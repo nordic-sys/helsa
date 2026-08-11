@@ -11,24 +11,12 @@ import {
 } from 'recharts'
 import { api, browserTz } from '../api/client'
 import { Card, Empty, ErrorState, Legend, Loading, Stat } from '../components/ui'
-import {
-  STAGE_CHART,
-  STAGE_COLOR,
-  STAGE_ORDER,
-  date,
-  duration,
-  fmt,
-  percent,
-  stageName,
-  time,
-} from '../lib/format'
+import { useI18n } from '../i18n'
+import { STAGE_CHART, STAGE_COLOR, STAGE_ORDER, useFormat } from '../lib/format'
 import { metricDef, pickSeries, readSeries } from '../lib/metrics'
 import { averages, groupByNight, segmentMinutes, type Night } from '../lib/sleep'
 
-const WINDOWS = [
-  { nights: 7, label: '7 éjszaka' },
-  { nights: 30, label: '30 éjszaka' },
-]
+const WINDOWS = [7, 30]
 
 /** The physiological metrics measured during the sleep window (docs/23 §5). */
 const PHYSIO = [
@@ -49,6 +37,8 @@ function isoDaysAgo(days: number): string {
 export default function Sleep() {
   const tz = browserTz()
   const [nightCount, setNightCount] = useState(7)
+  const { t, tp, tx, tMetric } = useI18n()
+  const f = useFormat()
 
   const from = isoDaysAgo(nightCount - 1)
   const to = isoDaysAgo(0)
@@ -76,13 +66,11 @@ export default function Sleep() {
 
   // Only the stages that actually occur make it onto the chart.
   const presentStages = STAGE_ORDER.filter((s) => nights.some((n) => (n.stages[s] ?? 0) > 0))
-  const chart = [...nights]
-    .reverse()
-    .map((n) => ({
-      startedAt: n.startedAt,
-      key: n.key,
-      ...Object.fromEntries(presentStages.map((s) => [s, n.stages[s] ?? 0])),
-    }))
+  const chart = [...nights].reverse().map((n) => ({
+    startedAt: n.startedAt,
+    key: n.key,
+    ...Object.fromEntries(presentStages.map((s) => [s, n.stages[s] ?? 0])),
+  }))
 
   const physioCards = PHYSIO.map((def) => ({
     def,
@@ -91,60 +79,54 @@ export default function Sleep() {
 
   return (
     <>
-      <h1>Alvás</h1>
+      <h1>{t('sleep.title')}</h1>
       <p className="subtle">
-        Éjszakánként, szakaszokra bontva. A minőség-mutatók — hatékonyság, felébredések,
-        szakasz-arányok — <strong>számított</strong> értékek a szakaszokból; a HealthKitben
-        nincs „alvásminőség" mező. Egy éjszaka a folytonos szakaszok sora: három óránál
-        hosszabb szünet után új tétel kezdődik, így a szunyókálás külön látszik.
+        {tx('sleep.subtitle', { derived: <strong>{t('sleep.subtitle.derived')}</strong> })}
       </p>
 
       <div className="controls">
-        {WINDOWS.map((w) => (
+        {WINDOWS.map((n) => (
           <button
-            key={w.nights}
+            key={n}
             className="seg"
-            aria-pressed={nightCount === w.nights}
-            onClick={() => setNightCount(w.nights)}
+            aria-pressed={nightCount === n}
+            onClick={() => setNightCount(n)}
           >
-            {w.label}
+            {tp('sleep.window', n)}
           </button>
         ))}
       </div>
 
       {nights.length === 0 ? (
-        <Empty
-          title="Még nincs alvás-adat"
-          hint="Az alvás-szakaszokat a Watch rögzíti, és a párosított iPhone tölti fel."
-        />
+        <Empty title={t('sleep.empty.title')} hint={t('sleep.empty.hint')} />
       ) : (
         <>
           <div className="grid" style={{ marginBottom: 18 }}>
             <Stat
-              label={`Átlagos alvásidő — ${avg.nights} éjszaka`}
-              value={duration(avg.asleepMin)}
+              label={tp('sleep.avgSleep', avg.nights)}
+              value={f.duration(avg.asleepMin)}
               color="var(--helsa-nordlys)"
             />
             <Stat
-              label="Alvás-hatékonyság"
-              value={percent(avg.efficiency, 0)}
+              label={t('sleep.efficiency')}
+              value={f.percent(avg.efficiency, 0)}
               color="var(--helsa-fjord)"
             />
             <Stat
-              label="Felébredések / éjszaka"
-              value={fmt(avg.awakenings, 1)}
+              label={t('sleep.awakeningsPerNight')}
+              value={f.fmt(avg.awakenings, 1)}
               color="var(--helsa-ember)"
             />
             <Stat
-              label="Mély + REM arány"
-              value={percent(avg.deepRemShare, 0)}
+              label={t('sleep.deepRemShare')}
+              value={f.percent(avg.deepRemShare, 0)}
               color="var(--helsa-nordlys)"
             />
           </div>
 
           {chart.length > 1 && (
             <div style={{ marginBottom: 16 }}>
-              <Card title="Szakaszok éjszakánként (perc)">
+              <Card title={t('sleep.stagesChart')}>
                 <div style={{ width: '100%', height: 300 }}>
                   <ResponsiveContainer>
                     <BarChart data={chart} margin={{ top: 8, right: 12, bottom: 4, left: -8 }}>
@@ -153,13 +135,13 @@ export default function Sleep() {
                         dataKey="startedAt"
                         tick={{ fill: 'var(--text-dim)', fontSize: 12 }}
                         stroke="var(--border)"
-                        tickFormatter={(v: string) => v.slice(5, 10)}
+                        tickFormatter={(v: string) => f.monthDay(v)}
                       />
                       <YAxis
                         tick={{ fill: 'var(--text-dim)', fontSize: 12 }}
                         stroke="var(--border)"
                         width={54}
-                        tickFormatter={(v: number) => fmt(v, 0)}
+                        tickFormatter={(v: number) => f.fmt(v, 0)}
                       />
                       <Tooltip
                         contentStyle={{
@@ -169,14 +151,14 @@ export default function Sleep() {
                           color: 'var(--text)',
                         }}
                         labelStyle={{ color: 'var(--text-dim)' }}
-                        labelFormatter={(v: string) => date(v)}
-                        formatter={(v: number, name: string) => [duration(v), name]}
+                        labelFormatter={(v: string) => f.date(v)}
+                        formatter={(v: number, name: string) => [f.duration(v), name]}
                       />
                       {presentStages.map((s, i) => (
                         <Bar
                           key={s}
                           dataKey={s}
-                          name={stageName(s)}
+                          name={f.stageName(s)}
                           stackId="stage"
                           fill={STAGE_CHART[s]?.fill ?? 'var(--surface-2)'}
                           fillOpacity={STAGE_CHART[s]?.opacity ?? 1}
@@ -192,7 +174,7 @@ export default function Sleep() {
                 </div>
                 <Legend
                   items={presentStages.map((s) => ({
-                    label: stageName(s),
+                    label: f.stageName(s),
                     color: STAGE_COLOR[s] ?? 'var(--surface-2)',
                   }))}
                 />
@@ -202,21 +184,20 @@ export default function Sleep() {
 
           {physioCards.length > 0 && (
             <div style={{ marginBottom: 16 }}>
-              <Card title="Élettani mutatók az időszakban">
+              <Card title={t('sleep.physio.title')}>
                 <div className="grid">
                   {physioCards.map(({ def, r }) => (
                     <Stat
                       key={def.key}
-                      label={def.label}
-                      value={fmt(r.total, def.digits)}
-                      unit={r.unit}
+                      label={tMetric(def.key)}
+                      value={f.fmt(r.total, def.digits)}
+                      unit={f.unit(r.unit)}
                       color={def.color}
                     />
                   ))}
                 </div>
                 <p className="subtle" style={{ margin: '12px 0 0' }}>
-                  Ezek az egész időszak átlagai, nem kizárólag az alvás-ablakból — a minták
-                  alvás-ablakra szűrése a backend <code>insights</code> rétegére vár (docs/23 §5).
+                  {tx('sleep.physio.note', { insights: <code>insights</code> })}
                 </p>
               </Card>
             </div>
@@ -232,22 +213,31 @@ export default function Sleep() {
 }
 
 function NightCard({ night }: { night: Night }) {
+  const { t, tp } = useI18n()
+  const f = useFormat()
   const span = night.inBedMin || 1
   const stages = STAGE_ORDER.filter((s) => (night.stages[s] ?? 0) > 0)
+  const day = f.date(night.key)
 
   return (
     <div style={{ marginBottom: 16 }}>
-      <Card title={`${date(night.key)} — alvás ${duration(night.asleepMin)}`}>
+      <Card title={t('sleep.night.title', { date: day, duration: f.duration(night.asleepMin) })}>
         {/* A proportional bar: how long each stage lasted */}
         <div
-          style={{ display: 'flex', height: 26, borderRadius: 7, overflow: 'hidden', marginBottom: 12 }}
+          style={{
+            display: 'flex',
+            height: 26,
+            borderRadius: 7,
+            overflow: 'hidden',
+            marginBottom: 12,
+          }}
           role="img"
-          aria-label={`Alvás-szakaszok ${date(night.key)}`}
+          aria-label={t('sleep.night.aria', { date: day })}
         >
           {night.segments.map((s, i) => (
             <div
               key={i}
-              title={`${stageName(s.stage)} · ${duration(segmentMinutes(s))}`}
+              title={`${f.stageName(s.stage)} · ${f.duration(segmentMinutes(s))}`}
               style={{
                 width: `${(segmentMinutes(s) / span) * 100}%`,
                 background: STAGE_COLOR[s.stage ?? ''] ?? 'var(--surface-2)',
@@ -260,23 +250,23 @@ function NightCard({ night }: { night: Night }) {
           <table>
             <tbody>
               <tr>
-                <td>Ágyban</td>
-                <td className="num">{duration(night.inBedMin)}</td>
-                <td>Hatékonyság</td>
-                <td className="num">{percent(night.efficiency, 0)}</td>
+                <td>{t('sleep.inBed')}</td>
+                <td className="num">{f.duration(night.inBedMin)}</td>
+                <td>{t('sleep.efficiencyShort')}</td>
+                <td className="num">{f.percent(night.efficiency, 0)}</td>
               </tr>
               <tr>
-                <td>Elalvás</td>
-                <td className="num">{time(night.onset)}</td>
-                <td>Ébredés</td>
-                <td className="num">{time(night.wakeUp)}</td>
+                <td>{t('sleep.onset')}</td>
+                <td className="num">{f.time(night.onset)}</td>
+                <td>{t('sleep.wakeUp')}</td>
+                <td className="num">{f.time(night.wakeUp)}</td>
               </tr>
               <tr>
-                <td>Felébredések</td>
-                <td className="num">{night.awakenings}</td>
-                <td>Mély + REM</td>
+                <td>{t('sleep.awakenings')}</td>
+                <td className="num">{f.num(night.awakenings)}</td>
+                <td>{t('sleep.deepRem')}</td>
                 <td className="num">
-                  {percent(
+                  {f.percent(
                     night.asleepMin > 0
                       ? ((night.stages.deep ?? 0) + (night.stages.rem ?? 0)) / night.asleepMin
                       : null,
@@ -292,9 +282,9 @@ function NightCard({ night }: { night: Night }) {
           <table>
             <thead>
               <tr>
-                <th>Szakasz</th>
-                <th>Hossz</th>
-                <th>Arány az alvásidőn belül</th>
+                <th>{t('sleep.col.stage')}</th>
+                <th>{t('sleep.col.length')}</th>
+                <th>{t('sleep.col.shareOfSleep')}</th>
               </tr>
             </thead>
             <tbody>
@@ -305,13 +295,16 @@ function NightCard({ night }: { night: Night }) {
                       className="picker-dot"
                       style={{ background: STAGE_COLOR[s] ?? 'var(--surface-2)' }}
                     />{' '}
-                    {stageName(s)}
+                    {f.stageName(s)}
                   </td>
-                  <td className="num">{duration(night.stages[s])}</td>
+                  <td className="num">{f.duration(night.stages[s])}</td>
                   <td className="num">
                     {s === 'awake' || s === 'inBed'
                       ? '–'
-                      : percent(night.asleepMin > 0 ? night.stages[s]! / night.asleepMin : null, 0)}
+                      : f.percent(
+                          night.asleepMin > 0 ? night.stages[s]! / night.asleepMin : null,
+                          0,
+                        )}
                   </td>
                 </tr>
               ))}
@@ -321,25 +314,25 @@ function NightCard({ night }: { night: Night }) {
 
         <details style={{ marginTop: 12 }}>
           <summary className="subtle" style={{ cursor: 'pointer' }}>
-            Nyers szakaszok ({night.segments.length})
+            {tp('sleep.raw', night.segments.length)}
           </summary>
           <div className="table-wrap" style={{ marginTop: 8 }}>
             <table>
               <thead>
                 <tr>
-                  <th>Szakasz</th>
-                  <th>Kezdet</th>
-                  <th>Vége</th>
-                  <th>Hossz</th>
+                  <th>{t('sleep.col.stage')}</th>
+                  <th>{t('sleep.col.start')}</th>
+                  <th>{t('sleep.col.end')}</th>
+                  <th>{t('sleep.col.length')}</th>
                 </tr>
               </thead>
               <tbody>
                 {night.segments.map((s, i) => (
                   <tr key={i}>
-                    <td>{stageName(s.stage)}</td>
-                    <td className="num">{time(s.started_at)}</td>
-                    <td className="num">{time(s.ended_at)}</td>
-                    <td className="num">{duration(segmentMinutes(s))}</td>
+                    <td>{f.stageName(s.stage)}</td>
+                    <td className="num">{f.time(s.started_at)}</td>
+                    <td className="num">{f.time(s.ended_at)}</td>
+                    <td className="num">{f.duration(segmentMinutes(s))}</td>
                   </tr>
                 ))}
               </tbody>

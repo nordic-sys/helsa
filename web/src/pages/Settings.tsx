@@ -1,15 +1,23 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, browserTz, clearToken, getToken, setToken } from '../api/client'
+import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { Card, ErrorState, Ring } from '../components/ui'
-import { relative } from '../lib/format'
+import { useI18n } from '../i18n'
+import { useFormat } from '../lib/format'
 
 export default function SettingsPage() {
   const qc = useQueryClient()
   const [draft, setDraft] = useState('')
   const hasToken = !!getToken()
+  const { t, tMetric } = useI18n()
+  const f = useFormat()
 
-  const devices = useQuery({ queryKey: ['devices'], queryFn: () => api.devices(), enabled: hasToken })
+  const devices = useQuery({
+    queryKey: ['devices'],
+    queryFn: () => api.devices(),
+    enabled: hasToken,
+  })
   const goals = useQuery({ queryKey: ['goals'], queryFn: () => api.goals(), enabled: hasToken })
   const settings = useQuery({
     queryKey: ['settings'],
@@ -26,19 +34,23 @@ export default function SettingsPage() {
 
   return (
     <>
-      <h1>Beállítások</h1>
-      <p className="subtle">
-        Egyfelhasználós rendszer — nincs bejelentkezés. A hozzáférés két rétegű: hálózati
-        (WireGuard) és alkalmazás-szintű (eszköz-token).
-      </p>
+      <h1>{t('settings.title')}</h1>
+      <p className="subtle">{t('settings.subtitle')}</p>
 
       <div style={{ marginBottom: 16 }}>
-        <Card title="Eszköz-token">
+        <Card title={t('settings.language.title')}>
+          <LanguageSwitcher />
+          <p className="subtle" style={{ margin: '10px 0 0' }}>
+            {t('settings.language.note')}
+          </p>
+        </Card>
+      </div>
+
+      <div style={{ marginBottom: 16 }}>
+        <Card title={t('settings.token.title')}>
           {hasToken ? (
             <>
-              <p style={{ marginTop: 0 }}>
-                Be van állítva ezen a gépen. Új gépen egyszer kell megadni.
-              </p>
+              <p style={{ marginTop: 0 }}>{t('settings.token.present')}</p>
               <button
                 className="seg"
                 onClick={() => {
@@ -46,21 +58,19 @@ export default function SettingsPage() {
                   qc.invalidateQueries()
                 }}
               >
-                Token törlése
+                {t('settings.token.clear')}
               </button>
             </>
           ) : (
             <>
-              <p style={{ marginTop: 0, color: 'var(--text-dim)' }}>
-                Illeszd be a tokent — a böngésző tárolja, a szerver nem kér jelszót.
-              </p>
+              <p style={{ marginTop: 0, color: 'var(--text-dim)' }}>{t('settings.token.hint')}</p>
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <input
                   type="password"
                   value={draft}
                   onChange={(e) => setDraft(e.target.value)}
                   onKeyDown={(e) => e.key === 'Enter' && save()}
-                  placeholder="eszköz-token"
+                  placeholder={t('settings.token.placeholder')}
                   style={{
                     flex: '1 1 260px',
                     padding: '8px 11px',
@@ -72,7 +82,7 @@ export default function SettingsPage() {
                   }}
                 />
                 <button className="seg" onClick={save}>
-                  Mentés
+                  {t('settings.token.save')}
                 </button>
               </div>
             </>
@@ -83,29 +93,31 @@ export default function SettingsPage() {
       {hasToken && (
         <>
           <div style={{ marginBottom: 16 }}>
-            <Card title="Eszközök és szinkron-frissesség">
+            <Card title={t('settings.devices.title')}>
               {devices.isError ? (
                 <ErrorState error={devices.error} />
               ) : (devices.data?.length ?? 0) === 0 ? (
                 <p style={{ margin: 0, color: 'var(--text-dim)' }}>
-                  Még nincs regisztrált eszköz.
+                  {t('settings.devices.empty')}
                 </p>
               ) : (
                 <div className="table-wrap">
                   <table>
                     <thead>
                       <tr>
-                        <th>Eszköz</th>
-                        <th>Platform</th>
-                        <th>Utolsó szinkron</th>
+                        <th>{t('settings.devices.col.device')}</th>
+                        <th>{t('settings.devices.col.platform')}</th>
+                        <th>{t('settings.devices.col.lastSync')}</th>
                       </tr>
                     </thead>
                     <tbody>
+                      {/* The device name, model and platform are strings the phone
+                          registered — server content, not interface text. */}
                       {devices.data!.map((d) => (
                         <tr key={d.id}>
                           <td>{d.name ?? d.model ?? '–'}</td>
                           <td>{d.platform ?? '–'}</td>
-                          <td>{relative(d.last_seen_at)}</td>
+                          <td>{f.relative(d.last_seen_at)}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -116,44 +128,43 @@ export default function SettingsPage() {
           </div>
 
           <div style={{ marginBottom: 16 }}>
-            <Card title="Célok">
+            <Card title={t('settings.goals.title')}>
               {(goals.data?.length ?? 0) === 0 ? (
-                <p style={{ margin: 0, color: 'var(--text-dim)' }}>Még nincs cél-adat.</p>
+                <p style={{ margin: 0, color: 'var(--text-dim)' }}>{t('settings.goals.empty')}</p>
               ) : (
                 <div style={{ display: 'flex', gap: 26, flexWrap: 'wrap' }}>
                   {goals.data!.map((g) => (
                     <Ring
                       key={g.metric}
                       size={84}
-                      label={g.metric ?? ''}
+                      label={g.metric ? tMetric(g.metric) : ''}
                       value={g.target_value}
                       goal={g.target_value}
-                      unit={g.unit}
+                      unit={f.unit(g.unit)}
                       color="var(--helsa-fjord)"
                     />
                   ))}
                 </div>
               )}
               <p className="subtle" style={{ margin: '10px 0 0' }}>
-                A három Apple gyűrű célja a HealthKitből jön (csak olvasható); a lépés-cél
-                felhasználó által állított.
+                {t('settings.goals.note')}
               </p>
             </Card>
           </div>
 
-          <Card title="Rendszer">
+          <Card title={t('settings.system.title')}>
             <table>
               <tbody>
                 <tr>
-                  <td>Böngésző időzónája</td>
+                  <td>{t('settings.system.browserTz')}</td>
                   <td className="num">{browserTz()}</td>
                 </tr>
                 <tr>
-                  <td>Szerver időzónája</td>
+                  <td>{t('settings.system.serverTz')}</td>
                   <td className="num">{settings.data?.time_zone ?? '–'}</td>
                 </tr>
                 <tr>
-                  <td>Mértékegység</td>
+                  <td>{t('settings.system.units')}</td>
                   <td className="num">{settings.data?.unit_system ?? '–'}</td>
                 </tr>
               </tbody>

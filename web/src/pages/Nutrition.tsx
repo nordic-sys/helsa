@@ -18,7 +18,9 @@ import {
 import { api, browserTz } from '../api/client'
 import type { Range } from '../api/types'
 import { Card, Empty, ErrorState, Legend, Loading, Note, Stat } from '../components/ui'
-import { fmt, percent } from '../lib/format'
+import { useI18n } from '../i18n'
+import type { UiKey } from '../i18n'
+import { useFormat } from '../lib/format'
 import {
   metricDef,
   metricsOfGroup,
@@ -48,16 +50,22 @@ const WATER = metricDef('dietaryWater')
 // For a year the bucket is a month, so the "daily average" would not come out
 // without a division — and with nutrition it is precisely the daily figure that is
 // interesting. Hence only day/week/month here.
-const RANGES: { key: Range; label: string }[] = [
-  { key: 'day', label: 'Ma' },
-  { key: 'week', label: 'Hét' },
-  { key: 'month', label: '30 nap' },
+const RANGES: { key: Range; label: UiKey }[] = [
+  { key: 'day', label: 'nutrition.range.day' },
+  { key: 'week', label: 'nutrition.range.week' },
+  { key: 'month', label: 'nutrition.range.month' },
+]
+
+const SECTIONS: { title: UiKey; defs: readonly MetricDef[] }[] = [
+  { title: 'nutrition.section.macros', defs: MACROS },
+  { title: 'nutrition.section.minerals', defs: MINERALS },
+  { title: 'nutrition.section.vitamins', defs: VITAMINS },
 ]
 
 /**
  * The headline value: normally the daily intake, but for a degraded series only
  * the per-sample average — no daily total can be made of that, so we do not call it
- * one either (the caller spells out what is being shown via `headlineLabel`).
+ * one either (the caller spells out what is being shown via `headlineKey`).
  */
 function daily(r: ReadSeries, range: Range): number | null {
   if (!r.hasData || r.total == null) return null
@@ -67,13 +75,19 @@ function daily(r: ReadSeries, range: Range): number | null {
   return days === 0 ? null : r.total / days
 }
 
-const headlineLabel = (degraded: boolean, range: Range) =>
-  degraded ? 'Mintánkénti átlag' : range === 'day' ? 'Ma összesen' : 'Napi átlag'
+const headlineKey = (degraded: boolean, range: Range): UiKey =>
+  degraded
+    ? 'nutrition.headline.sampleAverage'
+    : range === 'day'
+      ? 'nutrition.headline.todayTotal'
+      : 'nutrition.headline.dailyAverage'
 
 export default function Nutrition() {
   const tz = browserTz()
   const [range, setRange] = useState<Range>('week')
   const [showAll, setShowAll] = useState(false)
+  const { t, tp, tx, tMetric } = useI18n()
+  const f = useFormat()
 
   const q = useQuery({
     queryKey: ['nutrition', range, tz],
@@ -124,15 +138,13 @@ export default function Nutrition() {
   collect(FAT, 'fat', KCAL_PER_G.fat)
   const daysChart = [...byDay.values()].sort((a, b) => a.t.localeCompare(b.t))
 
-  const headline = headlineLabel(degraded, range)
+  const headline = t(headlineKey(degraded, range))
+  const stat = (def: MetricDef) => t('nutrition.stat', { metric: tMetric(def.key), headline })
 
   return (
     <>
-      <h1>Táplálkozás</h1>
-      <p className="subtle">
-        Bevitt energia, makrók és mikrotápanyagok. A Health-be egy étkezés-naplózó app
-        írja őket; a Helsa csak olvassa.
-      </p>
+      <h1>{t('nutrition.title')}</h1>
+      <p className="subtle">{t('nutrition.subtitle')}</p>
 
       <div className="controls">
         {RANGES.map((x) => (
@@ -142,85 +154,79 @@ export default function Nutrition() {
             aria-pressed={range === x.key}
             onClick={() => setRange(x.key)}
           >
-            {x.label}
+            {t(x.label)}
           </button>
         ))}
       </div>
 
       {degraded && (
-        <Note title="A napi összegek helyett mintánkénti átlagot mutat a szerver">
-          A táplálkozási típusok mind összegzendők, de a backend csak öt metrika
-          aggregációját ismeri név szerint (<code>internal/summary/summary.go</code>),
-          a többire átlagot ad vissza darabszám nélkül. A napi bevitel ebből nem
-          állítható helyre, ezért az itt látszó számok egy-egy bejegyzés átlagát
-          jelentik, nem a napi összeget.
+        <Note title={t('nutrition.degraded.title')}>
+          {tx('nutrition.degraded.body', { file: <code>internal/summary/summary.go</code> })}
         </Note>
       )}
 
       {withData.length === 0 ? (
-        <Empty
-          title="Még nincs táplálkozási adat"
-          hint="A HealthKit magától nem gyűjt étkezést — egy naplózó app (pl. kalóriaszámláló) írja a Health-be, és onnan tölti fel az iPhone."
-        />
+        <Empty title={t('nutrition.empty.title')} hint={t('nutrition.empty.hint')} />
       ) : (
         <>
           <div className="grid" style={{ marginBottom: 18 }}>
             <Stat
-              label={`Bevitt energia — ${headline}`}
-              value={fmt(daily(of(ENERGY), range), 0)}
-              unit={of(ENERGY).unit}
+              label={stat(ENERGY)}
+              value={f.fmt(daily(of(ENERGY), range), 0)}
+              unit={f.unit(of(ENERGY).unit)}
               color={ENERGY.color}
             />
             <Stat
-              label={`Fehérje — ${headline}`}
-              value={fmt(daily(of(PROTEIN), range), 1)}
-              unit={of(PROTEIN).unit}
+              label={stat(PROTEIN)}
+              value={f.fmt(daily(of(PROTEIN), range), 1)}
+              unit={f.unit(of(PROTEIN).unit)}
               color={PROTEIN.color}
             />
             <Stat
-              label={`Szénhidrát — ${headline}`}
-              value={fmt(daily(of(CARBS), range), 1)}
-              unit={of(CARBS).unit}
+              label={stat(CARBS)}
+              value={f.fmt(daily(of(CARBS), range), 1)}
+              unit={f.unit(of(CARBS).unit)}
               color={CARBS.color}
             />
             <Stat
-              label={`Zsír — ${headline}`}
-              value={fmt(daily(of(FAT), range), 1)}
-              unit={of(FAT).unit}
+              label={stat(FAT)}
+              value={f.fmt(daily(of(FAT), range), 1)}
+              unit={f.unit(of(FAT).unit)}
               color={FAT.color}
             />
             <Stat
-              label={`Víz — ${headline}`}
-              value={fmt(daily(of(WATER), range), 0)}
-              unit={of(WATER).unit}
+              label={stat(WATER)}
+              value={f.fmt(daily(of(WATER), range), 0)}
+              unit={f.unit(of(WATER).unit)}
               color={WATER.color}
             />
           </div>
 
           {kcalTotal > 0 && (
             <div style={{ marginBottom: 16 }}>
-              <Card title="Makró-bontás (energia szerint)">
-                <div className="split-bar" role="img" aria-label="Makró-arány energia szerint">
+              <Card title={t('nutrition.macroSplit.title')}>
+                <div className="split-bar" role="img" aria-label={t('nutrition.macroSplit.aria')}>
                   {macroSplit.map((m) => (
                     <div
                       key={m.def.key}
                       style={{ width: `${(m.kcal / kcalTotal) * 100}%`, background: m.def.color }}
-                      title={`${m.def.label}: ${percent(m.kcal / kcalTotal)}`}
+                      title={`${tMetric(m.def.key)}: ${f.percent(m.kcal / kcalTotal)}`}
                     />
                   ))}
                 </div>
                 <Legend
                   items={macroSplit.map((m) => ({
-                    label: m.def.label,
+                    label: tMetric(m.def.key),
                     color: m.def.color,
-                    value: `${percent(m.kcal / kcalTotal)} · ${fmt(m.grams, 1)} g`,
+                    value: `${f.percent(m.kcal / kcalTotal)} · ${f.fmt(m.grams, 1)} g`,
                   }))}
                 />
                 <p className="subtle" style={{ margin: '12px 0 0' }}>
-                  A fenti grammokból számolt energia {fmt(kcalTotal, 0)} kcal (4 / 4 / 9 kcal
-                  per gramm). A HealthKit külön mért <code>dietaryEnergyConsumed</code> értéke{' '}
-                  {fmt(of(ENERGY).total, 0)} kcal — a kettő eltérhet, ha a naplózó app nem
-                  minden tételhez rögzít makrókat.
+                  {tx('nutrition.macroSplit.note', {
+                    computed: f.fmt(kcalTotal, 0),
+                    field: <code>dietaryEnergyConsumed</code>,
+                    measured: f.fmt(of(ENERGY).total, 0),
+                  })}
                 </p>
               </Card>
             </div>
@@ -228,28 +234,26 @@ export default function Nutrition() {
 
           {daysChart.length > 1 && (
             <div style={{ marginBottom: 16 }}>
-              <Card title={degraded ? 'Makrók energiája bucketenként (kcal)' : 'Makrók energiája naponta (kcal)'}>
+              <Card
+                title={t(degraded ? 'nutrition.chart.perBucket' : 'nutrition.chart.perDay')}
+              >
                 <div style={{ width: '100%', height: 300 }}>
                   <ResponsiveContainer>
                     <BarChart data={daysChart} margin={{ top: 8, right: 12, bottom: 4, left: -8 }}>
-                      <CartesianGrid
-                        stroke="var(--border)"
-                        strokeDasharray="3 3"
-                        vertical={false}
-                      />
+                      <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
                       <XAxis
                         dataKey="t"
                         tick={{ fill: 'var(--text-dim)', fontSize: 12 }}
                         stroke="var(--border)"
                         tickFormatter={(v: string) =>
-                          range === 'day' ? v.slice(11, 16) : v.slice(5, 10)
+                          range === 'day' ? f.hourMinute(v) : f.monthDay(v)
                         }
                       />
                       <YAxis
                         tick={{ fill: 'var(--text-dim)', fontSize: 12 }}
                         stroke="var(--border)"
                         width={58}
-                        tickFormatter={(v: number) => fmt(v, 0)}
+                        tickFormatter={(v: number) => f.fmt(v, 0)}
                       />
                       <Tooltip
                         contentStyle={{
@@ -259,14 +263,16 @@ export default function Nutrition() {
                           color: 'var(--text)',
                         }}
                         labelStyle={{ color: 'var(--text-dim)' }}
-                        labelFormatter={(v: string) => (range === 'day' ? v.slice(11, 16) : v.slice(0, 10))}
-                        formatter={(v: number, name: string) => [`${fmt(v, 0)} kcal`, name]}
+                        labelFormatter={(v: string) =>
+                          range === 'day' ? f.hourMinute(v) : f.date(v)
+                        }
+                        formatter={(v: number, name: string) => [`${f.fmt(v, 0)} kcal`, name]}
                       />
                       {macroSplit.map((m, i) => (
                         <Bar
                           key={m.def.key}
                           dataKey={i === 0 ? 'protein' : i === 1 ? 'carbs' : 'fat'}
-                          name={m.def.label}
+                          name={tMetric(m.def.key)}
                           stackId="macro"
                           fill={m.def.color}
                           stroke="var(--surface)"
@@ -280,22 +286,19 @@ export default function Nutrition() {
                   </ResponsiveContainer>
                 </div>
                 <Legend
-                  items={macroSplit.map((m) => ({ label: m.def.label, color: m.def.color }))}
+                  items={macroSplit.map((m) => ({
+                    label: tMetric(m.def.key),
+                    color: m.def.color,
+                  }))}
                 />
               </Card>
             </div>
           )}
 
-          {(
-            [
-              ['Makrók részletesen', MACROS],
-              ['Ásványi anyagok', MINERALS],
-              ['Vitaminok', VITAMINS],
-            ] as const
-          ).map(([title, defs]) => (
+          {SECTIONS.map(({ title, defs }) => (
             <NutrientTable
               key={title}
-              title={title}
+              title={t(title)}
               defs={defs}
               read={read}
               range={range}
@@ -306,8 +309,8 @@ export default function Nutrition() {
 
           <button className="seg" onClick={() => setShowAll((v) => !v)} aria-pressed={showAll}>
             {showAll
-              ? 'Az adat nélküli tápanyagok elrejtése'
-              : `Az adat nélküli ${NUTRIENTS.length - withData.length} tápanyag mutatása`}
+              ? t('nutrition.hideEmpty')
+              : tp('nutrition.showEmpty', NUTRIENTS.length - withData.length)}
           </button>
         </>
       )}
@@ -330,6 +333,8 @@ function NutrientTable({
   showAll: boolean
   degraded: boolean
 }) {
+  const { t, tMetric } = useI18n()
+  const f = useFormat()
   const rows = defs.filter((d) => showAll || read.get(d.key)!.hasData)
   if (rows.length === 0) return null
 
@@ -340,12 +345,12 @@ function NutrientTable({
           <table>
             <thead>
               <tr>
-                <th>Tápanyag</th>
-                <th>{headlineLabel(degraded, range)}</th>
+                <th>{t('nutrition.col.nutrient')}</th>
+                <th>{t(headlineKey(degraded, range))}</th>
                 {/* For a degraded series there is no "period total": the server
                     returned an average, and making a sum out of that would be a lie. */}
-                {!degraded && <th>Időszak összesen</th>}
-                <th>Egység</th>
+                {!degraded && <th>{t('nutrition.col.periodTotal')}</th>}
+                <th>{t('nutrition.col.unit')}</th>
               </tr>
             </thead>
             <tbody>
@@ -355,11 +360,11 @@ function NutrientTable({
                   <tr key={d.key} style={r.hasData ? undefined : { opacity: 0.5 }}>
                     <td>
                       <span className="picker-dot" style={{ background: d.color }} />{' '}
-                      {d.label}
+                      {tMetric(d.key)}
                     </td>
-                    <td className="num">{fmt(daily(r, range), d.digits)}</td>
-                    {!degraded && <td className="num">{fmt(r.total, d.digits)}</td>}
-                    <td className="num">{r.unit}</td>
+                    <td className="num">{f.fmt(daily(r, range), d.digits)}</td>
+                    {!degraded && <td className="num">{f.fmt(r.total, d.digits)}</td>}
+                    <td className="num">{f.unit(r.unit)}</td>
                   </tr>
                 )
               })}

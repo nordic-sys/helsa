@@ -15,23 +15,29 @@ import { api, browserTz } from '../api/client'
 import type { Range } from '../api/types'
 import { MetricPicker } from '../components/MetricPicker'
 import { Card, Empty, ErrorState, Loading, Note } from '../components/ui'
-import { fmt } from '../lib/format'
+import { useI18n } from '../i18n'
+import type { UiKey } from '../i18n'
+import { useFormat, type Formatters } from '../lib/format'
 import { metricDef, pickSeries, readSeries } from '../lib/metrics'
 import { useAvailability } from '../lib/useAvailability'
 
-const RANGES: { key: Range; label: string }[] = [
-  { key: 'day', label: 'Nap' },
-  { key: 'week', label: 'Hét' },
-  { key: 'month', label: 'Hónap' },
-  { key: 'year', label: 'Év' },
+const RANGES: { key: Range; label: UiKey }[] = [
+  { key: 'day', label: 'range.day' },
+  { key: 'week', label: 'range.week' },
+  { key: 'month', label: 'range.month' },
+  { key: 'year', label: 'range.year' },
 ]
 
-/** An hour in the daily view, otherwise a date — from the bucket's ISO timestamp. */
-function tickLabel(t: string, range: Range): string {
+/**
+ * An hour in the daily view, a month in the yearly one, otherwise a date — from
+ * the bucket's ISO timestamp, formatted for the current locale rather than
+ * sliced out of the string.
+ */
+function tickLabel(t: string, range: Range, f: Formatters): string {
   if (!t) return ''
-  if (range === 'day') return t.slice(11, 16)
-  if (range === 'year') return t.slice(0, 7)
-  return t.slice(5, 10)
+  if (range === 'day') return f.hourMinute(t)
+  if (range === 'year') return f.yearMonth(t)
+  return f.monthDay(t)
 }
 
 export default function Trends() {
@@ -39,6 +45,8 @@ export default function Trends() {
   const [range, setRange] = useState<Range>('week')
   const [metric, setMetric] = useState('stepCount')
   const availability = useAvailability()
+  const { t, tx, tMetric } = useI18n()
+  const f = useFormat()
 
   const def = metricDef(metric)
   const q = useQuery({
@@ -47,10 +55,11 @@ export default function Trends() {
   })
 
   const r = readSeries(def, pickSeries(def, q.data?.metrics))
+  const label = tMetric(def.key)
+  const unit = f.unit(r.unit)
   // For averaged metrics the bucket carries min/max too: that is the band of daily
   // variation (docs/11 §2, the range band). For summed ones it makes no sense.
-  const showBand =
-    r.effectiveAgg === 'avg' && r.points.some((p) => p.min != null && p.max != null)
+  const showBand = r.effectiveAgg === 'avg' && r.points.some((p) => p.min != null && p.max != null)
   const data = r.points.map((p) => ({
     t: p.t,
     value: p.value,
@@ -59,8 +68,8 @@ export default function Trends() {
 
   return (
     <>
-      <h1>Trendek</h1>
-      <p className="subtle">Hosszabb távú alakulás, a saját időzónád szerint bucketelve.</p>
+      <h1>{t('trends.title')}</h1>
+      <p className="subtle">{t('trends.subtitle')}</p>
 
       <div className="controls">
         {RANGES.map((x) => (
@@ -70,25 +79,23 @@ export default function Trends() {
             aria-pressed={range === x.key}
             onClick={() => setRange(x.key)}
           >
-            {x.label}
+            {t(x.label)}
           </button>
         ))}
       </div>
 
       <div style={{ marginBottom: 16 }}>
-        <Card title="Metrika">
+        <Card title={t('trends.metric')}>
           <MetricPicker value={metric} onChange={setMetric} availability={availability} />
         </Card>
       </div>
 
       {r.degraded && (
-        <Note title="Ez a típus mintánkénti átlagként érkezik, nem napi összegként">
-          A <code>{def.key}</code> összegzendő metrika, de a szerver csak azt az öt
-          típust ismeri név szerint, aminek beégetett aggregációja van — a többire
-          átlagot, minimumot és maximumot ad vissza, darabszámot nem. Napi összeget
-          ebből nem lehet visszaállítani, ezért itt az egy mintára jutó átlag látszik.
-          A javítás helye a backend <code>internal/summary/summary.go</code> metricMeta
-          táblája.
+        <Note title={t('trends.degraded.title')}>
+          {tx('trends.degraded.body', {
+            metric: <code>{def.key}</code>,
+            file: <code>internal/summary/summary.go</code>,
+          })}
         </Note>
       )}
 
@@ -98,15 +105,15 @@ export default function Trends() {
         <ErrorState error={q.error} />
       ) : !r.hasData ? (
         <Empty
-          title={`Nincs adat ebben az időszakban: ${def.label}`}
+          title={t('trends.empty.title', { metric: label })}
           hint={
             availability.has(def.key)
-              ? 'Erre a típusra van adat, csak nem ebben az ablakban — válts időtávot.'
-              : 'Erre a típusra még nem érkezett minta. A HealthKit nem különbözteti meg a „nincs adat" és a „nincs engedély" esetet — mindkettő üres.'
+              ? t('trends.empty.hintElsewhere')
+              : t('trends.empty.hintNever')
           }
         />
       ) : (
-        <Card title={`${def.label}${r.unit ? ` (${r.unit})` : ''}`}>
+        <Card title={`${label}${unit ? ` (${unit})` : ''}`}>
           <div style={{ width: '100%', height: 320 }}>
             <ResponsiveContainer>
               <ComposedChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: -8 }}>
@@ -115,13 +122,13 @@ export default function Trends() {
                   dataKey="t"
                   tick={{ fill: 'var(--text-dim)', fontSize: 12 }}
                   stroke="var(--border)"
-                  tickFormatter={(v: string) => tickLabel(v, range)}
+                  tickFormatter={(v: string) => tickLabel(v, range, f)}
                 />
                 <YAxis
                   tick={{ fill: 'var(--text-dim)', fontSize: 12 }}
                   stroke="var(--border)"
                   width={58}
-                  tickFormatter={(v: number) => fmt(v, def.digits)}
+                  tickFormatter={(v: number) => f.fmt(v, def.digits)}
                 />
                 <Tooltip
                   contentStyle={{
@@ -131,18 +138,21 @@ export default function Trends() {
                     color: 'var(--text)',
                   }}
                   labelStyle={{ color: 'var(--text-dim)' }}
-                  labelFormatter={(v: string) => tickLabel(v, range)}
+                  labelFormatter={(v: string) => tickLabel(v, range, f)}
                   formatter={(v: number | number[], name: string) => {
                     if (Array.isArray(v)) {
-                      return [`${fmt(v[0], def.digits)} – ${fmt(v[1], def.digits)}`, 'Szélsőértékek']
+                      return [
+                        `${f.fmt(v[0], def.digits)} – ${f.fmt(v[1], def.digits)}`,
+                        t('trends.extremes'),
+                      ]
                     }
-                    return [`${fmt(v, def.digits)} ${r.unit}`.trim(), name]
+                    return [`${f.fmt(v, def.digits)} ${unit}`.trim(), name]
                   }}
                 />
                 {showBand && (
                   <Area
                     dataKey="band"
-                    name="Szélsőértékek"
+                    name={t('trends.extremes')}
                     stroke="none"
                     fill={def.color}
                     fillOpacity={0.13}
@@ -154,7 +164,7 @@ export default function Trends() {
                   // Discrete per-period totals → bars; a continuous measurement → a line.
                   <Bar
                     dataKey="value"
-                    name={def.label}
+                    name={label}
                     fill={def.color}
                     radius={[4, 4, 0, 0]}
                     maxBarSize={34}
@@ -164,7 +174,7 @@ export default function Trends() {
                   <Line
                     type="monotone"
                     dataKey="value"
-                    name={def.label}
+                    name={label}
                     stroke={def.color}
                     strokeWidth={2}
                     dot={false}
@@ -178,9 +188,9 @@ export default function Trends() {
           </div>
           {r.total != null && (
             <p className="subtle" style={{ margin: '10px 0 0' }}>
-              {r.effectiveAgg === 'avg' ? 'Átlag' : 'Összesen'} az időszakban:{' '}
-              <strong>{fmt(r.total, def.digits)}</strong> {r.unit}
-              {showBand && ' · a halvány sáv a bucketen belüli minimum–maximum'}
+              {r.effectiveAgg === 'avg' ? t('trends.periodAverage') : t('trends.periodTotal')}:{' '}
+              <strong>{f.fmt(r.total, def.digits)}</strong> {unit}
+              {showBand && ` ${t('trends.bandNote')}`}
             </p>
           )}
         </Card>

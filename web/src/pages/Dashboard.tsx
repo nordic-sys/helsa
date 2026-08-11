@@ -1,7 +1,8 @@
 import { useQuery } from '@tanstack/react-query'
 import { api, browserTz } from '../api/client'
 import { Card, Empty, ErrorState, Loading, Ring, Stat } from '../components/ui'
-import { fmt, relative } from '../lib/format'
+import { useI18n } from '../i18n'
+import { useFormat } from '../lib/format'
 import { metricDef, pickSeries, readSeries } from '../lib/metrics'
 
 const TODAY = ['stepCount', 'activeEnergy', 'heartRate', 'restingHeartRate'].map(metricDef)
@@ -9,6 +10,8 @@ const TODAY_WIRE = TODAY.flatMap((d) => [d.key, ...d.aliases])
 
 export default function Dashboard() {
   const tz = browserTz()
+  const { t, tMetric } = useI18n()
+  const f = useFormat()
 
   const summary = useQuery({
     queryKey: ['summary', 'day', tz],
@@ -40,18 +43,15 @@ export default function Dashboard() {
 
   return (
     <>
-      <h1>Ma</h1>
+      <h1>{t('dashboard.title')}</h1>
       <p className="subtle">
-        {summary.data?.from ?? ''} · időzóna: {summary.data?.tz ?? tz}
-        {lastSeen ? ` · utolsó szinkron: ${relative(lastSeen)}` : ''}
+        {f.date(summary.data?.from)} · {t('dashboard.tz', { tz: summary.data?.tz ?? tz })}
+        {lastSeen ? ` · ${t('dashboard.lastSync', { when: f.relative(lastSeen) })}` : ''}
       </p>
 
       {!hasAny && (
         <div style={{ marginBottom: 18 }}>
-          <Empty
-            title="Még nincs adat"
-            hint="Az iPhone az egyetlen feltöltő — amint szinkronizál, itt megjelenik."
-          />
+          <Empty title={t('dashboard.empty.title')} hint={t('dashboard.empty.hint')} />
         </div>
       )}
 
@@ -64,16 +64,16 @@ export default function Dashboard() {
           return (
             <Stat
               key={def.key}
-              label={def.label}
-              value={fmt(r.total, def.digits)}
-              unit={r.unit}
+              label={tMetric(def.key)}
+              value={f.fmt(r.total, def.digits)}
+              unit={f.unit(r.unit)}
               color={def.color}
             />
           )
         })}
       </div>
 
-      <Card title="Aktivitás-gyűrűk">
+      <Card title={t('dashboard.rings.title')}>
         {activity.isLoading ? (
           <div className="skeleton" style={{ height: 120 }} />
         ) : rings ? (
@@ -87,31 +87,31 @@ export default function Dashboard() {
             }}
           >
             <Ring
-              label="Mozgás"
+              label={t('dashboard.rings.move')}
               value={rings.active_energy}
               goal={rings.active_energy_goal}
               unit="kcal"
               color="var(--helsa-ember)"
             />
             <Ring
-              label="Edzés"
+              label={t('dashboard.rings.exercise')}
               value={rings.exercise_minutes}
               goal={rings.exercise_goal}
-              unit="p"
+              unit={t('unit.minShort')}
               color="var(--helsa-move)"
             />
             <Ring
-              label="Állás"
+              label={t('dashboard.rings.stand')}
               value={rings.stand_hours}
               goal={rings.stand_goal}
-              unit="ó"
+              unit={t('unit.hourShort')}
               color="var(--helsa-fjord)"
             />
           </div>
         ) : (
           <Empty
-            title="Nincs gyűrű-adat"
-            hint="A HealthKit napi activity-summaryja még nem érkezett meg."
+            title={t('dashboard.rings.empty.title')}
+            hint={t('dashboard.rings.empty.hint')}
           />
         )}
       </Card>

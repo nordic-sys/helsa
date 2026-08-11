@@ -1,5 +1,7 @@
 import type { ReactNode } from 'react'
 import { ApiError } from '../api/client'
+import { useI18n } from '../i18n'
+import { useFormat } from '../lib/format'
 
 export function Card({ title, children }: { title?: string; children: ReactNode }) {
   return (
@@ -22,7 +24,7 @@ export function Stat({
   color?: string
 }) {
   return (
-    <div className="card">
+    <div className="card stat-card">
       <h2>{label}</h2>
       <div className="stat" style={color ? { color } : undefined}>
         {value}
@@ -80,23 +82,29 @@ export function Legend({ items }: { items: { label: string; color: string; value
   )
 }
 
-/** The error state. A 401 is handled separately, because it has a concrete
- * course of action. */
+/**
+ * The error state. A 401 is handled separately, because it has a concrete course
+ * of action.
+ *
+ * ⚠️ `e.message` and `e.detail` come from the backend's problem+json and are
+ * NOT translated here — they are server content, not interface text. Only the
+ * fallbacks below are ours.
+ */
 export function ErrorState({ error }: { error: unknown }) {
+  const { t } = useI18n()
   const e = error as ApiError
   if (e?.status === 401 || e?.status === 403) {
     return (
       <div className="state error">
-        <strong>Nincs érvényes eszköz-token</strong>
-        Állítsd be a Beállítások oldalon. Egyfelhasználós rendszer — nincs
-        bejelentkezés, csak egy token, amit egyszer kell megadni ezen a gépen.
+        <strong>{t('error.noToken.title')}</strong>
+        {t('error.noToken.body')}
       </div>
     )
   }
   return (
     <div className="state error">
-      <strong>{e?.message ?? 'Hiba történt'}</strong>
-      {e?.detail ?? 'A backend nem válaszolt a várt módon.'}
+      <strong>{e?.message ?? t('error.generic.title')}</strong>
+      {e?.detail ?? t('error.generic.detail')}
     </div>
   )
 }
@@ -117,6 +125,7 @@ export function Ring({
   unit?: string
   size?: number
 }) {
+  const f = useFormat()
   const pct = goal && goal > 0 ? Math.min((value ?? 0) / goal, 1) : 0
   const stroke = 11
   const r = (size - stroke) / 2
@@ -127,7 +136,7 @@ export function Ring({
         width={size}
         height={size}
         role="img"
-        aria-label={`${label}: ${Math.round(value ?? 0)} / ${Math.round(goal ?? 0)} ${unit ?? ''}`}
+        aria-label={`${label}: ${f.num(value ?? 0)} / ${f.num(goal ?? 0)} ${unit ?? ''}`}
       >
         <circle
           cx={size / 2}
@@ -151,10 +160,10 @@ export function Ring({
       </svg>
       <div style={{ marginTop: 6, fontSize: 13, color: 'var(--text-dim)' }}>{label}</div>
       <div style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
-        {Math.round(value ?? 0)}
+        {f.num(value ?? 0)}
         <span style={{ color: 'var(--text-dim)', fontWeight: 400 }}>
           {' / '}
-          {Math.round(goal ?? 0)} {unit}
+          {f.num(goal ?? 0)} {unit}
         </span>
       </div>
     </div>

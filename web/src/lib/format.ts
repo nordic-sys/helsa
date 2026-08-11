@@ -1,149 +1,162 @@
 // Formatters.
 //
-// ⚠️ The output here is USER-FACING product copy, and it is Hungarian — the number
-// formatting, the unit labels, the activity and sleep-stage names alike. The
-// comments are English, the strings are not; do not "translate" them in passing.
-// Switching unit systems (metric/imperial) will hang off /v1/settings (docs/20 B4)
-// — for now everything is metric.
+// ⚠️ Everything here is USER-FACING, so all of it is language-dependent — not
+// just the words but the numbers too. `1 234,6` and `1,234.6` are the same
+// value; `2026. 08. 11.` and `Aug 11, 2026` are the same day. That is why the
+// formatting goes through `Intl` rather than through hand-rolled string
+// surgery, and why it hangs off a hook: the locale comes from the i18n context.
+//
+// Switching unit systems (metric/imperial) will hang off /v1/settings (docs/20
+// B4) — for now everything is metric.
 
-const nf0 = new Intl.NumberFormat('hu-HU', { maximumFractionDigits: 0 })
-const nf1 = new Intl.NumberFormat('hu-HU', { maximumFractionDigits: 1 })
+import { useMemo } from 'react'
+import { useI18n } from '../i18n'
 
-export const num = (v?: number | null) => (v == null ? '–' : nf0.format(v))
-export const num1 = (v?: number | null) => (v == null ? '–' : nf1.format(v))
+/** What we print where there is no value. */
+const DASH = '–'
 
-// The useful precision differs per metric: on a step count a decimal is noise,
-// while for copper (mg) a whole number would swallow everything. The catalog says
-// how many decimals are needed (metrics.ts → MetricDef.digits).
-const nfCache = new Map<number, Intl.NumberFormat>()
-function nf(digits: number): Intl.NumberFormat {
-  let f = nfCache.get(digits)
-  if (!f) {
-    f = new Intl.NumberFormat('hu-HU', { maximumFractionDigits: digits })
-    nfCache.set(digits, f)
-  }
-  return f
+export type Formatters = {
+  /** A whole number: `1234.56` → "1 235". */
+  num: (v?: number | null) => string
+  /** One decimal: `1234.56` → "1 234,6". */
+  num1: (v?: number | null) => string
+  /** A decimal-aware number. `fmt(1234.56, 1)` → "1 234,6". */
+  fmt: (v?: number | null, digits?: number) => string
+  /** A ratio in 0..1 → "63%". */
+  percent: (v?: number | null, digits?: number) => string
+  /** Metres, promoted to km once it is worth it. */
+  km: (meters?: number | null) => string
+  /** Minutes → "1 ó 24 p", "2 óra", "45 p". */
+  duration: (minutes?: number | null) => string
+  durationBetween: (a?: string, b?: string) => string
+  /** A full date: "2026. aug. 11." / "Aug 11, 2026". */
+  date: (iso?: string) => string
+  dateTime: (iso?: string) => string
+  time: (iso?: string) => string
+  /** Chart-axis forms: no year, and only as much precision as a tick can hold. */
+  monthDay: (iso?: string) => string
+  yearMonth: (iso?: string) => string
+  hourMinute: (iso?: string) => string
+  /** "3 perccel ezelőtt", "tegnap" — for showing how fresh the sync is. */
+  relative: (iso?: string) => string
+  /** A unit token in the current language. */
+  unit: (unit?: string) => string
+  /** A HealthKit workout type. */
+  activityName: (type?: string) => string
+  /** A sleep stage. */
+  stageName: (stage?: string) => string
 }
 
-/** A decimal-aware number. `fmt(1234.56, 1)` → "1 234,6". */
-export const fmt = (v?: number | null, digits = 0) => (v == null ? '–' : nf(digits).format(v))
+export function useFormat(): Formatters {
+  const { locale, t, tUnit, tActivity, tStage } = useI18n()
 
-/** A ratio in 0..1 → "63%". */
-export const percent = (v?: number | null, digits = 0) =>
-  v == null || !Number.isFinite(v) ? '–' : `${nf(digits).format(v * 100)}%`
+  return useMemo<Formatters>(() => {
+    // The useful precision differs per metric: on a step count a decimal is
+    // noise, while for copper (mg) a whole number would swallow everything. The
+    // catalog says how many decimals are needed (metrics.ts → MetricDef.digits).
+    const numberFormats = new Map<number, Intl.NumberFormat>()
+    const nf = (digits: number): Intl.NumberFormat => {
+      let f = numberFormats.get(digits)
+      if (!f) {
+        f = new Intl.NumberFormat(locale, { maximumFractionDigits: digits })
+        numberFormats.set(digits, f)
+      }
+      return f
+    }
 
-export function km(meters?: number | null): string {
-  if (meters == null) return '–'
-  return meters >= 1000 ? `${nf1.format(meters / 1000)} km` : `${nf0.format(meters)} m`
+    const dateFmt = new Intl.DateTimeFormat(locale, {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+    })
+    const dateTimeFmt = new Intl.DateTimeFormat(locale, {
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+    const timeFmt = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' })
+    const monthDayFmt = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' })
+    const yearMonthFmt = new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short' })
+    // `numeric: 'auto'` is what turns -1 day into "tegnap" / "yesterday" instead
+    // of "1 nappal ezelőtt".
+    const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
+
+    const fmt = (v?: number | null, digits = 0) => (v == null ? DASH : nf(digits).format(v))
+
+    /**
+     * Guards every date formatter: an absent or unparseable ISO string prints a
+     * dash.
+     *
+     * ⚠️ A date-only string is parsed as LOCAL midnight, not UTC. `new
+     * Date('2026-08-11')` means UTC midnight per spec, which west of Greenwich
+     * renders as the 10th — and the dates we get in this form (a night's key, a
+     * summary's `from`) are calendar days on the user's own clock.
+     */
+    const on = (iso: string | undefined, f: Intl.DateTimeFormat): string => {
+      if (!iso) return DASH
+      const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
+      const d = dateOnly
+        ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+        : new Date(iso)
+      return Number.isNaN(d.getTime()) ? DASH : f.format(d)
+    }
+
+    const duration = (minutes?: number | null): string => {
+      if (minutes == null) return DASH
+      const m = Math.round(minutes)
+      const h = Math.floor(m / 60)
+      const rest = m % 60
+      if (h === 0) return t('duration.m', { m: rest })
+      // On a whole hour, do not print "0 p".
+      return rest === 0 ? t('duration.h', { h }) : t('duration.hm', { h, m: rest })
+    }
+
+    return {
+      num: (v) => fmt(v, 0),
+      num1: (v) => fmt(v, 1),
+      fmt,
+      percent: (v, digits = 0) =>
+        v == null || !Number.isFinite(v) ? DASH : `${nf(digits).format(v * 100)}%`,
+      km: (meters) => {
+        if (meters == null) return DASH
+        return meters >= 1000
+          ? `${nf(1).format(meters / 1000)} km`
+          : `${nf(0).format(meters)} m`
+      },
+      duration,
+      durationBetween: (a, b) => {
+        if (!a || !b) return DASH
+        return duration((new Date(b).getTime() - new Date(a).getTime()) / 60000)
+      },
+      date: (iso) => on(iso, dateFmt),
+      dateTime: (iso) => on(iso, dateTimeFmt),
+      time: (iso) => on(iso, timeFmt),
+      monthDay: (iso) => on(iso, monthDayFmt),
+      yearMonth: (iso) => on(iso, yearMonthFmt),
+      hourMinute: (iso) => on(iso, timeFmt),
+      relative: (iso) => {
+        if (!iso) return t('relative.never')
+        const diff = Date.now() - new Date(iso).getTime()
+        const min = Math.round(diff / 60000)
+        if (min < 1) return t('relative.now')
+        if (min < 60) return rtf.format(-min, 'minute')
+        const h = Math.round(min / 60)
+        if (h < 24) return rtf.format(-h, 'hour')
+        return rtf.format(-Math.round(h / 24), 'day')
+      },
+      unit: tUnit,
+      activityName: tActivity,
+      stageName: tStage,
+    }
+  }, [locale, t, tUnit, tActivity, tStage])
 }
-
-/** A duration given or computed in minutes → "1 ó 24 p", "2 óra", "45 p". */
-export function duration(minutes?: number | null): string {
-  if (minutes == null) return '–'
-  const m = Math.round(minutes)
-  const h = Math.floor(m / 60)
-  const rest = m % 60
-  if (h === 0) return `${rest} p`
-  // On a whole hour, do not print "0 p".
-  return rest === 0 ? `${h} óra` : `${h} ó ${rest} p`
-}
-
-/** Turns the backend's SI/HealthKit units into human Hungarian forms. */
-export function unitLabel(unit?: string): string {
-  if (!unit) return ''
-  switch (unit) {
-    case 'count':
-      return '' // a step count needs no unit
-    case 'count/min':
-      return '/perc'
-    case 'min':
-      return 'perc'
-    case 'h':
-      return 'óra'
-    default:
-      return unit // kcal, ms, m, km — these can stay as they are
-  }
-}
-
-export function durationBetween(a?: string, b?: string): string {
-  if (!a || !b) return '–'
-  return duration((new Date(b).getTime() - new Date(a).getTime()) / 60000)
-}
-
-export function date(iso?: string): string {
-  if (!iso) return '–'
-  return new Date(iso).toLocaleDateString('hu-HU', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-  })
-}
-
-export function dateTime(iso?: string): string {
-  if (!iso) return '–'
-  return new Date(iso).toLocaleString('hu-HU', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-export function time(iso?: string): string {
-  if (!iso) return '–'
-  return new Date(iso).toLocaleTimeString('hu-HU', {
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
-/** "3 perce", "tegnap", "5 napja" — for showing how fresh the sync is. */
-export function relative(iso?: string): string {
-  if (!iso) return 'soha'
-  const diff = Date.now() - new Date(iso).getTime()
-  const min = Math.round(diff / 60000)
-  if (min < 1) return 'épp most'
-  if (min < 60) return `${min} perce`
-  const h = Math.round(min / 60)
-  if (h < 24) return `${h} órája`
-  const d = Math.round(h / 24)
-  return d === 1 ? 'tegnap' : `${d} napja`
-}
-
-const ACTIVITY_HU: Record<string, string> = {
-  running: 'Futás',
-  walking: 'Séta',
-  cycling: 'Kerékpár',
-  hiking: 'Túra',
-  swimming: 'Úszás',
-  strengthTraining: 'Erősítés',
-  functionalStrengthTraining: 'Funkcionális erősítés',
-  traditionalStrengthTraining: 'Súlyzós edzés',
-  yoga: 'Jóga',
-  rowing: 'Evezés',
-  elliptical: 'Elliptikus',
-  highIntensityIntervalTraining: 'HIIT',
-  other: 'Egyéb',
-}
-export const activityName = (t?: string) => (t ? (ACTIVITY_HU[t] ?? t) : '–')
-
-const STAGE_HU: Record<string, string> = {
-  deep: 'Mély',
-  rem: 'REM',
-  core: 'Alap',
-  light: 'Könnyű',
-  awake: 'Ébren',
-  inBed: 'Ágyban',
-  asleep: 'Alvás',
-}
-export const stageName = (s?: string) => (s ? (STAGE_HU[s] ?? s) : '–')
 
 /** The drawing order of the stages: from deep sleep to being awake. */
 export const STAGE_ORDER = ['deep', 'rem', 'core', 'light', 'asleep', 'awake']
 
 /** Does it count as sleep? (Efficiency and total sleep time are built from these.) */
-export const isAsleep = (stage?: string) =>
-  !!stage && stage !== 'awake' && stage !== 'inBed'
+export const isAsleep = (stage?: string) => !!stage && stage !== 'awake' && stage !== 'inBed'
 
 /**
  * A Recharts-friendly stage palette. `color-mix()` is reliable as an HTML
@@ -169,5 +182,5 @@ export const STAGE_COLOR: Record<string, string> = {
 }
 
 // The metric catalog (name, unit, group, colour, aggregation) lives in
-// lib/metrics.ts — that one is not about five metrics but about the whole HealthKit
-// quantity list.
+// lib/metrics.ts — that one is not about five metrics but about the whole
+// HealthKit quantity list. The display NAMES for it live in src/i18n/.

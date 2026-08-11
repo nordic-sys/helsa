@@ -95,6 +95,26 @@ a:hover {
   color: var(--helsa-fjord);
 }
 
+/* The language switcher sits at the far end of the sidebar — below the nav on a
+   wide screen, after it on a narrow one. `margin-top: auto` does the pushing in
+   the column layout; in the row layout the axis flips, so `margin-left` takes
+   over. */
+.lang-switch {
+  display: flex;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 16px;
+}
+@media (max-width: 820px) {
+  .lang-switch {
+    margin-top: 0;
+    margin-left: auto;
+    padding-top: 0;
+    align-self: center;
+    flex: none;
+  }
+}
+
 .main {
   padding: 26px clamp(16px, 3vw, 34px) 60px;
   max-width: 1180px;
@@ -141,6 +161,18 @@ h1 {
   letter-spacing: 0.05em;
   color: var(--text-dim);
   margin: 0 0 10px;
+}
+
+/* A stat headline wraps to two lines in one language and fits on one in another
+   — that is a fact of translation, not a design choice. Pinning the number to
+   the bottom of the card keeps a row of stats aligned either way (grid items
+   already stretch to equal height). */
+.stat-card {
+  display: flex;
+  flex-direction: column;
+}
+.stat-card .stat {
+  margin-top: auto;
 }
 
 .stat {

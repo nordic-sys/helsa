@@ -1,9 +1,8 @@
 // The metric catalog — the full list of HealthKit quantity types (docs/23 §3).
 //
 // The backend's `data_type` is an open string, so any type can be stored and
-// queried. This catalog describes the PRESENTATION: display name, unit, group,
-// colour, decimal places and — most importantly — the **nature of the
-// aggregation**.
+// queried. This catalog describes the PRESENTATION: unit, group, colour, decimal
+// places and — most importantly — the **nature of the aggregation**.
 //
 // ⚠️ Summed vs averaged: this is not cosmetics but correctness. Steps and calories
 // consumed have to be ADDED UP; heart rate and body weight have to be AVERAGED. A
@@ -16,20 +15,15 @@
 // (`activeEnergy`, `hrv`), THAT is the key — because those are the only ones it
 // returns a correct `agg`/`unit`/`total` for — and the HealthKit name becomes an
 // alias. On query we ask for both, and whichever has data wins.
+//
+// ⚠️ The DISPLAY NAMES are not here: they live in `src/i18n/`, one set per
+// language, and `MetricKey` is derived from that dictionary — so a metric added
+// here without a translation is a compile error, not a blank label.
 
 import type { MetricSeries } from '../api/types'
+import type { GroupKey, MetricKey } from '../i18n/types'
 
-export type MetricGroupKey =
-  | 'activity'
-  | 'heart'
-  | 'respiratory'
-  | 'body'
-  | 'macro'
-  | 'mineral'
-  | 'vitamin'
-  | 'mobility'
-  | 'environment'
-  | 'other'
+export type MetricGroupKey = GroupKey
 
 /** `sum`: cumulative, to be added up over the period. `avg`: an instantaneous
  * measurement, to be averaged. */
@@ -37,8 +31,13 @@ export type MetricAgg = 'sum' | 'avg'
 
 export type MetricDef = {
   key: string
-  label: string
-  /** The unit to display. An empty string means it need not be printed. */
+  /**
+   * The unit to display, as a CANONICAL token — the same vocabulary the server
+   * speaks (`min`, `count/min`), not a pre-translated word. `i18n.tUnit()` turns
+   * it into something readable; anything it does not recognise (`kcal`, `mg`,
+   * `°C`) reads the same in either language and passes through. An empty string
+   * means it need not be printed.
+   */
   unit: string
   group: MetricGroupKey
   agg: MetricAgg
@@ -48,192 +47,173 @@ export type MetricDef = {
   aliases: string[]
 }
 
-export const METRIC_GROUPS: { key: MetricGroupKey; label: string; color: string }[] = [
-  { key: 'activity', label: 'Aktivitás', color: 'var(--helsa-move)' },
-  { key: 'heart', label: 'Szív', color: 'var(--helsa-pulse)' },
-  { key: 'respiratory', label: 'Légzés', color: 'var(--helsa-fjord)' },
-  { key: 'body', label: 'Testösszetétel', color: 'var(--helsa-nordlys)' },
-  { key: 'macro', label: 'Táplálkozás — makrók', color: 'var(--helsa-ember)' },
-  { key: 'mineral', label: 'Táplálkozás — ásványi', color: 'var(--helsa-fjord)' },
-  { key: 'vitamin', label: 'Táplálkozás — vitaminok', color: 'var(--helsa-move)' },
-  { key: 'mobility', label: 'Mobilitás', color: 'var(--helsa-nordlys)' },
-  { key: 'environment', label: 'Környezet', color: 'var(--helsa-fjord)' },
-  { key: 'other', label: 'Egyéb', color: 'var(--helsa-pulse)' },
+export const METRIC_GROUPS: { key: MetricGroupKey; color: string }[] = [
+  { key: 'activity', color: 'var(--helsa-move)' },
+  { key: 'heart', color: 'var(--helsa-pulse)' },
+  { key: 'respiratory', color: 'var(--helsa-fjord)' },
+  { key: 'body', color: 'var(--helsa-nordlys)' },
+  { key: 'macro', color: 'var(--helsa-ember)' },
+  { key: 'mineral', color: 'var(--helsa-fjord)' },
+  { key: 'vitamin', color: 'var(--helsa-move)' },
+  { key: 'mobility', color: 'var(--helsa-nordlys)' },
+  { key: 'environment', color: 'var(--helsa-fjord)' },
+  { key: 'other', color: 'var(--helsa-pulse)' },
 ]
 
 const GROUP_COLOR = new Map(METRIC_GROUPS.map((g) => [g.key, g.color]))
 
-export function groupLabel(g: MetricGroupKey): string {
-  return METRIC_GROUPS.find((x) => x.key === g)?.label ?? g
-}
-
-/** [wire name, display name, unit, aggregation, decimal places, overrides?] */
-type Row = [
-  string,
-  string,
-  string,
-  MetricAgg,
-  number,
-  { color?: string; aliases?: string[] }?,
-]
+/** [wire name, unit, aggregation, decimal places, overrides?] */
+type Row = [MetricKey, string, MetricAgg, number, { color?: string; aliases?: string[] }?]
 
 // --- 3.1 Activity and movement -----------------------------------------------
 const ACTIVITY: Row[] = [
-  ['stepCount', 'Lépés', '', 'sum', 0, { color: 'var(--helsa-move)' }],
-  ['distanceWalkingRunning', 'Gyaloglás/futás táv', 'm', 'sum', 0],
-  ['distanceCycling', 'Kerékpáros táv', 'm', 'sum', 0],
-  ['distanceSwimming', 'Úszott táv', 'm', 'sum', 0],
-  ['distanceWheelchair', 'Kerekesszékes táv', 'm', 'sum', 0],
-  ['distanceDownhillSnowSports', 'Lesiklott táv', 'm', 'sum', 0],
-  ['pushCount', 'Tolások', '', 'sum', 0],
-  ['swimmingStrokeCount', 'Úszótempók', '', 'sum', 0],
-  ['flightsClimbed', 'Megmászott emelet', '', 'sum', 0],
+  ['stepCount', '', 'sum', 0, { color: 'var(--helsa-move)' }],
+  ['distanceWalkingRunning', 'm', 'sum', 0],
+  ['distanceCycling', 'm', 'sum', 0],
+  ['distanceSwimming', 'm', 'sum', 0],
+  ['distanceWheelchair', 'm', 'sum', 0],
+  ['distanceDownhillSnowSports', 'm', 'sum', 0],
+  ['pushCount', '', 'sum', 0],
+  ['swimmingStrokeCount', '', 'sum', 0],
+  ['flightsClimbed', '', 'sum', 0],
   [
     'activeEnergy',
-    'Aktív energia',
     'kcal',
     'sum',
     0,
     { color: 'var(--helsa-ember)', aliases: ['activeEnergyBurned'] },
   ],
-  ['basalEnergyBurned', 'Alapanyagcsere-energia', 'kcal', 'sum', 0],
-  ['appleExerciseTime', 'Edzésidő', 'perc', 'sum', 0],
-  ['appleMoveTime', 'Mozgásidő', 'perc', 'sum', 0],
-  ['appleStandTime', 'Állásidő', 'perc', 'sum', 0],
-  ['nikeFuel', 'Nike Fuel', '', 'sum', 0],
-  ['physicalEffort', 'Fizikai megterhelés', 'kcal/ó/kg', 'avg', 1],
+  ['basalEnergyBurned', 'kcal', 'sum', 0],
+  ['appleExerciseTime', 'min', 'sum', 0],
+  ['appleMoveTime', 'min', 'sum', 0],
+  ['appleStandTime', 'min', 'sum', 0],
+  ['nikeFuel', '', 'sum', 0],
+  ['physicalEffort', 'kcal/hr/kg', 'avg', 1],
 ]
 
 // --- 3.2 Heart and circulation -----------------------------------------------
 const HEART: Row[] = [
-  ['heartRate', 'Pulzus', '/perc', 'avg', 0, { color: 'var(--helsa-pulse)' }],
-  ['restingHeartRate', 'Nyugalmi pulzus', '/perc', 'avg', 0, { color: 'var(--helsa-pulse)' }],
-  ['walkingHeartRateAverage', 'Séta közbeni pulzus', '/perc', 'avg', 0],
-  [
-    'hrv',
-    'HRV (SDNN)',
-    'ms',
-    'avg',
-    0,
-    { color: 'var(--helsa-fjord)', aliases: ['heartRateVariabilitySDNN'] },
-  ],
-  ['heartRateRecoveryOneMinute', 'Pulzus-visszaállás (1 perc)', '/perc', 'avg', 0],
-  ['atrialFibrillationBurden', 'Pitvarfibrilláció-arány', '%', 'avg', 1],
-  ['bloodPressureSystolic', 'Vérnyomás — szisztolés', 'mmHg', 'avg', 0],
-  ['bloodPressureDiastolic', 'Vérnyomás — diasztolés', 'mmHg', 'avg', 0],
-  ['peripheralPerfusionIndex', 'Perifériás perfúziós index', '%', 'avg', 1],
-  ['vo2Max', 'VO₂max', 'ml/kg/perc', 'avg', 1],
+  ['heartRate', 'count/min', 'avg', 0, { color: 'var(--helsa-pulse)' }],
+  ['restingHeartRate', 'count/min', 'avg', 0, { color: 'var(--helsa-pulse)' }],
+  ['walkingHeartRateAverage', 'count/min', 'avg', 0],
+  ['hrv', 'ms', 'avg', 0, { color: 'var(--helsa-fjord)', aliases: ['heartRateVariabilitySDNN'] }],
+  ['heartRateRecoveryOneMinute', 'count/min', 'avg', 0],
+  ['atrialFibrillationBurden', '%', 'avg', 1],
+  ['bloodPressureSystolic', 'mmHg', 'avg', 0],
+  ['bloodPressureDiastolic', 'mmHg', 'avg', 0],
+  ['peripheralPerfusionIndex', '%', 'avg', 1],
+  ['vo2Max', 'ml/kg/min', 'avg', 1],
 ]
 
 // --- 3.3 Respiration and blood oxygen ----------------------------------------
 const RESPIRATORY: Row[] = [
-  ['respiratoryRate', 'Légzésszám', '/perc', 'avg', 0],
-  ['oxygenSaturation', 'Véroxigén (SpO₂)', '%', 'avg', 1],
-  ['forcedVitalCapacity', 'Erőltetett vitálkapacitás', 'L', 'avg', 2],
-  ['forcedExpiratoryVolume1', 'FEV1', 'L', 'avg', 2],
-  ['peakExpiratoryFlowRate', 'Kilégzési csúcsáramlás', 'L/perc', 'avg', 0],
-  ['inhalerUsage', 'Inhalátor-használat', '', 'sum', 0],
+  ['respiratoryRate', 'count/min', 'avg', 0],
+  ['oxygenSaturation', '%', 'avg', 1],
+  ['forcedVitalCapacity', 'L', 'avg', 2],
+  ['forcedExpiratoryVolume1', 'L', 'avg', 2],
+  ['peakExpiratoryFlowRate', 'L/min', 'avg', 0],
+  ['inhalerUsage', '', 'sum', 0],
 ]
 
 // --- 3.4 Body composition ----------------------------------------------------
 const BODY: Row[] = [
-  ['bodyMass', 'Testsúly', 'kg', 'avg', 1],
-  ['bodyMassIndex', 'BMI', '', 'avg', 1],
-  ['bodyFatPercentage', 'Testzsír', '%', 'avg', 1],
-  ['leanBodyMass', 'Zsírmentes testtömeg', 'kg', 'avg', 1],
-  ['height', 'Testmagasság', 'm', 'avg', 2],
-  ['waistCircumference', 'Derékbőség', 'm', 'avg', 2],
-  ['appleSleepingWristTemperature', 'Alvási csuklóhőmérséklet', '°C', 'avg', 2],
-  ['bodyTemperature', 'Testhőmérséklet', '°C', 'avg', 1],
-  ['basalBodyTemperature', 'Bazális testhőmérséklet', '°C', 'avg', 2],
+  ['bodyMass', 'kg', 'avg', 1],
+  ['bodyMassIndex', '', 'avg', 1],
+  ['bodyFatPercentage', '%', 'avg', 1],
+  ['leanBodyMass', 'kg', 'avg', 1],
+  ['height', 'm', 'avg', 2],
+  ['waistCircumference', 'm', 'avg', 2],
+  ['appleSleepingWristTemperature', '°C', 'avg', 2],
+  ['bodyTemperature', '°C', 'avg', 1],
+  ['basalBodyTemperature', '°C', 'avg', 2],
 ]
 
 // --- 3.5 Nutrition — macros --------------------------------------------------
 const MACRO: Row[] = [
-  ['dietaryEnergyConsumed', 'Bevitt energia', 'kcal', 'sum', 0, { color: 'var(--helsa-ember)' }],
-  ['dietaryProtein', 'Fehérje', 'g', 'sum', 1, { color: 'var(--helsa-fjord)' }],
-  ['dietaryCarbohydrates', 'Szénhidrát', 'g', 'sum', 1, { color: 'var(--helsa-ember)' }],
-  ['dietaryFatTotal', 'Zsír (összes)', 'g', 'sum', 1, { color: 'var(--helsa-nordlys)' }],
-  ['dietaryFiber', 'Rost', 'g', 'sum', 1],
-  ['dietarySugar', 'Cukor', 'g', 'sum', 1],
-  ['dietaryFatSaturated', 'Telített zsír', 'g', 'sum', 1],
-  ['dietaryFatMonounsaturated', 'Egyszeresen telítetlen zsír', 'g', 'sum', 1],
-  ['dietaryFatPolyunsaturated', 'Többszörösen telítetlen zsír', 'g', 'sum', 1],
-  ['dietaryCholesterol', 'Koleszterin', 'mg', 'sum', 0],
-  ['dietaryWater', 'Víz', 'mL', 'sum', 0],
-  ['dietaryCaffeine', 'Koffein', 'mg', 'sum', 0],
+  ['dietaryEnergyConsumed', 'kcal', 'sum', 0, { color: 'var(--helsa-ember)' }],
+  ['dietaryProtein', 'g', 'sum', 1, { color: 'var(--helsa-fjord)' }],
+  ['dietaryCarbohydrates', 'g', 'sum', 1, { color: 'var(--helsa-ember)' }],
+  ['dietaryFatTotal', 'g', 'sum', 1, { color: 'var(--helsa-nordlys)' }],
+  ['dietaryFiber', 'g', 'sum', 1],
+  ['dietarySugar', 'g', 'sum', 1],
+  ['dietaryFatSaturated', 'g', 'sum', 1],
+  ['dietaryFatMonounsaturated', 'g', 'sum', 1],
+  ['dietaryFatPolyunsaturated', 'g', 'sum', 1],
+  ['dietaryCholesterol', 'mg', 'sum', 0],
+  ['dietaryWater', 'mL', 'sum', 0],
+  ['dietaryCaffeine', 'mg', 'sum', 0],
 ]
 
 // --- 3.6 Nutrition — minerals ------------------------------------------------
 const MINERAL: Row[] = [
-  ['dietaryCalcium', 'Kalcium', 'mg', 'sum', 0],
-  ['dietaryIron', 'Vas', 'mg', 'sum', 1],
-  ['dietaryMagnesium', 'Magnézium', 'mg', 'sum', 0],
-  ['dietaryPhosphorus', 'Foszfor', 'mg', 'sum', 0],
-  ['dietaryPotassium', 'Kálium', 'mg', 'sum', 0],
-  ['dietarySodium', 'Nátrium', 'mg', 'sum', 0],
-  ['dietaryZinc', 'Cink', 'mg', 'sum', 1],
-  ['dietaryChloride', 'Klorid', 'mg', 'sum', 0],
-  ['dietaryChromium', 'Króm', 'µg', 'sum', 1],
-  ['dietaryCopper', 'Réz', 'mg', 'sum', 2],
-  ['dietaryIodine', 'Jód', 'µg', 'sum', 1],
-  ['dietaryManganese', 'Mangán', 'mg', 'sum', 2],
-  ['dietaryMolybdenum', 'Molibdén', 'µg', 'sum', 1],
-  ['dietarySelenium', 'Szelén', 'µg', 'sum', 1],
+  ['dietaryCalcium', 'mg', 'sum', 0],
+  ['dietaryIron', 'mg', 'sum', 1],
+  ['dietaryMagnesium', 'mg', 'sum', 0],
+  ['dietaryPhosphorus', 'mg', 'sum', 0],
+  ['dietaryPotassium', 'mg', 'sum', 0],
+  ['dietarySodium', 'mg', 'sum', 0],
+  ['dietaryZinc', 'mg', 'sum', 1],
+  ['dietaryChloride', 'mg', 'sum', 0],
+  ['dietaryChromium', 'µg', 'sum', 1],
+  ['dietaryCopper', 'mg', 'sum', 2],
+  ['dietaryIodine', 'µg', 'sum', 1],
+  ['dietaryManganese', 'mg', 'sum', 2],
+  ['dietaryMolybdenum', 'µg', 'sum', 1],
+  ['dietarySelenium', 'µg', 'sum', 1],
 ]
 
 // --- 3.7 Nutrition — vitamins ------------------------------------------------
 const VITAMIN: Row[] = [
-  ['dietaryVitaminA', 'A-vitamin', 'µg', 'sum', 1],
-  ['dietaryVitaminB6', 'B6-vitamin', 'mg', 'sum', 2],
-  ['dietaryVitaminB12', 'B12-vitamin', 'µg', 'sum', 1],
-  ['dietaryVitaminC', 'C-vitamin', 'mg', 'sum', 1],
-  ['dietaryVitaminD', 'D-vitamin', 'µg', 'sum', 1],
-  ['dietaryVitaminE', 'E-vitamin', 'mg', 'sum', 1],
-  ['dietaryVitaminK', 'K-vitamin', 'µg', 'sum', 1],
-  ['dietaryThiamin', 'Tiamin (B1)', 'mg', 'sum', 2],
-  ['dietaryRiboflavin', 'Riboflavin (B2)', 'mg', 'sum', 2],
-  ['dietaryNiacin', 'Niacin (B3)', 'mg', 'sum', 1],
-  ['dietaryFolate', 'Folát (B9)', 'µg', 'sum', 1],
-  ['dietaryBiotin', 'Biotin (B7)', 'µg', 'sum', 1],
-  ['dietaryPantothenicAcid', 'Pantoténsav (B5)', 'mg', 'sum', 2],
+  ['dietaryVitaminA', 'µg', 'sum', 1],
+  ['dietaryVitaminB6', 'mg', 'sum', 2],
+  ['dietaryVitaminB12', 'µg', 'sum', 1],
+  ['dietaryVitaminC', 'mg', 'sum', 1],
+  ['dietaryVitaminD', 'µg', 'sum', 1],
+  ['dietaryVitaminE', 'mg', 'sum', 1],
+  ['dietaryVitaminK', 'µg', 'sum', 1],
+  ['dietaryThiamin', 'mg', 'sum', 2],
+  ['dietaryRiboflavin', 'mg', 'sum', 2],
+  ['dietaryNiacin', 'mg', 'sum', 1],
+  ['dietaryFolate', 'µg', 'sum', 1],
+  ['dietaryBiotin', 'µg', 'sum', 1],
+  ['dietaryPantothenicAcid', 'mg', 'sum', 2],
 ]
 
 // --- 3.8 Mobility and gait ---------------------------------------------------
 const MOBILITY: Row[] = [
-  ['walkingSpeed', 'Gyaloglási sebesség', 'm/s', 'avg', 2],
-  ['walkingStepLength', 'Lépéshossz', 'm', 'avg', 2],
-  ['walkingAsymmetryPercentage', 'Járás-aszimmetria', '%', 'avg', 1],
-  ['walkingDoubleSupportPercentage', 'Kettős támaszfázis', '%', 'avg', 1],
-  ['sixMinuteWalkTestDistance', '6 perces séta-teszt', 'm', 'avg', 0],
-  ['stairAscentSpeed', 'Lépcsőn fel — sebesség', 'm/s', 'avg', 2],
-  ['stairDescentSpeed', 'Lépcsőn le — sebesség', 'm/s', 'avg', 2],
-  ['appleWalkingSteadiness', 'Járásstabilitás', '%', 'avg', 1],
-  ['runningSpeed', 'Futósebesség', 'm/s', 'avg', 2],
-  ['runningPower', 'Futóteljesítmény', 'W', 'avg', 0],
-  ['runningStrideLength', 'Futó lépéshossz', 'm', 'avg', 2],
-  ['runningVerticalOscillation', 'Függőleges kilengés', 'cm', 'avg', 1],
-  ['runningGroundContactTime', 'Talajérintési idő', 'ms', 'avg', 0],
+  ['walkingSpeed', 'm/s', 'avg', 2],
+  ['walkingStepLength', 'm', 'avg', 2],
+  ['walkingAsymmetryPercentage', '%', 'avg', 1],
+  ['walkingDoubleSupportPercentage', '%', 'avg', 1],
+  ['sixMinuteWalkTestDistance', 'm', 'avg', 0],
+  ['stairAscentSpeed', 'm/s', 'avg', 2],
+  ['stairDescentSpeed', 'm/s', 'avg', 2],
+  ['appleWalkingSteadiness', '%', 'avg', 1],
+  ['runningSpeed', 'm/s', 'avg', 2],
+  ['runningPower', 'W', 'avg', 0],
+  ['runningStrideLength', 'm', 'avg', 2],
+  ['runningVerticalOscillation', 'cm', 'avg', 1],
+  ['runningGroundContactTime', 'ms', 'avg', 0],
 ]
 
 // --- 3.9 Environment and hearing ---------------------------------------------
 const ENVIRONMENT: Row[] = [
-  ['environmentalAudioExposure', 'Környezeti hangterhelés', 'dB', 'avg', 0],
-  ['headphoneAudioExposure', 'Fejhallgató-hangterhelés', 'dB', 'avg', 0],
-  ['environmentalSoundReduction', 'Zajcsökkentés', 'dB', 'avg', 0],
-  ['timeInDaylight', 'Napfényben töltött idő', 'perc', 'sum', 0],
-  ['uvExposure', 'UV-terhelés', '', 'avg', 1],
+  ['environmentalAudioExposure', 'dB', 'avg', 0],
+  ['headphoneAudioExposure', 'dB', 'avg', 0],
+  ['environmentalSoundReduction', 'dB', 'avg', 0],
+  ['timeInDaylight', 'min', 'sum', 0],
+  ['uvExposure', '', 'avg', 1],
 ]
 
 // --- 3.10 Other --------------------------------------------------------------
 const OTHER: Row[] = [
-  ['bloodGlucose', 'Vércukor', 'mg/dL', 'avg', 0],
-  ['bloodAlcoholContent', 'Véralkohol', '%', 'avg', 3],
-  ['insulinDelivery', 'Inzulin-bevitel', 'IU', 'sum', 1],
-  ['numberOfTimesFallen', 'Elesések', '', 'sum', 0],
-  ['electrodermalActivity', 'Bőrvezetés', 'S', 'avg', 2],
-  ['waterTemperature', 'Vízhőmérséklet', '°C', 'avg', 1],
-  ['underwaterDepth', 'Merülési mélység', 'm', 'avg', 1],
+  ['bloodGlucose', 'mg/dL', 'avg', 0],
+  ['bloodAlcoholContent', '%', 'avg', 3],
+  ['insulinDelivery', 'IU', 'sum', 1],
+  ['numberOfTimesFallen', '', 'sum', 0],
+  ['electrodermalActivity', 'S', 'avg', 2],
+  ['waterTemperature', '°C', 'avg', 1],
+  ['underwaterDepth', 'm', 'avg', 1],
 ]
 
 const SOURCE: [MetricGroupKey, Row[]][] = [
@@ -251,9 +231,8 @@ const SOURCE: [MetricGroupKey, Row[]][] = [
 
 /** The catalog in order — the groups follow the order of docs/23 §3. */
 export const METRIC_LIST: MetricDef[] = SOURCE.flatMap(([group, rows]) =>
-  rows.map(([key, label, unit, agg, digits, extra]) => ({
+  rows.map(([key, unit, agg, digits, extra]) => ({
     key,
-    label,
     unit,
     group,
     agg,
@@ -276,14 +255,13 @@ export const metricsOfGroup = (g: MetricGroupKey) => METRIC_LIST.filter((d) => d
 /**
  * Give an unknown wire name a usable definition too: the catalog is a snapshot of
  * docs/23, whereas HealthKit grows with every iOS release. Better that it shows up
- * raw than that it disappears.
+ * raw than that it disappears — `i18n.tMetric()` humanises the name for it.
  */
 export function metricDef(key: string): MetricDef {
   const known = METRICS[key]
   if (known) return known
   return {
     key,
-    label: humanize(key),
     unit: '',
     group: 'other',
     agg: 'avg',
@@ -291,12 +269,6 @@ export function metricDef(key: string): MetricDef {
     color: 'var(--text-dim)',
     aliases: [],
   }
-}
-
-/** `dietaryVitaminB12` → `Dietary vitamin b12` — for unknown types only. */
-function humanize(key: string): string {
-  const s = key.replace(/([A-Z])/g, ' $1').trim()
-  return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase()
 }
 
 // --- Reading a series --------------------------------------------------------
@@ -312,6 +284,8 @@ export type ReadSeries = {
    * there is nothing to ask the server about. Without this rule the truth about
    * units would live in three places — and they did drift apart: `dietaryWater`
    * was in L here and in mL in the SDK.
+   *
+   * Still a canonical token, not a display string: run it through `tUnit()`.
    */
   unit: string
   /** What the RECEIVED data actually carries — not necessarily what the catalog

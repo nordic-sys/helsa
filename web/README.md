@@ -42,6 +42,28 @@ ceremony without a purpose.
 
 ## Language
 
-The interface text is **Hungarian**; the code and the comments are English. The
-contract already carries a `locale ∈ {hu, en}` setting, so translating the UI is a
-matter of extracting the strings, not of restructuring anything.
+The interface speaks **Hungarian and English**, switchable at runtime from the
+sidebar (and from Settings). The starting language comes from `navigator.language`
+— anything that is neither Hungarian nor English lands on English — and a choice
+made in the switcher is remembered in `localStorage`.
+
+The whole of it lives in `src/i18n/`, hand-rolled rather than pulled from a
+library: two languages and a few hundred keys need a typed record and `Intl`, not
+a framework. `hu.ts` defines the key set, `en.ts` is typed as its shape, so a
+missing translation is a **compile error**. `MetricKey` is derived from the
+dictionary too, which means the ~105-entry metric catalog in `lib/metrics.ts`
+cannot name a metric that has no display name.
+
+Formatting is part of translation, not separate from it: `useFormat()` builds its
+number, date, duration and relative-time formatters from the active locale via
+`Intl`, so `1 234,6` / `1,234.6` and `2026. aug. 11.` / `Aug 11, 2026` both follow
+the language. Units are stored as canonical tokens (`min`, `count/min`) and
+translated on the way out, which is also how the server's units are rendered.
+
+**Not translated, on purpose** — this is server content, not interface text:
+
+- the `/insights` sentences, which the backend composes in Hungarian;
+- `problem+json` error titles and details (the UI's own fallbacks *are*
+  translated);
+- device names, platform strings and the `unit_system` value, which are echoed
+  back as they were registered.
