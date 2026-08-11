@@ -1,0 +1,16 @@
+# Build artifacts
+/bin/
+/out/
+helsa-api
+helsa-worker
+
+# Local env (holds secrets!) — .env.example is the committed one
+.env
+
+# Derived codegen input (the canonical source is openapi.yaml)
+/api/openapi.gen.yaml
+
+.DS_Store
+
+# build output of cmd/token
+/token

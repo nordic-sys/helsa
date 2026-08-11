@@ -1,0 +1,26 @@
+[ req ]
+default_md          = sha256
+prompt              = no
+distinguished_name  = dn
+req_extensions      = v3_req
+
+[ dn ]
+CN = helsa.example.com
+O  = Helsa
+
+# The SAN list is deliberately broad: it carries the public DDNS name, the internal
+# name and the LAN IP, so that the proxy can serve both the phone (from outside) and
+# the WireGuard browser (from inside) with the same certificate. If the final
+# hostname changes, rewrite it here and run `make server` again.
+[ v3_req ]
+basicConstraints       = CA:FALSE
+keyUsage               = critical, digitalSignature, keyEncipherment
+extendedKeyUsage       = serverAuth
+subjectKeyIdentifier   = hash
+subjectAltName         = @alt
+
+[ alt ]
+DNS.1 = helsa.example.com
+DNS.2 = api.helsa.example.com
+DNS.3 = helsa
+IP.1  = 192.168.1.10

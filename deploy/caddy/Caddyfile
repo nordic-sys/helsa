@@ -1,0 +1,76 @@
+# The Helsa reverse proxy — the ONLY component that faces outwards.
+# Plan: docs/07-infra-deployment.md §4, decision: ADR-0003.
+#
+# Two separate surfaces, with two separate gates:
+#   :443   API — publicly routable, mTLS MANDATORY (this is where the phone syncs)
+#   :8443  Web — NOT port-forwarded on the router, and filtered by IP on top of that
+{
+	# No automatic Let's Encrypt: we use our own private CA.
+	auto_https off
+	admin off
+}
+
+# ---------------------------------------------------------------------------
+# API — the mTLS gate
+# ---------------------------------------------------------------------------
+https://:443 {
+	tls /etc/caddy/pki/server.crt /etc/caddy/pki/server.key {
+		client_auth {
+			# require_and_verify: without a valid client certificate signed by OUR
+			# CA the TLS handshake fails — the request never reaches the HTTP layer.
+			mode require_and_verify
+			trust_pool file {
+				pem_file /etc/caddy/pki/ca.crt
+			}
+		}
+	}
+
+	# This is how the backend knows which device is speaking (docs/08 §4).
+	handle /v1/* {
+		reverse_proxy api:8080 {
+			header_up X-Client-Cert-Subject {http.request.tls.client.subject}
+			header_up X-Client-Cert-Serial {http.request.tls.client.serial}
+		}
+	}
+
+	# Health/readiness: without a certificate these are unreachable too (the mTLS
+	# applies to the whole site), but they also stay trivial in content — no internal
+	# state. /readyz reports whether the DB + Redis + MQ are reachable, which is why
+	# it is needed from outside as well.
+	@health path /healthz /readyz
+	handle @health {
+		reverse_proxy api:8080
+	}
+
+	handle {
+		respond "not found" 404
+	}
+}
+
+# ---------------------------------------------------------------------------
+# Web dashboard — LAN / WireGuard only
+# ---------------------------------------------------------------------------
+# No client certificate: in a browser that would be uncomfortable. Here the gate is
+# the network. Two defences that reinforce each other:
+#   1. this port is NOT forwarded on the router (primary, at the network level)
+#   2. a remote_ip filter for the LAN + WireGuard ranges (secondary, in case somebody
+#      does open it after all)
+https://:8443 {
+	tls /etc/caddy/pki/server.crt /etc/caddy/pki/server.key
+
+	@allowed remote_ip {$LAN_SUBNET} {$WG_SUBNET}
+
+	handle @allowed {
+		# The web reads the same API, just not through mTLS.
+		handle /v1/* {
+			reverse_proxy api:8080
+		}
+		handle {
+			reverse_proxy web:80
+		}
+	}
+
+	handle {
+		respond "forbidden" 403
+	}
+}

@@ -1,0 +1,149 @@
+# Helsa — the HOME VM overlay (phase 0.3–0.4).
+#
+# It adds the application services and the proxy. The data services publish NO
+# ports (see the base file) — Caddy alone faces outwards.
+#
+# Expected directory layout on the VM:
+#   /opt/helsa/
+#   ├── helsa/           ← the monorepo clone
+#   │   ├── deploy/      ← this is where you run compose
+#   │   ├── backend/     ← the build context for the api/worker images
+#   │   └── web/         ← the static build (until it exists, the web service can be skipped)
+#   └── pki/             ← ca.crt, server.crt, server.key (see deploy/pki/README.md §3)
+#
+# pki/ sits DELIBERATELY OUTSIDE the clone: the keys must never end up in the
+# repository, and this way a `git clean` cannot take them away either.
+#
+# Usage:
+#   make prod-up        start it
+#   make prod-migrate   migration — a SEPARATE, DELIBERATE step (docs/07 §3.1)
+
+services:
+  timescaledb:
+    environment:
+      # The -ha image brings Patroni too; on a single-machine install that is just noise.
+      PATRONI_SCOPE: helsa
+
+  api:
+    build:
+      context: ../backend
+      args:
+        APP: api
+    image: helsa-api:local
+    container_name: helsa-api
+    env_file: .env
+    environment:
+      HELSA_HTTP_ADDR: ":8080"
+      HELSA_DATABASE_URL: "postgres://${POSTGRES_USER:-helsa}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB:-helsa}?sslmode=disable"
+      HELSA_REDIS_ADDR: "redis:6379"
+      HELSA_REDIS_PASSWORD: "${REDIS_PASSWORD}"
+      HELSA_RABBITMQ_URL: "amqp://${RABBITMQ_USER:-helsa}:${RABBITMQ_PASSWORD}@rabbitmq:5672/"
+      # ⚠️ Its default is "dev-only-insecure-secret-change-me" — overriding it is mandatory.
+      HELSA_JWT_SECRET: "${HELSA_JWT_SECRET:?must be set in .env}"
+      # The device-token model (docs/08 §7): no Apple JWKS, issuing the token is a manual step.
+      HELSA_AUTH_DEV_MODE: "${HELSA_AUTH_DEV_MODE:-true}"
+    depends_on:
+      timescaledb: { condition: service_healthy }
+      redis:       { condition: service_healthy }
+      rabbitmq:    { condition: service_healthy }
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ../backend
+      args:
+        APP: worker
+    image: helsa-worker:local
+    container_name: helsa-worker
+    env_file: .env
+    environment:
+      HELSA_DATABASE_URL: "postgres://${POSTGRES_USER:-helsa}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB:-helsa}?sslmode=disable"
+      HELSA_REDIS_ADDR: "redis:6379"
+      HELSA_REDIS_PASSWORD: "${REDIS_PASSWORD}"
+      HELSA_RABBITMQ_URL: "amqp://${RABBITMQ_USER:-helsa}:${RABBITMQ_PASSWORD}@rabbitmq:5672/"
+      HELSA_JWT_SECRET: "${HELSA_JWT_SECRET:?must be set in .env}"
+    depends_on:
+      timescaledb: { condition: service_healthy }
+      rabbitmq:    { condition: service_healthy }
+    restart: unless-stopped
+
+  # Migration: under a SEPARATE profile, so that `up -d` NEVER runs it automatically.
+  # On a production database, "migrate on start-up" behaviour is hard to reverse after
+  # a bad deploy (docs/07 §3.1).
+  migrate:
+    profiles: ["tools"]
+    build:
+      context: ./migrate
+    image: helsa-migrate:local
+    container_name: helsa-migrate
+    environment:
+      GOOSE_DRIVER: postgres
+      GOOSE_DBSTRING: "postgres://${POSTGRES_USER:-helsa}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB:-helsa}?sslmode=disable"
+      GOOSE_MIGRATION_DIR: /migrations
+    volumes:
+      - ../backend/db/migrations:/migrations:ro
+    depends_on:
+      timescaledb: { condition: service_healthy }
+
+  # Issuing a device token. A single-user system has no interactive login
+  # (ADR-0003) — the operator issues the token, once per device. That is why it sits
+  # in the "tools" profile: it does not run on its own.
+  #
+  #   make prod-token SUBJECT=bob-web
+  token:
+    profiles: ["tools"]
+    build:
+      context: ../backend
+      args:
+        APP: token
+    image: helsa-token:local
+    env_file: .env
+    environment:
+      HELSA_DATABASE_URL: "postgres://${POSTGRES_USER:-helsa}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB:-helsa}?sslmode=disable"
+      HELSA_REDIS_ADDR: "redis:6379"
+      HELSA_REDIS_PASSWORD: "${REDIS_PASSWORD}"
+      HELSA_RABBITMQ_URL: "amqp://${RABBITMQ_USER:-helsa}:${RABBITMQ_PASSWORD}@rabbitmq:5672/"
+      HELSA_JWT_SECRET: "${HELSA_JWT_SECRET:?must be set in .env}"
+      # The device token is deliberately long-lived: here expiry is more of a risk
+      # (a silent stop in syncing) than a protection — docs/08 §7.
+      HELSA_ACCESS_TTL: "${HELSA_DEVICE_TOKEN_TTL:-8760h}"
+    depends_on:
+      timescaledb: { condition: service_healthy }
+      redis:       { condition: service_healthy }
+
+  web:
+    build:
+      context: ../web
+    image: helsa-web:local
+    container_name: helsa-web
+    # Publishes no port: Caddy proxies :8443 here, and even that is not port-forwarded
+    # on the router (docs/07 §4).
+    restart: unless-stopped
+
+  proxy:
+    image: caddy:2-alpine
+    container_name: helsa-proxy
+    ports:
+      # 443: the ONLY port reachable from outside through the router. The mTLS gate.
+      - "443:443"
+      # 8443: the web dashboard. DELIBERATELY NOT port-forwarded on the router — the
+      # "unreachable from the internet" guarantee comes from the network, not from a
+      # line of configuration.
+      - "8443:8443"
+    volumes:
+      - ./caddy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - /opt/helsa/pki:/etc/caddy/pki:ro
+      - helsa_caddydata:/data
+      - helsa_caddyconfig:/config
+    environment:
+      # The source ranges allowed to reach the web dashboard (LAN + WireGuard).
+      LAN_SUBNET: "${LAN_SUBNET:-192.168.1.0/24}"
+      WG_SUBNET: "${WG_SUBNET:-10.100.0.0/24}"
+    depends_on:
+      - api
+      - web
+    restart: unless-stopped
+
+volumes:
+  helsa_caddydata:
+  helsa_caddyconfig:

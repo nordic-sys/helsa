@@ -1,0 +1,65 @@
+name: helsa
+
+# Helsa — the DATA SERVICES (TimescaleDB + Redis + RabbitMQ). This is the BASE file.
+#
+# It deliberately publishes NO ports at all: the safe default is "they only talk on
+# the internal Docker network". The dev overlay is what adds the ports.
+#
+#   local development:  make up        (-f docker-compose.yml -f docker-compose.dev.yml)
+#   home VM:            make prod-up   (-f docker-compose.yml -f docker-compose.prod.yml)
+#
+# Plan: docs/07-infra-deployment.md
+
+services:
+  timescaledb:
+    image: timescale/timescaledb-ha:pg18   # PG18 in the -ha image (Ubuntu + Toolkit + PostGIS + Patroni); the "most complete" Timescale. Pin to a concrete tag before production.
+    container_name: helsa-timescaledb
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-helsa}
+      POSTGRES_USER: ${POSTGRES_USER:-helsa}       # locally the helsa superuser; in production a scoped helsa role
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-helsa_local_dev}
+    volumes:
+      # The -ha image creates PGDATA in the /home/postgres/pgdata/data subdirectory;
+      # the named volume is mounted on the PARENT directory, so that initdb can chmod
+      # the data subdirectory.
+      - helsa_pgdata:/home/postgres/pgdata
+      - ./init/timescaledb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-helsa} -d ${POSTGRES_DB:-helsa}"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  redis:
+    image: redis:8-alpine
+    container_name: helsa-redis
+    command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-helsa_local_dev}", "--appendonly", "yes"]
+    volumes:
+      - helsa_redisdata:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli --no-auth-warning -a \"${REDIS_PASSWORD:-helsa_local_dev}\" ping | grep -q PONG"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: helsa-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-helsa}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-helsa_local_dev}
+    volumes:
+      - helsa_rabbitmqdata:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+    restart: unless-stopped
+
+volumes:
+  helsa_pgdata:
+  helsa_redisdata:
+  helsa_rabbitmqdata:

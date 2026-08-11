@@ -1,0 +1,12 @@
+# oapi-codegen configuration — generating the server interface + the DTOs from openapi.yaml.
+# Run it with: `go generate ./...` (see internal/api/gen.go) or
+# `go tool oapi-codegen -config api/oapi-codegen.yaml api/openapi.yaml`.
+package: api
+output: internal/api/api.gen.go
+generate:
+  models: true        # DTO structs from components/schemas
+  chi-server: true    # a chi-based ServerInterface + the router wiring
+  embedded-spec: false
+output-options:
+  skip-prune: false
+  skip-fmt: false

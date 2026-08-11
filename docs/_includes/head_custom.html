@@ -1,0 +1,88 @@
+<!--
+  Colour scheme handling.
+
+  Just the Docs ships three stylesheets: -default (built from the color_scheme
+  setting in _config.yml), -light and -dark. jtd.setTheme() swaps the href of
+  the first stylesheet link.
+
+  This include runs inside <head>, after that link element and after
+  just-the-docs.js has loaded, so the switch happens before first paint —
+  no flash of the wrong theme.
+
+  Order of preference:
+    1. an explicit choice the visitor made (localStorage)
+    2. the operating system setting (prefers-color-scheme)
+-->
+<script>
+  (function () {
+    var KEY = 'helsa-color-scheme';
+
+    function preferred() {
+      try {
+        var stored = window.localStorage.getItem(KEY);
+        if (stored === 'dark' || stored === 'light') return stored;
+      } catch (e) { /* private mode: fall through to the OS setting */ }
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+        ? 'dark'
+        : 'light';
+    }
+
+    window.helsaApplyTheme = function (theme) {
+      if (typeof jtd !== 'undefined' && jtd.setTheme) {
+        jtd.setTheme(theme);
+      } else {
+        // Defensive fallback if the theme's JS ever stops exposing setTheme.
+        var link = document.querySelector('link[rel="stylesheet"]');
+        if (link) {
+          link.setAttribute(
+            'href',
+            link.getAttribute('href').replace(/just-the-docs-[a-z]+\.css/, 'just-the-docs-' + theme + '.css')
+          );
+        }
+      }
+      document.documentElement.setAttribute('data-helsa-theme', theme);
+    };
+
+    window.helsaToggleTheme = function () {
+      var next = document.documentElement.getAttribute('data-helsa-theme') === 'dark' ? 'light' : 'dark';
+      try { window.localStorage.setItem(KEY, next); } catch (e) { /* ignore */ }
+      window.helsaApplyTheme(next);
+      var label = next === 'dark' ? 'Light mode' : 'Dark mode';
+      var buttons = document.querySelectorAll('.helsa-theme-toggle');
+      for (var i = 0; i < buttons.length; i++) buttons[i].textContent = label;
+    };
+
+    window.helsaApplyTheme(preferred());
+
+    // Follow the OS if the visitor has not made an explicit choice.
+    if (window.matchMedia) {
+      var mq = window.matchMedia('(prefers-color-scheme: dark)');
+      var onChange = function (e) {
+        try { if (window.localStorage.getItem(KEY)) return; } catch (err) { /* ignore */ }
+        window.helsaApplyTheme(e.matches ? 'dark' : 'light');
+      };
+      if (mq.addEventListener) mq.addEventListener('change', onChange);
+      else if (mq.addListener) mq.addListener(onChange);
+    }
+  })();
+</script>
+
+<style>
+  .helsa-theme-toggle {
+    margin: 0.6rem 0 0;
+    padding: 0;
+    font-size: 0.75rem;
+    background: none;
+    border: 0;
+    cursor: pointer;
+    color: inherit;
+    opacity: 0.75;
+    text-decoration: underline;
+  }
+  .helsa-theme-toggle:hover { opacity: 1; }
+
+  /* Long command lines and wide tables scroll inside their own box rather
+     than pushing the page sideways on a phone. */
+  .main-content pre,
+  .main-content table { overflow-x: auto; display: block; max-width: 100%; }
+</style>

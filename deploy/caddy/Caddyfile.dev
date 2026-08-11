@@ -1,0 +1,43 @@
+# The Helsa reverse proxy — DEV VM.
+#
+# The same as the production `Caddyfile`, with ONE difference: **there is no :443
+# mTLS gate**.
+#
+# ⚠️ This is not laziness but protection. If dev also demanded mTLS, it would need a
+# client certificate — and the most obvious move would be to use the production one.
+# From that point on your phone's production certificate would be good for the dev
+# backend too, and one mistyped address would be enough to send your real health data
+# into the development database.
+#
+# Without mTLS this is STRUCTURALLY impossible: dev accepts nothing that the
+# production certificate vouches for, because it asks for no certificate at all —
+# here the gate is the network.
+{
+	auto_https off
+	admin off
+}
+
+# ---------------------------------------------------------------------------
+# Web + API — LAN / WireGuard only
+# ---------------------------------------------------------------------------
+# The same port and path layout as in production. Deliberately: if dev had a
+# different shape, the differences would surface exactly at the point of wiring
+# things up — in production.
+https://:8443 {
+	tls /etc/caddy/pki/server.crt /etc/caddy/pki/server.key
+
+	@allowed remote_ip {$LAN_SUBNET} {$WG_SUBNET}
+
+	handle @allowed {
+		handle /v1/* {
+			reverse_proxy api:8080
+		}
+		handle {
+			reverse_proxy web:80
+		}
+	}
+
+	handle {
+		respond "forbidden" 403
+	}
+}

@@ -1,0 +1,29 @@
+# The DEV VM overlay — it goes ON TOP of `docker-compose.prod.yml`.
+#
+# The dev machine runs the same stack as production, with two differences:
+#
+#   1. **There is no mTLS gate** (:443). The dev Caddyfile only opens :8443, with
+#      LAN/WireGuard filtering. The reasoning is at the top of
+#      `caddy/Caddyfile.dev`: with mTLS, the phone's PRODUCTION certificate would be
+#      good for dev too, and one mistyped address would be enough to send real
+#      health data into the development database.
+#
+#   2. **There is no port forward on the router.** Production's :443 is reachable
+#      from outside; this machine is deliberately reachable only from the internal
+#      network.
+#
+# Everything else — the images, the migration, the token CLI — is deliberately
+# identical. If dev had a different shape, the differences would surface exactly at
+# the point of wiring things up: in production.
+#
+# Usage on the dev VM:  make devvm-up   (see the Makefile)
+services:
+  proxy:
+    ports: !override
+      # ONLY the web+API port. 443 is deliberately absent.
+      - "8443:8443"
+    volumes: !override
+      - ./caddy/Caddyfile.dev:/etc/caddy/Caddyfile:ro
+      - /opt/helsa/pki:/etc/caddy/pki:ro
+      - helsa_caddydata:/data
+      - helsa_caddyconfig:/config

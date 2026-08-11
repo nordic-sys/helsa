@@ -1,0 +1,20 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    # Only the migrations that are plain SQL; sqlc does not know the Timescale
+    # functions used by 00002.
+    schema:
+      - "db/migrations/00001_init_schema.sql"
+      - "db/migrations/00003_devices_upsert_key.sql"
+      - "db/migrations/00004_sample_workout_source_uuid.sql"
+      - "db/migrations/00005_push_tokens.sql"
+      - "db/migrations/00007_achievements.sql"
+      - "db/migrations/00008_workout_routes.sql"
+    queries: "db/queries"
+    gen:
+      go:
+        package: "db"
+        out: "internal/db"
+        sql_package: "pgx/v5"
+        emit_json_tags: true
+        emit_pointers_for_null_types: true

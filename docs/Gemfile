@@ -1,0 +1,22 @@
+# Optional: local preview of the documentation site.
+#
+# GitHub Pages builds this site itself from the `docs/` folder, so nothing here is
+# required for publishing. This file exists so you can check a change before
+# pushing it.
+#
+#   cd docs
+#   bundle install
+#   bundle exec jekyll serve --livereload
+#   open http://127.0.0.1:4000/helsa/     <- note the baseurl from _config.yml
+#
+# The `github-pages` gem pins Jekyll and every plugin to exactly the versions
+# GitHub Pages runs, so a local build that works is a good predictor of the
+# published one.
+
+source "https://rubygems.org"
+
+gem "github-pages", "~> 232", group: :jekyll_plugins
+
+# Windows and JRuby need these; harmless elsewhere.
+gem "tzinfo-data", platforms: [:mingw, :x64_mingw, :mswin, :jruby]
+gem "wdm", "~> 0.1", platforms: [:mingw, :x64_mingw, :mswin]

@@ -1,0 +1,965 @@
+openapi: 3.1.0
+info:
+  title: Helsa API
+  version: 0.1.0
+  description: >
+    Helsa — Apple Health / fitness data processing backend API.
+    Contract-first: this spec is the single source of truth (the backend, the web and the Apple clients all generate from it).
+    A single-user system, on home infrastructure (see docs/decisions/ADR-0002).
+    Access: /ingest and the read endpoints sit behind an mTLS client certificate, with a device token above it;
+    the web dashboard is reachable over WireGuard only (docs/08-auth-hozzaferes.md).
+    Every timestamp is ISO-8601 UTC; the daily/weekly aggregates take a tz parameter.
+servers:
+  - url: https://api.helsa.example.com/v1
+    description: home VM, an mTLS client certificate is mandatory (the final hostname is TBD — docs/07 §10)
+  - url: http://localhost:8080/v1
+    description: local
+
+security:
+  - deviceToken: []
+
+tags:
+  - name: auth
+  - name: profile
+  - name: ingestion
+  - name: read
+  - name: goals
+  - name: export
+  - name: push
+  - name: insights
+  - name: achievements
+  - name: health
+
+paths:
+  /auth/refresh:
+    post:
+      tags: [auth]
+      summary: Refresh the access token with a refresh token
+      security: []
+      responses:
+        '200':
+          description: A new session
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Session' }
+        '401': { $ref: '#/components/responses/Problem' }
+
+  /auth/logout:
+    post:
+      tags: [auth]
+      summary: Sign out (revoke the refresh token)
+      responses:
+        '204': { description: OK }
+
+  /me:
+    get:
+      tags: [profile]
+      summary: Profile
+      responses:
+        '200':
+          description: The signed-in user
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+
+  /settings:
+    get:
+      tags: [profile]
+      summary: Settings (units, language, time zone, notifications)
+      responses:
+        '200':
+          description: Settings
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Settings' }
+    put:
+      tags: [profile]
+      summary: Change settings
+      description: >
+        A **partial** change: only the fields that are sent change, the missing ones are left untouched
+        (`notif_prefs` is merged field by field as well). `time_zone` must be a valid IANA zone —
+        the daily bucketing of summary/activity/sleep is built on it.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Settings' }
+      responses:
+        '200':
+          description: The updated settings
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Settings' }
+        '400': { $ref: '#/components/responses/Problem' }
+
+  /devices:
+    get:
+      tags: [profile]
+      summary: Connected devices
+      description: >
+        The list in descending `last_seen_at` order. **This is the source of the sync-freshness alert**
+        (docs/16 §2): Home Assistant polls this endpoint, and if the newest
+        `last_seen_at` is older than X hours, it alerts (a dead man's switch).
+      responses:
+        '200':
+          description: The device list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Device' }
+    post:
+      tags: [profile]
+      summary: Device registration / heartbeat
+      description: >
+        An upsert: if the body carries an `id`, it updates that one; if not, the (platform, model) pair is
+        the key — so the same device does not get duplicated. `last_seen_at` is **always set by the server**
+        (the moment of the call); a value sent by the client is ignored.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/Device' }
+      responses:
+        '200':
+          description: Device
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Device' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /push/register:
+    post:
+      tags: [push]
+      summary: APNs push token registration
+      description: >
+        ⚠️ **Today this is STORAGE ONLY.** The server stores the token but **sends no
+        push messages at all** — the APNs key and the delivery path are an open decision
+        (docs/19), and the output may end up being ntfy or Home Assistant.
+        Storage is needed now because the client receives the token at the moment
+        permission is granted, and it would otherwise be lost.
+
+
+        An upsert on the `(user, token)` pair: registering the same token again is an
+        update, not a new row. The `environment` (`sandbox`/`prod`) is stored TOGETHER
+        with the token, because the two APNs environments use separate token spaces.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/PushRegister' }
+      responses:
+        '204': { description: "The token has been stored (nothing is sent)" }
+        '400': { $ref: '#/components/responses/Problem' }
+
+  /push/prefs:
+    put:
+      tags: [push]
+      summary: Notification preferences
+      description: >
+        Writes the very same `notif_prefs` field as `PUT /v1/settings` — deliberately,
+        so there are not two truths about what the user asked for. This is only a convenience
+        surface for the native permission screen. **Partial**: switches that are not sent stay untouched.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NotifPrefs' }
+      responses:
+        '200':
+          description: The updated preferences
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotifPrefs' }
+
+  /ingest:
+    post:
+      tags: [ingestion]
+      summary: HealthKit chunk upload (samples + workouts + activity summaries + deletions)
+      description: >
+        Idempotent (deduplicated by source_uuid). The server answers 202 quickly and processing is asynchronous
+        (queue → worker).
+
+
+        **This is a CHUNK endpoint, not an "upload everything" endpoint.** Starting from the HealthKit anchor,
+        the client reads in pieces of a bounded size and sends them one at a time: fetch → POST /ingest → 202 →
+        save the anchor → again. The anchor may only move forward AFTER the 202; that way even a multi-week offline
+        stretch can be caught up, and partial progress is never lost (docs/04 §6).
+
+
+        **Size limit:** at most `max_items` items (samples + workouts + sleep_segments +
+        activity_summaries + deletions combined) per chunk. Exceeding it gives a 413. The concrete limit is
+        served by the server from the configuration next to /readyz; the client's default is 2000-5000 (docs/04 §6.2).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IngestBatch' }
+      responses:
+        '202':
+          description: "Chunk accepted, processing in progress"
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IngestAccepted' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '413':
+          description: "The chunk is too large — the client has to split it into smaller pieces"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /summary:
+    get:
+      tags: [read]
+      summary: Aggregated dashboard data (timezone-aware)
+      parameters:
+        - { name: range, in: query, required: true, schema: { type: string, enum: [day, week, month, year] } }
+        - { name: metrics, in: query, required: true, schema: { type: string }, description: "a comma-separated list, e.g. stepCount,heartRate,activeEnergy" }
+        - { name: tz, in: query, required: false, schema: { type: string }, description: "IANA tz; if missing, user.time_zone" }
+        - { name: from, in: query, required: false, schema: { type: string, format: date } }
+        - { name: to, in: query, required: false, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: Summary
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SummaryResponse' }
+
+  /activity:
+    get:
+      tags: [read]
+      summary: Activity rings (Move/Exercise/Stand), daily value + goal
+      parameters:
+        - { name: from, in: query, required: false, schema: { type: string, format: date } }
+        - { name: to, in: query, required: false, schema: { type: string, format: date } }
+        - { name: tz, in: query, required: false, schema: { type: string } }
+      responses:
+        '200':
+          description: The list of daily activity summaries
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/ActivitySummary' }
+
+  /workouts:
+    get:
+      tags: [read]
+      summary: Workout list (paginated)
+      parameters:
+        - { name: cursor, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 50, maximum: 200 } }
+      responses:
+        '200':
+          description: Workouts
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkoutPage' }
+
+  /workouts/{id}:
+    get:
+      tags: [read]
+      summary: Workout detail
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Workout
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Workout' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /sleep:
+    get:
+      tags: [read]
+      summary: Sleep segments / daily summary
+      parameters:
+        - { name: from, in: query, schema: { type: string, format: date } }
+        - { name: to, in: query, schema: { type: string, format: date } }
+        - { name: tz, in: query, schema: { type: string } }
+      responses:
+        '200':
+          description: Sleep data
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/SleepSegment' }
+
+  /samples:
+    get:
+      tags: [read]
+      summary: Raw samples (paginated, for debugging/export)
+      description: >
+        The raw samples of a single `data_type`, newest first, with keyset pagination.
+
+
+        `data_type` is **required**: without a filter this would be a scan of the entire hypertable.
+
+
+        **Pagination:** hand the response's `next_cursor` back unchanged in the `cursor`
+        parameter. The cursor rides on the `(ts, source_uuid)` pair, so samples sharing a
+        timestamp (several source devices) are neither skipped nor duplicated. `next_cursor: null`
+        → there are no more pages. `from`/`to` denote the half-open `[from, to)` window.
+
+
+        Values in `%` units come back in the **0…100** range here as well — the same convention
+        as for `/summary` (see `MetricSeries`).
+      parameters:
+        - { name: data_type, in: query, required: true, schema: { type: string } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to, in: query, schema: { type: string, format: date-time } }
+        - { name: cursor, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 500, maximum: 2000 } }
+      responses:
+        '200':
+          description: Samples
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/SamplePage' }
+
+  /goals:
+    get:
+      tags: [goals]
+      summary: Daily goals (steps + rings)
+      responses:
+        '200':
+          description: Goals
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Goal' }
+    put:
+      tags: [goals]
+      summary: Update a goal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/GoalUpdate' }
+      responses:
+        '200':
+          description: The updated goal
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Goal' }
+
+  /workouts/{id}/route:
+    get:
+      tags: [read]
+      summary: A workout's GPS route
+      description: >
+        The points of the `HKWorkoutRoute` in increasing time order. **A separate endpoint, not
+        part of `/workouts/{id}`**: a three-hour hike means points on the order of ten
+        thousand, and the workout list should never have to drag that along.
+
+
+        **An empty list is a full answer**: an indoor workout has no route, and neither do
+        old workouts recorded before route support. This is not a 404 — the workout exists.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The route (may be empty)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkoutRoute' }
+        '404':
+          description: No such workout
+
+  /achievements:
+    get:
+      tags: [achievements]
+      summary: Earned badges (monthly, yearly, streak, record, milestone)
+      description: >
+        A badge is a **historical fact**: the record of a condition that was met at a given moment.
+        That is why the row also carries the data as it stood when it was earned (`value`, `thresholds`) — a
+        reference is not enough, because the user can rewrite their thresholds at any time, and recomputed
+        with today's setting a month completed long ago could "degrade back".
+      responses:
+        '200':
+          description: Badges, in descending `earned_at` order
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Achievement' }
+    post:
+      tags: [achievements]
+      summary: Record badges (idempotent upsert)
+      description: >
+        **The phone evaluates, the server stores.** The thresholds live on the client, so
+        a server-side evaluation would first require syncing the settings up;
+        besides, the iPhone is the only uploader anyway (docs/04). The other platforms and the
+        web ONLY READ this list.
+
+
+        **An upsert, never a delete.** The call does not replace the server's list with the submitted
+        set: whatever is already stored stays stored even if the client does not send it this time.
+        A reinstalled phone starts from an empty state — a "full replacement" semantics
+        would wipe out badges collected over years.
+
+
+        Sending the same `id` twice creates no new row and **does not rewrite the original
+        `earned_at`**: the date earned is settled at the first recording.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: array
+              items: { $ref: '#/components/schemas/AchievementInput' }
+      responses:
+        '200':
+          description: The complete stored list after the upsert
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Achievement' }
+
+  /insights:
+    get:
+      tags: [insights]
+      summary: Rule-based insights / anomalies
+      description: >
+        Rule-based, explainable observations — **there is no LLM** (docs/20 B7, docs/22 §2.2):
+        a rolling average, a z-score and a Pearson correlation.
+
+
+        **An empty list is a full answer.** Every rule has a data minimum, and until that
+        is met the rule silently stays out — an invented insight is worse than
+        silence. Today's rules and what they require:
+
+
+        1. **Sustained deviation** (`anomaly`, `restingHeartRate` ↑ / `hrv` ↓ / sleep duration ↓):
+        a 28-day baseline window (closing 3 days before today), of which **at least
+        14 measured days**, data that is not constant, and **3 consecutive** recent days at ≥1.5 sigma
+        plus a per-metric absolute threshold (2 bpm / 5 ms / 30 minutes).
+
+
+        2. **Weekly trend** (`trend`, step count, sleep duration): two consecutive 7-day windows,
+        **at least 5 measured days** in each, a ≥10% relative AND an absolute minimum difference.
+
+
+        3. **Co-occurrence** (`correlation`, step count ↔ that night's sleep): a 60-day window,
+        **at least 14 paired days** (both have data), |r| ≥ 0.5.
+
+
+        Today (a partial day) counts towards none of the windows. Missing days are never
+        filled in with zeros or interpolation.
+      responses:
+        '200':
+          description: The insight list
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Insight' }
+
+  /export:
+    post:
+      tags: [export]
+      summary: Export (synchronous download)
+      description: >
+        The export is **synchronous**: the response IS the file, streamed — there is no job id,
+        no polling. `Content-Disposition` supplies a file name.
+
+
+        The asynchronous branch of docs/13 §3 was deliberately NOT built: there is no object store
+        (MinIO is EOL), and the synchronous path is enough until exporting the full history starts
+        timing out. If it ever does, this endpoint may also answer `202` — which is why
+        `GET /export/{id}` stays in the contract.
+
+
+        **Formats:** `csv` — long format, one sample per row
+        (`ts,data_type,value,unit,source_device`). `json` — `{meta, samples, workouts,
+        sleep_segments}`. `pdf` appears in the contract but is **not implemented yet**
+        (`501`).
+
+
+        **Time span:** `from`/`to` denote days in the user's time zone, and the `to`
+        day IS included. Without them, the last 30 days. An empty `metrics` means every metric.
+
+
+        Values in `%` units are in the 0…100 range here too (see `MetricSeries`).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ExportRequest' }
+      responses:
+        '200':
+          description: The finished file (streamed)
+          content:
+            text/csv: {}
+            application/json: {}
+        '400': { $ref: '#/components/responses/Problem' }
+        '501':
+          description: "The requested format (today: pdf) is not implemented yet"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /export/{id}:
+    get:
+      tags: [export]
+      summary: Export job status (today always 404 — the export is synchronous)
+      description: >
+        **Today this endpoint always answers `404`**, because there is no export job:
+        `POST /v1/export` returns the file directly. The slot is kept
+        so that the asynchronous branch can later be introduced additively; an invented job
+        stuck in `pending` forever would be a lie.
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The job (only if the asynchronous branch is ever switched on)
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ExportJob' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /healthz:
+    get:
+      tags: [health]
+      summary: Liveness
+      security: []
+      responses:
+        '200': { description: OK }
+
+  /readyz:
+    get:
+      tags: [health]
+      summary: Readiness (DB + Redis + MQ)
+      security: []
+      responses:
+        '200': { description: Ready }
+        '503': { $ref: '#/components/responses/Problem' }
+
+components:
+  securitySchemes:
+    deviceToken:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: >
+        A long-lived device token (docs/08-auth-hozzaferes.md §7). It does NOT come from an interactive
+        sign-in — an install-time or manual step issues it. This is the application-level factor; the
+        transport-level factor is the mTLS client certificate that the reverse proxy verifies (the backend
+        sees which device is speaking from the X-Client-Cert-CN header).
+
+  responses:
+    Problem:
+      description: Error (RFC 9457)
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+
+  schemas:
+    Problem:
+      type: object
+      properties:
+        type: { type: string }
+        title: { type: string }
+        status: { type: integer }
+        detail: { type: string }
+        instance: { type: string }
+
+    Session:
+      type: object
+      properties:
+        access_token: { type: string }
+        refresh_token: { type: string, description: "for the native clients; on the web it lives in an httpOnly cookie" }
+        expires_in: { type: integer }
+
+    User:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        display_name: { type: string }
+        settings: { $ref: '#/components/schemas/Settings' }
+        created_at: { type: string, format: date-time }
+
+    Settings:
+      type: object
+      properties:
+        time_zone: { type: string, description: "IANA tz, e.g. Europe/Budapest" }
+        locale: { type: string, enum: [hu, en] }
+        unit_system: { type: string, enum: [metric, imperial] }
+        notif_prefs: { $ref: '#/components/schemas/NotifPrefs' }
+
+    NotifPrefs:
+      type: object
+      properties:
+        sync_errors: { type: boolean, default: true }
+        weekly_summary: { type: boolean, default: true }
+        goal_nudges: { type: boolean, default: false }
+        insights: { type: boolean, default: false }
+
+    Device:
+      type: object
+      required: [platform]
+      properties:
+        id: { type: string, format: uuid, description: "the server-side identifier; optional on POST (if given, that row is updated)" }
+        platform: { type: string, enum: [ios, watchos, ipados, macos, web] }
+        model: { type: string, description: "e.g. iPhone17,1 — together with the platform this is the key of the upsert without an `id`" }
+        name: { type: string }
+        time_zone: { type: string, description: "the device's current IANA tz" }
+        last_seen_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: "set by the server: the time of the most recent POST /devices, or of an /ingest that came from the device"
+
+    PushRegister:
+      type: object
+      required: [token, platform]
+      properties:
+        device_id: { type: string, format: uuid }
+        token: { type: string, description: APNs device token }
+        platform: { type: string, enum: [ios, ipados, macos, watchos] }
+        environment: { type: string, enum: [sandbox, prod] }
+
+    IngestAccepted:
+      type: object
+      description: >
+        The body of the 202 response. `received` gives the item counts the server TOOK IN (not processed) —
+        the actual write happens in the worker. This is how the client can check that the chunk arrived
+        complete, and `batch_id` correlates it with the server log when debugging a long backlog drain.
+      properties:
+        batch_id: { type: string, format: uuid, description: "for log correlation" }
+        received:
+          type: object
+          properties:
+            samples: { type: integer }
+            workouts: { type: integer }
+            sleep_segments: { type: integer }
+            activity_summaries: { type: integer }
+            deletions: { type: integer }
+        max_items:
+          type: integer
+          description: "The server's current chunk limit — the client can size its next piece to it."
+
+    IngestBatch:
+      type: object
+      description: "One CHUNK of the delta read from the HealthKit anchor (see the description of POST /ingest)."
+      properties:
+        device_id: { type: string, format: uuid }
+        time_zone: { type: string, description: "the device's current IANA tz" }
+        samples:
+          type: array
+          items: { $ref: '#/components/schemas/SampleIn' }
+        workouts:
+          type: array
+          items: { $ref: '#/components/schemas/WorkoutIn' }
+        sleep_segments:
+          type: array
+          items: { $ref: '#/components/schemas/SleepSegmentIn' }
+        activity_summaries:
+          type: array
+          items: { $ref: '#/components/schemas/ActivitySummary' }
+        deletions:
+          type: array
+          description: "the source_uuids of items deleted in HealthKit (samples/workouts/sleep)"
+          items: { type: string }
+
+    SampleIn:
+      type: object
+      required: [source_uuid, data_type, ts]
+      properties:
+        source_uuid: { type: string }
+        data_type:
+          type: string
+          description: >
+            The short name of the HealthKit type, without the
+            `HKQuantityTypeIdentifier`/`HKCategoryTypeIdentifier` prefix, in lowerCamelCase — e.g. `stepCount`,
+            `dietaryEnergyConsumed`, `bodyMass`, `oxygenSaturation`.
+
+
+            **DELIBERATELY AN OPEN STRING, NOT AN ENUM.** HealthKit offers well over a hundred quantity
+            types, and the set grows with every iOS release; with a closed enum, every new type would
+            require a contract change, a code regeneration and a deploy. On the storage side
+            `samples.data_type` is `text` anyway.
+
+
+            The catalog of supported types and their units: `docs/23-healthkit-katalogus.md`.
+            The server accepts and stores an unknown type — better to have the data than to
+            let a new iOS version silently drop it.
+        ts: { type: string, format: date-time }
+        value: { type: number }
+        unit: { type: string }
+        workout_source_uuid:
+          type: string
+          description: >
+            The **HKWorkout.uuid** of the related workout (not the server-side `workouts.id` — the client
+            does not know that). The worker resolves it to a `workouts.id`; if the workout only arrives in a
+            LATER chunk, the resolution is filled in then. `Workout.avg_heart_rate`/`max_heart_rate` build on this.
+        source_device: { type: string, enum: [watch, iphone] }
+        source_bundle: { type: string }
+
+    WorkoutIn:
+      type: object
+      required: [source_uuid, activity_type, started_at]
+      properties:
+        source_uuid: { type: string }
+        activity_type: { type: string }
+        started_at: { type: string, format: date-time }
+        ended_at: { type: string, format: date-time }
+        total_energy_kcal: { type: number }
+        total_distance_m: { type: number }
+        metadata: { type: object, additionalProperties: true }
+        route:
+          type: array
+          items: { $ref: '#/components/schemas/RoutePoint' }
+          description: >
+            The GPS route, if there is one (`HKWorkoutRoute`). **The client must count the points
+            against its chunk budget** — the route of a long hike is on its own bigger
+            than an entire helping of samples, and chunking (docs/04 §6.2) exists precisely
+            to avoid giant batches.
+
+    SleepSegmentIn:
+      type: object
+      required: [source_uuid, started_at, ended_at, stage]
+      properties:
+        source_uuid: { type: string }
+        started_at: { type: string, format: date-time }
+        ended_at: { type: string, format: date-time }
+        stage: { type: string, enum: [inBed, asleepCore, asleepDeep, asleepREM, awake] }
+
+    SummaryResponse:
+      type: object
+      properties:
+        range: { type: string }
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+        tz: { type: string }
+        metrics:
+          type: object
+          additionalProperties: { $ref: '#/components/schemas/MetricSeries' }
+
+    MetricSeries:
+      type: object
+      description: >
+        One metric's time series, broken into buckets.
+
+
+        ⚠️ **Percentage convention:** wherever `unit` is `%`, the `total` and the bucket
+        values come back in the **0…100** range (19.2% body fat is `19.24`). HealthKit
+        itself gives a 0…1 fraction (`HKUnit.percent()`), and **storage deliberately stays raw**;
+        the multiplication by 100 happens ONCE, on the server's read path. The client must therefore
+        **not scale again** — it should only append the `%` sign. The same convention holds in the
+        `GET /samples` and `POST /export` responses. See `docs/23` §3.0.1.
+      properties:
+        agg: { type: string, enum: [sum, avg] }
+        unit: { type: string, description: "The unit sent by the SERVER is authoritative; the client-side catalog is only a fallback." }
+        total: { type: number }
+        buckets:
+          type: array
+          items:
+            type: object
+            properties:
+              t: { type: string }
+              v: { type: number }
+              avg: { type: number }
+              min: { type: number }
+              max: { type: number }
+
+    ActivitySummary:
+      type: object
+      properties:
+        day: { type: string, format: date }
+        active_energy: { type: number }
+        active_energy_goal: { type: number }
+        exercise_minutes: { type: number }
+        exercise_goal: { type: number }
+        stand_hours: { type: number }
+        stand_goal: { type: number }
+
+    Workout:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        source_uuid: { type: string }
+        activity_type: { type: string }
+        started_at: { type: string, format: date-time }
+        ended_at: { type: string, format: date-time }
+        total_energy_kcal: { type: number }
+        total_distance_m: { type: number }
+        avg_heart_rate: { type: number }
+        max_heart_rate: { type: number }
+        metadata: { type: object, additionalProperties: true }
+
+    WorkoutPage:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Workout' }
+        next_cursor: { type: [string, 'null'] }
+
+    SleepSegment:
+      type: object
+      properties:
+        started_at: { type: string, format: date-time }
+        ended_at: { type: string, format: date-time }
+        stage: { type: string }
+
+    Sample:
+      type: object
+      properties:
+        ts: { type: string, format: date-time }
+        data_type: { type: string }
+        value: { type: number }
+        unit: { type: string }
+        source_device: { type: string }
+
+    SamplePage:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/Sample' }
+        next_cursor: { type: [string, 'null'] }
+
+    Goal:
+      type: object
+      properties:
+        metric: { type: string, enum: [stepCount, activeEnergy, exerciseTime, standHours] }
+        target_value: { type: number }
+        unit: { type: string }
+        source: { type: string, enum: [healthkit, user] }
+        hk_value: { type: [number, 'null'], description: "the last HealthKit goal seen" }
+        updated_at: { type: string, format: date-time }
+
+    GoalUpdate:
+      type: object
+      required: [metric, target_value]
+      properties:
+        metric: { type: string, enum: [stepCount, activeEnergy, exerciseTime, standHours] }
+        target_value: { type: number }
+        source: { type: string, enum: [healthkit, user] }
+        hk_value: { type: number }
+
+    RoutePoint:
+      type: object
+      required: [ts, lat, lon]
+      properties:
+        ts: { type: string, format: date-time }
+        # ⚠️ `format: double` IS REQUIRED. A bare `number` becomes `float32` in the generator,
+        # which at Budapest's latitude means 0.5–1.2 metres of quantisation — below the noise
+        # of GPS, so good enough to draw, but it puts a visible stair-step into the route when
+        # you zoom into a slow walk. The coordinate is the only field where this matters.
+        lat: { type: number, format: double }
+        lon: { type: number, format: double }
+        # Altitude and speed may be absent: HealthKit does not always give everything, and
+        # 0 would be a REAL value here (sea level, and a full stop), not "no data".
+        altitude_m: { type: number }
+        speed_mps: { type: number }
+        # Horizontal accuracy in metres. This is what lets the map throw the junk away: in a
+        # city, a point with 100 metres of error jumps a whole block.
+        accuracy_m: { type: number }
+
+    WorkoutRoute:
+      type: object
+      required: [points]
+      properties:
+        points:
+          type: array
+          items: { $ref: '#/components/schemas/RoutePoint' }
+
+    Achievement:
+      type: object
+      required: [id, kind, code, earned_at]
+      properties:
+        id:
+          type: string
+          description: >
+            A stable identifier formed by the client — `<kind>:<code>[:<period>]`, e.g.
+            `month:complete:2026-08`, `streak:3:2026-08`, `record:best-month`,
+            `milestone:total-1000000`. This is what gives idempotency: the same badge
+            stays one row however many times it is uploaded.
+        kind: { type: string, enum: [month, year, streak, record, milestone] }
+        code:
+          type: string
+          description: "The specific badge within the family (e.g. `complete`, `3`, `best-month`, `total-1000000`)."
+        # The optional fields are ABSENT when they do not apply — they do not come back as `null`.
+        # (The step that derives 3.0 from the 3.1 nullable union can only rewrite it in inline
+        # flow style; and "present but empty" would have no meaning here anyway.)
+        period:
+          type: string
+          description: "`YYYY-MM` or `YYYY`, if the badge belongs to a calendar period."
+        value:
+          type: number
+          description: "The figure as it stood when earned (monthly step count, streak length, the record's value)."
+        unit: { type: string }
+        thresholds:
+          type: array
+          items: { type: integer }
+          description: >
+            A snapshot of the thresholds that were IN FORCE when it was earned. A monthly badge's card can be
+            redrawn from this (and from `period`) — the path is deterministic given the month,
+            so no image has to be stored.
+        earned_at: { type: string, format: date-time }
+
+    AchievementInput:
+      type: object
+      required: [id, kind, code, earned_at]
+      properties:
+        id: { type: string }
+        kind: { type: string, enum: [month, year, streak, record, milestone] }
+        code: { type: string }
+        period: { type: string }
+        value: { type: number }
+        unit: { type: string }
+        thresholds:
+          type: array
+          items: { type: integer }
+        earned_at:
+          type: string
+          format: date-time
+          description: >
+            Only matters for a NEW badge; for an existing one the server keeps the original. The
+            client sends the moment it first saw the condition met — which may well be
+            the first sync long after the end of the month.
+
+    Insight:
+      type: object
+      properties:
+        id:
+          type: string
+          description: >
+            An identifier of the form `<rule>:<day>`, STABLE WITHIN A DAY (e.g.
+            `resting-hr-elevated:2026-08-11`) — the same statement on the same day always gets
+            the same id, so the client can deduplicate it or mark it as dismissed.
+        kind: { type: string, enum: [trend, anomaly, correlation] }
+        metric: { type: string }
+        title: { type: string }
+        detail: { type: string }
+        severity: { type: string, enum: [info, notice] }
+        generated_at: { type: string, format: date-time }
+
+    ExportRequest:
+      type: object
+      required: [format]
+      properties:
+        format: { type: string, enum: [csv, json, pdf] }
+        metrics:
+          type: array
+          items: { type: string }
+        from: { type: string, format: date }
+        to: { type: string, format: date }
+
+    ExportJob:
+      type: object
+      description: >
+        The shape of the asynchronous export branch. **No such object is produced today** — the export is
+        synchronous and `POST /v1/export` hands back the file. The schema stays for a future introduction.
+      properties:
+        export_id: { type: string, format: uuid }
+        status: { type: string, enum: [pending, ready, failed] }
+        url: { type: [string, 'null'] }
+        expires_at: { type: [string, 'null'], format: date-time }

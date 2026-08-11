@@ -1,0 +1,71 @@
+# Helsa
+
+Self-hosted backend for the Helsa app — your Apple Health data, on a server you run.
+
+**Documentation: https://nordic-sys.github.io/helsa/**
+
+---
+
+## Not a medical device
+
+Helsa is a hobby project for looking at your own fitness data. It is **not a medical
+device**, not for diagnosis, treatment, or monitoring of any medical condition, and
+its output must not be used to make health decisions. It is provided **as is,
+without warranty of any kind** (see [LICENSE](LICENSE)). The author accepts no
+responsibility for data loss, for a server you exposed to the internet, or for
+anything you did because of what Helsa displayed.
+
+---
+
+## What this is
+
+The **Helsa iOS app is local-first**: it reads HealthKit on the device, does its
+analysis on the device, and by default your health data never leaves the phone.
+Sending data anywhere is an option you switch on, pointing at an endpoint you type
+in yourself.
+
+This repository is what that endpoint can be:
+
+| | |
+|---|---|
+| `backend/` | Go API and ingestion worker, PostgreSQL + TimescaleDB schema |
+| `web/` | React dashboard |
+| `deploy/` | Docker Compose, Caddy configuration, private-CA tooling, backup scripts |
+| `integrations/` | Home Assistant (MQTT with discovery) |
+| `docs/` | The documentation site, published with GitHub Pages |
+
+The iOS app itself is closed source and not distributed here.
+
+The API contract is [`backend/api/openapi.yaml`](backend/api/openapi.yaml). It is
+the source of truth, and it is what you implement if you would rather write your
+own backend.
+
+## Quick start
+
+```bash
+git clone https://github.com/nordic-sys/helsa.git
+cd helsa/deploy
+cp .env.example .env          # then replace every placeholder secret
+docker compose up -d
+docker compose --profile tools run --rm migrate up
+```
+
+Nothing in that sequence is reachable from the internet. Exposing the server is a
+separate, deliberate process — see
+[Deployment](https://nordic-sys.github.io/helsa/deployment/), and read it before you
+forward a port.
+
+## Licence
+
+MIT. See [LICENSE](LICENSE).
+
+## Security
+
+Found something? See [SECURITY.md](SECURITY.md). This is a single-maintainer hobby
+project with no service-level commitment.
+
+## A note on how this was built
+
+Helsa was developed with the help of an AI assistant. Every line was reviewed by a
+human before it was committed, and the responsibility for the code is the author's.
+This is stated for transparency, not because any rule requires it.

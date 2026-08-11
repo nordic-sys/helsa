@@ -1,0 +1,11 @@
+.env
+*.local
+
+# Private PKI — the issued keys and certificates NEVER go into the repository.
+# The pki/ Makefile and the *.cnf files do; the output does not.
+pki/out/
+*.key
+*.p12
+*.pem
+*.srl
+p12-password.txt

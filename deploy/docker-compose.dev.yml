@@ -1,0 +1,24 @@
+# Helsa — the LOCAL development overlay.
+#
+# This is what publishes the data services' ports to the host, so that a
+# `go run ./cmd/api` on the workstation can reach them. The ports are deliberately
+# non-default, so they do not clash with an existing local Postgres/Redis.
+#
+# Usage:  make up   (the Makefile adds the -f flags)
+#
+# ⚠️ DO NOT USE THIS on the home VM — there the prod overlay runs, and it exposes
+# not a single data port.
+
+services:
+  timescaledb:
+    ports:
+      - "${TIMESCALE_HOST_PORT:-5433}:5432"
+
+  redis:
+    ports:
+      - "${REDIS_HOST_PORT:-6380}:6379"
+
+  rabbitmq:
+    ports:
+      - "${RABBITMQ_AMQP_PORT:-5672}:5672"     # AMQP
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672"   # management UI

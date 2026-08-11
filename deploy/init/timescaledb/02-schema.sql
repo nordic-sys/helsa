@@ -1,0 +1,23 @@
+-- DELIBERATELY EMPTY.
+--
+-- This file used to hold the complete schema (9 tables, the hypertable, the
+-- indexes), in parallel with the goose migrations in `backend/db/migrations/`.
+-- That caused two bugs, and both of them were SILENT:
+--
+--   1. The init script runs BEFORE goose (the Postgres entrypoint runs it on first
+--      start), while the migrations use `CREATE TABLE IF NOT EXISTS` — so the stale
+--      definition here WON, and the migration silently skipped the table. That is
+--      how `devices.time_zone` went missing until a separate `ALTER` migration
+--      (00003) levelled it out.
+--
+--   2. The `subscriptions` table was created here as well — even though ADR-0002
+--      (the personal direction) had ended the SaaS/billing line. A table nothing
+--      references would have sat there for months.
+--
+-- The ONE source of the schema is now `backend/db/migrations/`.
+-- Applying it is a deliberate, separate step (`make prod-migrate`), not a start-up
+-- side effect — see docs/07-infra-deployment.md §3.1.
+--
+-- To bring up a fresh database: `make up` (or `make prod-up`) → `make migrate`
+-- (or `make prod-migrate`). Against a schema-less database the API's `/readyz` will
+-- fail, which is correct: better to fail loudly than to run on half a schema.

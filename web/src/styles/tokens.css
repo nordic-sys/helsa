@@ -1,0 +1,69 @@
+/* Helsa design tokens — docs/14-arculat-design.md §2.
+ *
+ * Two layers: (a) the brand/metric colours, which are the heroes of the charts and
+ * cards, and (b) the surface, which stays restrained. Scandinavian clarity: plenty
+ * of negative space, quiet chrome, loud data.
+ *
+ * Light is defined on the bare :root and dark only overrides the tokens — so there
+ * is not a single colour whose only definition sits inside a media query. */
+
+:root {
+  /* Brand + metric colours (light) */
+  --helsa-fjord: #0e7e8c;
+  --helsa-move: #2fb46b;
+  --helsa-ember: #f2802e;
+  --helsa-pulse: #e23b53;
+  --helsa-nordlys: #5b5bd6;
+
+  /* Surface (light) */
+  --bg: #f7f8f9;
+  --surface: #ffffff;
+  --surface-2: #f0f2f4;
+  --border: #dfe3e8;
+  --text: #14181c;
+  --text-dim: #5b6672;
+  --shadow: 0 1px 2px rgb(20 24 28 / 6%), 0 4px 16px rgb(20 24 28 / 4%);
+
+  /* Typography — the system font stack, with Inter as a fallback (docs/14 §3) */
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, system-ui,
+    'Segoe UI', Roboto, sans-serif;
+  --font-num: ui-rounded, 'SF Pro Rounded', var(--font);
+
+  --radius: 14px;
+  --radius-sm: 9px;
+  --gap: 16px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --helsa-fjord: #3fb6c4;
+    --helsa-move: #46d585;
+    --helsa-ember: #ff9f4d;
+    --helsa-pulse: #ff5c72;
+    --helsa-nordlys: #8a86f0;
+
+    --bg: #0e1215;
+    --surface: #161b20;
+    --surface-2: #1e252b;
+    --border: #2a333b;
+    --text: #eef2f5;
+    --text-dim: #93a1ad;
+    --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 4px 20px rgb(0 0 0 / 25%);
+  }
+}
+
+:root[data-theme='dark'] {
+  --helsa-fjord: #3fb6c4;
+  --helsa-move: #46d585;
+  --helsa-ember: #ff9f4d;
+  --helsa-pulse: #ff5c72;
+  --helsa-nordlys: #8a86f0;
+
+  --bg: #0e1215;
+  --surface: #161b20;
+  --surface-2: #1e252b;
+  --border: #2a333b;
+  --text: #eef2f5;
+  --text-dim: #93a1ad;
+  --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 4px 20px rgb(0 0 0 / 25%);
+}

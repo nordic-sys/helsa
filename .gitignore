@@ -1,0 +1,4 @@
+.DS_Store
+
+# Minden komponensnek saját .gitignore-ja van (backend/, deploy/, web/) —
+# ide csak az kerül, ami az egész fára érvényes.
