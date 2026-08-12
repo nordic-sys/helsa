@@ -37,8 +37,13 @@ run-worker: $(ENV_FILE) ## Start the ingestion worker
 migrate: ## Apply the goose migrations (idempotent against an already bootstrapped schema)
 	GOOSE_DRIVER=postgres GOOSE_DBSTRING="$(GOOSE_DBSTRING)" GOOSE_MIGRATION_DIR=db/migrations go tool goose up
 
+# The smoke suite is not only test/smoke: internal/insights carries the
+# database-level tests of the sleep series, which need the same live Timescale
+# and would be meaningless without it.
+SMOKE_PKGS := ./test/smoke ./internal/insights
+
 smoke: $(ENV_FILE) ## E2E smoke: auth -> ingest -> summary (against the running infrastructure)
-	HELSA_AUTH_DEV_MODE=true go test -tags smoke -count=1 -v ./test/smoke
+	HELSA_AUTH_DEV_MODE=true go test -tags smoke -count=1 -v $(SMOKE_PKGS)
 
 test: ## Unit tests
 	go test ./...
