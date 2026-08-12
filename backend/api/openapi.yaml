@@ -935,7 +935,15 @@ components:
             An identifier of the form `<rule>:<day>`, STABLE WITHIN A DAY (e.g.
             `resting-hr-elevated:2026-08-11`) — the same statement on the same day always gets
             the same id, so the client can deduplicate it or mark it as dismissed.
-        kind: { type: string, enum: [trend, anomaly, correlation] }
+        kind:
+          type: string
+          enum: [trend, anomaly, correlation, pattern]
+          description: >
+            What SHAPE of statement this is. `trend` compares a window with the one before it,
+            `anomaly` compares recent days with a longer baseline, `correlation` reports
+            co-movement of two series, and `pattern` describes a property of one window —
+            how much bedtime scatters, how the weekend differs from the week. A `pattern` is
+            not a change over time, which is why it is not a `trend`.
         metric: { type: string }
         title: { type: string }
         detail: { type: string }

@@ -230,6 +230,7 @@ func (e GoalUpdateSource) Valid() bool {
 const (
 	Anomaly     InsightKind = "anomaly"
 	Correlation InsightKind = "correlation"
+	Pattern     InsightKind = "pattern"
 	Trend       InsightKind = "trend"
 )
 
@@ -239,6 +240,8 @@ func (e InsightKind) Valid() bool {
 	case Anomaly:
 		return true
 	case Correlation:
+		return true
+	case Pattern:
 		return true
 	case Trend:
 		return true
@@ -592,14 +595,16 @@ type Insight struct {
 	GeneratedAt *time.Time `json:"generated_at,omitempty"`
 
 	// Id An identifier of the form `<rule>:<day>`, STABLE WITHIN A DAY (e.g. `resting-hr-elevated:2026-08-11`) — the same statement on the same day always gets the same id, so the client can deduplicate it or mark it as dismissed.
-	Id       *string          `json:"id,omitempty"`
+	Id *string `json:"id,omitempty"`
+
+	// Kind What SHAPE of statement this is. `trend` compares a window with the one before it, `anomaly` compares recent days with a longer baseline, `correlation` reports co-movement of two series, and `pattern` describes a property of one window — how much bedtime scatters, how the weekend differs from the week. A `pattern` is not a change over time, which is why it is not a `trend`.
 	Kind     *InsightKind     `json:"kind,omitempty"`
 	Metric   *string          `json:"metric,omitempty"`
 	Severity *InsightSeverity `json:"severity,omitempty"`
 	Title    *string          `json:"title,omitempty"`
 }
 
-// InsightKind defines model for Insight.Kind.
+// InsightKind What SHAPE of statement this is. `trend` compares a window with the one before it, `anomaly` compares recent days with a longer baseline, `correlation` reports co-movement of two series, and `pattern` describes a property of one window — how much bedtime scatters, how the weekend differs from the week. A `pattern` is not a change over time, which is why it is not a `trend`.
 type InsightKind string
 
 // InsightSeverity defines model for Insight.Severity.

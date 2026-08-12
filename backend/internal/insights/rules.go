@@ -29,7 +29,12 @@ import (
 	"github.com/nordic-sys/helsa/backend/internal/api"
 )
 
-// --- data minimums (the rules' thresholds in one place, so they can be held to account) ---
+// --- data minimums (the thresholds of the rules in this file, so they can be
+// held to account) ---
+//
+// The later rule families keep their own constants at the top of their file
+// (sleep_patterns.go, training.go) — same rule, same discipline: a named
+// constant with a sentence saying why THAT number.
 
 const (
 	// Deviation rule (anomaly): the baseline is a BaselineDays-long window starting
@@ -64,6 +69,33 @@ const (
 	CorrelationDays = 60
 )
 
+// --- the rule registry ---
+//
+// ruleIDPrefixes lists every rule the engine knows, by the stem of its
+// identifier. It exists so the vector suite can prove a property that no single
+// test can: that EVERY rule has both a case where it speaks and a case where it
+// stays silent (docs/api/insight-vectors.md). A rule added without vectors fails
+// the suite, which is the point — the failure mode that matters here is a
+// confident statement made from too little evidence.
+//
+// `efficiency-trend` is a stem: the rule produces one identifier per activity
+// type (`efficiency-trend-running:2026-08-11`), so the coverage check matches by
+// prefix.
+var ruleIDPrefixes = []string{
+	"resting-hr-elevated",
+	"hrv-depressed",
+	"sleep-short",
+	"steps-weekly-trend",
+	"sleep-weekly-trend",
+	"steps-sleep-correlation",
+	"sleep-regularity",
+	"sleep-midpoint-weekend",
+	"sleep-weekend-duration",
+	"steps-weekend",
+	"training-load-jump",
+	"efficiency-trend",
+}
+
 // Point is one day (00:00 taken in the user's timezone) and the value belonging
 // to it.
 type Point struct {
@@ -77,7 +109,43 @@ type Point struct {
 // these.
 type Series []Point
 
-// Input is what the rules are fed: daily series per metric, plus the sleep hours.
+// SleepNight is one night as a PERIOD: when the sleeping began and when it
+// ended. The length alone cannot answer "do you go to bed at the same time?",
+// which is what the regularity and weekend rules are about.
+//
+// Start/End and the hours in SleepHours are NOT the same measurement and neither
+// can be derived from the other: End-Start is the span the night covers, while
+// the hours are the sum of the `asleep*` segments inside it. Waking up at 3 a.m.
+// for an hour shortens the second and leaves the first alone.
+type SleepNight struct {
+	// Day is the night's key day at 00:00 local — the day the night STARTED on
+	// (see the note on sleepQuery in service.go about why a night is keyed by
+	// "start minus 12 hours" rather than by the calendar day).
+	Day   time.Time
+	Start time.Time
+	End   time.Time
+}
+
+// Workout is one finished session, reduced to what the rules need.
+//
+// Every optional measurement is a pointer, because the alternative is the bug
+// this package keeps guarding against: a workout recorded without a heart-rate
+// strap has NO average heart rate, and treating that as 0 bpm would drag every
+// average it touches towards zero.
+type Workout struct {
+	// Day is 00:00 local of the day the session started on.
+	Day          time.Time
+	ActivityType string
+	// Duration is the session's length. A workout still in progress (no end
+	// stamp) does not reach the rules at all — see service.go.
+	Duration     time.Duration
+	EnergyKcal   *float64
+	DistanceM    *float64
+	AvgHeartRate *float64
+}
+
+// Input is what the rules are fed: daily series per metric, the sleep, and the
+// workouts.
 type Input struct {
 	// Today is 00:00 of today, taken in the user's timezone.
 	Today time.Time
@@ -87,26 +155,64 @@ type Input struct {
 	// SleepHours: actual sleep per night in hours (the sum of the `asleep*`
 	// segments), booked against the day the NIGHT started on.
 	SleepHours Series
+	// SleepNights: the same nights as periods. Empty when only the duration is
+	// known — the timing rules then stay silent, which is the correct answer.
+	SleepNights []SleepNight
+	// Workouts: finished sessions in increasing start order.
+	Workouts []Workout
 }
 
-// Evaluate runs every rule. The result is in deterministic order, and an empty
-// list is perfectly fine — it means there is nothing to say.
+// Result is one insight together with the numbers the rule computed on the way
+// to it.
+//
+// The insight is what the user reads; Values is what the SHARED TEST VECTORS pin
+// (docs/api/insight-vectors.md). The two are separate on purpose: Go and Swift
+// format numbers through different libraries, so an assertion on the rendered
+// sentence would break on a thousands separator instead of on a rule. A
+// fired/not-fired flag alone, on the other hand, would not notice a threshold
+// that has quietly drifted — hence the numbers.
+type Result struct {
+	Insight api.Insight
+	Values  map[string]float64
+}
+
+// Evaluate runs every rule and returns what the user gets to read. The result is
+// in deterministic order, and an empty list is perfectly fine — it means there is
+// nothing to say.
 func Evaluate(in Input, now time.Time) []api.Insight {
-	out := []api.Insight{}
-	for _, r := range deviationRules {
-		if ins := r.eval(in, now); ins != nil {
-			out = append(out, *ins)
+	res := EvaluateDetailed(in, now)
+	out := make([]api.Insight, 0, len(res))
+	for _, r := range res {
+		out = append(out, r.Insight)
+	}
+	return out
+}
+
+// EvaluateDetailed runs every rule and keeps the computed numbers alongside each
+// insight. The API path only needs Evaluate; this is what the vector suite runs.
+func EvaluateDetailed(in Input, now time.Time) []Result {
+	out := []Result{}
+	add := func(r *Result) {
+		if r != nil {
+			out = append(out, *r)
 		}
+	}
+	for _, r := range deviationRules {
+		add(r.eval(in, now))
 	}
 	for _, r := range trendRules {
-		if ins := r.eval(in, now); ins != nil {
-			out = append(out, *ins)
-		}
+		add(r.eval(in, now))
 	}
-	if ins := stepsSleepCorrelation(in, now); ins != nil {
-		out = append(out, *ins)
+	add(stepsSleepCorrelation(in, now))
+	add(sleepRegularity(in, now))
+	for _, r := range weekendRules {
+		add(r.eval(in, now))
 	}
-	sort.Slice(out, func(i, j int) bool { return *out[i].Id < *out[j].Id })
+	add(trainingLoadJump(in, now))
+	for _, r := range efficiencyRules {
+		add(r.eval(in, now))
+	}
+	sort.Slice(out, func(i, j int) bool { return *out[i].Insight.Id < *out[j].Insight.Id })
 	return out
 }
 
@@ -171,7 +277,7 @@ var deviationRules = []deviationRule{
 	},
 }
 
-func (r deviationRule) eval(in Input, now time.Time) *api.Insight {
+func (r deviationRule) eval(in Input, now time.Time) *Result {
 	s := r.series(in)
 	if len(s) == 0 {
 		return nil
@@ -229,7 +335,8 @@ func (r deviationRule) eval(in Input, now time.Time) *api.Insight {
 			"betegségtől is elmozdul.",
 		AnomalyStreakDays, fmtVal(rm, r.unit), len(base), fmtVal(m, r.unit), fmtVal(sd, r.unit))
 
-	return insight(r.idPrefix, in.Today, api.Anomaly, r.metric, title, detail, api.Notice, now)
+	return insight(r.idPrefix, in.Today, api.Anomaly, r.metric, title, detail, api.Notice, now,
+		map[string]float64{"recent": rm, "baseline": m, "deviation": sd})
 }
 
 // --- Rule 2: weekly trend ---
@@ -264,7 +371,7 @@ var trendRules = []trendRule{
 	},
 }
 
-func (r trendRule) eval(in Input, now time.Time) *api.Insight {
+func (r trendRule) eval(in Input, now time.Time) *Result {
 	s := r.series(in)
 	if len(s) == 0 {
 		return nil
@@ -300,7 +407,8 @@ func (r trendRule) eval(in Input, now time.Time) *api.Insight {
 			"Csak azok a napok számítanak, amelyekre van adat.",
 		TrendWindowDays, fmtVal(cm, r.unit), len(cur), fmtVal(pm, r.unit), len(prev), arrow)
 
-	return insight(r.idPrefix, in.Today, api.Trend, r.metric, title, detail, api.Info, now)
+	return insight(r.idPrefix, in.Today, api.Trend, r.metric, title, detail, api.Info, now,
+		map[string]float64{"current": cm, "previous": pm, "changePct": rel * 100})
 }
 
 // --- Rule 3: step count ↔ sleep correlation ---
@@ -309,7 +417,7 @@ func (r trendRule) eval(in Input, now time.Time) *api.Insight {
 // THAT NIGHT'S sleep move together. It words itself cautiously on purpose: this
 // is CO-OCCURRENCE, not cause and effect — a day off can bring both more steps
 // and more sleep.
-func stepsSleepCorrelation(in Input, now time.Time) *api.Insight {
+func stepsSleepCorrelation(in Input, now time.Time) *Result {
 	steps := in.Daily["stepCount"]
 	sleep := in.SleepHours
 	if len(steps) == 0 || len(sleep) == 0 {
@@ -335,7 +443,8 @@ func stepsSleepCorrelation(in Input, now time.Time) *api.Insight {
 			"Ez EGYÜTTJÁRÁS, nem ok-okozat: egy szabadnap egyszerre hozhat több lépést és több alvást.",
 		len(x), r)
 
-	return insight("steps-sleep-correlation", in.Today, api.Correlation, "stepCount", title, detail, api.Info, now)
+	return insight("steps-sleep-correlation", in.Today, api.Correlation, "stepCount", title, detail, api.Info, now,
+		map[string]float64{"r": r, "pairs": float64(len(x))})
 }
 
 // --- Series operations ---
@@ -432,30 +541,89 @@ func pearson(x, y []float64) (float64, bool) {
 // definitions above with it.
 
 func fmtVal(v float64, unit string) string {
-	switch {
-	case unit == "lépés":
+	switch unit {
+	case "lépés":
 		return fmt.Sprintf("%.0f lépés", v)
-	case unit == "óra":
-		h := int(v)
-		m := int(math.Round((v - float64(h)) * 60))
-		if m == 60 {
-			h, m = h+1, 0
-		}
+	case "óra":
+		h, m := splitHours(v)
 		return fmt.Sprintf("%d óra %02d perc", h, m)
+	case "perc":
+		return fmt.Sprintf("%.0f perc", v)
+	// "óraidő" is not a quantity but a CLOCK READING: minutes counted from the
+	// night's key day at midnight, so a 02:40 sleep midpoint is 1600. Rendering it
+	// as "1600.0 perc" would be arithmetically true and unreadable.
+	case "óraidő":
+		return fmtClock(v)
+	case "km/h":
+		return fmt.Sprintf("%.1f km/h", v)
 	default:
 		return fmt.Sprintf("%.1f %s", v, unit)
 	}
 }
 
+// fmtDelta renders a DIFFERENCE between two values.
+//
+// ⚠️ Hungarian puts the measure of a comparison in the instrumental case — "72
+// perccel később", not "72 perc később"; "1500 lépéssel kevesebb", not "1500
+// lépés kevesebb". The suffix therefore belongs to the comparison, not to the
+// number, which is why this cannot be folded into fmtVal: that one renders
+// levels ("the average was 7 óra 30 perc"), and levels take the nominative.
+func fmtDelta(v float64, unit string) string {
+	switch unit {
+	case "perc":
+		return fmt.Sprintf("%.0f perccel", v)
+	case "lépés":
+		return fmt.Sprintf("%.0f lépéssel", v)
+	case "óra":
+		h, m := splitHours(v)
+		switch {
+		case h == 0:
+			return fmt.Sprintf("%d perccel", m)
+		case m == 0:
+			// "2 óra 0 perccel hosszabb" is something no one says.
+			return fmt.Sprintf("%d órával", h)
+		default:
+			return fmt.Sprintf("%d óra %d perccel", h, m)
+		}
+	default:
+		return fmt.Sprintf("%.1f %s", v, unit)
+	}
+}
+
+// splitHours breaks decimal hours into whole hours and minutes, rounding the
+// minutes (7.999 hours is 8 hours flat, not 7 hours 60 minutes).
+func splitHours(v float64) (int, int) {
+	h := int(v)
+	m := int(math.Round((v - float64(h)) * 60))
+	if m == 60 {
+		h, m = h+1, 0
+	}
+	return h, m
+}
+
+// fmtClock renders minutes-from-midnight as a wall clock. Values past 24 hours
+// (a midpoint after midnight, which is the normal case) wrap around, and so do
+// negative ones — someone who fell asleep before their key day's midnight.
+func fmtClock(minutes float64) string {
+	m := int(math.Round(minutes)) % (24 * 60)
+	if m < 0 {
+		m += 24 * 60
+	}
+	return fmt.Sprintf("%02d:%02d", m/60, m%60)
+}
+
 func insight(idPrefix string, today time.Time, kind api.InsightKind, metric, title, detail string,
-	sev api.InsightSeverity, now time.Time) *api.Insight {
+	sev api.InsightSeverity, now time.Time, values map[string]float64) *Result {
 	// The identifier is made of the rule and the day: the same statement on the same
 	// day always gets the same id, so the client can deduplicate it or mark it as
 	// dismissed.
 	id := idPrefix + ":" + today.Format("2006-01-02")
 	gen := now.UTC()
-	return &api.Insight{
-		Id: &id, Kind: &kind, Metric: &metric,
-		Title: &title, Detail: &detail, Severity: &sev, GeneratedAt: &gen,
+	return &Result{
+		Insight: api.Insight{
+			Id: &id, Kind: &kind, Metric: &metric,
+			Title: &title, Detail: &detail, Severity: &sev, GeneratedAt: &gen,
+		},
+		Values: values,
 	}
 }

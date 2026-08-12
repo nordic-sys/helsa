@@ -5,6 +5,8 @@ import (
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/nordic-sys/helsa/backend/internal/api"
 )
 
 var (
@@ -362,6 +364,222 @@ func TestStrongCorrelationIsReportedWithACaveat(t *testing.T) {
 	}
 	if !found {
 		t.Error("expected an insight for a strong correlation")
+	}
+}
+
+// --- the wording of the new rule families ---
+//
+// The vectors pin the DECISIONS (see vectors_test.go); what is tested here is
+// what the Go side alone owns: the Hungarian sentence. Two properties matter —
+// it must state the numbers it is based on, and it must not overreach.
+
+// nightsWithStart builds `count` nights ending yesterday, each `durMin` long,
+// starting at the minute-of-day the callback returns.
+func nightsWithStart(count int, durMin float64, startMin func(time.Weekday) float64) []SleepNight {
+	out := []SleepNight{}
+	for i := count; i > 0; i-- {
+		d := today.AddDate(0, 0, -i)
+		start := d.Add(time.Duration(startMin(d.Weekday())) * time.Minute)
+		out = append(out, SleepNight{
+			Day: d, Start: start, End: start.Add(time.Duration(durMin) * time.Minute),
+		})
+	}
+	return out
+}
+
+// balancedSwing: bedtimes that swing `spread` minutes around 22:30 while the
+// free nights (Friday, Saturday) average exactly what the work nights do — so
+// only the SCATTER is left for a rule to find.
+func balancedSwing(spread float64) func(time.Weekday) float64 {
+	return func(wd time.Weekday) float64 {
+		switch wd {
+		case time.Sunday:
+			return 1350
+		case time.Monday, time.Wednesday, time.Friday:
+			return 1350 - spread
+		default:
+			return 1350 + spread
+		}
+	}
+}
+
+func findInsight(t *testing.T, in Input, prefix string) api.Insight {
+	t.Helper()
+	for _, ins := range Evaluate(in, now) {
+		if strings.HasPrefix(*ins.Id, prefix) {
+			return ins
+		}
+	}
+	t.Fatalf("no insight with the prefix %q; we got: %v", prefix, idsOf(t, in))
+	return api.Insight{}
+}
+
+func TestSleepRegularityWordsTheScatterAndTheMidpoint(t *testing.T) {
+	// A bedtime swinging 90 minutes around 22:30 (so the midpoint of an unvarying
+	// 8-hour night averages 02:30), balanced across the weekdays so that the
+	// weekend rules have nothing to say about the same nights.
+	swing := balancedSwing(90)
+	in := Input{Today: today, SleepNights: nightsWithStart(28, 480, swing)}
+	ins := findInsight(t, in, "sleep-regularity")
+
+	if *ins.Kind != api.Pattern {
+		t.Errorf("kind = %s — a property of a window is not a trend", *ins.Kind)
+	}
+	// The scatter is the finding, so it has to be in the title.
+	if !strings.Contains(*ins.Title, "perc") {
+		t.Errorf("the title does not state the scatter: %s", *ins.Title)
+	}
+	// The midpoint belongs in the explanation as a CLOCK reading: "1590 perc"
+	// would be arithmetically true and unreadable.
+	if !strings.Contains(*ins.Detail, "02:30") {
+		t.Errorf("the explanation does not state the midpoint as a clock time: %s", *ins.Detail)
+	}
+	if !strings.Contains(*ins.Detail, "nem diagnózis") {
+		t.Errorf("the qualifying wording is missing: %s", *ins.Detail)
+	}
+
+	// The same nights, a third of the swing: nothing to report.
+	quiet := Input{Today: today, SleepNights: nightsWithStart(28, 480, balancedSwing(30))}
+	if hasPrefix(idsOf(t, quiet), "sleep-regularity") {
+		t.Error("a 30-minute swing was reported as irregular")
+	}
+}
+
+// Hungarian puts the measure of a comparison in the instrumental case. Getting
+// this wrong ("120 perc később" instead of "120 perccel később") is the kind of
+// thing only a native reader notices, so it is pinned.
+func TestWeekendRulesUseTheInstrumentalCase(t *testing.T) {
+	jetlag := func(wd time.Weekday) float64 {
+		if wd == time.Friday || wd == time.Saturday {
+			return 1380 + 120
+		}
+		return 1380
+	}
+	in := Input{Today: today, SleepNights: nightsWithStart(28, 480, jetlag)}
+	ins := findInsight(t, in, "sleep-midpoint-weekend")
+	if !strings.Contains(*ins.Title, "perccel később van") {
+		t.Errorf("the title is not grammatical Hungarian: %s", *ins.Title)
+	}
+	// Both averages are clock readings, and the count is of NIGHTS, not days.
+	if !strings.Contains(*ins.Detail, "mért éjszakából") {
+		t.Errorf("the explanation counts days rather than nights: %s", *ins.Detail)
+	}
+
+	steps := Series{}
+	for i := 28; i > 0; i-- {
+		d := today.AddDate(0, 0, -i)
+		v := 11000.0
+		if d.Weekday() == time.Saturday || d.Weekday() == time.Sunday {
+			v = 6000
+		}
+		steps = append(steps, Point{Day: d, Value: v})
+	}
+	stepsIn := Input{Today: today, Daily: map[string]Series{"stepCount": steps}}
+	ins = findInsight(t, stepsIn, "steps-weekend")
+	if !strings.Contains(*ins.Title, "lépéssel kevesebb") {
+		t.Errorf("the title is not grammatical Hungarian: %s", *ins.Title)
+	}
+	if !strings.Contains(*ins.Detail, "nem nulla") {
+		t.Errorf("the explanation does not say that a missing day is left out: %s", *ins.Detail)
+	}
+}
+
+// Whole hours: "2 óra 0 perccel hosszabb" is not a sentence anyone says.
+func TestWholeHourDifferenceReadsNaturally(t *testing.T) {
+	if got := fmtDelta(2, "óra"); got != "2 órával" {
+		t.Errorf("fmtDelta(2, óra) = %q", got)
+	}
+	if got := fmtDelta(1.5, "óra"); got != "1 óra 30 perccel" {
+		t.Errorf("fmtDelta(1.5, óra) = %q", got)
+	}
+	if got := fmtDelta(0.7, "óra"); got != "42 perccel" {
+		t.Errorf("fmtDelta(0.7, óra) = %q", got)
+	}
+	// A clock reading past midnight wraps: 1590 minutes is 02:30, not 26:30.
+	if got := fmtVal(1590, "óraidő"); got != "02:30" {
+		t.Errorf("fmtVal(1590, óraidő) = %q", got)
+	}
+}
+
+// The training-load rule is the one most likely to be misread as medicine, so
+// its disclaimers are part of the contract, not decoration.
+func TestTrainingLoadSaysItIsNotAnInjuryForecast(t *testing.T) {
+	var ws []Workout
+	addWorkout := func(daysAgo int, mins float64) {
+		ws = append(ws, Workout{
+			Day:          today.AddDate(0, 0, -daysAgo),
+			ActivityType: "traditionalStrengthTraining",
+			Duration:     time.Duration(mins) * time.Minute,
+		})
+	}
+	for _, d := range []int{28, 27, 21, 20, 14, 13} {
+		addWorkout(d, 45)
+	}
+	for _, d := range []int{7, 5, 3, 1} {
+		addWorkout(d, 60)
+	}
+	in := Input{Today: today, Workouts: ws}
+	ins := findInsight(t, in, "training-load-jump")
+
+	if *ins.Severity != api.Info {
+		t.Errorf("severity = %s — a training figure dressed as a warning invites a medical reading", *ins.Severity)
+	}
+	for _, want := range []string{"nem sérülés-előrejelzés", "NEM orvosi állítás", "perc"} {
+		if !strings.Contains(*ins.Detail, want) {
+			t.Errorf("the explanation is missing %q: %s", want, *ins.Detail)
+		}
+	}
+}
+
+// The efficiency rule's whole claim rests on the heart rate being comparable;
+// if it is not, the correct output is nothing at all.
+func TestEfficiencyNeedsAComparableHeartRate(t *testing.T) {
+	build := func(recentMins, recentHR float64) Input {
+		var ws []Workout
+		run := func(daysAgo int, mins, hr float64) {
+			dist := 8000.0
+			ws = append(ws, Workout{
+				Day: today.AddDate(0, 0, -daysAgo), ActivityType: "running",
+				Duration:  time.Duration(mins * float64(time.Minute)),
+				DistanceM: &dist, AvgHeartRate: &hr,
+			})
+		}
+		for _, d := range []int{55, 52, 45, 38, 31} {
+			run(d, 44, 149)
+		}
+		for _, d := range []int{27, 24, 17, 10, 3} {
+			run(d, recentMins, recentHR)
+		}
+		return Input{Today: today, Workouts: ws}
+	}
+
+	ins := findInsight(t, build(40, 150), "efficiency-trend-running")
+	if !strings.Contains(*ins.Title, "ugyanazon a pulzuson") {
+		t.Errorf("the title does not say the comparison is at a like heart rate: %s", *ins.Title)
+	}
+	// km/h, because "200.0 m/min" is not how anyone thinks about their pace.
+	if !strings.Contains(*ins.Detail, "km/h") {
+		t.Errorf("the explanation does not state the pace in km/h: %s", *ins.Detail)
+	}
+
+	if hasPrefix(idsOf(t, build(40, 158)), "efficiency-trend") {
+		t.Error("we called it an efficiency gain although the heart rate rose by 9 bpm with it")
+	}
+}
+
+// A strength session has no pace. Reading its zero distance as a slow one would
+// invent the very data this package refuses to invent.
+func TestEfficiencyIgnoresSessionsWithoutDistanceOrHeartRate(t *testing.T) {
+	var ws []Workout
+	for _, d := range []int{55, 52, 45, 38, 31, 27, 24, 17, 10, 3} {
+		ws = append(ws, Workout{
+			Day: today.AddDate(0, 0, -d), ActivityType: "running",
+			Duration: 40 * time.Minute,
+		})
+	}
+	in := Input{Today: today, Workouts: ws}
+	if hasPrefix(idsOf(t, in), "efficiency-trend") {
+		t.Error("we produced an efficiency insight from workouts with no distance and no heart rate")
 	}
 }
 
