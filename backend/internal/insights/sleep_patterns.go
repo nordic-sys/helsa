@@ -135,9 +135,9 @@ func sleepRegularity(in Input, now time.Time) *Result {
 type weekendRule struct {
 	metric string
 	series func(Input) Series
-	// freeDay: is this day a free one? For a NIGHT this is the day the night
+	// isFree: is this day a free one? For a NIGHT this is the day the night
 	// started on, for a daily total it is the day itself.
-	freeDay func(time.Weekday) bool
+	isFree func(time.Weekday) bool
 	// unit of the two averages, deltaUnit of the difference between them. They
 	// differ for the midpoint rule: the level is a clock reading, the difference
 	// is a number of minutes.
@@ -161,7 +161,6 @@ type weekendRule struct {
 	// nothing ("10% later than 02:00" is not a sentence).
 	minAbsDelta float64
 	minRelative float64
-	kind        api.InsightKind
 }
 
 // A free NIGHT is one that starts on a Friday or a Saturday: those are the
@@ -178,7 +177,7 @@ var weekendRules = []weekendRule{
 	{
 		metric:      "sleepDuration",
 		series:      func(in Input) Series { return midpointSeries(in.SleepNights) },
-		freeDay:     freeNight,
+		isFree:      freeNight,
 		unit:        "óraidő",
 		deltaUnit:   "perc",
 		label:       "Az alvásod közepe",
@@ -188,12 +187,11 @@ var weekendRules = []weekendRule{
 		idPrefix:    "sleep-midpoint-weekend",
 		minAbsDelta: MinSocialJetlagMinutes,
 		minRelative: 0, // a clock reading has no meaningful percentage
-		kind:        api.Pattern,
 	},
 	{
 		metric:      "sleepDuration",
 		series:      func(in Input) Series { return in.SleepHours },
-		freeDay:     freeNight,
+		isFree:      freeNight,
 		unit:        "óra",
 		deltaUnit:   "óra",
 		label:       "Az alvásod hossza",
@@ -203,12 +201,11 @@ var weekendRules = []weekendRule{
 		idPrefix:    "sleep-weekend-duration",
 		minAbsDelta: MinWeekendSleepDeltaHours,
 		minRelative: MinWeekendSleepRelative,
-		kind:        api.Pattern,
 	},
 	{
 		metric:      "stepCount",
 		series:      func(in Input) Series { return in.Daily["stepCount"] },
-		freeDay:     freeDay,
+		isFree:      freeDay,
 		unit:        "lépés",
 		deltaUnit:   "lépés",
 		label:       "A napi lépésszámod",
@@ -218,7 +215,6 @@ var weekendRules = []weekendRule{
 		idPrefix:    "steps-weekend",
 		minAbsDelta: MinWeekendStepsDelta,
 		minRelative: MinWeekendStepsRelative,
-		kind:        api.Pattern,
 	},
 }
 
@@ -226,7 +222,7 @@ func (r weekendRule) eval(in Input, now time.Time) *Result {
 	s := r.series(in).between(in.Today.AddDate(0, 0, -SleepPatternWindowDays), in.Today)
 	var free, work []float64
 	for _, p := range s {
-		if r.freeDay(p.Day.Weekday()) {
+		if r.isFree(p.Day.Weekday()) {
 			free = append(free, p.Value)
 		} else {
 			work = append(work, p.Value)
@@ -262,6 +258,8 @@ func (r weekendRule) eval(in Input, now time.Time) *Result {
 		fmtVal(fm, r.unit), len(free), r.countWord,
 		fmtVal(wm, r.unit), len(work), r.countWord)
 
-	return insight(r.idPrefix, in.Today, r.kind, r.metric, title, detail, api.Info, now,
+	// Every rule here is a `pattern`: it describes a property of one window
+	// rather than a change from one window to the next.
+	return insight(r.idPrefix, in.Today, api.Pattern, r.metric, title, detail, api.Info, now,
 		map[string]float64{"free": fm, "work": wm, "delta": delta})
 }
