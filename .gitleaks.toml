@@ -1,0 +1,31 @@
+# Secret scanning configuration.
+#
+# The point of an allowlist is to keep the scanner worth reading. Two
+# documentation examples trip the generic API-key rule on every run, and a
+# scanner that always reports something is one people stop looking at — which
+# is precisely when a real finding slips past.
+[extend]
+useDefault = true
+
+[[rules]]
+id = "generic-api-key"
+
+  [[rules.allowlists]]
+  description = """
+  Truncated JWT headers in documentation.
+
+  `eyJhbGciOiJIUzI1NiIs` is base64 for `{"alg":"HS256",` — the identical opening
+  of every HS256 token ever issued. It carries no key, no payload and no
+  signature, and it is followed by `...` in the docs because it is an
+  illustration of the shape, not a value.
+
+  Scoped to the docs tree and to that exact prefix, so a real token pasted
+  anywhere else still fails the scan.
+  """
+  # ⚠️ `condition = "AND"` is required. The default is OR, under which the path alone
+  # exempts the whole docs tree from the rule — a real token pasted into any page
+  # would then pass unnoticed. A probe caught this: after writing an allowlist, try
+  # to smuggle something through it.
+  condition = "AND"
+  paths = ['''^docs/.*\.md$''']
+  regexes = ['''eyJhbGciOiJIUzI1NiIs\.\.\.''']
