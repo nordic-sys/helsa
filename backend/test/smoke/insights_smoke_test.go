@@ -155,6 +155,151 @@ func TestInsightsFromSeededHistory(t *testing.T) {
 	}
 }
 
+// The timing and workout rules E2E. What is worth proving here, and cannot be
+// proved by a unit test, is the SQL underneath them: that a night's first start
+// and last end survive the "start minus 12 hours" grouping, and that a workout's
+// average heart rate is resolved from samples the client could only tag with an
+// HKWorkout.uuid.
+func TestTimingAndWorkoutInsightsFromSeededHistory(t *testing.T) {
+	e := newEnv(t)
+	c, token, sub := e.client, e.token, e.appleSub
+
+	const tz = "Europe/Budapest"
+	loc, err := time.LoadLocation(tz)
+	must(t, err, "tz")
+	tzp := tz
+	if st := c.do(t, http.MethodPut, "/v1/settings", token, api.Settings{TimeZone: &tzp}, nil); st != http.StatusOK {
+		t.Fatalf("settings status=%d", st)
+	}
+
+	now := time.Now().In(loc)
+	today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, loc)
+	dayAt := func(daysAgo int, minutes float64) time.Time {
+		return today.AddDate(0, 0, -daysAgo).Add(time.Duration(minutes) * time.Minute)
+	}
+
+	// 28 nights, every one exactly 8 hours long, but the free nights (those
+	// STARTING on a Friday or a Saturday) begin two hours later. The length is
+	// perfectly steady, so only a rule that looks at the timing can see anything
+	// at all.
+	var sleeps []api.SleepSegmentIn
+	for d := 28; d >= 1; d-- {
+		startMin := 23 * 60.0
+		if wd := today.AddDate(0, 0, -d).Weekday(); wd == time.Friday || wd == time.Saturday {
+			startMin += 120
+		}
+		start := dayAt(d, startMin)
+		sleeps = append(sleeps, api.SleepSegmentIn{
+			SourceUuid: fmt.Sprintf("%s-tim-sl-%d", sub, d),
+			StartedAt:  start.UTC(),
+			EndedAt:    start.Add(8 * time.Hour).UTC(),
+			Stage:      api.SleepSegmentInStage("asleepCore"),
+		})
+	}
+
+	// Workouts. The strength sessions carry the training load; the runs carry the
+	// pace, 8 km in 40 minutes now against 8 km in 44 minutes a month ago, at a
+	// heart rate one beat apart.
+	var workouts []api.WorkoutIn
+	var samples []api.SampleIn
+	addWorkout := func(daysAgo int, activity string, mins float64, distance, hr *float32) {
+		uuid := fmt.Sprintf("%s-tim-wo-%s-%d", sub, activity, daysAgo)
+		start := dayAt(daysAgo, 17*60)
+		end := start.Add(time.Duration(mins) * time.Minute)
+		workouts = append(workouts, api.WorkoutIn{
+			SourceUuid: uuid, ActivityType: activity,
+			StartedAt: start.UTC(), EndedAt: &end, TotalDistanceM: distance,
+		})
+		if hr == nil {
+			return
+		}
+		// The heart rate is a SAMPLE tagged with the workout's HealthKit uuid —
+		// the client has no other handle on it. The worker resolves the link.
+		unit := "count/min"
+		samples = append(samples, api.SampleIn{
+			SourceUuid: uuid + "-hr", DataType: "heartRate", Ts: start.Add(time.Minute).UTC(),
+			Value: hr, Unit: &unit, WorkoutSourceUuid: &uuid,
+		})
+	}
+
+	// Three quiet weeks of two strength sessions, then four in the last week.
+	for _, d := range []int{28, 27, 21, 20, 14, 13} {
+		addWorkout(d, "traditionalStrengthTraining", 45, nil, nil)
+	}
+	for _, d := range []int{7, 5, 3, 2} {
+		addWorkout(d, "traditionalStrengthTraining", 60, nil, nil)
+	}
+	dist, recentHR, prevHR := float32(8000), float32(150), float32(149)
+	for _, d := range []int{27, 24, 17, 10, 3} {
+		addWorkout(d, "running", 40, &dist, &recentHR)
+	}
+	for _, d := range []int{55, 52, 45, 38, 31} {
+		addWorkout(d, "running", 44, &dist, &prevHR)
+	}
+
+	tzc := tz
+	if st := c.do(t, http.MethodPost, "/v1/ingest", token, api.IngestBatch{
+		TimeZone: &tzc, Workouts: &workouts, Samples: &samples, SleepSegments: &sleeps,
+	}, nil); st != http.StatusAccepted {
+		t.Fatalf("ingest status=%d (expected 202)", st)
+	}
+
+	want := []string{"sleep-midpoint-weekend", "training-load-jump", "efficiency-trend-running"}
+	var got []api.Insight
+	ids := map[string]api.Insight{}
+	deadline := time.Now().Add(30 * time.Second)
+	for time.Now().Before(deadline) {
+		got = nil
+		if st := c.do(t, http.MethodGet, "/v1/insights", token, nil, &got); st != http.StatusOK {
+			t.Fatalf("insights status=%d", st)
+		}
+		ids = map[string]api.Insight{}
+		for _, ins := range got {
+			if ins.Id == nil {
+				t.Fatal("insight without an identifier")
+			}
+			ids[strings.SplitN(*ins.Id, ":", 2)[0]] = ins
+		}
+		if len(ids) >= len(want) {
+			break
+		}
+		time.Sleep(400 * time.Millisecond)
+	}
+	for _, w := range want {
+		if _, ok := ids[w]; !ok {
+			t.Fatalf("missing insight: %s (we got: %v)", w, keysOf(ids))
+		}
+	}
+
+	// The weekend shift is two hours, and it has to come back as two hours: if the
+	// night grouping cut a 01:00 bedtime off at midnight, this is where it shows.
+	jetlag := ids["sleep-midpoint-weekend"]
+	if jetlag.Title == nil || !strings.Contains(*jetlag.Title, "120 perccel később") {
+		t.Errorf("unexpected social jetlag title: %s", deref(jetlag.Title))
+	}
+	// An unvarying 8-hour night is not irregular, however late it starts.
+	if _, ok := ids["sleep-regularity"]; ok {
+		t.Errorf("a steady 8-hour night was reported as irregular: %s", deref(ids["sleep-regularity"].Title))
+	}
+	// The efficiency rule only speaks when the heart rate came back from the
+	// sample→workout resolution; without that it stays silent, so this assertion
+	// is really a test of the join.
+	eff := ids["efficiency-trend-running"]
+	if eff.Detail == nil || !strings.Contains(*eff.Detail, "150.0 bpm") {
+		t.Errorf("the efficiency explanation does not cite the resolved heart rate: %s", deref(eff.Detail))
+	}
+	// And the load figure must keep saying what it is not.
+	load := ids["training-load-jump"]
+	if load.Detail == nil || !strings.Contains(*load.Detail, "nem sérülés-előrejelzés") {
+		t.Errorf("the training load explanation dropped its qualifier: %s", deref(load.Detail))
+	}
+
+	t.Logf("✓ timing/workout insights E2E: %d observations (%v)", len(got), keysOf(ids))
+	for _, ins := range got {
+		t.Logf("   • [%s] %s — %s", *ins.Kind, *ins.Title, *ins.Detail)
+	}
+}
+
 func deref(s *string) string {
 	if s == nil {
 		return "<nil>"

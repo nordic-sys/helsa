@@ -210,15 +210,36 @@ Current rules and what each needs before it will say anything:
 | **Sustained deviation** (resting HR up, HRV down, sleep down) | 28-day baseline window ending 3 days ago, at least 14 measured days in it, non-constant data, and 3 consecutive recent days at ≥1.5σ plus a per-metric absolute threshold (2 bpm / 5 ms / 30 min). |
 | **Weekly trend** (steps, sleep) | Two consecutive 7-day windows, at least 5 measured days in each, ≥10% relative change and an absolute minimum. |
 | **Co-occurrence** (steps ↔ that night's sleep) | 60-day window, at least 14 paired days, absolute correlation coefficient ≥ 0.5. |
+| **Sleep regularity** (scatter of the night's midpoint) | 28-day window, at least 14 measured nights, midpoint standard deviation ≥ 60 minutes. Needs the sleep segments' start and end, not just the hours. |
+| **Free days vs work days** (sleep timing, sleep length, steps) | 28-day window, at least 4 free and 10 work days measured, ≥60 minutes of midpoint shift / ≥1 hour and 10% of sleep / ≥1500 steps and 15%. A free **night** is one starting Friday or Saturday; a free **day**, for steps, is Saturday or Sunday. |
+| **Training load** (last 7 days vs last 28) | At least 8 sessions in the 28 days **and at least one in every one of the four weeks**, 2 sessions and 90 minutes in the last 7, ratio ≥ 1.5. |
+| **Efficiency** (pace at a given heart rate, per activity) | Two consecutive 28-day windows, at least 4 sessions with distance *and* average heart rate in each, the two windows' average heart rate within 5 bpm, pace ≥5% and ≥5 m/min apart. |
 
 The partial current day never enters a window, and missing days are never filled
 with zeroes or interpolated.
+
+Two of these deserve their reasoning spelled out. The training-load rule wants a
+session in **every** chronic week because a week with none is indistinguishable
+from a week that never synced — a rest week and a broken upload leave identical
+evidence, and averaging across the gap would announce a "jump" that is really
+missing data. The efficiency rule refuses to speak when the two windows' heart
+rates differ by more than 5 bpm, because faster at a higher pulse is effort, not
+efficiency.
+
+**The training-load figure is sport bookkeeping, not medicine.** It is arithmetic
+on your own session lengths and carries no injury forecast, whatever the sports
+science literature it borrows its shape from is currently arguing about.
 
 **An empty list is a complete answer.** Below its data minimum a rule stays silent,
 because a fabricated insight is worse than none.
 
 `id` is stable within a day (`<rule>:<date>`), so a client can deduplicate or mark
-one as dismissed.
+one as dismissed. `kind` is `trend`, `anomaly`, `correlation` or `pattern` — a
+`pattern` describes a property of one window (how much bedtime scatters, how the
+weekend differs from the week) rather than a change over time.
+
+The same rules run in the iOS app, and both implementations are held to the
+[shared test vectors](insight-vectors.html).
 
 > These are arithmetic on your own numbers, not clinical findings. See the
 > [disclaimer](../disclaimer.html).
