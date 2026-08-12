@@ -178,23 +178,44 @@ func TestTimingAndWorkoutInsightsFromSeededHistory(t *testing.T) {
 		return today.AddDate(0, 0, -daysAgo).Add(time.Duration(minutes) * time.Minute)
 	}
 
-	// 28 nights, every one exactly 8 hours long, but the free nights (those
-	// STARTING on a Friday or a Saturday) begin two hours later. The length is
-	// perfectly steady, so only a rule that looks at the timing can see anything
-	// at all.
+	// 28 nights, every one the same length, but the free nights (those STARTING on
+	// a Friday or a Saturday) begin two hours later. The length is perfectly
+	// steady, so only a rule that looks at the timing can see anything at all.
+	//
+	// ⚠️ The nights are seeded the way the real data looks, and that is the point
+	// of this scenario: an `inBed` envelope around everything, half an hour awake
+	// in the middle — and on the free nights a SECOND source describing the very
+	// same eight hours in its own words. Summing the raw segments would make those
+	// nights sixteen hours long and fire "you sleep longer at the weekend" out of
+	// nothing but the double counting. See the absence assertion below.
 	var sleeps []api.SleepSegmentIn
+	seg := func(d int, tag, stage string, from, to time.Time) {
+		sleeps = append(sleeps, api.SleepSegmentIn{
+			SourceUuid: fmt.Sprintf("%s-tim-sl-%d-%s", sub, d, tag),
+			StartedAt:  from.UTC(),
+			EndedAt:    to.UTC(),
+			Stage:      api.SleepSegmentInStage(stage),
+		})
+	}
 	for d := 28; d >= 1; d-- {
 		startMin := 23 * 60.0
+		free := false
 		if wd := today.AddDate(0, 0, -d).Weekday(); wd == time.Friday || wd == time.Saturday {
 			startMin += 120
+			free = true
 		}
 		start := dayAt(d, startMin)
-		sleeps = append(sleeps, api.SleepSegmentIn{
-			SourceUuid: fmt.Sprintf("%s-tim-sl-%d", sub, d),
-			StartedAt:  start.UTC(),
-			EndedAt:    start.Add(8 * time.Hour).UTC(),
-			Stage:      api.SleepSegmentInStage("asleepCore"),
-		})
+		end := start.Add(8 * time.Hour)
+
+		seg(d, "bed", "inBed", start.Add(-30*time.Minute), end.Add(30*time.Minute))
+		seg(d, "phone", "asleepCore", start, end)
+		// Wakefulness in the middle of the night: it comes off the sleep, but it
+		// moves neither falling asleep nor waking, so the midpoint stays put.
+		seg(d, "awake", "awake", start.Add(3*time.Hour), start.Add(3*time.Hour+30*time.Minute))
+		if free {
+			seg(d, "watch-1", "asleepDeep", start, start.Add(4*time.Hour))
+			seg(d, "watch-2", "asleepREM", start.Add(4*time.Hour), end)
+		}
 	}
 
 	// Workouts. The strength sessions carry the training load; the runs carry the
@@ -277,9 +298,18 @@ func TestTimingAndWorkoutInsightsFromSeededHistory(t *testing.T) {
 	if jetlag.Title == nil || !strings.Contains(*jetlag.Title, "120 perccel később") {
 		t.Errorf("unexpected social jetlag title: %s", deref(jetlag.Title))
 	}
-	// An unvarying 8-hour night is not irregular, however late it starts.
+	// An unvarying night is not irregular, however late it starts.
 	if _, ok := ids["sleep-regularity"]; ok {
-		t.Errorf("a steady 8-hour night was reported as irregular: %s", deref(ids["sleep-regularity"].Title))
+		t.Errorf("a steady night was reported as irregular: %s", deref(ids["sleep-regularity"].Title))
+	}
+	// Every night here is the same length — 8 hours in bed asleep minus the half
+	// hour awake. The free nights only LOOK longer, because a second source
+	// describes them a second time. If that overlap is summed instead of resolved,
+	// this insight appears out of nowhere and claims eight hours of weekend
+	// lie-in.
+	if _, ok := ids["sleep-weekend-duration"]; ok {
+		t.Errorf("the overlap of two sources was counted as extra sleep: %s",
+			deref(ids["sleep-weekend-duration"].Title))
 	}
 	// The efficiency rule only speaks when the heart rate came back from the
 	// sample→workout resolution; without that it stays silent, so this assertion

@@ -190,7 +190,9 @@ func TestHomeAssistantMQTTPublisher(t *testing.T) {
 	}
 	rec.await(t, prefix+"/daily/active_energy", func(v string) bool { return v == "450" })
 	rec.await(t, prefix+"/daily/resting_heart_rate", func(v string) bool { return v == "55" })
-	// One hour asleep between the two-hour in-bed window: time asleep, not time in bed.
+	// One hour asleep between the two-hour in-bed window: time asleep, not time in
+	// bed — and one hour even though two sources describe it, because the overlap
+	// counts once.
 	rec.await(t, prefix+"/daily/sleep_hours", func(v string) bool { return v == "1.0" })
 	// Two of the three rings reached their goal (energy 450/500 did not).
 	rec.await(t, prefix+"/daily/rings_closed", func(v string) bool { return v == "2" })
@@ -314,12 +316,17 @@ func seedForMQTT(t *testing.T, e *env) {
 	samples = append(samples, sample(appleSub, "restingHeartRate", "count/min", noon.UTC(), 55, 960))
 
 	// Two hours in bed, one of them asleep: the published figure must be the hour
-	// asleep, not the two hours lying there.
+	// asleep, not the two hours lying there — and not the two and a half a naive
+	// sum would make of it, because a second source describes the same hour of
+	// sleep in its own words (half deep, half core).
 	inBed := api.SleepSegmentInStage("inBed")
 	core := api.SleepSegmentInStage("asleepCore")
+	deep := api.SleepSegmentInStage("asleepDeep")
 	sleeps := []api.SleepSegmentIn{
 		{SourceUuid: appleSub + "-mqtt-sl-bed", StartedAt: noon.Add(-8 * time.Hour).UTC(), EndedAt: noon.Add(-6 * time.Hour).UTC(), Stage: inBed},
 		{SourceUuid: appleSub + "-mqtt-sl-core", StartedAt: noon.Add(-7 * time.Hour).UTC(), EndedAt: noon.Add(-6 * time.Hour).UTC(), Stage: core},
+		{SourceUuid: appleSub + "-mqtt-sl-watch-1", StartedAt: noon.Add(-7 * time.Hour).UTC(), EndedAt: noon.Add(-390 * time.Minute).UTC(), Stage: deep},
+		{SourceUuid: appleSub + "-mqtt-sl-watch-2", StartedAt: noon.Add(-390 * time.Minute).UTC(), EndedAt: noon.Add(-6 * time.Hour).UTC(), Stage: core},
 	}
 
 	// Exercise and stand reach their goal, move does not → two rings closed.
