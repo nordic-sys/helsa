@@ -14,6 +14,16 @@
 # pki/ sits DELIBERATELY OUTSIDE the clone: the keys must never end up in the
 # repository, and this way a `git clean` cannot take them away either.
 #
+#
+# IMAGES vs SOURCE. Every application service names a published image AND a build
+# context, and `pull_policy` decides which one is used:
+#
+#   HELSA_PULL_POLICY=always   pull the published images (the default in .env.example)
+#   HELSA_PULL_POLICY=build    build from the sources in this checkout
+#
+# ⚠️ While the repository is private, pulling needs a GitHub login:
+#   echo $GITHUB_TOKEN | docker login ghcr.io -u <user> --password-stdin
+#
 # Usage:
 #   make prod-up        start it
 #   make prod-migrate   migration — a SEPARATE, DELIBERATE step (docs/07 §3.1)
@@ -25,11 +35,10 @@ services:
       PATRONI_SCOPE: helsa
 
   api:
+    image: ${HELSA_BACKEND_IMAGE:-ghcr.io/nordic-sys/helsa/backend:latest}
+    pull_policy: ${HELSA_PULL_POLICY:-always}
     build:
       context: ../backend
-      args:
-        APP: api
-    image: helsa-api:local
     container_name: helsa-api
     env_file: .env
     environment:
@@ -56,11 +65,12 @@ services:
   # reach. `mqtt.lan` resolves inside the container through Docker's DNS, not
   # through the host's /etc/hosts; an IP address is the reliable answer.
   worker:
+    image: ${HELSA_BACKEND_IMAGE:-ghcr.io/nordic-sys/helsa/backend:latest}
+    pull_policy: ${HELSA_PULL_POLICY:-always}
     build:
       context: ../backend
-      args:
-        APP: worker
-    image: helsa-worker:local
+    # One image, three binaries — the command picks the worker.
+    command: ["helsa-worker"]
     container_name: helsa-worker
     env_file: .env
     environment:
@@ -99,11 +109,11 @@ services:
   #   make prod-token SUBJECT=bob-web
   token:
     profiles: ["tools"]
+    image: ${HELSA_BACKEND_IMAGE:-ghcr.io/nordic-sys/helsa/backend:latest}
+    pull_policy: ${HELSA_PULL_POLICY:-always}
     build:
       context: ../backend
-      args:
-        APP: token
-    image: helsa-token:local
+    entrypoint: ["helsa-token"]
     env_file: .env
     environment:
       HELSA_DATABASE_URL: "postgres://${POSTGRES_USER:-helsa}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB:-helsa}?sslmode=disable"
@@ -119,9 +129,10 @@ services:
       redis:       { condition: service_healthy }
 
   web:
+    image: ${HELSA_WEB_IMAGE:-ghcr.io/nordic-sys/helsa/web:latest}
+    pull_policy: ${HELSA_PULL_POLICY:-always}
     build:
       context: ../web
-    image: helsa-web:local
     container_name: helsa-web
     # Publishes no port: Caddy proxies :8443 here, and even that is not port-forwarded
     # on the router (docs/07 §4).

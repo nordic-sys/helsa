@@ -46,6 +46,5 @@ test: ## Unit tests
 tidy: ## go mod tidy
 	go mod tidy
 
-docker: ## Build both images locally
-	docker build --build-arg APP=api    -t helsa-api:dev .
-	docker build --build-arg APP=worker -t helsa-worker:dev .
+docker: ## Build the backend image locally (it carries api + worker + token)
+	docker build -t helsa-backend:dev .

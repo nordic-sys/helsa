@@ -53,6 +53,29 @@ make reset       # stop + DELETE THE DATA (the volumes)
 
 `make help` lists all of them, including the `prod-*` and `devvm-*` targets.
 
+## Images or source
+
+The application services (`api`, `worker`, `web`, `token`) default to the images
+published to GHCR — `ghcr.io/nordic-sys/helsa/backend` and `.../web` — so running
+Helsa does not require compiling it. One backend image carries all three binaries;
+the compose file picks one per service with `command`.
+
+`HELSA_PULL_POLICY` in `.env` is the switch:
+
+| Value | What happens | Target |
+|---|---|---|
+| `always` (default) | the published images are pulled | `make prod-pull` + `make prod-up` |
+| `build` | the images are built from this checkout | `make prod-build` + `make prod-up-source` |
+
+⚠️ **While the repository is private, a pull needs `docker login ghcr.io` first**,
+with a token carrying `read:packages`. A missing login fails as `denied`, which
+reads like a missing image rather than a missing credential.
+
+⚠️ **Do not mix the two by accident.** With `HELSA_PULL_POLICY=always` in `.env`, a
+plain `make prod-up` quietly replaces locally built images with the published ones
+— a successful pull looks exactly like a successful start. `make prod-up-source`
+exists for that reason.
+
 ## On a host
 
 The expected directory layout is documented at the top of
@@ -80,5 +103,6 @@ The expected directory layout is documented at the top of
 | `docker-compose.devvm.yml` | a development host: the same as production, without the mTLS gate |
 | `caddy/` | the reverse proxy — the only component facing outwards |
 | `pki/` | the private CA and the certificates ([README](pki/README.md)) |
-| `migrate/` | the goose runner image |
+| `migrate/` | the goose runner image (built locally; not published) |
+| `mosquitto/` | a throwaway MQTT broker for testing the Home Assistant publisher (`make mqtt-up`; behind a compose profile, never started by `make up`) |
 | `scripts/` | database backup, the restore procedure, the sync-freshness heartbeat |

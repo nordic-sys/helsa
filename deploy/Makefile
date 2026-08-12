@@ -10,12 +10,16 @@ ENV_FILE := .env
 
 DEV  := docker compose -f docker-compose.yml -f docker-compose.dev.yml
 PROD := docker compose -f docker-compose.yml -f docker-compose.prod.yml
+# Building from source is the SECOND path: the app services default to the images
+# published to GHCR. `pull_policy` is what switches between them, so the build
+# targets set it explicitly rather than relying on whatever .env happens to say.
+FROM_SOURCE := HELSA_PULL_POLICY=build
 # The DEV VM runs the same thing as production, minus the mTLS gate
 # (docker-compose.devvm.yml).
 DEVVM := docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.devvm.yml
 
 .PHONY: help up down restart logs ps psql redis-cli rabbit reset migrate mqtt-up mqtt-down mqtt-watch \
-        prod-up prod-down prod-logs prod-ps prod-build prod-migrate prod-caddy-check \
+        prod-up prod-down prod-logs prod-ps prod-build prod-pull prod-up-source prod-migrate prod-caddy-check \
         devvm-up devvm-down devvm-logs devvm-ps devvm-build devvm-migrate
 
 help: ## List the commands
@@ -76,8 +80,14 @@ prod-up: ## [VM] Start the full stack (app + proxy)
 prod-down: ## [VM] Stop (the data survives)
 	$(PROD) down
 
-prod-build: ## [VM] Rebuild the images from the backend/ sources
-	$(PROD) build
+prod-pull: ## [VM] Pull the published images from GHCR (needs a docker login while the repo is private)
+	$(PROD) pull
+
+prod-build: ## [VM] Build the images from THIS checkout instead of pulling
+	$(FROM_SOURCE) $(PROD) build
+
+prod-up-source: ## [VM] Start from locally built images (after prod-build)
+	$(FROM_SOURCE) $(PROD) up -d
 
 prod-ps: ## [VM] Service status
 	$(PROD) ps
@@ -99,14 +109,14 @@ prod-caddy-check: ## [VM] Validate the Caddyfile BEFORE DEPLOYING (handle takes 
 # --- DEV VM ---------------------------------------------------------------
 # The same steps as in production, so the two environments do not drift apart.
 
-devvm-build: ## [DEV VM] Build the images
-	$(DEVVM) build
+devvm-build: ## [DEV VM] Build the images from this checkout
+	$(FROM_SOURCE) $(DEVVM) build
 
 devvm-migrate: ## [DEV VM] Migration
-	$(DEVVM) --profile tools run --rm migrate up
+	$(FROM_SOURCE) $(DEVVM) --profile tools run --rm migrate up
 
-devvm-up: ## [DEV VM] Start the stack (web+API on :8443, WITHOUT mTLS)
-	$(DEVVM) up -d
+devvm-up: ## [DEV VM] Start the stack from this checkout (web+API on :8443, WITHOUT mTLS)
+	$(FROM_SOURCE) $(DEVVM) up -d
 
 devvm-down: ## [DEV VM] Stop the stack
 	$(DEVVM) down
