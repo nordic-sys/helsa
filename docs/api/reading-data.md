@@ -155,11 +155,21 @@ GET /v1/sleep?from=2026-08-01&to=2026-08-11&tz=Europe/Budapest
     "stage": "asleepCore" } ]
 ```
 
-Stages: `inBed`, `asleepCore`, `asleepDeep`, `asleepREM`, `awake`.
+Stages: `inBed`, `asleepCore`, `asleepDeep`, `asleepREM`, `awake`. Older rows may
+also carry the short spellings (`core`, `deep`, `rem`) and HealthKit's
+`asleepUnspecified` — sleep that the source did not break into stages.
 
 Sleep is stored as intervals rather than point samples, which is why it lives in
-its own table instead of the samples hypertable. Daily sleep time is the summed
-duration per stage within the local day.
+its own table instead of the samples hypertable. The endpoint returns the
+segments **raw**, exactly as they were recorded.
+
+⚠️ **Do not add the segment lengths together.** They overlap: `inBed` wraps the
+whole night, and two sources (the phone and the watch) describe the same night
+at their own boundaries, so the naive sum is roughly one and a half times the
+real sleep time. Sleep time is the UNION of the sleep stages, computed on a
+flattened timeline where `awake` beats every sleep stage and `inBed` loses to
+everything. Every consumer follows the same rules — `backend/internal/sleep`,
+the web's `lib/sleep.ts`, and `SleepAnalysis.swift` on the phone.
 
 ## Raw samples
 

@@ -188,7 +188,10 @@ Home Assistant UI.
   sleep crosses midnight, and a calendar-day cut would split one night into two
   half-nights. A gap of more than three hours starts a new session, so an
   afternoon nap does not merge into last night. It counts **time asleep, not time
-  in bed** — the `inBed` and `awake` stages are excluded.
+  in bed** — the `inBed` and `awake` stages are excluded. Where two sources (the
+  phone and the watch) describe the same night, the overlap counts **once**: the
+  published figure is the union of the sleep stages, not the sum of the segments,
+  which would be about one and a half times as long.
 - **Rings closed** counts how many of Move, Exercise and Stand reached their goal
   today. If any of the three has no goal set, the whole count is published as
   `None`: "0 of 3 closed" told to somebody who never set a Move goal is a lie an
