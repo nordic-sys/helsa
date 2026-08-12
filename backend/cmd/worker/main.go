@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/nordic-sys/helsa/backend/internal/config"
+	"github.com/nordic-sys/helsa/backend/internal/hass"
 	"github.com/nordic-sys/helsa/backend/internal/ingest"
 	"github.com/nordic-sys/helsa/backend/internal/queue"
 	"github.com/nordic-sys/helsa/backend/internal/store"
@@ -42,6 +43,18 @@ func main() {
 	}
 	defer q.Close()
 
+	// The Home Assistant publisher shares the worker's lifetime. It is OFF unless
+	// HELSA_MQTT_URL is set, and a broker that is unreachable costs it a log line,
+	// not the process: ingestion must not depend on home automation being up.
+	hp := hass.New(st.DB, log, cfg.MQTT)
+	hassDone := make(chan struct{})
+	go func() {
+		defer close(hassDone)
+		if err := hp.Run(ctx); err != nil {
+			log.Error("home assistant publisher", "err", err)
+		}
+	}()
+
 	log.Info("worker started", "queue", cfg.IngestQueue)
 	err = q.Consume(ctx, 8, func(ctx context.Context, body []byte) error {
 		if err := ingest.Process(ctx, st.DB, st.Redis, body); err != nil {
@@ -55,4 +68,9 @@ func main() {
 		log.Error("consume", "err", err)
 		os.Exit(1)
 	}
+
+	// Wait for the publisher to say goodbye to the broker, so that a planned stop
+	// leaves `offline` behind rather than looking like a crash.
+	stop()
+	<-hassDone
 }

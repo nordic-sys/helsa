@@ -29,7 +29,29 @@ type Config struct {
 	AppleAudiences  []string // accepted audiences (native bundleID + web serviceID)
 	AppleIssuer     string   // https://appleid.apple.com
 	AuthDevMode     bool     // if true, /auth/apple accepts the "dev:<apple_sub>" token without JWKS (local smoke)
+
+	// Home Assistant over MQTT — OFF unless MQTTURL is set.
+	MQTT MQTT
 }
+
+// MQTT configures the Home Assistant publisher (internal/hass).
+//
+// ⚠️ The feature is OFF by default, and the switch is the broker URL being empty.
+// A boolean "enabled" flag next to a URL only adds a way to disagree with itself:
+// enabled with no URL, or a URL that does nothing. One field, one meaning.
+type MQTT struct {
+	URL             string        // mqtt://user:pass@host:1883 — empty means the publisher does not start
+	ClientID        string        // MQTT client identifier
+	Prefix          string        // topic root for Helsa's own topics, e.g. "helsa"
+	DiscoveryPrefix string        // Home Assistant's discovery root, e.g. "homeassistant"
+	Interval        time.Duration // how often the daily summaries are republished
+	FreshnessPeriod time.Duration // how often the sync-freshness heartbeat is published
+	ExpireAfter     time.Duration // the heartbeat's expire_after — how long HA waits before calling it unavailable
+	UserID          string        // pin the published user; empty means "the only user, if there is exactly one"
+}
+
+// Enabled reports whether the Home Assistant publisher should start at all.
+func (m MQTT) Enabled() bool { return m.URL != "" }
 
 // Load reads from the environment; the local dev defaults point at the ports
 // published by the deploy/ compose stack.
@@ -47,6 +69,19 @@ func Load() (*Config, error) {
 		AppleAudiences:  envList("HELSA_APPLE_AUDIENCES", []string{"com.nordic-sys.Helsa"}),
 		AppleIssuer:     env("HELSA_APPLE_ISSUER", "https://appleid.apple.com"),
 		AuthDevMode:     envBool("HELSA_AUTH_DEV_MODE", false),
+		MQTT: MQTT{
+			URL:             env("HELSA_MQTT_URL", ""),
+			ClientID:        env("HELSA_MQTT_CLIENT_ID", "helsa"),
+			Prefix:          env("HELSA_MQTT_PREFIX", "helsa"),
+			DiscoveryPrefix: env("HELSA_MQTT_DISCOVERY_PREFIX", "homeassistant"),
+			Interval:        envDuration("HELSA_MQTT_PUBLISH_INTERVAL", 6*time.Hour),
+			FreshnessPeriod: envDuration("HELSA_MQTT_FRESHNESS_INTERVAL", 15*time.Minute),
+			// 90 minutes: six missed 15-minute heartbeats. Long enough that a reboot or a
+			// broker restart does not raise an alarm, short enough that a genuinely dead
+			// host is noticed the same morning.
+			ExpireAfter: envDuration("HELSA_MQTT_EXPIRE_AFTER", 90*time.Minute),
+			UserID:      env("HELSA_MQTT_USER_ID", ""),
+		},
 	}
 	if c.JWTSecret == "" {
 		return nil, fmt.Errorf("HELSA_JWT_SECRET is required")
