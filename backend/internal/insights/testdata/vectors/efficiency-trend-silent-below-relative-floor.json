@@ -1,0 +1,81 @@
+{
+  "name": "efficiency-trend stays silent on a 2.5% pace difference (the floor is 5%)",
+  "today": "2026-08-11",
+  "timezone": "Europe/Budapest",
+  "workouts": [
+    {
+      "day": "2026-06-17",
+      "activityType": "running",
+      "durationMin": 41,
+      "distanceM": 8000,
+      "avgHeartRate": 149
+    },
+    {
+      "day": "2026-06-20",
+      "activityType": "running",
+      "durationMin": 41,
+      "distanceM": 8000,
+      "avgHeartRate": 149
+    },
+    {
+      "day": "2026-06-27",
+      "activityType": "running",
+      "durationMin": 41,
+      "distanceM": 8000,
+      "avgHeartRate": 149
+    },
+    {
+      "day": "2026-07-04",
+      "activityType": "running",
+      "durationMin": 41,
+      "distanceM": 8000,
+      "avgHeartRate": 149
+    },
+    {
+      "day": "2026-07-11",
+      "activityType": "running",
+      "durationMin": 41,
+      "distanceM": 8000,
+      "avgHeartRate": 149
+    },
+    {
+      "day": "2026-07-15",
+      "activityType": "running",
+      "durationMin": 40,
+      "distanceM": 8000,
+      "avgHeartRate": 150
+    },
+    {
+      "day": "2026-07-18",
+      "activityType": "running",
+      "durationMin": 40,
+      "distanceM": 8000,
+      "avgHeartRate": 150
+    },
+    {
+      "day": "2026-07-25",
+      "activityType": "running",
+      "durationMin": 40,
+      "distanceM": 8000,
+      "avgHeartRate": 150
+    },
+    {
+      "day": "2026-08-01",
+      "activityType": "running",
+      "durationMin": 40,
+      "distanceM": 8000,
+      "avgHeartRate": 150
+    },
+    {
+      "day": "2026-08-08",
+      "activityType": "running",
+      "durationMin": 40,
+      "distanceM": 8000,
+      "avgHeartRate": 150
+    }
+  ],
+  "expect": [],
+  "silentFor": [
+    "efficiency-trend"
+  ]
+}

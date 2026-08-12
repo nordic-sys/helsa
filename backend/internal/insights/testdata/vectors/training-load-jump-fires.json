@@ -1,0 +1,70 @@
+{
+  "name": "training-load-jump fires on a week at 1.9× the recent weekly average",
+  "today": "2026-08-11",
+  "timezone": "Europe/Budapest",
+  "workouts": [
+    {
+      "day": "2026-07-14",
+      "activityType": "traditionalStrengthTraining",
+      "durationMin": 45
+    },
+    {
+      "day": "2026-07-15",
+      "activityType": "traditionalStrengthTraining",
+      "durationMin": 45
+    },
+    {
+      "day": "2026-07-21",
+      "activityType": "traditionalStrengthTraining",
+      "durationMin": 45
+    },
+    {
+      "day": "2026-07-22",
+      "activityType": "traditionalStrengthTraining",
+      "durationMin": 45
+    },
+    {
+      "day": "2026-07-28",
+      "activityType": "traditionalStrengthTraining",
+      "durationMin": 45
+    },
+    {
+      "day": "2026-07-29",
+      "activityType": "traditionalStrengthTraining",
+      "durationMin": 45
+    },
+    {
+      "day": "2026-08-04",
+      "activityType": "traditionalStrengthTraining",
+      "durationMin": 60
+    },
+    {
+      "day": "2026-08-05",
+      "activityType": "traditionalStrengthTraining",
+      "durationMin": 60
+    },
+    {
+      "day": "2026-08-06",
+      "activityType": "traditionalStrengthTraining",
+      "durationMin": 60
+    },
+    {
+      "day": "2026-08-07",
+      "activityType": "traditionalStrengthTraining",
+      "durationMin": 60
+    }
+  ],
+  "expect": [
+    {
+      "id": "training-load-jump:2026-08-11",
+      "kind": "trend",
+      "metric": "workoutMinutes",
+      "severity": "info",
+      "values": {
+        "acute": 240,
+        "chronicWeekly": 127.5,
+        "ratio": 1.9
+      }
+    }
+  ]
+}

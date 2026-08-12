@@ -1,0 +1,51 @@
+{
+  "name": "training-load-jump stays silent on 80 acute minutes, however large the ratio",
+  "today": "2026-08-11",
+  "timezone": "Europe/Budapest",
+  "workouts": [
+    {
+      "day": "2026-07-14",
+      "activityType": "traditionalStrengthTraining",
+      "durationMin": 10
+    },
+    {
+      "day": "2026-07-15",
+      "activityType": "traditionalStrengthTraining",
+      "durationMin": 10
+    },
+    {
+      "day": "2026-07-21",
+      "activityType": "traditionalStrengthTraining",
+      "durationMin": 10
+    },
+    {
+      "day": "2026-07-22",
+      "activityType": "traditionalStrengthTraining",
+      "durationMin": 10
+    },
+    {
+      "day": "2026-07-28",
+      "activityType": "traditionalStrengthTraining",
+      "durationMin": 10
+    },
+    {
+      "day": "2026-07-29",
+      "activityType": "traditionalStrengthTraining",
+      "durationMin": 10
+    },
+    {
+      "day": "2026-08-04",
+      "activityType": "traditionalStrengthTraining",
+      "durationMin": 40
+    },
+    {
+      "day": "2026-08-05",
+      "activityType": "traditionalStrengthTraining",
+      "durationMin": 40
+    }
+  ],
+  "expect": [],
+  "silentFor": [
+    "training-load-jump"
+  ]
+}

@@ -1,0 +1,78 @@
+{
+  "name": "steps-weekly-trend fires on a week that more than doubled",
+  "today": "2026-08-11",
+  "timezone": "Europe/Budapest",
+  "daily": {
+    "stepCount": [
+      {
+        "day": "2026-07-28",
+        "value": 4000
+      },
+      {
+        "day": "2026-07-29",
+        "value": 4000
+      },
+      {
+        "day": "2026-07-30",
+        "value": 4000
+      },
+      {
+        "day": "2026-07-31",
+        "value": 4000
+      },
+      {
+        "day": "2026-08-01",
+        "value": 4000
+      },
+      {
+        "day": "2026-08-02",
+        "value": 4000
+      },
+      {
+        "day": "2026-08-03",
+        "value": 4000
+      },
+      {
+        "day": "2026-08-04",
+        "value": 9000
+      },
+      {
+        "day": "2026-08-05",
+        "value": 9000
+      },
+      {
+        "day": "2026-08-06",
+        "value": 9000
+      },
+      {
+        "day": "2026-08-07",
+        "value": 9000
+      },
+      {
+        "day": "2026-08-08",
+        "value": 9000
+      },
+      {
+        "day": "2026-08-09",
+        "value": 9000
+      },
+      {
+        "day": "2026-08-10",
+        "value": 9000
+      }
+    ]
+  },
+  "expect": [
+    {
+      "id": "steps-weekly-trend:2026-08-11",
+      "kind": "trend",
+      "metric": "stepCount",
+      "severity": "info",
+      "values": {
+        "changePct": 125,
+        "current": 9000,
+        "previous": 4000
+      }
+    }
+  ]
+}

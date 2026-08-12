@@ -1,0 +1,155 @@
+{
+  "name": "sleep-short fires after three short nights (and drags the weekly trend with it)",
+  "today": "2026-08-11",
+  "timezone": "Europe/Budapest",
+  "sleepHours": [
+    {
+      "day": "2026-07-11",
+      "value": 7.9
+    },
+    {
+      "day": "2026-07-12",
+      "value": 7.1
+    },
+    {
+      "day": "2026-07-13",
+      "value": 7.9
+    },
+    {
+      "day": "2026-07-14",
+      "value": 7.1
+    },
+    {
+      "day": "2026-07-15",
+      "value": 7.9
+    },
+    {
+      "day": "2026-07-16",
+      "value": 7.1
+    },
+    {
+      "day": "2026-07-17",
+      "value": 7.9
+    },
+    {
+      "day": "2026-07-18",
+      "value": 7.1
+    },
+    {
+      "day": "2026-07-19",
+      "value": 7.9
+    },
+    {
+      "day": "2026-07-20",
+      "value": 7.1
+    },
+    {
+      "day": "2026-07-21",
+      "value": 7.9
+    },
+    {
+      "day": "2026-07-22",
+      "value": 7.1
+    },
+    {
+      "day": "2026-07-23",
+      "value": 7.9
+    },
+    {
+      "day": "2026-07-24",
+      "value": 7.1
+    },
+    {
+      "day": "2026-07-25",
+      "value": 7.9
+    },
+    {
+      "day": "2026-07-26",
+      "value": 7.1
+    },
+    {
+      "day": "2026-07-27",
+      "value": 7.9
+    },
+    {
+      "day": "2026-07-28",
+      "value": 7.1
+    },
+    {
+      "day": "2026-07-29",
+      "value": 7.9
+    },
+    {
+      "day": "2026-07-30",
+      "value": 7.1
+    },
+    {
+      "day": "2026-07-31",
+      "value": 7.9
+    },
+    {
+      "day": "2026-08-01",
+      "value": 7.1
+    },
+    {
+      "day": "2026-08-02",
+      "value": 7.9
+    },
+    {
+      "day": "2026-08-03",
+      "value": 7.1
+    },
+    {
+      "day": "2026-08-04",
+      "value": 7.9
+    },
+    {
+      "day": "2026-08-05",
+      "value": 7.1
+    },
+    {
+      "day": "2026-08-06",
+      "value": 7.9
+    },
+    {
+      "day": "2026-08-07",
+      "value": 7.1
+    },
+    {
+      "day": "2026-08-08",
+      "value": 5
+    },
+    {
+      "day": "2026-08-09",
+      "value": 5.1
+    },
+    {
+      "day": "2026-08-10",
+      "value": 4.9
+    }
+  ],
+  "expect": [
+    {
+      "id": "sleep-short:2026-08-11",
+      "kind": "anomaly",
+      "metric": "sleepDuration",
+      "severity": "notice",
+      "values": {
+        "baseline": 7.5,
+        "deviation": 0.4,
+        "recent": 5
+      }
+    },
+    {
+      "id": "sleep-weekly-trend:2026-08-11",
+      "kind": "trend",
+      "metric": "sleepDuration",
+      "severity": "info",
+      "values": {
+        "changePct": -13.6,
+        "current": 6.4,
+        "previous": 7.4
+      }
+    }
+  ]
+}

@@ -1,0 +1,77 @@
+{
+  "name": "resting-hr-elevated stays silent with 13 baseline days (the minimum is 14)",
+  "today": "2026-08-11",
+  "timezone": "Europe/Budapest",
+  "daily": {
+    "restingHeartRate": [
+      {
+        "day": "2026-07-26",
+        "value": 56
+      },
+      {
+        "day": "2026-07-27",
+        "value": 54
+      },
+      {
+        "day": "2026-07-28",
+        "value": 56
+      },
+      {
+        "day": "2026-07-29",
+        "value": 54
+      },
+      {
+        "day": "2026-07-30",
+        "value": 56
+      },
+      {
+        "day": "2026-07-31",
+        "value": 54
+      },
+      {
+        "day": "2026-08-01",
+        "value": 56
+      },
+      {
+        "day": "2026-08-02",
+        "value": 54
+      },
+      {
+        "day": "2026-08-03",
+        "value": 56
+      },
+      {
+        "day": "2026-08-04",
+        "value": 54
+      },
+      {
+        "day": "2026-08-05",
+        "value": 56
+      },
+      {
+        "day": "2026-08-06",
+        "value": 54
+      },
+      {
+        "day": "2026-08-07",
+        "value": 56
+      },
+      {
+        "day": "2026-08-08",
+        "value": 62
+      },
+      {
+        "day": "2026-08-09",
+        "value": 63
+      },
+      {
+        "day": "2026-08-10",
+        "value": 64
+      }
+    ]
+  },
+  "expect": [],
+  "silentFor": [
+    "resting-hr-elevated"
+  ]
+}
