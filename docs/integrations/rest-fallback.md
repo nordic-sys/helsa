@@ -18,6 +18,11 @@ If you do not want an MQTT broker, Home Assistant can poll the API directly. It
 works, it needs no extra components, and it costs you hand-written YAML with no
 discovery.
 
+`deploy/scripts/sync-heartbeat.sh` is the push-shaped variant of the same idea: a
+cron job on the Helsa host that writes the freshness into a Home Assistant sensor
+over the REST API. Either is fine; running one of them **alongside** the MQTT
+publisher is not, because then one number has two sources that can disagree.
+
 The same rule applies as everywhere else: **poll summaries, not raw samples.**
 
 ## Reaching the API

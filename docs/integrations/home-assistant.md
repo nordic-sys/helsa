@@ -26,6 +26,12 @@ helsa worker ──▶ MQTT broker ──▶ Home Assistant
    (daily)         (retained)      (entities appear automatically)
 ```
 
+The publisher is part of the **worker**, not a separate service: it is a handful
+of small queries a few times a day against a database the worker already has open.
+It is **off unless you configure a broker**, and a broker that is unreachable costs
+it a line in the log rather than the process — ingestion does not depend on your
+home automation being up.
+
 > **Daily summaries only.** Not raw samples. The reasoning is on the
 > [Integrations overview](./) — in short, tens of thousands of state changes a day
 > would wreck the recorder database for data you would never read there.
@@ -50,43 +56,80 @@ In `deploy/.env`:
 
 ```bash
 HELSA_MQTT_URL=mqtt://helsa:CHANGE_ME@mqtt.lan:1883
-HELSA_MQTT_PREFIX=helsa
-HELSA_MQTT_DISCOVERY_PREFIX=homeassistant
-HELSA_MQTT_PUBLISH_INTERVAL=6h
 ```
 
-Then start the publisher alongside the rest of the stack. It reads the same
-database the API does and publishes summaries on a schedule.
+That one line is the switch. Leave it out and nothing connects, nothing is
+published, and no broker is needed. Everything else has a working default:
 
-> **Check your checkout.** If `integrations/home-assistant/` is not present in your
-> copy of the repository, the publisher has not landed there yet. The
-> [REST fallback](rest-fallback.html) does the same job with no extra components,
-> and you can move over later — the entity names below are the same either way.
+| Variable | Default | What it does |
+|---|---|---|
+| `HELSA_MQTT_URL` | *(empty)* | Broker URL. **Empty means the publisher does not start.** `mqtt://`, `mqtts://`, `tcp://`, `ws://` and `wss://` are understood; credentials go in the userinfo part. |
+| `HELSA_MQTT_PREFIX` | `helsa` | Topic root for Helsa's own topics. |
+| `HELSA_MQTT_DISCOVERY_PREFIX` | `homeassistant` | Home Assistant's discovery root. Change it only if you changed it in Home Assistant. |
+| `HELSA_MQTT_PUBLISH_INTERVAL` | `6h` | How often the daily summaries are republished. |
+| `HELSA_MQTT_FRESHNESS_INTERVAL` | `15m` | How often the heartbeat is published. |
+| `HELSA_MQTT_EXPIRE_AFTER` | `90m` | How long Home Assistant waits before calling the heartbeat `unavailable`. Keep it a comfortable multiple of the interval above. |
+| `HELSA_MQTT_CLIENT_ID` | `helsa` | MQTT client identifier. |
+| `HELSA_MQTT_USER_ID` | *(empty)* | Which user's numbers to publish. Only needed if the database holds more than one. |
+
+Restart the worker and the entities appear.
+
+> **The client ID must be unique on the broker.** Two clients connecting with the
+> same one kick each other off in a loop, and the symptom is not an error — it is
+> entities that flicker between a value and unavailable. If you run a second Helsa
+> against the same broker, give it its own `HELSA_MQTT_CLIENT_ID`.
+{: .warning }
+
+> **More than one user in the database and the publisher refuses to guess.** It
+> logs which users it found and publishes nothing until `HELSA_MQTT_USER_ID` says
+> whose data belongs on a broker the whole house can read. A single-user install
+> never sees this.
 {: .note }
 
 ## Topics
 
 ```
 helsa/status                        online | offline   (retained, LWT)
-helsa/daily/steps                   62194
+helsa/daily/steps                   8214
 helsa/daily/active_energy           512
 helsa/daily/sleep_hours             7.3
 helsa/daily/resting_heart_rate      54
 helsa/daily/rings_closed            3
-helsa/sync/freshness_hours          0.2
+helsa/sync/freshness_hours          0.2                (NOT retained)
+helsa/sync/attributes               {"newest_data": "...", "future_skew_s": 0, ...}
 ```
 
-State messages are **retained**, so Home Assistant restores the last value after a
-restart instead of showing `unknown` until the next publish.
+The daily state messages are **retained**, so Home Assistant restores the last
+value after a restart instead of showing `unknown` until the next publish. The
+freshness topics deliberately are not — see [below](#the-alert-that-matters).
 
 `helsa/status` is a last-will message: the broker publishes `offline` on its own if
 the publisher disconnects unexpectedly. Entities referencing it as
 `availability_topic` grey out rather than showing a stale number.
 
+### What "no data" looks like
+
+A measurement that has not arrived is published as the literal payload `None`,
+which Home Assistant turns into the state `unknown` for a numeric sensor.
+
+> **This is the point, not a quirk.** "0 steps today" and "no data has arrived
+> today" are different statements, and in a health context the first is alarming
+> while the second is normal — at one minute past midnight it is the only correct
+> answer. Publishing `0` would tell an automation you had walked nothing; leaving
+> the topic untouched would leave yesterday's step count on screen looking like
+> today's. Both are lies.
+>
+> **So write your automations to handle `unknown`.** A numeric-state trigger
+> ignores it, which is usually what you want; a template that does arithmetic on it
+> will not.
+{: .warning }
+
 ## Discovery
 
-One retained message per entity, on the discovery topic. Publish these once at
-start-up; Home Assistant remembers them.
+One retained message per entity, on `homeassistant/sensor/<object_id>/config`.
+Helsa publishes these on every connection, and again whenever Home Assistant
+announces its own restart on `homeassistant/status`. You do not have to write
+them; they are here so you can recognise them in Home Assistant's MQTT debug view.
 
 `homeassistant/sensor/helsa_steps/config`:
 
@@ -105,40 +148,21 @@ start-up; Home Assistant remembers them.
     "name": "Helsa",
     "manufacturer": "Helsa",
     "model": "Self-hosted health backend"
-  }
+  },
+  "origin": { "name": "helsa", "support_url": "https://github.com/nordic-sys/helsa" }
 }
 ```
 
-`homeassistant/sensor/helsa_resting_heart_rate/config`:
+The full set:
 
-```json
-{
-  "name": "Resting heart rate",
-  "unique_id": "helsa_resting_heart_rate",
-  "state_topic": "helsa/daily/resting_heart_rate",
-  "unit_of_measurement": "bpm",
-  "state_class": "measurement",
-  "icon": "mdi:heart-pulse",
-  "availability_topic": "helsa/status",
-  "device": { "identifiers": ["helsa"], "name": "Helsa" }
-}
-```
-
-`homeassistant/sensor/helsa_sleep_hours/config`:
-
-```json
-{
-  "name": "Sleep last night",
-  "unique_id": "helsa_sleep_hours",
-  "state_topic": "helsa/daily/sleep_hours",
-  "unit_of_measurement": "h",
-  "device_class": "duration",
-  "state_class": "measurement",
-  "icon": "mdi:sleep",
-  "availability_topic": "helsa/status",
-  "device": { "identifiers": ["helsa"], "name": "Helsa" }
-}
-```
+| Entity | Topic | Unit | State class |
+|---|---|---|---|
+| `sensor.helsa_steps` | `helsa/daily/steps` | steps | `total_increasing` |
+| `sensor.helsa_active_energy` | `helsa/daily/active_energy` | kcal | `total_increasing` |
+| `sensor.helsa_sleep_hours` | `helsa/daily/sleep_hours` | h (`device_class: duration`) | `measurement` |
+| `sensor.helsa_resting_heart_rate` | `helsa/daily/resting_heart_rate` | bpm | `measurement` |
+| `sensor.helsa_rings_closed` | `helsa/daily/rings_closed` | — | `measurement` |
+| `sensor.helsa_sync_freshness` | `helsa/sync/freshness_hours` | h | `measurement` |
 
 Sharing one `device` block groups every entity under a single Helsa device in the
 Home Assistant UI.
@@ -148,6 +172,27 @@ Home Assistant UI.
 > simply are what they are, such as heart rate. Getting this wrong does not break
 > anything, but long-term statistics will be nonsense.
 {: .note }
+
+> **Active energy carries no `device_class`.** Home Assistant does accept `kcal`
+> for `device_class: energy`, but that class marks a sensor as an energy meter and
+> offers it to the Energy dashboard — where a number of dietary calories sitting
+> next to your electricity meter is simply wrong.
+{: .note }
+
+### How the numbers are cut
+
+- **Steps and active energy** are today's totals in **your timezone**, the one in
+  your Helsa settings — the same cut the dashboard uses, so the two cannot
+  disagree.
+- **Sleep** is the most recent sleep **session**, not "sleep on today's date":
+  sleep crosses midnight, and a calendar-day cut would split one night into two
+  half-nights. A gap of more than three hours starts a new session, so an
+  afternoon nap does not merge into last night. It counts **time asleep, not time
+  in bed** — the `inBed` and `awake` stages are excluded.
+- **Rings closed** counts how many of Move, Exercise and Stand reached their goal
+  today. If any of the three has no goal set, the whole count is published as
+  `None`: "0 of 3 closed" told to somebody who never set a Move goal is a lie an
+  automation would act on.
 
 ![Home Assistant dashboard card with Helsa entities](../assets/screenshots/home-assistant-card.png)
 
@@ -180,7 +225,7 @@ newest sample timestamp and the last heartbeat from the **uploading** device.
 > Filter to the uploading phone specifically. An iPad or a Mac opening the dashboard
 > also checks in, and counting those would keep the alert looking healthy while the
 > phone had not synced for weeks — which is exactly the failure this is here to
-> catch.
+> catch. Helsa's query already does this: only `ios` devices count.
 {: .note }
 
 `homeassistant/sensor/helsa_sync_freshness/config`:
@@ -198,11 +243,22 @@ newest sample timestamp and the last heartbeat from the **uploading** device.
 }
 ```
 
-`expire_after: 5400` is what makes it a dead man's switch: if no message arrives for
-90 minutes, Home Assistant marks the entity `unavailable` by itself.
+Three deliberate absences and one deliberate presence, all of them load-bearing:
 
-Deliberately **no `availability_topic` here**: this entity must be able to expire.
-If the publisher's last will marked it unavailable, the expiry would be masked.
+- **`expire_after: 5400`** is what makes it a dead man's switch: if no message
+  arrives for 90 minutes, Home Assistant marks the entity `unavailable` by itself.
+- **No `availability_topic`.** If the publisher's last will marked this entity
+  unavailable, the expiry would be masked — and the expiry is the whole alert.
+- **The state is not retained.** Home Assistant's own documentation warns that a
+  retained state is replayed by the broker on restart, which would resurrect an
+  expired sensor with a stale value. Home Assistant restores the state itself and
+  keeps track of the remaining expiry time.
+- **The attributes** carry `newest_data` (the raw timestamp the age was computed
+  from) and `future_skew_s`. The latter exists because the age is clamped at zero:
+  if a clock is wrong and the newest data is dated ahead of now, a negative age
+  would never cross an "above 12" threshold and would silently switch the alert
+  off. The clamp fixes that, and the attribute makes sure the clamp itself is not
+  hiding anything — for the duration of the skew, real staleness is hidden too.
 
 ### The automation
 
@@ -232,11 +288,27 @@ automation:
             {% endif %}{% endraw %}
 ```
 
+A second automation worth having, on the attribute:
+
+```yaml
+  - alias: Helsa clock skew
+    trigger:
+      - platform: numeric_state
+        entity_id: sensor.helsa_sync_freshness
+        attribute: future_skew_s
+        above: 300
+    action:
+      - service: notify.mobile_app_your_phone
+        data:
+          title: Helsa data is dated in the future
+          message: "A clock is wrong; the freshness alert is blunted while it lasts."
+```
+
 ### Test it
 
 An untested alert is a decoration.
 
-1. Stop the publisher. Within 90 minutes plus 30, the notification should arrive.
+1. Stop the worker. Within 90 minutes plus 30, the notification should arrive.
 2. Set the freshness value above 12 by hand (Developer Tools → States) and confirm
    the first trigger fires.
 3. Start it again and check that the entity recovers.
@@ -246,6 +318,25 @@ An untested alert is a decoration.
 > and re-run the test above.
 {: .warning }
 
+## Trying it without a broker of your own
+
+The repository ships a throwaway Mosquitto behind a Compose profile, so `docker
+compose up` never starts one:
+
+```bash
+cd deploy && make mqtt-up                 # 127.0.0.1:1883, anonymous, no TLS
+make mqtt-watch                           # print everything on the broker
+
+cd ../backend && HELSA_MQTT_URL=mqtt://127.0.0.1:1883 make smoke
+cd ../deploy && make mqtt-down
+```
+
+The smoke test subscribes as Home Assistant would and checks that the discovery
+messages arrive, that a late subscriber gets the retained ones (which is what makes
+the entities survive a Home Assistant restart), that the freshness state is *not*
+among them, and that a birth message on `homeassistant/status` brings the discovery
+back. Without a broker configured, that test skips.
+
 ## Watch out for
 
 | | |
@@ -253,5 +344,6 @@ An untested alert is a decoration.
 | **Recorder growth** | Even daily entities add up over years. Home Assistant's default purge is 10 days; if you want longer history, use long-term statistics rather than raising the purge window. |
 | **A second copy of your data** | Whatever you publish now lives in Home Assistant's database too, with its own backups and possibly its own remote access. |
 | **Broker credentials** | In `secrets.yaml` on the Home Assistant side, in `.env` on the Helsa side, and in neither git repository. |
-| **Clock skew** | If a host's clock is wrong, freshness can compute as negative and a negative age never crosses a threshold — silently disabling the alert. Publish the raw newest-data timestamp as an attribute so you can see it, and clamp the age at zero. |
+| **Clock skew** | Handled — the age is clamped at zero and `future_skew_s` reports the cause. Alert on the attribute; a blunted alert is worth knowing about. |
 | **Timing** | Publishing more than a few times a day gains nothing. These are daily numbers. |
+| **Retained messages outlive the publisher** | If you change `HELSA_MQTT_PREFIX`, the old topics stay on the broker and the old entities stay in Home Assistant. Clear them by publishing an empty retained payload to each config topic. |

@@ -1,5 +1,14 @@
 #!/usr/bin/env bash
-# Helsa — a sync-freshness heartbeat into Home Assistant (docs/16 §2).
+# Helsa — a sync-freshness heartbeat into Home Assistant, over the REST API.
+#
+# ⚠️ THE MQTT PUBLISHER DOES THIS TOO, and does it better. Set HELSA_MQTT_URL and
+# the worker publishes the same figure with `expire_after`, so Home Assistant
+# notices the silence by itself instead of inferring it from a sensor that also
+# goes unknown on a restart. This script is the answer for anyone who would rather
+# not run a broker — see docs/integrations/.
+#
+# ⚠️ RUN ONE OR THE OTHER. Both write `sensor.helsa_sync_freshness` by default; two
+# sources for one number is how you end up debugging a disagreement between them.
 #
 # WHY THIS WAY: an expired certificate, a stale DDNS record, a dead worker and a
 # full disk all fail in the same way — nothing signals anything, and you only notice

@@ -21,6 +21,10 @@ maintenance debt: the discovery protocol is stable, and there is no custom
 integration to keep in step with Home Assistant releases. A bespoke HACS
 integration would be a nicer experience and a permanent obligation.
 
+The MQTT publisher ships **inside the ingestion worker** and is **off until you set
+`HELSA_MQTT_URL`**. Nothing about running Helsa requires a broker; if you do not
+set one, no MQTT code ever runs.
+
 ## One rule that governs both
 
 > ## Daily summaries go out. Raw samples do not.
