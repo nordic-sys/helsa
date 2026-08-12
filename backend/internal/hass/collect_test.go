@@ -54,6 +54,40 @@ func TestLatestSessionHours(t *testing.T) {
 			segs: []sleepSegment{{at(1, 0), at(6, 0), "awake"}},
 			want: nil,
 		},
+		{
+			// Two sources, one night. The phone says five hours in one piece, the
+			// watch breaks the same five hours into stages — that is five hours of
+			// sleep, not ten.
+			name: "two sources describing the same night count once",
+			segs: []sleepSegment{
+				{at(1, 0), at(6, 0), "asleepCore"},
+				{at(1, 0), at(2, 30), "asleepCore"},
+				{at(2, 30), at(4, 0), "asleepDeep"},
+				{at(4, 0), at(6, 0), "asleepREM"},
+			},
+			want: f(5),
+		},
+		{
+			// Where the sources disagree, wakefulness wins: claiming deep sleep over
+			// an hour another source saw as awake would be wrong in the more
+			// flattering direction.
+			name: "awake beats the sleep stage under it",
+			segs: []sleepSegment{
+				{at(0, 0), at(6, 0), "inBed"},
+				{at(1, 0), at(6, 0), "asleepCore"},
+				{at(3, 0), at(4, 0), "awake"},
+			},
+			want: f(4),
+		},
+		{
+			// A source that does not do staging still measured sleep.
+			name: "asleepUnspecified is sleep",
+			segs: []sleepSegment{
+				{at(0, 0), at(6, 30), "inBed"},
+				{at(1, 0), at(6, 0), "asleepUnspecified"},
+			},
+			want: f(5),
+		},
 	}
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/nordic-sys/helsa/backend/internal/metrics"
 	"github.com/nordic-sys/helsa/backend/internal/pgconv"
+	"github.com/nordic-sys/helsa/backend/internal/sleep"
 )
 
 // errNoTarget: there is nobody to publish for. Not a failure — a brand-new
@@ -180,12 +180,6 @@ GROUP BY data_type`
 	return out, rows.Err()
 }
 
-// sleepGap: a break longer than this ends a sleep session. Deliberately the same
-// three hours the web dashboard uses (web/src/lib/sleep.ts) — if the two drifted
-// apart, "last night" would mean one thing on the dashboard and another in Home
-// Assistant.
-const sleepGap = 3 * time.Hour
-
 // sleepSegment is the minimum a night needs.
 type sleepSegment struct {
 	start, end time.Time
@@ -228,40 +222,32 @@ ORDER BY started_at`
 }
 
 // latestSessionHours is the pure half of lastNightHours: group into sessions,
-// take the latest, and sum the time actually spent asleep.
+// take the latest, and measure the time actually spent asleep in it.
+//
+// Both halves of that are internal/sleep's job, and deliberately so. The
+// segments overlap each other — the watch and the phone both describe the night,
+// with `inBed` wrapped around everything — so a plain sum of the segments
+// reports about one and a half times the sleep that was recorded. The dashboard,
+// the phone and this publisher all resolve the overlap the same way; anything
+// else and "last night" would mean a different number in Home Assistant than on
+// the dashboard.
 func latestSessionHours(segs []sleepSegment) *float64 {
 	if len(segs) == 0 {
 		return nil
 	}
-	sort.Slice(segs, func(i, j int) bool { return segs[i].start.Before(segs[j].start) })
-
-	var session []sleepSegment
-	var lastEnd time.Time
+	rows := make([]sleep.Raw, 0, len(segs))
 	for _, s := range segs {
-		if len(session) > 0 && s.start.Sub(lastEnd) > sleepGap {
-			session = nil
-			lastEnd = time.Time{}
-		}
-		session = append(session, s)
-		if s.end.After(lastEnd) {
-			lastEnd = s.end
-		}
+		rows = append(rows, sleep.Raw{Start: s.start, End: s.end, Stage: s.stage})
 	}
+	spans, _ := sleep.Spans(rows)
 
-	// Time asleep, not time in bed: of the contract's five stages (inBed,
-	// asleepCore, asleepDeep, asleepREM, awake) two are wakefulness, and counting
-	// them would report eight hours of sleep for a night spent staring at the
-	// ceiling. Excluding rather than listing the asleep stages is deliberate: a new
-	// HealthKit sleep stage would then count as sleep, which is the safer default.
-	var asleep time.Duration
-	for _, s := range session {
-		if s.stage == "awake" || s.stage == "inBed" {
-			continue
-		}
-		if d := s.end.Sub(s.start); d > 0 {
-			asleep += d
-		}
+	nights := sleep.Nights(spans, sleep.NightGap)
+	if len(nights) == 0 {
+		return nil
 	}
+	// Time asleep, not time in bed: `awake` and `inBed` are not sleep, so a night
+	// spent staring at the ceiling must not be published as eight hours.
+	asleep := nights[len(nights)-1].Asleep()
 	if asleep == 0 {
 		return nil
 	}

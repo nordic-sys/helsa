@@ -3,6 +3,8 @@ package insights
 import (
 	"context"
 	"fmt"
+	"log/slog"
+	"sort"
 	"time"
 
 	"github.com/google/uuid"
@@ -12,6 +14,7 @@ import (
 	"github.com/nordic-sys/helsa/backend/internal/api"
 	"github.com/nordic-sys/helsa/backend/internal/metrics"
 	"github.com/nordic-sys/helsa/backend/internal/pgconv"
+	"github.com/nordic-sys/helsa/backend/internal/sleep"
 )
 
 // LookbackDays: how many days back we read. It is the longest requirement among
@@ -109,32 +112,37 @@ func (s *Service) dailySeries(ctx context.Context, userID uuid.UUID, dataType st
 	return out, rows.Err()
 }
 
-// sleepQuery: ACTUAL sleep per night (the sum of the `asleep*` segments) in
-// hours, plus the night's span.
+// sleepQuery: the RAW segments of the window, with the night they belong to.
 //
 // A night is keyed by the day of "start minus 12 hours": that way a segment
 // starting at 23:30 and one starting at 02:00 land in the SAME night. Grouping
 // by calendar day cuts the night in half at midnight — which did happen in
 // production (the web ended up showing 23 hours 59 minutes of "time in bed").
 //
-// The hours and the span come from ONE query on purpose. They are different
-// measurements (the sum of the asleep segments vs first-start to last-end, which
-// differ whenever you wake in the night), but they must agree on what a night
-// is; two queries would be two chances for that definition to drift apart.
+// ⚠️ The duration is deliberately NOT summed in SQL. The segments overlap each
+// other (two sources describe the same night, and `inBed` wraps all of it), so
+// `sum(ended_at - started_at)` reports about one and a half times the sleep that
+// was recorded. The union is computed by internal/sleep, from the same segments
+// the phone sees — see the package comment there.
+//
+// Every stage is read, not just the `asleep*` ones: `awake` overrides the sleep
+// underneath it, `inBed` marks out the night's envelope, and the stage names
+// come in two spellings which only internal/sleep.Normalize can tell apart.
 const sleepQuery = `
 SELECT (date_trunc('day', (started_at AT TIME ZONE $2::text) - interval '12 hours'))::date AS night,
-       sum(extract(epoch FROM (ended_at - started_at))) / 3600.0 AS hours,
-       min(started_at) AS first_start,
-       max(ended_at)   AS last_end
+       started_at, ended_at, stage
 FROM sleep_segments
 WHERE user_id = $1
-  AND stage IN ('asleepCore', 'asleepDeep', 'asleepREM')
   AND started_at >= $3 AND started_at < $4
-GROUP BY night
-ORDER BY night`
+ORDER BY night, started_at`
 
 // sleep returns both views of the nights: the duration series the older rules
 // use, and the periods the timing rules need.
+//
+// The two come from ONE pass on purpose. They are different measurements (the
+// union of the sleep stages vs falling asleep → waking, which differ whenever
+// you wake in the night), but they must agree on what a night is; two passes
+// would be two chances for that definition to drift apart.
 func (s *Service) sleep(ctx context.Context, userID uuid.UUID, loc *time.Location,
 	start, end time.Time) (Series, []SleepNight, error) {
 	rows, err := s.pool.Query(ctx, sleepQuery, pgconv.UUID(userID), loc.String(),
@@ -144,33 +152,105 @@ func (s *Service) sleep(ctx context.Context, userID uuid.UUID, loc *time.Locatio
 	}
 	defer rows.Close()
 
-	hours := Series{}
-	nights := []SleepNight{}
+	// The rows arrive ordered by night, so one night's segments are collected and
+	// resolved before the next one starts.
+	var (
+		hours    = Series{}
+		nights   = []SleepNight{}
+		unknown  = map[string]bool{}
+		pending  []sleep.Raw
+		pendingD time.Time
+		havePend bool
+	)
+	flush := func() {
+		if !havePend {
+			return
+		}
+		if night, ok := resolveNight(pending, loc, unknown); ok {
+			hours = append(hours, Point{Day: pendingD, Value: night.Hours})
+			// A night whose sleep has no two ends has no midpoint either. That is a
+			// missing measurement, not a midnight one, so it stays out of the timing
+			// rules while its duration still counts.
+			if !night.Start.IsZero() && !night.End.IsZero() {
+				nights = append(nights, SleepNight{Day: pendingD, Start: night.Start, End: night.End})
+			}
+		}
+		pending, havePend = nil, false
+	}
+
 	for rows.Next() {
 		var night pgtype.Date
-		var h *float64
-		var first, last pgtype.Timestamptz
-		if err := rows.Scan(&night, &h, &first, &last); err != nil {
+		var startedAt, endedAt pgtype.Timestamptz
+		var stage string
+		if err := rows.Scan(&night, &startedAt, &endedAt, &stage); err != nil {
 			return nil, nil, fmt.Errorf("scan sleep row: %w", err)
 		}
-		if h == nil {
+		if !startedAt.Valid || !endedAt.Valid {
 			continue
 		}
 		d := night.Time
 		day := time.Date(d.Year(), d.Month(), d.Day(), 0, 0, 0, 0, loc)
-		hours = append(hours, Point{Day: day, Value: *h})
-		// A night without both ends has no midpoint. That is a missing
-		// measurement, not a midnight one, so it stays out of the timing rules
-		// while its duration still counts.
-		if first.Valid && last.Valid {
-			nights = append(nights, SleepNight{
-				Day:   day,
-				Start: first.Time.In(loc),
-				End:   last.Time.In(loc),
-			})
+		if havePend && !day.Equal(pendingD) {
+			flush()
 		}
+		pendingD, havePend = day, true
+		pending = append(pending, sleep.Raw{Start: startedAt.Time, End: endedAt.Time, Stage: stage})
 	}
-	return hours, nights, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, nil, err
+	}
+	flush()
+
+	if len(unknown) > 0 {
+		// Not silent data loss: a stage we cannot place is time missing from the
+		// night, and that has to be visible somewhere.
+		slog.Warn("sleep segments with an unrecognized stage were left out",
+			"user", userID, "stages", keys(unknown))
+	}
+	return hours, nights, nil
+}
+
+// nightTotals: one night resolved — the union of its sleep, and the two ends of
+// that sleep.
+type nightTotals struct {
+	Hours      float64
+	Start, End time.Time
+}
+
+// resolveNight flattens one night's overlapping segments and measures it. The
+// second return value is false for a night that holds no sleep at all (only
+// `awake`/`inBed`): that is a missing measurement, and a zero-hour night in the
+// series would drag every average down as if it were a sleepless one.
+func resolveNight(rows []sleep.Raw, loc *time.Location,
+	unknown map[string]bool) (nightTotals, bool) {
+	spans, unrecognized := sleep.Spans(rows)
+	for _, u := range unrecognized {
+		unknown[u] = true
+	}
+	slices, _ := sleep.Resolve(spans)
+	night := sleep.Night{Slices: slices}
+
+	asleep := night.Asleep()
+	if asleep <= 0 {
+		return nightTotals{}, false
+	}
+	out := nightTotals{Hours: asleep.Hours()}
+	if onset, ok := night.Onset(); ok {
+		out.Start = onset.In(loc)
+	}
+	if wake, ok := night.Wake(); ok {
+		out.End = wake.In(loc)
+	}
+	return out, true
+}
+
+func keys(m map[string]bool) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	sort.Strings(out)
+	return out
 }
 
 // workoutQuery: the finished sessions, with the average heart rate LEFT JOIN-ed
