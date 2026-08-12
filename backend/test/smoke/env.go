@@ -10,6 +10,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/google/uuid"
+
 	"github.com/nordic-sys/helsa/backend/internal/auth"
 	"github.com/nordic-sys/helsa/backend/internal/config"
 	"github.com/nordic-sys/helsa/backend/internal/ingest"
@@ -27,6 +29,11 @@ type env struct {
 	client   *apiClient
 	token    string
 	appleSub string
+	// store and userID are what the tests that bypass HTTP need — the Home
+	// Assistant publisher reads the database directly, exactly as it does in the
+	// worker.
+	store  *store.Store
+	userID uuid.UUID
 }
 
 func newEnv(t *testing.T) *env {
@@ -85,5 +92,7 @@ func newEnv(t *testing.T) *env {
 		client:   &apiClient{base: ts.URL, hc: ts.Client()},
 		token:    sess.AccessToken,
 		appleSub: appleSub,
+		store:    st,
+		userID:   sess.UserID,
 	}
 }

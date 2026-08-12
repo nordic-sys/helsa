@@ -22,3 +22,22 @@ services:
     ports:
       - "${RABBITMQ_AMQP_PORT:-5672}:5672"     # AMQP
       - "${RABBITMQ_MGMT_PORT:-15672}:15672"   # management UI
+
+  # A throwaway MQTT broker for testing the Home Assistant publisher.
+  #
+  # ⚠️ Behind a PROFILE on purpose: `make up` must not start it. Helsa does not
+  # need a broker to run, and somebody who does not use Home Assistant should not
+  # find one listening on their machine. Start it only while testing:
+  #
+  #   make mqtt-up     then    make mqtt-down
+  #
+  # It is anonymous and unencrypted (see mosquitto/mosquitto.dev.conf) — a real
+  # deployment points HELSA_MQTT_URL at the broker Home Assistant already uses.
+  mosquitto:
+    profiles: ["mqtt"]
+    image: eclipse-mosquitto:2
+    container_name: helsa-mosquitto
+    ports:
+      - "127.0.0.1:${MQTT_HOST_PORT:-1883}:1883"
+    volumes:
+      - ./mosquitto/mosquitto.dev.conf:/mosquitto/config/mosquitto.conf:ro

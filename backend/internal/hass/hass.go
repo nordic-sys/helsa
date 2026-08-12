@@ -40,8 +40,10 @@ const (
 	payloadOnline  = "online"
 	payloadOffline = "offline"
 
-	// How long a single publish or a graceful disconnect may take.
-	publishTimeout    = 10 * time.Second
+	// How long a single publish or a graceful disconnect may take. Short, because a
+	// round of publishes waits these out one after another when a broker goes away
+	// mid-round.
+	publishTimeout    = 5 * time.Second
 	disconnectTimeout = 250 * time.Millisecond
 
 	// One round of collecting is a few small aggregates; if the database cannot
@@ -221,7 +223,9 @@ func (p *Publisher) publishDiscovery(c mqtt.Client) {
 			p.log.Error("build discovery", "entity", e.objectID, "err", err)
 			continue
 		}
-		p.publishRaw(c, p.top.discovery(e.objectID), string(buf), true)
+		if !p.publishRaw(c, p.top.discovery(e.objectID), string(buf), true) {
+			return
+		}
 	}
 }
 
@@ -246,7 +250,12 @@ func (p *Publisher) publishSummary(ctx context.Context) {
 		if e.expiring {
 			continue // the heartbeat has its own schedule
 		}
-		p.publishRaw(p.client, p.top.state(e.suffix), stateValue(snap.value(e.suffix), e.decimals), e.retain)
+		// Stop at the first failure. If the broker has gone away mid-round, the
+		// remaining topics would each sit out the whole timeout for nothing, and a
+		// shutdown asked for in the meantime would have to wait for all of them.
+		if !p.publishRaw(p.client, p.top.state(e.suffix), stateValue(snap.value(e.suffix), e.decimals), e.retain) {
+			return
+		}
 	}
 	p.log.Info("published daily summary",
 		"steps", snap.Steps, "active_energy", snap.ActiveEnergy,
@@ -294,6 +303,11 @@ func (p *Publisher) publishFreshness(ctx context.Context) {
 // target resolves who to publish for, turning "nobody yet" into a quiet skip.
 func (p *Publisher) target(ctx context.Context) (target, bool) {
 	t, err := resolveTarget(ctx, p.pool, p.cfg.UserID)
+	if err != nil && ctx.Err() != nil {
+		// The process is shutting down; a cancelled query is the expected outcome, not
+		// something worth an error line in the log on every restart.
+		return target{}, false
+	}
 	if errors.Is(err, errNoTarget) {
 		p.log.Debug("nothing to publish yet", "reason", err)
 		return target{}, false
@@ -305,9 +319,17 @@ func (p *Publisher) target(ctx context.Context) (target, bool) {
 	return t, true
 }
 
+// connected asks whether there is an OPEN connection right now.
+//
+// ⚠️ Not IsConnected(). With ConnectRetry set, paho reports a client that is
+// still trying to reach a broker as "connected", so that guard let publishes
+// through to a broker that was not there: each one then sat out the full publish
+// timeout, and a stack with no broker spent a minute of every round timing out
+// and another minute refusing to shut down. IsConnectionOpen is the one that
+// means what it says.
 func (p *Publisher) connected() bool {
-	if p.client == nil || !p.client.IsConnected() {
-		p.log.Debug("skipping publish: not connected to the broker")
+	if p.client == nil || !p.client.IsConnectionOpen() {
+		p.log.Debug("skipping publish: no open connection to the broker")
 		return false
 	}
 	return true
@@ -316,21 +338,26 @@ func (p *Publisher) connected() bool {
 // publishRaw sends one message at QoS 1 and logs a failure rather than returning
 // it: a publish that did not land is worth a line in the log, but it must not
 // stop the remaining topics from being sent.
-func (p *Publisher) publishRaw(c mqtt.Client, topic, payload string, retained bool) {
+func (p *Publisher) publishRaw(c mqtt.Client, topic, payload string, retained bool) bool {
 	tok := c.Publish(topic, 1, retained, payload)
 	if !tok.WaitTimeout(publishTimeout) {
 		p.log.Warn("mqtt publish timed out", "topic", topic)
-		return
+		return false
 	}
 	if err := tok.Error(); err != nil {
 		p.log.Warn("mqtt publish failed", "topic", topic, "err", err)
+		return false
 	}
+	return true
 }
 
 // shutdown says goodbye politely. The last will covers the impolite exits; this
 // covers the ordinary one, so a planned restart does not look like a crash.
 func (p *Publisher) shutdown() {
-	if p.client == nil || !p.client.IsConnected() {
+	if !p.connected() {
+		if p.client != nil {
+			p.client.Disconnect(uint(disconnectTimeout.Milliseconds()))
+		}
 		return
 	}
 	p.publishRaw(p.client, p.top.status(), payloadOffline, true)

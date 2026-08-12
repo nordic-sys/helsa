@@ -14,7 +14,7 @@ PROD := docker compose -f docker-compose.yml -f docker-compose.prod.yml
 # (docker-compose.devvm.yml).
 DEVVM := docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.devvm.yml
 
-.PHONY: help up down restart logs ps psql redis-cli rabbit reset migrate \
+.PHONY: help up down restart logs ps psql redis-cli rabbit reset migrate mqtt-up mqtt-down mqtt-watch \
         prod-up prod-down prod-logs prod-ps prod-build prod-migrate prod-caddy-check \
         devvm-up devvm-down devvm-logs devvm-ps devvm-build devvm-migrate
 
@@ -53,6 +53,19 @@ redis-cli: ## [local] redis-cli into Redis
 
 rabbit: ## [local] Open the RabbitMQ management UI
 	open http://localhost:$${RABBITMQ_MGMT_PORT:-15672}
+
+# --- MQTT (Home Assistant publisher testing) ---------------------------------
+# Behind a profile: `make up` does NOT start a broker. Helsa needs none, and the
+# publisher stays off unless HELSA_MQTT_URL is set.
+
+mqtt-up: ## [local] Start a throwaway MQTT broker on 127.0.0.1:1883
+	$(DEV) --profile mqtt up -d mosquitto
+
+mqtt-down: ## [local] Stop the throwaway MQTT broker
+	$(DEV) --profile mqtt rm -sf mosquitto
+
+mqtt-watch: ## [local] Print everything on the broker (needs mosquitto-clients)
+	mosquitto_sub -h 127.0.0.1 -p $${MQTT_HOST_PORT:-1883} -t '#' -v
 
 # --- HOME VM (phase 0.3–0.4) -------------------------------------------------
 # These run on the VM:  ssh <your-vm> && cd /opt/helsa/helsa/deploy

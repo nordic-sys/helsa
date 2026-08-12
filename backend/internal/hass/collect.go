@@ -248,8 +248,11 @@ func latestSessionHours(segs []sleepSegment) *float64 {
 		}
 	}
 
-	// Time asleep, not time in bed: `awake` and `inBed` are the interval spent lying
-	// there, and counting them would report eight hours of sleep for a bad night.
+	// Time asleep, not time in bed: of the contract's five stages (inBed,
+	// asleepCore, asleepDeep, asleepREM, awake) two are wakefulness, and counting
+	// them would report eight hours of sleep for a night spent staring at the
+	// ceiling. Excluding rather than listing the asleep stages is deliberate: a new
+	// HealthKit sleep stage would then count as sleep, which is the safer default.
 	var asleep time.Duration
 	for _, s := range session {
 		if s.stage == "awake" || s.stage == "inBed" {

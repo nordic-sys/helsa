@@ -48,6 +48,13 @@ services:
       rabbitmq:    { condition: service_healthy }
     restart: unless-stopped
 
+  # The worker also carries the Home Assistant publisher. Its HELSA_MQTT_* settings
+  # arrive through env_file below and are absent by default, which is what keeps the
+  # publisher off — see deploy/.env.example.
+  #
+  # ⚠️ If MQTT is enabled, HELSA_MQTT_URL must name a broker this container can
+  # reach. `mqtt.lan` resolves inside the container through Docker's DNS, not
+  # through the host's /etc/hosts; an IP address is the reliable answer.
   worker:
     build:
       context: ../backend
