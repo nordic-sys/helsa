@@ -115,6 +115,8 @@ export const en: Dict = {
       'These are averages over the whole period, not the sleep window alone — filtering samples to the sleep window is waiting on the backend’s {insights} layer (docs/23 §5).',
     'sleep.night.title': '{date} — {duration} asleep',
     'sleep.night.aria': 'Sleep stages on {date}',
+    'sleep.overlap':
+      'The sources wrote {duration} of overlap for this night; the overlap counts once, which is why the total is less than the sum of the stages.',
     'sleep.inBed': 'In bed',
     'sleep.efficiencyShort': 'Efficiency',
     'sleep.onset': 'Fell asleep',

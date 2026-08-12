@@ -155,9 +155,6 @@ export function useFormat(): Formatters {
 /** The drawing order of the stages: from deep sleep to being awake. */
 export const STAGE_ORDER = ['deep', 'rem', 'core', 'light', 'asleep', 'awake']
 
-/** Does it count as sleep? (Efficiency and total sleep time are built from these.) */
-export const isAsleep = (stage?: string) => !!stage && stage !== 'awake' && stage !== 'inBed'
-
 /**
  * A Recharts-friendly stage palette. `color-mix()` is reliable as an HTML
  * `background`, but not everywhere as an SVG presentation attribute — so in the

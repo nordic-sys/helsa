@@ -120,6 +120,8 @@ export const hu = {
       'Ezek az egész időszak átlagai, nem kizárólag az alvás-ablakból — a minták alvás-ablakra szűrése a backend {insights} rétegére vár (docs/23 §5).',
     'sleep.night.title': '{date} — alvás {duration}',
     'sleep.night.aria': 'Alvás-szakaszok {date}',
+    'sleep.overlap':
+      'A források {duration} átfedést írtak erre az éjszakára; az átfedés egyszer számít, ezért az összesen kevesebb, mint a szakaszok összege.',
     'sleep.inBed': 'Ágyban',
     'sleep.efficiencyShort': 'Hatékonyság',
     'sleep.onset': 'Elalvás',

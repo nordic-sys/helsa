@@ -14,7 +14,7 @@ import { Card, Empty, ErrorState, Legend, Loading, Stat } from '../components/ui
 import { useI18n } from '../i18n'
 import { STAGE_CHART, STAGE_COLOR, STAGE_ORDER, useFormat } from '../lib/format'
 import { metricDef, pickSeries, readSeries } from '../lib/metrics'
-import { averages, groupByNight, segmentMinutes, type Night } from '../lib/sleep'
+import { averages, groupByNight, segmentMinutes, sliceMinutes, type Night } from '../lib/sleep'
 
 const WINDOWS = [7, 30]
 
@@ -234,17 +234,25 @@ function NightCard({ night }: { night: Night }) {
           role="img"
           aria-label={t('sleep.night.aria', { date: day })}
         >
-          {night.segments.map((s, i) => (
+          {night.slices.map((s, i) => (
             <div
               key={i}
-              title={`${f.stageName(s.stage)} · ${f.duration(segmentMinutes(s))}`}
+              title={`${f.stageName(s.stage)} · ${f.duration(sliceMinutes(s))}`}
               style={{
-                width: `${(segmentMinutes(s) / span) * 100}%`,
-                background: STAGE_COLOR[s.stage ?? ''] ?? 'var(--surface-2)',
+                width: `${(sliceMinutes(s) / span) * 100}%`,
+                background: STAGE_COLOR[s.stage] ?? 'var(--surface-2)',
               }}
             />
           ))}
         </div>
+
+        {/* Without this the question "why is the total not the sum of the
+            stages?" would go unanswered — and the answer is not an error. */}
+        {night.overlapMin >= 1 && (
+          <p className="subtle" style={{ marginTop: -4, marginBottom: 12 }}>
+            {t('sleep.overlap', { duration: f.duration(night.overlapMin) })}
+          </p>
+        )}
 
         <div className="table-wrap" style={{ marginBottom: 12 }}>
           <table>
