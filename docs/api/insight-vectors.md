@@ -126,10 +126,26 @@ to say nothing", not "there was no data at all".
 | `sleep-midpoint-weekend`, `sleep-weekend-duration`, `steps-weekend` | free days against work days, ≥4 and ≥10 measured respectively | `free`, `work`, `delta` |
 | `training-load-jump` | 7-day load ≥1.5× the 28-day weekly average | `acute`, `chronicWeekly`, `ratio` |
 | `efficiency-trend-<activity>` | pace ≥5% apart at a heart rate within 5 bpm | `recentSpeed`, `previousSpeed`, `recentHr`, `previousHr`, `changePct` |
+| `baseline-drift-<metric>` | the last 28 days against days 90–120 back: Welch t ≥ 2.5 **and** an absolute floor, ≥14 measured days per window (8 for `bodyMass`) | `recent`, `older`, `drift`, `t` |
+| `sleep-debt` | the last 14 nights against the median of the preceding 90: ≥5 hours owed **and** ≥5% of what those nights should have held | `debtHours`, `usual`, `nights` |
+| `social-jetlag` | median weekly free-vs-work midpoint shift ≥90 min over ≥6 usable weeks of 8, two thirds of them ≥30 min | `jetlagMinutes`, `weeks`, `nights` |
 
 `kind` is one of `trend`, `anomaly`, `correlation`, `pattern`. A `pattern`
 describes a property of one window — how much bedtime scatters, how the weekend
-differs from the week — which is not a change over time, and so is not a `trend`.
+differs from the week, what a fortnight of sleep added up to — which is not a
+change over time, and so is not a `trend`.
+
+Two of these overlap on purpose, and a vector pins the boundary between them:
+`sleep-midpoint-weekend` pools one 28-day window and speaks from 60 minutes up,
+while `social-jetlag` pairs each week with itself and waits for 90 — so at 75
+minutes exactly one of them says anything, and at 120 both may, without
+contradicting each other.
+
+⚠️ `baseline-drift` reads two series no other rule asks for (`respiratoryRate`,
+`bodyMass`) and reaches four months back. A rule whose days or metrics never
+arrive returns nothing — which is indistinguishable from a rule with nothing to
+say, so the read window and the metric list are part of the port, not an
+afterthought (`LookbackDays`, `neededMetrics`).
 
 ## Adding a rule
 

@@ -583,6 +583,237 @@ func TestEfficiencyIgnoresSessionsWithoutDistanceOrHeartRate(t *testing.T) {
 	}
 }
 
+// --- baseline drift, sleep debt, social jetlag ---
+//
+// The decisions are pinned by the shared vectors; what these cover is what the Go
+// side alone owns — the Hungarian sentence — plus the one thing no vector can
+// see: whether the server actually READS the days and metrics these rules need.
+
+// driftSeries builds four months of a daily metric: `older` until 90 days ago and
+// `recent` from then on, with a ±2 wobble so that neither window is constant.
+func driftSeries(older, recent float64) Series {
+	s := Series{}
+	for n := 120; n >= 1; n-- {
+		v := recent
+		if n > 90 {
+			v = older
+		}
+		if n%2 == 0 {
+			v += 2
+		} else {
+			v -= 2
+		}
+		s = append(s, Point{Day: today.AddDate(0, 0, -n), Value: v})
+	}
+	return s
+}
+
+func TestBaselineDriftNamesBothWindowsAndRefusesADiagnosis(t *testing.T) {
+	in := Input{Today: today, Daily: map[string]Series{
+		"restingHeartRate": driftSeries(55, 61),
+	}}
+	ins := findInsight(t, in, "baseline-drift-restingHeartRate")
+
+	if *ins.Kind != api.Trend || *ins.Severity != api.Info {
+		t.Errorf("kind=%s severity=%s — a shift that finished weeks ago is not this morning's news",
+			*ins.Kind, *ins.Severity)
+	}
+	// Hungarian wants the instrumental case on the size of a difference, and it
+	// assimilates the suffix to the unit: "6.0 bpm-mel", never "6.0 bpm".
+	if !strings.Contains(*ins.Title, "bpm-mel") {
+		t.Errorf("the title is not grammatical Hungarian: %s", *ins.Title)
+	}
+	// The span is derived from the windows; a literal would go on claiming a
+	// length the arithmetic no longer has.
+	if !strings.Contains(*ins.Title, "3 hónap") {
+		t.Errorf("the title does not state the span the two windows are apart: %s", *ins.Title)
+	}
+	for _, want := range []string{"mért napból", "90–120 nappal ezelőtti", "nem diagnózis"} {
+		if !strings.Contains(*ins.Detail, want) {
+			t.Errorf("the explanation is missing %q: %s", want, *ins.Detail)
+		}
+	}
+
+	// Both directions are reported: a resting heart rate sliding down over a
+	// quarter is the same kind of fact as one sliding up.
+	down := Input{Today: today, Daily: map[string]Series{
+		"restingHeartRate": driftSeries(61, 55),
+	}}
+	if !strings.Contains(*findInsight(t, down, "baseline-drift").Title, "lejjebb csúszott") {
+		t.Error("a downward drift was not reported as one")
+	}
+}
+
+// The trap this rule is built on: neither of the short-window rules can see a
+// slow shift, because their own baselines drift along with the person.
+func TestBaselineDriftSeesWhatTheAnomalyRuleCannot(t *testing.T) {
+	in := Input{Today: today, Daily: map[string]Series{
+		"restingHeartRate": driftSeries(55, 61),
+	}}
+	ids := idsOf(t, in)
+	if hasPrefix(ids, "resting-hr-elevated") {
+		t.Errorf("the anomaly rule fired on a slow drift, which it cannot measure: %v", ids)
+	}
+	if !hasPrefix(ids, "baseline-drift-restingHeartRate") {
+		t.Errorf("nobody reported a 6 bpm shift over a quarter of a year: %v", ids)
+	}
+}
+
+// ⚠️ The failure this guards against is silent on both sides: a rule reading
+// `in.Daily["respiratoryRate"]` while the service never selects that data_type
+// returns nil exactly as a rule with nothing to say does. The phone would then
+// show five drifts and the dashboard three, for the same body.
+func TestEveryDriftMetricIsActuallyRead(t *testing.T) {
+	for _, r := range baselineDriftRules {
+		if r.metric == "sleepDuration" {
+			continue // fed by the sleep read path, which is not a `neededMetrics` entry
+		}
+		// Fed under the rule's own `metric` name: if the series function reads some
+		// other key, nothing fires and the loop below is checking the wrong string.
+		in := Input{Today: today, Daily: map[string]Series{r.metric: driftSeries(50, 60)}}
+		if !hasPrefix(idsOf(t, in), "baseline-drift-"+r.metric) {
+			t.Errorf("%s: the rule does not read in.Daily[%q]", r.metric, r.metric)
+			continue
+		}
+		var read bool
+		for _, m := range neededMetrics {
+			read = read || m == r.metric
+		}
+		if !read {
+			t.Errorf("the service never reads %q, so its drift can never fire on the server",
+				r.metric)
+		}
+	}
+}
+
+// The read window has to reach as far back as the hungriest rule asks. A rule
+// starved of its days looks exactly like a rule with nothing to say.
+func TestLookbackCoversTheLongestWindow(t *testing.T) {
+	for _, want := range []int{DriftOlderWindowStartDays, SleepDebtHistoryDays,
+		SocialJetlagWindowDays, CorrelationDays} {
+		if LookbackDays < want {
+			t.Errorf("LookbackDays = %d, but a rule reaches back %d days", LookbackDays, want)
+		}
+	}
+}
+
+// sleepNights builds a series of nights ending yesterday, `hours` long each.
+func debtSeries(baseline, fortnight float64) Series {
+	s := Series{}
+	for n := SleepDebtHistoryDays; n >= 1; n-- {
+		v := baseline
+		if n <= SleepDebtWindowDays {
+			v = fortnight
+		} else if n%2 == 0 {
+			v += 0.1
+		} else {
+			v -= 0.1
+		}
+		s = append(s, Point{Day: today.AddDate(0, 0, -n), Value: v})
+	}
+	return s
+}
+
+func TestSleepDebtSaysWhatItIsMeasuredAgainst(t *testing.T) {
+	in := Input{Today: today, SleepHours: debtSeries(7.5, 6.6)}
+	ins := findInsight(t, in, "sleep-debt")
+
+	if *ins.Kind != api.Pattern || *ins.Severity != api.Info {
+		t.Errorf("kind=%s severity=%s — a fortnight's balance is a property of one window",
+			*ins.Kind, *ins.Severity)
+	}
+	// The whole point is that "usual" is the person's own, not a round number
+	// everyone is measured against.
+	for _, want := range []string{"mediánja", "nem egy általános 8 órás ajánlás",
+		"se nullának, se szokásosnak", "nem orvosi értékelés"} {
+		if !strings.Contains(*ins.Detail, want) {
+			t.Errorf("the explanation is missing %q: %s", want, *ins.Detail)
+		}
+	}
+	// Hours, in the instrumental case, not "12.6 óra".
+	if !strings.Contains(*ins.Title, "perccel") && !strings.Contains(*ins.Title, "órával") &&
+		!strings.Contains(*ins.Title, "óra") {
+		t.Errorf("the title does not state the shortfall in hours: %s", *ins.Title)
+	}
+}
+
+// The horoscope trap: counting only the nights below the median would report a
+// debt for everyone, for ever, because half of anyone's nights are below their own
+// middle. The sum is signed, so a long night pays a short one back.
+func TestSleepDebtIsSignedNotASumOfShortNights(t *testing.T) {
+	s := debtSeries(7.5, 7.5)
+	// The fortnight alternates 2 hours either side of the usual: seven nights are
+	// short by 2 hours each — 14 hours of "debt" by the naive sum — and seven are
+	// long by the same.
+	for i := range s {
+		n := int(today.Sub(s[i].Day).Hours() / 24)
+		if n <= SleepDebtWindowDays {
+			if n%2 == 0 {
+				s[i].Value = 9.5
+			} else {
+				s[i].Value = 5.5
+			}
+		}
+	}
+	if ids := idsOf(t, Input{Today: today, SleepHours: s}); hasPrefix(ids, "sleep-debt") {
+		t.Errorf("a fortnight that netted out to the usual was reported as a debt: %v", ids)
+	}
+}
+
+// jetlagNights builds eight weeks of nights: work nights asleep 23:00–07:00, free
+// nights (Friday, Saturday) the same length but `shift` minutes later.
+func jetlagNights(shift float64) []SleepNight {
+	out := []SleepNight{}
+	for n := SocialJetlagWindowDays; n >= 1; n-- {
+		d := today.AddDate(0, 0, -n)
+		start := d.Add(23 * time.Hour)
+		if freeNight(d.Weekday()) {
+			start = start.Add(time.Duration(shift) * time.Minute)
+		}
+		out = append(out, SleepNight{Day: d, Start: start, End: start.Add(8 * time.Hour)})
+	}
+	return out
+}
+
+func TestSocialJetlagWordsTheHabitAndItsTimeZones(t *testing.T) {
+	in := Input{Today: today, SleepNights: jetlagNights(120)}
+	ins := findInsight(t, in, "social-jetlag")
+
+	if *ins.Kind != api.Pattern || *ins.Severity != api.Info {
+		t.Errorf("kind=%s severity=%s — a standing habit is not a change from window to window",
+			*ins.Kind, *ins.Severity)
+	}
+	if !strings.Contains(*ins.Title, "Szociális jetlag") {
+		t.Errorf("the title does not name what it found: %s", *ins.Title)
+	}
+	for _, want := range []string{"időzónányi", "hétben érte el a fél órát", "nem orvosi értékelés"} {
+		if !strings.Contains(*ins.Detail, want) {
+			t.Errorf("the explanation is missing %q: %s", want, *ins.Detail)
+		}
+	}
+
+	// One-sided: a weekend that starts EARLIER than the working week is an unusual
+	// life, not a jetlag, and borrowing the term for it would misname it.
+	early := Input{Today: today, SleepNights: jetlagNights(-120)}
+	if hasPrefix(idsOf(t, early), "social-jetlag") {
+		t.Error("an earlier weekend was reported as social jetlag")
+	}
+}
+
+// At an hour, the ported sleep-midpoint-weekend rule already says this about the
+// same nights. The 90-minute floor is what keeps the second card from being the
+// first one's echo.
+func TestSocialJetlagWaitsLongerThanItsNeighbour(t *testing.T) {
+	in := Input{Today: today, SleepNights: jetlagNights(75)}
+	ids := idsOf(t, in)
+	if !hasPrefix(ids, "sleep-midpoint-weekend") {
+		t.Errorf("the pooled weekend rule should speak at 75 minutes: %v", ids)
+	}
+	if hasPrefix(ids, "social-jetlag") {
+		t.Errorf("social-jetlag spoke below its own 90-minute floor: %v", ids)
+	}
+}
+
 // --- statistical kernels ---
 
 func TestPearsonRejectsConstantSeries(t *testing.T) {
@@ -599,6 +830,34 @@ func TestPearsonRejectsConstantSeries(t *testing.T) {
 	r, _ = pearson([]float64{1, 2, 3, 4}, []float64{8, 6, 4, 2})
 	if math.Abs(r+1) > 1e-9 {
 		t.Errorf("perfect opposite movement r = %v, expected -1", r)
+	}
+}
+
+// The median is what "your usual" is measured with, precisely because a handful
+// of odd days must not move it — a mean would let a fortnight of illness redefine
+// the standard the illness itself is being judged against.
+func TestMedianIgnoresAHandfulOfOddDays(t *testing.T) {
+	steady := []float64{7.4, 7.5, 7.5, 7.6, 7.5}
+	ill := []float64{7.4, 7.5, 7.5, 7.6, 7.5, 3.0, 3.0}
+	if got := median(steady); got != 7.5 {
+		t.Errorf("median = %v, expected 7.5", got)
+	}
+	if got := median(ill); got != 7.5 {
+		t.Errorf("two three-hour nights moved the median to %v", got)
+	}
+	// An even count averages the two middle values.
+	if got := median([]float64{1, 2, 3, 4}); got != 2.5 {
+		t.Errorf("median of an even count = %v, expected 2.5", got)
+	}
+	// And it must not reorder the caller's slice: that is a window of the input
+	// series, and the next rule reads it by day.
+	vals := []float64{3, 1, 2}
+	_ = median(vals)
+	if vals[0] != 3 || vals[1] != 1 || vals[2] != 2 {
+		t.Errorf("median sorted the caller's slice: %v", vals)
+	}
+	if median(nil) != 0 {
+		t.Error("the median of nothing is 0, like the mean of nothing")
 	}
 }
 

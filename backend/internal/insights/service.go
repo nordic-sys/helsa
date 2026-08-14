@@ -19,14 +19,36 @@ import (
 
 // LookbackDays: how many days back we read. It is the longest requirement among
 // the rules — the correlation wants 60 days, the efficiency rule two 28-day
-// windows, the deviation rule 28+3. `max` keeps that fact in the code rather
-// than in a comment that would go stale the next time a window changes.
-const LookbackDays = max(CorrelationDays, 2*EfficiencyWindowDays, BaselineDays+BaselineSkipDays)
+// windows, the deviation rule 28+3, and `baseline-drift` reaches back four
+// months. `max` keeps that fact in the code rather than in a comment that would
+// go stale the next time a window changes.
+//
+// ⚠️ A rule whose days never arrive looks EXACTLY like a rule with nothing to
+// say: it returns nil either way, silently. That is why this is a `max` over the
+// rules' own constants and not a literal — `baseline-drift` doubled it when it
+// landed, and a stale number here would have starved it of its older window
+// without a single failing test.
+//
+// The cost is real and worth naming: the daily read now covers 121 buckets rather
+// than 61. It is one query per metric either way.
+const LookbackDays = max(CorrelationDays, 2*EfficiencyWindowDays, BaselineDays+BaselineSkipDays,
+	DriftOlderWindowStartDays, SleepDebtHistoryDays, SocialJetlagWindowDays)
 
 // neededMetrics: these are the only ones we read. Running rules over all 120
 // metrics would be cheap to declare and expensive to defend — behind every rule
 // there has to be a reason why that particular threshold, and not another.
-var neededMetrics = []string{"restingHeartRate", "hrv", "stepCount"}
+//
+// ⚠️ This list and the rule tables are one contract: a rule that reads
+// `in.Daily["respiratoryRate"]` while this list omits it is a rule that can never
+// fire on the server, and it fails the same way as everything else here — in
+// silence, with the phone showing five drifts and the dashboard three.
+// TestEveryDriftMetricIsActuallyRead is what holds the two together.
+var neededMetrics = []string{
+	"restingHeartRate", "hrv", "stepCount",
+	// Read for `baseline-drift` alone: no other rule asks for them, and a slow
+	// shift in either is precisely the kind that no short window can see.
+	"respiratoryRate", "bodyMass",
+}
 
 type Service struct {
 	pool *pgxpool.Pool
