@@ -356,11 +356,14 @@ func (p *Publisher) publishRaw(c mqtt.Client, topic, payload string, retained bo
 func (p *Publisher) shutdown() {
 	if !p.connected() {
 		if p.client != nil {
+			// #nosec G115 -- disconnectTimeout is a constant (250ms), so the int64 → uint
+			// conversion is 250 on every build; no request-derived value reaches here.
 			p.client.Disconnect(uint(disconnectTimeout.Milliseconds()))
 		}
 		return
 	}
 	p.publishRaw(p.client, p.top.status(), payloadOffline, true)
+	// #nosec G115 -- see above: a constant 250, not an attacker-influenced number.
 	p.client.Disconnect(uint(disconnectTimeout.Milliseconds()))
 	p.log.Info("home assistant publisher stopped")
 }

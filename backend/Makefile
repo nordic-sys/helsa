@@ -11,7 +11,14 @@ endif
 
 GOOSE_DBSTRING ?= $(HELSA_DATABASE_URL)
 
-.PHONY: help generate build run-api run-worker migrate smoke test tidy lint docker
+.PHONY: help generate build run-api run-worker migrate smoke test tidy lint security docker
+
+# golangci-lint, govulncheck and gosec are installed with `go install`, so they land
+# in GOPATH/bin — which is usually not on PATH. Resolve it once for the targets below.
+GOBIN := $(shell go env GOBIN)
+ifeq ($(GOBIN),)
+GOBIN := $(shell go env GOPATH)/bin
+endif
 
 help: ## List the commands
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
@@ -50,6 +57,14 @@ test: ## Unit tests
 
 tidy: ## go mod tidy
 	go mod tidy
+
+lint: ## golangci-lint on its own (the quick loop)
+	$(GOBIN)/golangci-lint run ./...
+
+# The full gate: lint + reachable known vulnerabilities + our own insecure patterns.
+# What each tool is for, and why suppression is per-site, is in the script's header.
+security: ## Security scan: golangci-lint + govulncheck + gosec
+	./scripts/security-scan.sh
 
 docker: ## Build the backend image locally (it carries api + worker + token)
 	docker build -t helsa-backend:dev .
