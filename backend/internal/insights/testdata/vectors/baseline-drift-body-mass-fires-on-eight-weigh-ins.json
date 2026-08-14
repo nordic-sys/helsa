@@ -1,0 +1,87 @@
+{
+  "name": "baseline-drift fires on 8 weigh-ins a window: 4 kg down since the spring",
+  "today": "2026-08-11",
+  "timezone": "Europe/Budapest",
+  "daily": {
+    "bodyMass": [
+      {
+        "day": "2026-04-16",
+        "value": 81.5
+      },
+      {
+        "day": "2026-04-19",
+        "value": 82.5
+      },
+      {
+        "day": "2026-04-23",
+        "value": 81.5
+      },
+      {
+        "day": "2026-04-26",
+        "value": 82.5
+      },
+      {
+        "day": "2026-04-30",
+        "value": 81.5
+      },
+      {
+        "day": "2026-05-03",
+        "value": 82.5
+      },
+      {
+        "day": "2026-05-07",
+        "value": 81.5
+      },
+      {
+        "day": "2026-05-10",
+        "value": 82.5
+      },
+      {
+        "day": "2026-07-17",
+        "value": 77.5
+      },
+      {
+        "day": "2026-07-20",
+        "value": 78.5
+      },
+      {
+        "day": "2026-07-24",
+        "value": 77.5
+      },
+      {
+        "day": "2026-07-27",
+        "value": 78.5
+      },
+      {
+        "day": "2026-07-31",
+        "value": 77.5
+      },
+      {
+        "day": "2026-08-03",
+        "value": 78.5
+      },
+      {
+        "day": "2026-08-07",
+        "value": 77.5
+      },
+      {
+        "day": "2026-08-10",
+        "value": 78.5
+      }
+    ]
+  },
+  "expect": [
+    {
+      "id": "baseline-drift-bodyMass:2026-08-11",
+      "kind": "trend",
+      "metric": "bodyMass",
+      "severity": "info",
+      "values": {
+        "recent": 78.0,
+        "older": 82.0,
+        "drift": -4.0,
+        "t": 15.0
+      }
+    }
+  ]
+}

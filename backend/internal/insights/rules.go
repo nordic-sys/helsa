@@ -78,8 +78,9 @@ const (
 // the suite, which is the point — the failure mode that matters here is a
 // confident statement made from too little evidence.
 //
-// `efficiency-trend` is a stem: the rule produces one identifier per activity
-// type (`efficiency-trend-running:2026-08-11`), so the coverage check matches by
+// `efficiency-trend` and `baseline-drift` are stems: those rules produce one
+// identifier per activity type or metric (`efficiency-trend-running:2026-08-11`,
+// `baseline-drift-restingHeartRate:2026-08-11`), so the coverage check matches by
 // prefix.
 var ruleIDPrefixes = []string{
 	"resting-hr-elevated",
@@ -94,6 +95,9 @@ var ruleIDPrefixes = []string{
 	"steps-weekend",
 	"training-load-jump",
 	"efficiency-trend",
+	"baseline-drift",
+	"sleep-debt",
+	"social-jetlag",
 }
 
 // Point is one day (00:00 taken in the user's timezone) and the value belonging
@@ -212,6 +216,11 @@ func EvaluateDetailed(in Input, now time.Time) []Result {
 	for _, r := range efficiencyRules {
 		add(r.eval(in, now))
 	}
+	for _, r := range baselineDriftRules {
+		add(r.eval(in, now))
+	}
+	add(sleepDebt(in, now))
+	add(socialJetlag(in, now))
 	sort.Slice(out, func(i, j int) bool { return *out[i].Insight.Id < *out[j].Insight.Id })
 	return out
 }
@@ -511,6 +520,33 @@ func stdDev(vals []float64, m float64) float64 {
 		ss += d * d
 	}
 	return math.Sqrt(ss / float64(len(vals)-1))
+}
+
+// median is the middle value, averaging the two middle ones on an even count.
+//
+// Why the drift and debt rules want this and not mean(): they measure a person
+// against their own usual, over months. A fortnight of flu, a holiday, or one
+// night the watch recorded a nap as a night would move a mean enough to redefine
+// "usual" — and then the rule would compare the present against an average that
+// the illness itself created. The median does not move for a handful of odd days,
+// which is exactly the property "your usual" needs.
+//
+// It sorts a COPY: the caller's slice is a window of the input series, and a rule
+// that quietly reordered it would leave the next rule reading days out of order.
+// Returns 0 for an empty input, like mean() does; every caller checks its data
+// minimum first, so the value is never actually read from nothing.
+func median(vals []float64) float64 {
+	if len(vals) == 0 {
+		return 0
+	}
+	sorted := make([]float64, len(vals))
+	copy(sorted, vals)
+	sort.Float64s(sorted)
+	middle := len(sorted) / 2
+	if len(sorted)%2 == 0 {
+		return (sorted[middle-1] + sorted[middle]) / 2
+	}
+	return sorted[middle]
 }
 
 // pearson is the correlation coefficient; the second return value is false if
