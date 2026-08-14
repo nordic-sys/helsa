@@ -1,6 +1,7 @@
 package server
 
 import (
+	"math"
 	"os"
 	"strings"
 	"testing"
@@ -106,11 +107,26 @@ func TestAchievementThresholdsNullStaysAbsent(t *testing.T) {
 	if got.Period != nil || got.Unit != nil || got.Value != nil {
 		t.Errorf("the NULL columns must stay nil: %+v", got)
 	}
-	if thresholdsToDB(nil) != nil {
-		t.Error("nil thresholds → NULL, not an empty array")
+	if th, err := thresholdsToDB(nil); err != nil || th != nil {
+		t.Errorf("nil thresholds → NULL, not an empty array: %+v, %v", th, err)
 	}
-	if th := thresholdsToDB(&[]int{}); th == nil || len(th) != 0 {
-		t.Errorf("an empty list must stay an empty array (not NULL): %+v", th)
+	if th, err := thresholdsToDB(&[]int{}); err != nil || th == nil || len(th) != 0 {
+		t.Errorf("an empty list must stay an empty array (not NULL): %+v, %v", th, err)
+	}
+}
+
+// The column is `integer[]`, the request field is a 64-bit `int`. A threshold that
+// does not fit must be REFUSED, not silently truncated into a negative number —
+// a wrapped value would be stored as a historical fact and never questioned again.
+func TestAchievementThresholdsOutOfRangeRejected(t *testing.T) {
+	for _, v := range []int{math.MaxInt32 + 1, math.MinInt32 - 1} {
+		if _, err := thresholdsToDB(&[]int{1000, v}); err == nil {
+			t.Errorf("threshold %d does not fit in int32, it must be rejected", v)
+		}
+	}
+	// The edges themselves still fit and must go through.
+	if th, err := thresholdsToDB(&[]int{math.MinInt32, math.MaxInt32}); err != nil || len(th) != 2 {
+		t.Errorf("the int32 edges are valid thresholds: %+v, %v", th, err)
 	}
 }
 

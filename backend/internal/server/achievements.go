@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"math"
 	"net/http"
 
 	"github.com/google/uuid"
@@ -132,6 +133,10 @@ func achievementParams(uid uuid.UUID, in api.AchievementInput) (db.UpsertAchieve
 		v := float64(*in.Value)
 		value = &v
 	}
+	thresholds, err := thresholdsToDB(in.Thresholds)
+	if err != nil {
+		return db.UpsertAchievementParams{}, err
+	}
 	return db.UpsertAchievementParams{
 		UserID:     pgconv.UUID(uid),
 		ID:         in.Id,
@@ -140,7 +145,7 @@ func achievementParams(uid uuid.UUID, in api.AchievementInput) (db.UpsertAchieve
 		Period:     in.Period,
 		Value:      value,
 		Unit:       in.Unit,
-		Thresholds: thresholdsToDB(in.Thresholds),
+		Thresholds: thresholds,
 		EarnedAt:   pgconv.Timestamptz(in.EarnedAt),
 	}, nil
 }
@@ -168,13 +173,24 @@ func achievementDTO(a db.Achievement) api.Achievement {
 // thresholdsToDB: nil stays NULL. "No thresholds" (record, milestone) and "an
 // empty threshold list" are not the same thing, so we do not manufacture an
 // empty array out of a missing field.
-func thresholdsToDB(in *[]int) []int32 {
+//
+// The range check is not ceremony. The column is `integer[]` (32 bit), while the
+// contract-level value arrives as a plain `int` — 64 bit here — straight out of
+// the request body. Without the check a threshold above ~2.1 billion would not be
+// rejected but would SILENTLY WRAP into a negative number, and the badge would
+// then carry, forever, a threshold nobody ever set. A step count that large is
+// nonsense anyway, so refusing is the honest answer: the caller turns the error
+// into a 400, exactly like the other malformed fields.
+func thresholdsToDB(in *[]int) ([]int32, error) {
 	if in == nil {
-		return nil
+		return nil, nil
 	}
 	out := make([]int32, 0, len(*in))
 	for _, v := range *in {
+		if v < math.MinInt32 || v > math.MaxInt32 {
+			return nil, fmt.Errorf("threshold out of range: %d", v)
+		}
 		out = append(out, int32(v))
 	}
-	return out
+	return out, nil
 }
