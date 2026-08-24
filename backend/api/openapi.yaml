@@ -728,7 +728,7 @@ components:
         source_uuid: { type: string }
         started_at: { type: string, format: date-time }
         ended_at: { type: string, format: date-time }
-        stage: { type: string, enum: [inBed, asleepCore, asleepDeep, asleepREM, awake] }
+        stage: { type: string, enum: [inBed, asleepCore, asleepDeep, asleepREM, awake, asleepUnspecified] }
 
     SummaryResponse:
       type: object

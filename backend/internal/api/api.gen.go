@@ -384,11 +384,12 @@ func (e SettingsUnitSystem) Valid() bool {
 
 // Defines values for SleepSegmentInStage.
 const (
-	AsleepCore SleepSegmentInStage = "asleepCore"
-	AsleepDeep SleepSegmentInStage = "asleepDeep"
-	AsleepREM  SleepSegmentInStage = "asleepREM"
-	Awake      SleepSegmentInStage = "awake"
-	InBed      SleepSegmentInStage = "inBed"
+	AsleepCore        SleepSegmentInStage = "asleepCore"
+	AsleepDeep        SleepSegmentInStage = "asleepDeep"
+	AsleepREM         SleepSegmentInStage = "asleepREM"
+	AsleepUnspecified SleepSegmentInStage = "asleepUnspecified"
+	Awake             SleepSegmentInStage = "awake"
+	InBed             SleepSegmentInStage = "inBed"
 )
 
 // Valid indicates whether the value is a known member of the SleepSegmentInStage enum.
@@ -399,6 +400,8 @@ func (e SleepSegmentInStage) Valid() bool {
 	case AsleepDeep:
 		return true
 	case AsleepREM:
+		return true
+	case AsleepUnspecified:
 		return true
 	case Awake:
 		return true

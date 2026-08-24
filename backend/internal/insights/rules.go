@@ -252,7 +252,15 @@ type deviationRule struct {
 	// "a" or "az" by the sound the following word starts with ("a pulzusod", but
 	// "az alvásidőd"). Whoever localises this should keep the same shape: the
 	// label owns the whole noun phrase, not just the noun.
-	label    string
+	label string
+	// caveat is the clause after "Ez nem diagnózis — ", naming what ELSE moves this
+	// particular metric.
+	//
+	// ⚠️ Per rule, not shared. One footnote used to serve all three and it named the
+	// resting heart rate and the HRV, so a sentence about short sleep ended by
+	// explaining what moves a pulse. Keep this in step with the Swift twin
+	// (InsightRules.swift, `DeviationRule.caveat`).
+	caveat   string
 	idPrefix string
 }
 
@@ -264,6 +272,7 @@ var deviationRules = []deviationRule{
 		minAbsDelta: 2, // bpm — a smaller difference than this is measurement noise
 		unit:        "bpm",
 		label:       "A nyugalmi pulzusod",
+		caveat:      "a nyugalmi pulzus alvástól, alkoholtól, stressztől és betegségtől is elmozdul.",
 		idPrefix:    "resting-hr-elevated",
 	},
 	{
@@ -273,6 +282,7 @@ var deviationRules = []deviationRule{
 		minAbsDelta: 5, // ms
 		unit:        "ms",
 		label:       "A pulzusvariabilitásod (HRV)",
+		caveat:      "a pulzusvariabilitás alvástól, alkoholtól, stressztől és betegségtől is elmozdul.",
 		idPrefix:    "hrv-depressed",
 	},
 	{
@@ -282,6 +292,7 @@ var deviationRules = []deviationRule{
 		minAbsDelta: 0.5, // hours
 		unit:        "óra",
 		label:       "Az alvásidőd",
+		caveat:      "az alvásidőt a lefekvés ideje, az ébresztő és a mérés pontossága is befolyásolja.",
 		idPrefix:    "sleep-short",
 	},
 }
@@ -340,9 +351,9 @@ func (r deviationRule) eval(in Input, now time.Time) *Result {
 	title := fmt.Sprintf("%s %d napja a szokásos %s", r.label, AnomalyStreakDays, word)
 	detail := fmt.Sprintf(
 		"Az elmúlt %d nap átlaga %s, a korábbi %d nap átlaga %s (szórás %s). "+
-			"Ez nem diagnózis — a nyugalmi pulzus és a HRV alvástól, alkoholtól, stressztől és "+
-			"betegségtől is elmozdul.",
-		AnomalyStreakDays, fmtVal(rm, r.unit), len(base), fmtVal(m, r.unit), fmtVal(sd, r.unit))
+			"Ez nem diagnózis — %s",
+		AnomalyStreakDays, fmtVal(rm, r.unit), len(base), fmtVal(m, r.unit), fmtVal(sd, r.unit),
+		r.caveat)
 
 	return insight(r.idPrefix, in.Today, api.Anomaly, r.metric, title, detail, api.Notice, now,
 		map[string]float64{"recent": rm, "baseline": m, "deviation": sd})
