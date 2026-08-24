@@ -1,7 +1,7 @@
 ---
 title: Deployment
 layout: default
-nav_order: 4
+nav_order: 5
 has_children: true
 description: "Running Helsa for real: what you are actually defending against, the topology, and the order in which to do things."
 ---

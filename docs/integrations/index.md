@@ -1,7 +1,7 @@
 ---
 title: Integrations
 layout: default
-nav_order: 6
+nav_order: 7
 has_children: true
 description: "Getting daily summaries out of Helsa and into home automation — over MQTT with discovery, or over REST."
 ---

@@ -46,7 +46,7 @@ search:
 
 heading_anchors: true
 
-# Callout boxes. Pages mark a blockquote with {: .warning } or {: .note }.
+# Callout boxes. Pages mark a blockquote with {: .warning }, {: .important } or {: .note }.
 # Without these definitions the blockquotes still render — they just lose the
 # colour and the label — so nothing breaks if the theme changes this API.
 callouts_level: quiet
@@ -54,6 +54,9 @@ callouts:
   note:
     title: Note
     color: blue
+  important:
+    title: Important
+    color: yellow
   warning:
     title: Warning
     color: red

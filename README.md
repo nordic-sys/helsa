@@ -36,6 +36,27 @@ This repository is what that endpoint can be:
 
 The iOS app itself is closed source and not distributed here.
 
+## The app is in closed testing
+
+**Helsa is not on the App Store yet.** It is in a **TestFlight** round —
+invitation only, and the invitations go to people the author already knows.
+
+That has two consequences worth stating plainly:
+
+- **You cannot install the app from this repository.** What is here is the
+  optional server, and it is useful on its own only if you are writing a client
+  against [the API contract](backend/api/openapi.yaml).
+- **The contract can still move.** While the app is in testing, an endpoint or a
+  field may change shape between releases. Breaking changes are described in the
+  commit that makes them; there is no deprecation window yet, because there is
+  nobody on the outside depending on one.
+
+The server itself is not in testing — it is what it looks like, and it is MIT
+licensed. Run it, fork it, or replace it.
+
+⚠️ **A single-maintainer hobby project.** There is no support commitment, no
+uptime, and no roadmap you can hold anyone to.
+
 The API contract is [`backend/api/openapi.yaml`](backend/api/openapi.yaml). It is
 the source of truth, and it is what you implement if you would rather write your
 own backend.

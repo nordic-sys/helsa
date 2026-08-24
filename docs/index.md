@@ -26,6 +26,24 @@ something of your own that speaks the same [API contract](api/).
 
 ---
 
+> ## The app is in closed testing
+> {: .no_toc }
+>
+> **Helsa is not on the App Store yet.** The iPhone app is in a **TestFlight**
+> round — invitation only, and the invitations go to people the author already
+> knows. There is no public link, and this site is not one.
+>
+> What you can use today is the **server**: it is MIT licensed, it is documented
+> here, and its [API contract](api/) is the thing to implement if you would
+> rather write your own client.
+>
+> ⚠️ **The contract can still move** while the app is in testing. A breaking
+> change is described in the commit that makes it — there is no deprecation
+> window yet, because nobody outside depends on one.
+{: .important }
+
+---
+
 > ## Not a medical device
 > {: .no_toc }
 >
