@@ -126,6 +126,10 @@ export function Ring({
   size?: number
 }) {
   const f = useFormat()
+  // ⚠️ The `?? 0` belongs HERE and nowhere else. An arc has to have a length, and a
+  // missing value draws none — but that is a fact about the drawing, not about the day.
+  // Feeding the same `?? 0` to the formatter is what turned "we did not measure this"
+  // into "you did nothing", in the text and in the screen-reader label alike.
   const pct = goal && goal > 0 ? Math.min((value ?? 0) / goal, 1) : 0
   const stroke = 11
   const r = (size - stroke) / 2
@@ -136,7 +140,7 @@ export function Ring({
         width={size}
         height={size}
         role="img"
-        aria-label={`${label}: ${f.num(value ?? 0)} / ${f.num(goal ?? 0)} ${unit ?? ''}`}
+        aria-label={`${label}: ${f.num(value)} / ${f.num(goal)} ${unit ?? ''}`}
       >
         <circle
           cx={size / 2}
@@ -160,10 +164,10 @@ export function Ring({
       </svg>
       <div style={{ marginTop: 6, fontSize: 13, color: 'var(--text-dim)' }}>{label}</div>
       <div style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
-        {f.num(value ?? 0)}
+        {f.num(value)}
         <span style={{ color: 'var(--text-dim)', fontWeight: 400 }}>
           {' / '}
-          {f.num(goal ?? 0)} {unit}
+          {f.num(goal)} {unit}
         </span>
       </div>
     </div>

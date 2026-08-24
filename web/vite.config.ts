@@ -8,6 +8,15 @@ import react from '@vitejs/plugin-react'
 // either.
 export default defineConfig({
   plugins: [react()],
+  // ⚠️ These tests exist because there were none. ~4000 lines of code that displays
+  // health numbers had no runner at all (`docs/25` F23), while `docs/17` described a
+  // vitest / Testing Library / Playwright stack in the present tense.
+  test: {
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.ts'],
+    globals: true,
+    include: ['src/**/*.test.{ts,tsx}'],
+  },
   server: {
     proxy: {
       '/v1': {

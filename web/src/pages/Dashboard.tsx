@@ -1,4 +1,5 @@
 import { useQuery } from '@tanstack/react-query'
+import { newestActivity } from '../lib/activity'
 import { api, browserTz } from '../api/client'
 import { Card, Empty, ErrorState, Loading, Ring, Stat } from '../components/ui'
 import { useI18n } from '../i18n'
@@ -29,7 +30,11 @@ export default function Dashboard() {
   if (summary.isError) return <ErrorState error={summary.error} />
 
   const metrics = summary.data?.metrics ?? {}
-  const rings = activity.data?.at(-1)
+  // ⚠️ NOT `at(-1)`: the query asks for a window, and its newest entry is not necessarily
+  // today's. Presenting a three-day-old summary under a heading that says "Today" is a
+  // true number under a false claim — see `newestActivity`.
+  const newest = newestActivity(activity.data)
+  const rings = newest?.summary
 
   // The most recent device heartbeat: this is what says whether data is still
   // arriving at all.
@@ -74,6 +79,13 @@ export default function Dashboard() {
       </div>
 
       <Card title={t('dashboard.rings.title')}>
+        {/* When the newest summary is older than today, the card says which day it is
+            for instead of quietly implying this morning. */}
+        {newest && !newest.isToday && newest.summary.day ? (
+          <div style={{ fontSize: 13, color: 'var(--text-dim)', marginBottom: 8 }}>
+            {f.date(newest.summary.day)}
+          </div>
+        ) : null}
         {activity.isLoading ? (
           <div className="skeleton" style={{ height: 120 }} />
         ) : rings ? (
