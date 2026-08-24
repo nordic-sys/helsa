@@ -62,6 +62,7 @@
       "severity": "info",
       "values": {
         "acute": 240,
+        "acuteCount": 4,
         "chronicWeekly": 127.5,
         "ratio": 1.9
       }

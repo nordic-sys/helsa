@@ -594,6 +594,7 @@ type IngestBatch struct {
 
 // Insight defines model for Insight.
 type Insight struct {
+	// Detail The longer form of `title`, and a fallback in exactly the same sense.
 	Detail      *string    `json:"detail,omitempty"`
 	GeneratedAt *time.Time `json:"generated_at,omitempty"`
 
@@ -601,10 +602,19 @@ type Insight struct {
 	Id *string `json:"id,omitempty"`
 
 	// Kind What SHAPE of statement this is. `trend` compares a window with the one before it, `anomaly` compares recent days with a longer baseline, `correlation` reports co-movement of two series, and `pattern` describes a property of one window — how much bedtime scatters, how the weekend differs from the week. A `pattern` is not a change over time, which is why it is not a `trend`.
-	Kind     *InsightKind     `json:"kind,omitempty"`
-	Metric   *string          `json:"metric,omitempty"`
+	Kind   *InsightKind `json:"kind,omitempty"`
+	Metric *string      `json:"metric,omitempty"`
+
+	// Rule The rule that fired, WITHOUT the day — the stem of `id` (`resting-hr-elevated`, `baseline-drift-hrv`, `efficiency-trend-running`). This is what a client keys its own wording on.
+	Rule     *string          `json:"rule,omitempty"`
 	Severity *InsightSeverity `json:"severity,omitempty"`
-	Title    *string          `json:"title,omitempty"`
+
+	// Title ⚠️ **A fallback, not the source of truth.** A client that knows `rule` composes its own sentence and ignores this; it is here for the case the manual describes, where a server has a rule the app on this phone does not yet know. The wording is Hungarian, because that is the one language this server has ever spoken — which is precisely why it must not be what a client displays by default.
+	Title *string `json:"title,omitempty"`
+
+	// Values **The numbers the rule computed — this is the payload.** The server sends DATA, not sentences: the client composes the wording from `rule` and these values, in its own language and with its own number formatting.
+	// The keys are per rule and are pinned by the shared vectors (`docs/api/insight-vectors.md`), so a threshold that quietly drifts fails a test rather than merely reading differently. Directions are encoded as `+1` / `-1` (`direction`), never as a word — a word is language.
+	Values *map[string]float64 `json:"values,omitempty"`
 }
 
 // InsightKind What SHAPE of statement this is. `trend` compares a window with the one before it, `anomaly` compares recent days with a longer baseline, `correlation` reports co-movement of two series, and `pattern` describes a property of one window — how much bedtime scatters, how the weekend differs from the week. A `pattern` is not a change over time, which is why it is not a `trend`.

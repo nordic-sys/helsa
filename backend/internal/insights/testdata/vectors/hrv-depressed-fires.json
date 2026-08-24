@@ -138,6 +138,7 @@
       "severity": "notice",
       "values": {
         "baseline": 60,
+        "baselineDays": 28,
         "deviation": 3.1,
         "recent": 40
       }

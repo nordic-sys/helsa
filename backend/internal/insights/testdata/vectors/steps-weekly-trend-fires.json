@@ -71,7 +71,9 @@
       "values": {
         "changePct": 125,
         "current": 9000,
-        "previous": 4000
+        "currentDays": 7,
+        "previous": 4000,
+        "previousDays": 7
       }
     }
   ]

@@ -145,5 +145,12 @@ func sleepDebt(in Input, now time.Time) *Result {
 	// minute.
 	return insight("sleep-debt", in.Today, api.Pattern, "sleepDuration", title, detail,
 		api.Info, now,
-		map[string]float64{"debtHours": debt, "usual": usual, "nights": float64(len(recent))})
+		map[string]float64{
+			"debtHours": debt, "usual": usual, "nights": float64(len(recent)),
+			// What actually accumulated and what the usual night would have given. Both are
+			// in the sentence, and neither can be recomputed from the three above without
+			// repeating the rule's own arithmetic on the client.
+			"slept": slept, "expected": expected,
+			"baselineNights": float64(len(baseline)),
+		})
 }

@@ -252,7 +252,10 @@ func (r baselineDriftRule) eval(in Input, now time.Time) *Result {
 	// not.
 	return insight("baseline-drift-"+r.metric, in.Today, api.Trend, r.metric, title, detail,
 		api.Info, now,
-		map[string]float64{"recent": recentMean, "older": olderMean, "drift": delta, "t": t})
+		map[string]float64{
+			"recent": recentMean, "older": olderMean, "drift": delta, "t": t,
+			"recentDays": float64(len(recent)), "olderDays": float64(len(older)),
+		})
 }
 
 // deltaText renders the shift as a Hungarian instrumental phrase ("6.0 bpm-mel",

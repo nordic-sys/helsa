@@ -493,9 +493,11 @@
       "metric": "restingHeartRate",
       "severity": "info",
       "values": {
-        "recent": 61.0,
-        "older": 55.0,
         "drift": 6.0,
+        "older": 55.0,
+        "olderDays": 30,
+        "recent": 61.0,
+        "recentDays": 28,
         "t": 11.2
       }
     }

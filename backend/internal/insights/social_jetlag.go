@@ -165,5 +165,10 @@ func socialJetlag(in Input, now time.Time) *Result {
 		api.Info, now,
 		map[string]float64{
 			"jetlagMinutes": med, "weeks": float64(len(shifts)), "nights": float64(nightsUsed),
+			// How many weeks the window held at all (not just the comparable ones), and how
+			// many of those reached the half-hour. `zones` is deliberately absent: it is
+			// `jetlagMinutes` rounded to hours, and a number a client can derive is a number
+			// two implementations can round differently.
+			"weekCount": float64(weekCount), "agreeing": float64(agreeing),
 		})
 }

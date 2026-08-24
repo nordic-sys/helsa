@@ -261,5 +261,8 @@ func (r weekendRule) eval(in Input, now time.Time) *Result {
 	// Every rule here is a `pattern`: it describes a property of one window
 	// rather than a change from one window to the next.
 	return insight(r.idPrefix, in.Today, api.Pattern, r.metric, title, detail, api.Info, now,
-		map[string]float64{"free": fm, "work": wm, "delta": delta})
+		map[string]float64{
+			"free": fm, "work": wm, "delta": delta,
+			"freeCount": float64(len(free)), "workCount": float64(len(work)),
+		})
 }

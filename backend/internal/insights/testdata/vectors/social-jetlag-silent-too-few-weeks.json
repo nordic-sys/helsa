@@ -246,9 +246,11 @@
       "metric": "sleepDuration",
       "severity": "info",
       "values": {
+        "delta": 120.0,
         "free": 1740.0,
+        "freeCount": 8,
         "work": 1620.0,
-        "delta": 120.0
+        "workCount": 20
       }
     }
   ],

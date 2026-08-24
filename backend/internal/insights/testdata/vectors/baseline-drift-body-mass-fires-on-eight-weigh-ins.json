@@ -77,9 +77,11 @@
       "metric": "bodyMass",
       "severity": "info",
       "values": {
-        "recent": 78.0,
-        "older": 82.0,
         "drift": -4.0,
+        "older": 82.0,
+        "olderDays": 8,
+        "recent": 78.0,
+        "recentDays": 8,
         "t": 15.0
       }
     }

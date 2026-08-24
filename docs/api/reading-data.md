@@ -204,14 +204,30 @@ GET /v1/insights
 ```json
 [ { "id": "resting-hr-elevated:2026-08-11",
     "kind": "anomaly", "metric": "restingHeartRate",
-    "title": "Resting heart rate above baseline",
-    "detail": "Three consecutive days at least 1.5σ above the 28-day baseline.",
+    "rule": "resting-hr-elevated",
+    "values": { "recent": 63.0, "baseline": 55.5, "deviation": 0.5, "baselineDays": 28 },
+    "title": "A nyugalmi pulzusod 3 napja a szokásos fölött",
+    "detail": "Az elmúlt 3 nap átlaga 63.0 bpm, a korábbi 28 nap átlaga 55.5 bpm (szórás 0.5 bpm). …",
     "severity": "notice",
     "generated_at": "2026-08-11T04:00:00Z" } ]
 ```
 
 Rule-based and explainable — rolling averages, z-scores, Pearson correlation. **No
 language model is involved.**
+
+⚠️ **This endpoint sends data, and the sentence is a fallback.** `rule` and
+`values` are what a client is meant to read: it composes the wording itself, in
+its own language and with its own number formatting. `title` and `detail` are the
+server's own Hungarian — the one language this server has ever spoken — and exist
+for the case where a client meets a rule it does not know, which can happen when a
+server is newer than the app talking to it.
+
+It used to be the other way round, and that made the server the single part of the
+system able to speak one language: a phone running in English displayed Hungarian
+the moment it fetched anything, with every screen still reading perfectly. The key
+set of `values` is per rule and pinned by the shared vectors
+(`insight-vectors.md`), which is also what keeps a rule from publishing too little
+to be worded.
 
 Current rules and what each needs before it will say anything:
 

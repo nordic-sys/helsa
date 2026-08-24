@@ -136,6 +136,7 @@
       "severity": "notice",
       "values": {
         "baseline": 7.5,
+        "baselineDays": 28,
         "deviation": 0.4,
         "recent": 5
       }
@@ -148,7 +149,9 @@
       "values": {
         "changePct": -13.6,
         "current": 6.4,
-        "previous": 7.4
+        "currentDays": 7,
+        "previous": 7.4,
+        "previousDays": 7
       }
     }
   ]

@@ -127,7 +127,9 @@
       "values": {
         "delta": -5000,
         "free": 6000,
-        "work": 11000
+        "freeCount": 8,
+        "work": 11000,
+        "workCount": 20
       }
     }
   ],

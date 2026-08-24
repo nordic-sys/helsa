@@ -82,8 +82,10 @@
       "severity": "info",
       "values": {
         "changePct": 10,
+        "previousCount": 5,
         "previousHr": 149,
         "previousSpeed": 181.8,
+        "recentCount": 5,
         "recentHr": 150,
         "recentSpeed": 200
       }

@@ -916,3 +916,59 @@ func TestInsightIDsAreStableWithinADay(t *testing.T) {
 		}
 	}
 }
+
+// TestTheWireCarriesDataNotJustASentence is the guard on the decision behind this
+// endpoint: **the server sends data, and the sentence is only a fallback.**
+//
+// Before it, an insight went out as a finished Hungarian sentence and nothing else,
+// which made this server the one part of the system that could speak a single
+// language — and made a client's own language wrong the moment it fetched anything.
+// A regression here would not fail any other test: the sentence would still be
+// there, still correct, still Hungarian.
+func TestTheWireCarriesDataNotJustASentence(t *testing.T) {
+	raised := append(alternate(55, 1, MinBaselineDays), 75, 76, 77)
+	in := Input{Today: today, Daily: map[string]Series{
+		"restingHeartRate": seriesFrom(len(raised), raised...),
+	}}
+	got := Evaluate(in, now)
+	if len(got) == 0 {
+		t.Fatal("the fixture was supposed to fire a rule")
+	}
+	for _, ins := range got {
+		if ins.Rule == nil || *ins.Rule == "" {
+			t.Errorf("%v: no rule on the wire — a client cannot key its own wording on anything",
+				ins.Id)
+			continue
+		}
+		// The rule is the stem of the id, and that is not decoration: the id carries the
+		// day, so a client that keyed on it would need a new case every morning.
+		if want := *ins.Rule + ":" + today.Format("2006-01-02"); *ins.Id != want {
+			t.Errorf("id = %q, expected %q — the rule must be the stem of the id", *ins.Id, want)
+		}
+		if ins.Values == nil || len(*ins.Values) == 0 {
+			t.Errorf("%s: no values on the wire — the sentence would be the only content", *ins.Rule)
+		}
+	}
+}
+
+// TestTheWireValuesAreACopy guards a sharp edge of the change above: `Result.Values`
+// is handed to the vector suite, and the same map going out on the wire would give
+// two owners to one map — which is how a test starts editing production data.
+func TestTheWireValuesAreACopy(t *testing.T) {
+	raised := append(alternate(55, 1, MinBaselineDays), 75, 76, 77)
+	in := Input{Today: today, Daily: map[string]Series{
+		"restingHeartRate": seriesFrom(len(raised), raised...),
+	}}
+	res := EvaluateDetailed(in, now)
+	if len(res) == 0 {
+		t.Fatal("the fixture was supposed to fire a rule")
+	}
+	first := res[0]
+	for k := range first.Values {
+		first.Values[k] = -1
+		if (*first.Insight.Values)[k] == -1 {
+			t.Fatalf("%s: the wire map and the vector map are the same map", k)
+		}
+		break
+	}
+}

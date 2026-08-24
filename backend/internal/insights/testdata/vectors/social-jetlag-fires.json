@@ -321,9 +321,11 @@
       "metric": "sleepDuration",
       "severity": "info",
       "values": {
+        "delta": 116.3,
         "free": 1736.3,
+        "freeCount": 8,
         "work": 1620.0,
-        "delta": 116.3
+        "workCount": 20
       }
     },
     {
@@ -332,9 +334,11 @@
       "metric": "sleepDuration",
       "severity": "info",
       "values": {
+        "agreeing": 8,
         "jetlagMinutes": 115.0,
-        "weeks": 8,
-        "nights": 55
+        "nights": 55,
+        "weekCount": 8,
+        "weeks": 8
       }
     }
   ],

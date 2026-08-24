@@ -356,7 +356,15 @@ func (r deviationRule) eval(in Input, now time.Time) *Result {
 		r.caveat)
 
 	return insight(r.idPrefix, in.Today, api.Anomaly, r.metric, title, detail, api.Notice, now,
-		map[string]float64{"recent": rm, "baseline": m, "deviation": sd})
+		map[string]float64{
+			"recent": rm, "baseline": m, "deviation": sd,
+			// The number of baseline days that HAD data — the sentence names it, and it is
+			// data rather than a constant: `BaselineDays` is how far we looked, `baselineDays`
+			// is how much we found. Which way the rule points is NOT here, because it is a
+			// property of the rule and not of this firing; a client that knows the rule knows
+			// the direction.
+			"baselineDays": float64(len(base)),
+		})
 }
 
 // --- Rule 2: weekly trend ---
@@ -428,7 +436,12 @@ func (r trendRule) eval(in Input, now time.Time) *Result {
 		TrendWindowDays, fmtVal(cm, r.unit), len(cur), fmtVal(pm, r.unit), len(prev), arrow)
 
 	return insight(r.idPrefix, in.Today, api.Trend, r.metric, title, detail, api.Info, now,
-		map[string]float64{"current": cm, "previous": pm, "changePct": rel * 100})
+		map[string]float64{
+			"current": cm, "previous": pm, "changePct": rel * 100,
+			// How many days of each week actually had data. The direction is the sign of
+			// `changePct`, so it is not sent twice.
+			"currentDays": float64(len(cur)), "previousDays": float64(len(prev)),
+		})
 }
 
 // --- Rule 3: step count ↔ sleep correlation ---
@@ -666,9 +679,23 @@ func insight(idPrefix string, today time.Time, kind api.InsightKind, metric, tit
 	// dismissed.
 	id := idPrefix + ":" + today.Format("2006-01-02")
 	gen := now.UTC()
+	rule := idPrefix
+	// ⚠️ **The values travel with the insight, and that is the point of this endpoint.**
+	// They used to exist only for the shared test vectors, while the wire carried a
+	// finished Hungarian sentence — which made the server the one part of the system
+	// that could only speak one language, and made a client's own language a lie the
+	// moment it fetched anything. The sentence stays as a FALLBACK (see the schema),
+	// but what a client is meant to read is `rule` + `values`.
+	//
+	// The map is copied because `Result.Values` is handed to the vector suite as well,
+	// and two owners of one map is how a test starts editing production data.
+	wire := make(map[string]float64, len(values))
+	for k, v := range values {
+		wire[k] = v
+	}
 	return &Result{
 		Insight: api.Insight{
-			Id: &id, Kind: &kind, Metric: &metric,
+			Id: &id, Kind: &kind, Metric: &metric, Rule: &rule, Values: &wire,
 			Title: &title, Detail: &detail, Severity: &sev, GeneratedAt: &gen,
 		},
 		Values: values,

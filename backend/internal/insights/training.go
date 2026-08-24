@@ -160,7 +160,11 @@ func trainingLoadJump(in Input, now time.Time) *Result {
 	// training figure as an anomaly invites reading it as a health warning, which
 	// is exactly what the wording above refuses to do.
 	return insight("training-load-jump", in.Today, api.Trend, "workoutMinutes", title, detail, api.Info, now,
-		map[string]float64{"acute": acuteLoad, "chronicWeekly": chronicWeekly, "ratio": ratio})
+		map[string]float64{
+			"acute": acuteLoad, "chronicWeekly": chronicWeekly, "ratio": ratio,
+			// How many sessions the acute window held — the sentence names it.
+			"acuteCount": float64(len(acute)),
+		})
 }
 
 // --- Rule 7: efficiency trend ---
@@ -263,5 +267,6 @@ func (r efficiencyRule) eval(in Input, now time.Time) *Result {
 		map[string]float64{
 			"recentSpeed": recentSpeed, "previousSpeed": prevSpeed,
 			"recentHr": recentHR, "previousHr": prevHR, "changePct": rel * 100,
+			"recentCount": float64(len(recent)), "previousCount": float64(len(prev)),
 		})
 }

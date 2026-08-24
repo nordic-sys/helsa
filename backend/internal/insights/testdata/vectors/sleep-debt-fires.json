@@ -419,9 +419,12 @@
       "metric": "sleepDuration",
       "severity": "info",
       "values": {
+        "baselineNights": 90,
         "debtHours": 6.0,
-        "usual": 7.4,
-        "nights": 12
+        "expected": 88.8,
+        "nights": 12,
+        "slept": 82.8,
+        "usual": 7.4
       }
     }
   ],

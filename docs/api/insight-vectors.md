@@ -82,6 +82,15 @@ One JSON file per case, in `backend/internal/insights/testdata/vectors/`.
   The key set is matched exactly: a rule that quietly stops publishing one of its
   numbers, or starts publishing a new one, is a change the other implementation
   has to hear about.
+
+  ⚠️ **These numbers are also what goes on the wire.** `GET /v1/insights` sends
+  `rule` and `values` — data — and the client composes the sentence from them, in
+  its own language; the server's Hungarian wording survives only as a fallback for
+  a rule the client does not know (`openapi.yaml` → `Insight.values`). So a value
+  set has a second job now: it must be **enough to word the rule's own sentence**.
+  A rule publishing too little would read perfectly on the machine that computed
+  it and go silent everywhere else, which is why the Swift suite checks that the
+  composer can reproduce each fired insight from its values alone.
 - Decoding is **strict** on both sides — an unknown field is an error. The failure
   that prevents is the nastiest one available here: a mistyped key silently
   dropping the very data the case was written to exercise, leaving a test that
@@ -119,16 +128,27 @@ to say nothing", not "there was no data at all".
 
 | Rule (identifier stem) | Fires on | `values` |
 |---|---|---|
-| `resting-hr-elevated`, `hrv-depressed`, `sleep-short` | 3 recent days ≥1.5σ from a 28-day baseline, plus an absolute floor | `recent`, `baseline`, `deviation` |
-| `steps-weekly-trend`, `sleep-weekly-trend` | two 7-day windows, ≥10% apart plus an absolute floor | `current`, `previous`, `changePct` |
+| `resting-hr-elevated`, `hrv-depressed`, `sleep-short` | 3 recent days ≥1.5σ from a 28-day baseline, plus an absolute floor | `recent`, `baseline`, `deviation`, `baselineDays` |
+| `steps-weekly-trend`, `sleep-weekly-trend` | two 7-day windows, ≥10% apart plus an absolute floor | `current`, `previous`, `changePct`, `currentDays`, `previousDays` |
 | `steps-sleep-correlation` | ≥14 paired days, \|r\| ≥ 0.5 | `r`, `pairs` |
 | `sleep-regularity` | midpoint scatter ≥60 min over ≥14 nights | `midpoint`, `midpointSd`, `nights` |
-| `sleep-midpoint-weekend`, `sleep-weekend-duration`, `steps-weekend` | free days against work days, ≥4 and ≥10 measured respectively | `free`, `work`, `delta` |
-| `training-load-jump` | 7-day load ≥1.5× the 28-day weekly average | `acute`, `chronicWeekly`, `ratio` |
-| `efficiency-trend-<activity>` | pace ≥5% apart at a heart rate within 5 bpm | `recentSpeed`, `previousSpeed`, `recentHr`, `previousHr`, `changePct` |
-| `baseline-drift-<metric>` | the last 28 days against days 90–120 back: Welch t ≥ 2.5 **and** an absolute floor, ≥14 measured days per window (8 for `bodyMass`) | `recent`, `older`, `drift`, `t` |
-| `sleep-debt` | the last 14 nights against the median of the preceding 90: ≥5 hours owed **and** ≥5% of what those nights should have held | `debtHours`, `usual`, `nights` |
-| `social-jetlag` | median weekly free-vs-work midpoint shift ≥90 min over ≥6 usable weeks of 8, two thirds of them ≥30 min | `jetlagMinutes`, `weeks`, `nights` |
+| `sleep-midpoint-weekend`, `sleep-weekend-duration`, `steps-weekend` | free days against work days, ≥4 and ≥10 measured respectively | `free`, `work`, `delta`, `freeCount`, `workCount` |
+| `training-load-jump` | 7-day load ≥1.5× the 28-day weekly average | `acute`, `chronicWeekly`, `ratio`, `acuteCount` |
+| `efficiency-trend-<activity>` | pace ≥5% apart at a heart rate within 5 bpm | `recentSpeed`, `previousSpeed`, `recentHr`, `previousHr`, `changePct`, `recentCount`, `previousCount` |
+| `baseline-drift-<metric>` | the last 28 days against days 90–120 back: Welch t ≥ 2.5 **and** an absolute floor, ≥14 measured days per window (8 for `bodyMass`) | `recent`, `older`, `drift`, `t`, `recentDays`, `olderDays` |
+| `sleep-debt` | the last 14 nights against the median of the preceding 90: ≥5 hours owed **and** ≥5% of what those nights should have held | `debtHours`, `usual`, `nights`, `slept`, `expected`, `baselineNights` |
+| `social-jetlag` | median weekly free-vs-work midpoint shift ≥90 min over ≥6 usable weeks of 8, two thirds of them ≥30 min | `jetlagMinutes`, `weeks`, `nights`, `weekCount`, `agreeing` |
+
+⚠️ **The `…Days` / `…Count` keys are data, not constants.** `baselineDays` is how
+many of the 28 baseline days actually HAD data — `BaselineDays` is how far we
+looked, this is how much we found — and the sentence names it. What is
+deliberately **absent**: labels, units, caveats, and the direction a rule points
+in. Those are properties of the rule, and a client that knows the rule knows them
+already; sending them would put one fact in two places and let a server's copy
+contradict the app's own screens. A trend's direction is the sign of `changePct`,
+and `social-jetlag` does not send its time-zone count because that is the median
+rounded to hours — a number both sides can derive, and therefore one they could
+round differently.
 
 `kind` is one of `trend`, `anomaly`, `correlation`, `pattern`. A `pattern`
 describes a property of one window — how much bedtime scatters, how the weekend
