@@ -41,10 +41,12 @@ cp .env.example .env
 ### Log in to the registry
 {: #registry-login }
 
-> **While this repository is private, GHCR will not serve the images anonymously.**
-> A pull fails with `denied` or `unauthorized`, which reads like a missing image
-> rather than a missing login. Authenticate first, with a GitHub personal access
-> token that has the `read:packages` scope:
+> **If the images are private, GHCR will not serve them anonymously.** A pull
+> fails with `denied` or `unauthorized`, which reads like a missing image rather
+> than a missing login. Package visibility is set per package and is independent
+> of this repository's, so public source does not guarantee public images.
+> Authenticate first, with a GitHub personal access token that has the
+> `read:packages` scope:
 >
 > ```bash
 > echo "$GITHUB_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USER --password-stdin

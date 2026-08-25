@@ -67,9 +67,12 @@ the compose file picks one per service with `command`.
 | `always` (default) | the published images are pulled | `make prod-pull` + `make prod-up` |
 | `build` | the images are built from this checkout | `make prod-build` + `make prod-up-source` |
 
-⚠️ **While the repository is private, a pull needs `docker login ghcr.io` first**,
+⚠️ **If the GHCR packages are private, a pull needs `docker login ghcr.io` first**,
 with a token carrying `read:packages`. A missing login fails as `denied`, which
 reads like a missing image rather than a missing credential.
+
+Package visibility is set per package and is **independent of the repository's** —
+making the repository public does not publish the images with it.
 
 ⚠️ **Do not mix the two by accident.** With `HELSA_PULL_POLICY=always` in `.env`, a
 plain `make prod-up` quietly replaces locally built images with the published ones

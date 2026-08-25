@@ -21,8 +21,9 @@
 #   HELSA_PULL_POLICY=always   pull the published images (the default in .env.example)
 #   HELSA_PULL_POLICY=build    build from the sources in this checkout
 #
-# ⚠️ While the repository is private, pulling needs a GitHub login:
+# ⚠️ If the GHCR packages are private, pulling needs a GitHub login:
 #   echo $GITHUB_TOKEN | docker login ghcr.io -u <user> --password-stdin
+# Package visibility is independent of the repository's.
 #
 # Usage:
 #   make prod-up        start it
