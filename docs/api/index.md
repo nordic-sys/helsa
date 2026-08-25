@@ -1,7 +1,7 @@
 ---
 title: API
 layout: default
-nav_order: 6
+nav_order: 7
 has_children: true
 description: "The contract: base URL, conventions, endpoint map, and where the authoritative OpenAPI document lives."
 ---

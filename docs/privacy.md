@@ -1,7 +1,7 @@
 ---
 title: Privacy
 layout: default
-nav_order: 3
+nav_order: 4
 description: "What the Helsa app reads, what it writes, and what leaves your device — which by default is nothing."
 ---
 

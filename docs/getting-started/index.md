@@ -1,7 +1,7 @@
 ---
 title: Getting started
 layout: default
-nav_order: 4
+nav_order: 5
 has_children: true
 description: "Bring the stack up locally with Docker Compose, issue a device token, and verify a first sync — with nothing exposed to the internet."
 ---

@@ -1,7 +1,7 @@
 ---
 title: Disclaimer
 layout: default
-nav_order: 2
+nav_order: 3
 description: "Helsa is not a medical device, comes with no warranty, and you operate it at your own risk."
 ---
 
