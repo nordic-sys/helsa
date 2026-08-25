@@ -79,6 +79,34 @@ top, and a section that scrolls on the phone fits on one page here.
 | ![Folyadék](assets/screenshots/app/ipad-hu-05-hydration.png) | ![Események](assets/screenshots/app/ipad-hu-06-events.png) |
 | ![Kihívás](assets/screenshots/app/ipad-hu-07-challenge.png) | ![Beállítások](assets/screenshots/app/ipad-hu-08-settings.png) |
 
+## Apple Health is the only store
+
+Everything the app records goes into Apple Health: the daily journal, the symptoms
+written on events, the water. There is no separate Helsa store for measurements — not on
+the phone, and not on the server this repository builds. What a server holds is a copy for
+reading on other screens, never the original.
+
+It is what lets the app be removed without taking anything with it. The price is worth
+saying out loud rather than leaving to be discovered:
+
+> **Apple Health's list of measurement types is fixed, and an app cannot add to it.**
+> So what is missing there is missing from Helsa.
+{: .warning }
+
+| Not recordable | Why |
+|---|---|
+| Body water percentage | No type exists |
+| Skeletal muscle mass | No type exists. Health has *lean body mass*, which measures something else — bone, water and organs are counted in it |
+| Lab results | Health displays them, but only when sent by a healthcare institution. No app may write them |
+| Circumferences other than the waist | Only the waist has a type |
+
+A scale is not useless because of this: body mass and body fat percentage do have types
+and arrive normally. It is these extra numbers that stop at the door.
+
+If Apple adds a type, it appears in the app on its own — it works from the list of types
+rather than from a list of its own. The reverse would create data that exists nowhere
+else, which is the one thing the design is built to avoid.
+
 ## What is not shown here
 
 The Apple Watch app and the complications, because the app has not yet run on a watch — the

@@ -36,6 +36,25 @@ This repository is what that endpoint can be:
 
 The iOS app itself is closed source and not distributed here.
 
+## Apple Health is the only store
+
+Everything Helsa records goes into Apple Health — the daily journal, the symptoms
+written on events, the water. There is no separate Helsa store for measurements:
+not on the phone, and **not in this backend either**. What the server holds is a
+copy for reading on other screens, never the original.
+
+That is what lets the app be removed without taking anything with it, and it has a
+price worth stating plainly: **Apple Health's list of measurement types is fixed,
+an app cannot add to it, so what is missing there is missing from Helsa.** In
+practice that means body water percentage, skeletal muscle mass, lab results, and
+every body circumference except the waist. A scale still syncs its body mass and
+body fat percentage normally; it is those extra numbers that stop at the door.
+
+If Apple adds a type, it appears on its own — the app works from the list of types
+rather than from a list of its own. The reverse, keeping something Health does not,
+would create data that exists nowhere else, which is the one thing this design is
+built to avoid.
+
 ## The app is in closed testing
 
 **Helsa is not on the App Store yet.** It is in a **TestFlight** round —
