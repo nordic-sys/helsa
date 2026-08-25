@@ -23,6 +23,15 @@ images, and the Compose files use them by default; building from source is
 | API, worker and the token CLI | `ghcr.io/nordic-sys/helsa/backend` |
 | Web dashboard | `ghcr.io/nordic-sys/helsa/web` |
 
+Two images, not three — the token CLI runs from the backend image rather than having one
+of its own. The tags each image carries:
+
+| Tag | What it is |
+|---|---|
+| `main` | the tip of the default branch — **the default**, and the newest thing that exists |
+| `sha-…` | one exact build, and the only tag that never moves |
+| `1.2.3`, `latest` | a release. ⚠️ **There are none yet**, so `latest` does not resolve — do not put it in your `.env` expecting it to work |
+
 One backend image carries all three binaries; the Compose file picks which one each
 service runs.
 
@@ -237,11 +246,11 @@ make prod-migrate   # only if the pull brought new migrations — read them firs
 make prod-up
 ```
 
-> **Pull the migrations before the images, and read them.** `latest` moves whenever
-> `main` does, so an image can expect a schema your database does not have yet. The
-> containers will start and then fail on queries, which looks like a bug rather than
-> a missed step. Pin `HELSA_BACKEND_IMAGE` to a version tag if you would rather
-> decide when that happens.
+> **Pull the migrations before the images, and read them.** The default tag is `main`,
+> the tip of the default branch, so an image can expect a schema your database does not
+> have yet. The containers will start and then fail on queries, which looks like a bug
+> rather than a missed step. Pin `HELSA_BACKEND_IMAGE` to a `sha-…` tag if you would
+> rather decide when that happens.
 {: .warning }
 
 ## What this is not

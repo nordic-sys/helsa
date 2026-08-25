@@ -36,7 +36,7 @@ services:
       PATRONI_SCOPE: helsa
 
   api:
-    image: ${HELSA_BACKEND_IMAGE:-ghcr.io/nordic-sys/helsa/backend:latest}
+    image: ${HELSA_BACKEND_IMAGE:-ghcr.io/nordic-sys/helsa/backend:main}
     pull_policy: ${HELSA_PULL_POLICY:-always}
     build:
       context: ../backend
@@ -66,7 +66,7 @@ services:
   # reach. `mqtt.lan` resolves inside the container through Docker's DNS, not
   # through the host's /etc/hosts; an IP address is the reliable answer.
   worker:
-    image: ${HELSA_BACKEND_IMAGE:-ghcr.io/nordic-sys/helsa/backend:latest}
+    image: ${HELSA_BACKEND_IMAGE:-ghcr.io/nordic-sys/helsa/backend:main}
     pull_policy: ${HELSA_PULL_POLICY:-always}
     build:
       context: ../backend
@@ -110,7 +110,7 @@ services:
   #   make prod-token SUBJECT=bob-web
   token:
     profiles: ["tools"]
-    image: ${HELSA_BACKEND_IMAGE:-ghcr.io/nordic-sys/helsa/backend:latest}
+    image: ${HELSA_BACKEND_IMAGE:-ghcr.io/nordic-sys/helsa/backend:main}
     pull_policy: ${HELSA_PULL_POLICY:-always}
     build:
       context: ../backend
@@ -130,7 +130,7 @@ services:
       redis:       { condition: service_healthy }
 
   web:
-    image: ${HELSA_WEB_IMAGE:-ghcr.io/nordic-sys/helsa/web:latest}
+    image: ${HELSA_WEB_IMAGE:-ghcr.io/nordic-sys/helsa/web:main}
     pull_policy: ${HELSA_PULL_POLICY:-always}
     build:
       context: ../web

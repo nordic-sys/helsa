@@ -44,7 +44,21 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: ghcr.io/${{ github.repository }}/${{ matrix.name }}
-          # `latest` only from the default branch; tags get their own version.
+          # ⚠️ This comment used to claim "`latest` only from the default branch", and that was
+          # never true: `type=semver` only fires on a `v*` git tag, of which there were none, so
+          # `latest` HAD NEVER BEEN PUBLISHED — while every default in `docker-compose.prod.yml`
+          # pointed at it. Anyone following the quick start got `manifest unknown`, which reads
+          # like a wrong image name rather than a missing tag.
+          #
+          # What actually happens now:
+          #   a push to a branch      -> that branch's name (`main`)
+          #   a `v*` tag              -> `1.2.3`, `1.2`, and `latest`
+          #   every build             -> `sha-<short>`, which is the only immutable one
+          #
+          # `latest` deliberately still means "the newest RELEASE", not the tip of main. On a
+          # server holding somebody's health data, a tag that silently follows development is
+          # not a good default — the compose file points at `main` and says so, which is honest
+          # today and stops meaning "development" the moment the first release exists.
           tags: |
             type=ref,event=branch
             type=semver,pattern={{version}}
