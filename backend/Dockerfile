@@ -15,16 +15,25 @@
 # binaries weigh a few megabytes; a missing one costs an afternoon.
 ARG GO_VERSION=1.26
 
-FROM golang:${GO_VERSION}-alpine AS build
+# ⚠️ `--platform=$BUILDPLATFORM` pins the build stage to the machine doing the building, and
+# `GOARCH=$TARGETARCH` below cross-compiles from there. Without it a multi-platform build runs
+# the whole Go toolchain under QEMU for every foreign architecture — same result, several times
+# the CI minutes. Go cross-compiles natively, so emulating it buys nothing.
+FROM --platform=$BUILDPLATFORM golang:${GO_VERSION}-alpine AS build
+ARG TARGETOS
+ARG TARGETARCH
 WORKDIR /src
 # Dependency cache: go.mod/sum first, so that this layer stays cacheable.
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
 # Static (CGO-free) binaries — small and scratch-compatible.
-RUN CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/helsa-api    ./cmd/api  && \
-    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/helsa-worker ./cmd/worker && \
-    CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o /out/helsa-token  ./cmd/token
+RUN CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+        go build -trimpath -ldflags="-s -w" -o /out/helsa-api    ./cmd/api  && \
+    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+        go build -trimpath -ldflags="-s -w" -o /out/helsa-worker ./cmd/worker && \
+    CGO_ENABLED=0 GOOS=${TARGETOS} GOARCH=${TARGETARCH} \
+        go build -trimpath -ldflags="-s -w" -o /out/helsa-token  ./cmd/token
 
 FROM alpine:3.21
 RUN apk add --no-cache ca-certificates tzdata && adduser -D -u 10001 helsa

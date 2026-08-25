@@ -1,7 +1,11 @@
 # helsa-web — a static build, behind nginx.
 # Caddy proxies :8443 here (docs/07 §4); this container does NOT face outwards.
 
-FROM node:26-alpine AS build
+# ⚠️ `--platform=$BUILDPLATFORM`: the bundle is JavaScript and CSS, which is the same file on
+# every architecture. Building it once on the build machine and copying it into each per-arch
+# nginx image is not an optimisation with a caveat — running npm under QEMU would produce the
+# identical `dist`, only slowly.
+FROM --platform=$BUILDPLATFORM node:26-alpine AS build
 WORKDIR /src
 COPY package.json package-lock.json* ./
 # npm 11 does not run dependencies' install scripts by default; esbuild does need

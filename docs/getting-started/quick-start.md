@@ -24,7 +24,8 @@ images, and the Compose files use them by default; building from source is
 | Web dashboard | `ghcr.io/nordic-sys/helsa/web` |
 
 Two images, not three — the token CLI runs from the backend image rather than having one
-of its own. The tags each image carries:
+of its own. Both are built for **`linux/amd64` and `linux/arm64`**, so a Raspberry Pi, an ARM
+VPS or an Apple Silicon machine runs them natively. The tags each image carries:
 
 | Tag | What it is |
 |---|---|
