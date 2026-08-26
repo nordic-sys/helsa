@@ -245,6 +245,11 @@ const notRecordable = [
   }
   .switch button:focus-visible { outline: 2px solid var(--helsa-brand); outline-offset: 2px; }
 
+  /* An author `display` beats the UA stylesheet's `[hidden] { display: none }`,
+     so without this rule the attribute toggles and every view stays on screen.
+     The switchers looked wired up and were: the CSS was overriding them. */
+  .grid-shots[hidden] { display: none; }
+
   .grid-shots {
     display: grid;
     gap: 2rem 1.6rem;
