@@ -27,5 +27,5 @@ id = "generic-api-key"
   # would then pass unnoticed. A probe caught this: after writing an allowlist, try
   # to smuggle something through it.
   condition = "AND"
-  paths = ['''^docs/.*\.md$''']
+  paths = ['''^site/(src/(content/docs|pages)/)?.*\.md$''']
   regexes = ['''eyJhbGciOiJIUzI1NiIs\.\.\.''']

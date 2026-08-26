@@ -1,0 +1,132 @@
+/* ---------------------------------------------------------------------------
+   Helsa design tokens.
+
+   One source of truth for both shells: the Starlight documentation pages and
+   the hand-built marketing pages in src/pages/. Everything visual on this site
+   resolves to a variable defined here.
+
+   Theme mechanics follow Starlight so that a single toggle drives both shells:
+   `:root` is the DARK theme, `:root[data-theme='light']` overrides it, and the
+   applied value lives in `document.documentElement.dataset.theme`, persisted in
+   localStorage under `starlight-theme`.
+
+   Palette source: docs/14-arculat-design.md — Nordic, calm, data-first. The
+   brand colour is `fjord` teal; the four accents are the metric colours the app
+   itself uses, so a chart on the web reads the same way as one on the phone.
+
+   No web fonts are loaded. On Apple hardware the system stack *is* SF Pro,
+   which is the brand typeface — and a privacy policy that phones a font CDN to
+   render itself would be arguing against its own text.
+--------------------------------------------------------------------------- */
+
+:root {
+  /* -- Brand ------------------------------------------------------------- */
+  /* `fjord` #0E7E8C is the light-theme brand value. On dark backgrounds it
+     falls below 4.5:1 against the page, so dark uses a lifted variant rather
+     than the same hex at lower opacity. */
+  --helsa-brand: #3FB6C4;
+  --helsa-brand-strong: #6ACFDA;
+  --helsa-brand-quiet: #0F2E33;
+  --helsa-brand-contrast: #05171B;
+
+  /* -- Metric accents ---------------------------------------------------- */
+  --helsa-move: #4FC585;    /* steps, distance, exercise */
+  --helsa-ember: #E8A055;   /* active energy */
+  --helsa-pulse: #E8776D;   /* heart rate */
+  --helsa-nordlys: #8593E8; /* sleep */
+
+  /* -- Surfaces and ink -------------------------------------------------- */
+  --helsa-bg: #0A1215;
+  --helsa-bg-sunken: #060D0F;
+  --helsa-surface: #101C20;
+  --helsa-surface-raised: #16262B;
+  --helsa-border: #1E3238;
+  --helsa-border-strong: #2C464E;
+  --helsa-ink: #E7EFF1;
+  --helsa-ink-muted: #93A6AC;
+  --helsa-ink-faint: #6B7F86;
+
+  /* -- The aurora ------------------------------------------------------ */
+  /* Used for the logo stroke, the hero wash and section rules. Teal into
+     indigo into green is the actual colour order of an aurora arc, which is
+     where the mark comes from. */
+  --helsa-aurora: linear-gradient(
+    100deg,
+    #3FB6C4 0%,
+    #5FA8D8 32%,
+    #8593E8 62%,
+    #4FC585 100%
+  );
+  --helsa-aurora-wash: radial-gradient(
+    120% 90% at 50% -20%,
+    rgba(63, 182, 196, 0.20) 0%,
+    rgba(133, 147, 232, 0.13) 38%,
+    rgba(79, 197, 133, 0.05) 62%,
+    transparent 78%
+  );
+
+  /* -- Type -------------------------------------------------------------- */
+  --helsa-font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI',
+    Roboto, 'Helvetica Neue', Arial, system-ui, sans-serif;
+  --helsa-font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display',
+    'Segoe UI', Roboto, 'Helvetica Neue', Arial, system-ui, sans-serif;
+  --helsa-font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
+    'Liberation Mono', monospace;
+
+  /* -- Shape and depth --------------------------------------------------- */
+  --helsa-radius-sm: 8px;
+  --helsa-radius: 14px;
+  --helsa-radius-lg: 22px;
+  --helsa-shadow: 0 1px 2px rgba(0, 0, 0, 0.28), 0 8px 24px rgba(0, 0, 0, 0.24);
+  --helsa-shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.3), 0 18px 44px rgba(0, 0, 0, 0.34);
+
+  /* -- Measure ----------------------------------------------------------- */
+  --helsa-measure: 68ch;
+  --helsa-page: 1140px;
+}
+
+:root[data-theme='light'] {
+  --helsa-brand: #0E7E8C;
+  --helsa-brand-strong: #0A626D;
+  --helsa-brand-quiet: #E2F0F2;
+  --helsa-brand-contrast: #FFFFFF;
+
+  --helsa-move: #2E9A5F;
+  --helsa-ember: #B96A25;
+  --helsa-pulse: #C4483F;
+  --helsa-nordlys: #4C5FC0;
+
+  --helsa-bg: #F5F8F9;
+  --helsa-bg-sunken: #EAF0F2;
+  --helsa-surface: #FFFFFF;
+  --helsa-surface-raised: #FFFFFF;
+  --helsa-border: #DBE4E7;
+  --helsa-border-strong: #C2D0D5;
+  --helsa-ink: #0D1C21;
+  --helsa-ink-muted: #4E6167;
+  --helsa-ink-faint: #6F8188;
+
+  --helsa-aurora: linear-gradient(
+    100deg,
+    #0E7E8C 0%,
+    #2F7FB8 32%,
+    #4C5FC0 62%,
+    #2E9A5F 100%
+  );
+  --helsa-aurora-wash: radial-gradient(
+    120% 90% at 50% -20%,
+    rgba(14, 126, 140, 0.14) 0%,
+    rgba(76, 95, 192, 0.09) 38%,
+    rgba(46, 154, 95, 0.05) 62%,
+    transparent 78%
+  );
+
+  --helsa-shadow: 0 1px 2px rgba(13, 28, 33, 0.06), 0 8px 24px rgba(13, 28, 33, 0.07);
+  --helsa-shadow-lift: 0 2px 4px rgba(13, 28, 33, 0.08), 0 18px 44px rgba(13, 28, 33, 0.1);
+}
+
+/* Figures are the point of several pages, so numerals line up in tables and
+   stat blocks rather than wandering. */
+:root {
+  font-variant-numeric: tabular-nums;
+}

@@ -32,7 +32,7 @@ This repository is what that endpoint can be:
 | `web/` | React dashboard |
 | `deploy/` | Docker Compose, Caddy configuration, private-CA tooling, backup scripts |
 | `integrations/` | Home Assistant (MQTT with discovery) |
-| `docs/` | The documentation site, published with GitHub Pages |
+| `site/` | The public documentation site, built with Astro and published to GitHub Pages |
 
 The iOS app itself is closed source and not distributed here.
 

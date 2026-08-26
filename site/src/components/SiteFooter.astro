@@ -1,0 +1,49 @@
+---
+import { url } from '../lib/url';
+
+const year = new Date().getFullYear();
+---
+
+<footer class="site-footer">
+  <div class="shell">
+    <div class="footer-grid">
+      <div class="footer-about">
+        <p class="footer-mark">Helsa</p>
+        <p>
+          Your Apple Health data, read and analysed on your own iPhone. The server
+          in this repository is optional, and it is yours.
+        </p>
+      </div>
+
+      <nav aria-label="Documentation">
+        <h2>Documentation</h2>
+        <ul>
+          <li><a href={url('/getting-started/')}>Getting started</a></li>
+          <li><a href={url('/deployment/')}>Deployment</a></li>
+          <li><a href={url('/api/')}>API</a></li>
+          <li><a href={url('/integrations/')}>Integrations</a></li>
+        </ul>
+      </nav>
+
+      <nav aria-label="About">
+        <h2>About</h2>
+        <ul>
+          <li><a href={url('/the-app/')}>The app</a></li>
+          <li><a href={url('/support/')}>Support</a></li>
+          <li><a href={url('/privacy/')}>Privacy</a></li>
+          <li><a href={url('/disclaimer/')}>Disclaimer</a></li>
+          <li><a href="https://github.com/nordic-sys/helsa" rel="noopener">Source on GitHub</a></li>
+        </ul>
+      </nav>
+    </div>
+
+    <p class="footer-legal">
+      <strong>Not a medical device.</strong> Helsa is not for diagnosis, treatment or
+      monitoring of any medical condition, and it comes with no warranty of any kind.{' '}
+      <a href={url('/disclaimer/')}>Read the full disclaimer</a>.
+    </p>
+    <p class="footer-meta">
+      MIT licensed · {year} Nordic-Sys · No analytics, no cookies, no third-party scripts.
+    </p>
+  </div>
+</footer>

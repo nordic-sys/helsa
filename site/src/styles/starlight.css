@@ -1,0 +1,115 @@
+/* ---------------------------------------------------------------------------
+   Starlight, wearing the Helsa palette.
+
+   This file only re-points Starlight's own variables at the tokens defined in
+   tokens.css; it does not restyle the theme's components. That is deliberate —
+   Starlight's layout, focus states and keyboard behaviour are the reason it is
+   here, and overriding its internals is how a docs theme stops being upgradable.
+
+   These rules are outside `@layer`, so they win against the theme's layered
+   defaults without needing !important.
+--------------------------------------------------------------------------- */
+
+:root {
+  --sl-font: var(--helsa-font-sans);
+  --sl-font-mono: var(--helsa-font-mono);
+
+  /* Dark theme (Starlight's default state). */
+  --sl-color-accent: var(--helsa-brand);
+  --sl-color-accent-low: var(--helsa-brand-quiet);
+  --sl-color-accent-high: var(--helsa-brand-strong);
+
+  --sl-color-white: #FFFFFF;
+  --sl-color-gray-1: #DCE6E9;
+  --sl-color-gray-2: var(--helsa-ink-muted);
+  --sl-color-gray-3: var(--helsa-ink-faint);
+  --sl-color-gray-4: var(--helsa-border-strong);
+  --sl-color-gray-5: var(--helsa-border);
+  --sl-color-gray-6: var(--helsa-surface);
+  --sl-color-gray-7: var(--helsa-surface-raised);
+  --sl-color-black: var(--helsa-bg);
+
+  --sl-color-text: var(--helsa-ink);
+  --sl-color-text-accent: var(--helsa-brand-strong);
+  --sl-color-bg: var(--helsa-bg);
+  --sl-color-bg-nav: var(--helsa-bg-sunken);
+  --sl-color-bg-sidebar: var(--helsa-bg-sunken);
+  --sl-color-bg-inline-code: var(--helsa-surface-raised);
+
+  --sl-color-hairline: var(--helsa-border);
+  --sl-color-hairline-light: var(--helsa-border-strong);
+  --sl-color-hairline-shade: var(--helsa-bg-sunken);
+}
+
+:root[data-theme='light'] {
+  --sl-color-accent: var(--helsa-brand);
+  --sl-color-accent-low: var(--helsa-brand-quiet);
+  --sl-color-accent-high: var(--helsa-brand-strong);
+
+  --sl-color-white: var(--helsa-ink);
+  --sl-color-gray-1: var(--helsa-surface-raised);
+  --sl-color-gray-2: var(--helsa-border);
+  --sl-color-gray-3: var(--helsa-border-strong);
+  --sl-color-gray-4: var(--helsa-ink-faint);
+  --sl-color-gray-5: var(--helsa-ink-muted);
+  --sl-color-gray-6: #26383D;
+  --sl-color-gray-7: #1A2A2F;
+  --sl-color-black: var(--helsa-surface);
+
+  --sl-color-text: var(--helsa-ink-muted);
+  --sl-color-text-accent: var(--helsa-brand-strong);
+  --sl-color-bg: var(--helsa-bg);
+  --sl-color-bg-nav: var(--helsa-surface);
+  --sl-color-bg-sidebar: var(--helsa-surface);
+  --sl-color-bg-inline-code: var(--helsa-bg-sunken);
+
+  --sl-color-hairline: var(--helsa-border);
+  --sl-color-hairline-light: var(--helsa-border-strong);
+  --sl-color-hairline-shade: var(--helsa-border);
+}
+
+/* A one-pixel aurora under the header, so the docs and the landing page are
+   visibly the same site rather than two that happen to share a colour. */
+.header {
+  border-bottom: 0;
+  box-shadow: none;
+  position: relative;
+}
+.header::after {
+  content: '';
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 2px;
+  background: var(--helsa-aurora);
+  opacity: 0.85;
+}
+
+/* The wordmark sits next to the logo; give it the display face and let the
+   logo carry the colour. */
+.site-title {
+  font-family: var(--helsa-font-display);
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+/* Long command lines and wide tables scroll inside their own box rather than
+   pushing the page sideways on a phone. Carried over from the Jekyll site,
+   where it was the one CSS rule worth keeping. */
+.sl-markdown-content pre,
+.sl-markdown-content table {
+  max-width: 100%;
+  overflow-x: auto;
+}
+.sl-markdown-content table {
+  display: block;
+  width: max-content;
+  max-width: 100%;
+}
+
+/* Screenshots of a phone are tall and narrow; unconstrained they take over a
+   docs page. */
+.sl-markdown-content img {
+  border-radius: var(--helsa-radius-sm);
+  border: 1px solid var(--helsa-border);
+}

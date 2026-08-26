@@ -1,0 +1,155 @@
+---
+/**
+ * The two-layer picture that the whole project rests on.
+ *
+ * The Jekyll site drew this as ASCII art inside a <pre>. That reads well in a
+ * terminal and badly on a phone, where it either wraps into nonsense or forces
+ * a horizontal scroll. This is the same diagram in flowing markup: it reflows,
+ * it can be read aloud in order, and it takes the page's own colours.
+ */
+---
+
+<div class="arch">
+  <section class="arch-node" aria-labelledby="arch-phone">
+    <p class="arch-kicker">Always</p>
+    <h3 id="arch-phone">iPhone — the Helsa app</h3>
+    <p class="arch-flow"><span>HealthKit</span><span>analysis</span><span>what you see</span></p>
+    <p class="arch-note">
+      HealthKit is the store and the analysis runs on the device. This works
+      fully offline, with no server at all.
+    </p>
+  </section>
+
+  <div class="arch-link" role="presentation">
+    <span class="arch-line"></span>
+    <p>
+      <strong>Optional, opt-in, and you type the URL.</strong>{' '}
+      Mutual TLS plus a device token.
+    </p>
+    <span class="arch-line"></span>
+  </div>
+
+  <section class="arch-node arch-node--server" aria-labelledby="arch-server">
+    <p class="arch-kicker">Only if you want it</p>
+    <h3 id="arch-server">Your server — this repository</h3>
+    <p class="arch-flow">
+      <span>Caddy</span><span>API</span><span>RabbitMQ</span><span>worker</span><span>TimescaleDB</span>
+    </p>
+    <p class="arch-note">
+      Long-term history, a web dashboard on your LAN or VPN, exports, and daily
+      summaries for Home Assistant.
+    </p>
+  </section>
+
+  <p class="arch-caption">
+    The phone is the <strong>only writer</strong>. Every other surface — the web
+    dashboard, an iPad, Home Assistant — reads from the server. That asymmetry is
+    not a preference: HealthKit has no cloud API, so the device holding the data
+    is the only thing that can upload it.
+  </p>
+</div>
+
+<style>
+  .arch {
+    margin-top: 2.4rem;
+    max-width: 46rem;
+  }
+
+  .arch-node {
+    border: 1px solid var(--helsa-border);
+    border-radius: var(--helsa-radius);
+    background: var(--helsa-surface);
+    padding: 1.4rem 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  /* An aurora edge marks the layer that is always present; the server layer
+     gets a plain edge, because it is the optional one. */
+  .arch-node::before {
+    content: '';
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    width: 3px;
+    background: var(--helsa-aurora);
+  }
+  .arch-node--server::before { background: var(--helsa-border-strong); }
+
+  .arch-kicker {
+    font-size: 0.72rem;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--helsa-ink-faint);
+    margin-bottom: 0.35rem;
+  }
+  .arch-node h3 { font-size: 1.1rem; }
+
+  .arch-flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.55rem;
+    margin: 0.9rem 0 0.85rem;
+    font-family: var(--helsa-font-mono);
+    font-size: 0.83rem;
+  }
+  .arch-flow span {
+    border: 1px solid var(--helsa-border);
+    background: var(--helsa-bg-sunken);
+    border-radius: 999px;
+    padding: 0.2rem 0.7rem;
+    color: var(--helsa-ink);
+    white-space: nowrap;
+  }
+  /* The arrows are decoration between the stages, so they are generated rather
+     than written into the markup where a screen reader would announce them. */
+  .arch-flow span + span::before {
+    content: '→';
+    color: var(--helsa-ink-faint);
+    margin-inline-end: 0.55rem;
+    margin-inline-start: -0.15rem;
+  }
+
+  .arch-note {
+    color: var(--helsa-ink-muted);
+    font-size: 0.94rem;
+    margin: 0;
+  }
+
+  .arch-link {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding-block: 0.9rem;
+  }
+  .arch-link p {
+    margin: 0;
+    font-size: 0.87rem;
+    color: var(--helsa-ink-muted);
+    text-align: center;
+    flex: none;
+    max-width: 26rem;
+  }
+  .arch-link strong { color: var(--helsa-ink); font-weight: 600; }
+  .arch-line {
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--helsa-border-strong));
+  }
+  .arch-link .arch-line:last-child {
+    background: linear-gradient(90deg, var(--helsa-border-strong), transparent);
+  }
+
+  .arch-caption {
+    margin-top: 1.6rem;
+    color: var(--helsa-ink-muted);
+    font-size: 0.95rem;
+  }
+  .arch-caption strong { color: var(--helsa-ink); }
+
+  @media (max-width: 34rem) {
+    .arch-link { flex-direction: column; gap: 0.5rem; }
+    .arch-line { width: 1px; height: 1.1rem; flex: none; background: var(--helsa-border-strong); }
+    .arch-link .arch-line:last-child { background: var(--helsa-border-strong); }
+  }
+</style>

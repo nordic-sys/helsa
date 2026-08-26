@@ -1,0 +1,23 @@
+{
+  "name": "helsa-site",
+  "type": "module",
+  "private": true,
+  "description": "The public documentation and marketing site for Helsa, built with Astro and published to GitHub Pages.",
+  "engines": {
+    "node": ">=22.12.0"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "prebuild": "node scripts/legacy-redirects.mjs",
+    "predev": "node scripts/legacy-redirects.mjs"
+  },
+  "dependencies": {
+    "@astrojs/sitemap": "3.7.3",
+    "@astrojs/starlight": "0.41.9",
+    "astro": "7.2.7",
+    "sharp": "^0.34.0"
+  }
+}

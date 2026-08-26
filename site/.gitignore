@@ -1,0 +1,23 @@
+node_modules/
+dist/
+.astro/
+.DS_Store
+
+# Generated before every build by scripts/legacy-redirects.mjs.
+public/disclaimer.html
+public/privacy.html
+public/support.html
+public/the-app.html
+public/getting-started/quick-start.html
+public/getting-started/device-token.html
+public/getting-started/first-sync.html
+public/api/authentication.html
+public/api/ingest.html
+public/api/reading-data.html
+public/api/insight-vectors.html
+public/deployment/tls-mtls.html
+public/deployment/reverse-proxy.html
+public/deployment/backups.html
+public/deployment/hardening.html
+public/integrations/home-assistant.html
+public/integrations/rest-fallback.html

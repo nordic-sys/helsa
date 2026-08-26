@@ -1,0 +1,296 @@
+---
+import { Image } from 'astro:assets';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { url } from '../lib/url';
+
+// Every screenshot in one map, keyed by file name, so a screen is described
+// once and rendered four times (phone/tablet × English/Hungarian) instead of
+// being listed four times as the Markdown tables did.
+const files = import.meta.glob<ImageMetadata>('../assets/screenshots/app/*.png', {
+  eager: true,
+  import: 'default',
+});
+const shot = (name: string) => files[`../assets/screenshots/app/${name}.png`];
+
+const screens = [
+  { slug: '01-today', en: 'Today', hu: 'Ma',
+    note: 'The opening tab, in four named bands of cards. Every card can be switched off and reordered.' },
+  { slug: '02-trends', en: 'Trends', hu: 'Trendek',
+    note: '120 metrics, grouped; day, week, month and year. The dashed line is the previous period.' },
+  { slug: '03-workouts', en: 'Workouts', hu: 'Edzések',
+    note: 'Grouped by month with a count and a total, filterable by type, place, duration, distance, energy and heart rate.' },
+  { slug: '04-sleep', en: 'Sleep', hu: 'Alvás',
+    note: 'The night as it was recorded, with stages, efficiency, and the pattern across the period.' },
+  { slug: '05-hydration', en: 'Water', hu: 'Folyadék',
+    note: 'The daily amount, and a moss that dries out and comes back. Written to Apple Health, not kept separately.' },
+  { slug: '06-events', en: 'Events', hu: 'Események',
+    note: 'What the watch recorded, and what you felt at the time. The second half is the part no other app keeps.' },
+  { slug: '07-challenge', en: 'Challenge', hu: 'Kihívás',
+    note: 'The monthly streak, with rest days built in rather than bolted on.' },
+  { slug: '08-settings', en: 'Settings', hu: 'Beállítások',
+    note: 'Everything is off by default, including notifications and the calendar.' },
+];
+
+const views = [
+  { device: 'iphone', lang: 'en', prefix: 'en' },
+  { device: 'iphone', lang: 'hu', prefix: 'hu' },
+  { device: 'ipad', lang: 'en', prefix: 'ipad-en' },
+  { device: 'ipad', lang: 'hu', prefix: 'ipad-hu' },
+];
+
+const notRecordable = [
+  ['Body water percentage', 'No type exists.'],
+  ['Skeletal muscle mass', 'No type exists. Health has lean body mass, which measures something else — bone, water and organs are counted in it.'],
+  ['Lab results', 'Health displays them, but only when sent by a healthcare institution. No app may write them.'],
+  ['Circumferences other than the waist', 'Only the waist has a type.'],
+];
+---
+
+<BaseLayout
+  title="The app — Helsa"
+  description="What Helsa looks like on iPhone and iPad, in both languages it ships in."
+  current="the-app"
+>
+  <div class="shell prose-page">
+    <header class="prose-header">
+      <h1>The app</h1>
+      <p class="lede">
+        The server in this repository is optional. This is the thing it is optional <em>for</em>.
+      </p>
+    </header>
+
+    <div class="callout callout--note narrow">
+      <p>
+        <strong>The app is in closed testing.</strong> It is not on the App Store yet,
+        and these pages describe a build that is still going to TestFlight. The source
+        of the app itself is not in this repository — only the backend it can optionally
+        talk to.
+      </p>
+    </div>
+
+    <section class="about-pictures">
+      <h2>About these pictures</h2>
+      <p>
+        They are taken from the running app on a simulator, one launch per screen, no
+        manual tapping, a fixed random seed. Everything above the data layer is the
+        shipping code: the same views, the same analysis, the same wording.
+      </p>
+      <p>
+        <strong>The person in them does not exist.</strong> A fresh simulator’s Health
+        database is empty, so the screens are fed from a generated five-month history
+        rather than from anyone’s measurements. The numbers are lifelike, and none of
+        them are real.
+      </p>
+      <p>
+        The app ships in <strong>English and Hungarian</strong>, and follows the phone’s
+        own language and region — there is no language switch inside it. Both sets are
+        here, because a translation you cannot see is a translation nobody checked.
+      </p>
+    </section>
+  </div>
+
+  <div class="shell">
+    <div class="gallery" data-gallery data-device="iphone" data-lang="en">
+      <div class="switchers">
+        <div class="switch" role="group" aria-label="Device">
+          <button type="button" data-set="device" data-value="iphone" aria-pressed="true">iPhone</button>
+          <button type="button" data-set="device" data-value="ipad" aria-pressed="false">iPad</button>
+        </div>
+        <div class="switch" role="group" aria-label="Language">
+          <button type="button" data-set="lang" data-value="en" aria-pressed="true">English</button>
+          <button type="button" data-set="lang" data-value="hu" aria-pressed="false">Magyar</button>
+        </div>
+      </div>
+
+      {views.map((view, viewIndex) => (
+        <div class="grid-shots" data-view={`${view.device}-${view.lang}`} hidden={viewIndex !== 0}>
+          {screens.map((screen, index) => (
+            <figure class:list={['screen', view.device === 'ipad' && 'screen--wide']}>
+              <Image
+                src={shot(`${view.prefix}-${screen.slug}`)}
+                alt={`${view.lang === 'hu' ? screen.hu : screen.en} — ${screen.note}`}
+                widths={view.device === 'ipad' ? [420, 840] : [320, 640]}
+                sizes={view.device === 'ipad'
+                  ? '(max-width: 46rem) 90vw, 420px'
+                  : '(max-width: 46rem) 45vw, 300px'}
+                loading={viewIndex === 0 && index < 2 ? 'eager' : 'lazy'}
+              />
+              <figcaption>
+                <strong>{view.lang === 'hu' ? screen.hu : screen.en}</strong>
+                <span>{screen.note}</span>
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <div class="shell prose-page">
+    <section class="prose">
+      <h2>Apple Health is the only store</h2>
+      <p>
+        Everything the app records goes into Apple Health: the daily journal, the symptoms
+        written on events, the water. There is no separate Helsa store for measurements —
+        not on the phone, and not on the server this repository builds. What a server holds
+        is a copy for reading on other screens, never the original.
+      </p>
+      <p>
+        It is what lets the app be removed without taking anything with it. The price is
+        worth saying out loud rather than leaving to be discovered:
+      </p>
+
+      <aside class="callout callout--warning">
+        <p>
+          <strong>Apple Health’s list of measurement types is fixed, and an app cannot add
+          to it.</strong> So what is missing there is missing from Helsa.
+        </p>
+      </aside>
+
+      <dl class="boundaries">
+        {notRecordable.map(([what, why]) => (
+          <div><dt>{what}</dt><dd>{why}</dd></div>
+        ))}
+      </dl>
+
+      <p>
+        A scale is not useless because of this: body mass and body fat percentage do have
+        types and arrive normally. It is these extra numbers that stop at the door.
+      </p>
+      <p>
+        If Apple adds a type, it appears in the app on its own — it works from the list of
+        types rather than from a list of its own. The reverse would create data that exists
+        nowhere else, which is the one thing the design is built to avoid.
+      </p>
+
+      <h2>What is not shown here</h2>
+      <p>
+        The Apple Watch app and the complications, because the app has not yet run on a
+        watch — the minimum is watchOS 26, which needs a Series 6 or newer. The widgets,
+        for the same reason a widget is hard to photograph honestly: what they show depends
+        on the hour you look.
+      </p>
+
+      <p class="next-link">
+        <a href={url('/getting-started/')}>Run the optional server →</a>
+      </p>
+    </section>
+  </div>
+</BaseLayout>
+
+<script>
+  // Progressive enhancement: with no JavaScript the first view stays visible and
+  // the switchers simply do nothing, which is a worse page but not a broken one.
+  document.querySelectorAll<HTMLElement>('[data-gallery]').forEach((gallery) => {
+    const apply = () => {
+      const wanted = `${gallery.dataset.device}-${gallery.dataset.lang}`;
+      gallery.querySelectorAll<HTMLElement>('[data-view]').forEach((view) => {
+        view.hidden = view.dataset.view !== wanted;
+      });
+      gallery.querySelectorAll<HTMLButtonElement>('button[data-set]').forEach((button) => {
+        const isOn = gallery.dataset[button.dataset.set!] === button.dataset.value;
+        button.setAttribute('aria-pressed', String(isOn));
+      });
+    };
+
+    gallery.querySelectorAll<HTMLButtonElement>('button[data-set]').forEach((button) => {
+      button.addEventListener('click', () => {
+        gallery.dataset[button.dataset.set!] = button.dataset.value!;
+        apply();
+      });
+    });
+  });
+</script>
+
+<style>
+  .narrow { max-width: var(--helsa-measure); margin-top: 2rem; }
+  .about-pictures {
+    max-width: var(--helsa-measure);
+    padding-block: 2.5rem 0;
+  }
+  .about-pictures h2 { font-size: 1.3rem; margin-bottom: 0.9rem; }
+  .about-pictures p { color: var(--helsa-ink-muted); }
+  .about-pictures strong { color: var(--helsa-ink); }
+
+  .gallery { padding-block: 2.5rem 1rem; }
+
+  .switchers {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+  }
+  .switch {
+    display: inline-flex;
+    padding: 3px;
+    gap: 3px;
+    border: 1px solid var(--helsa-border);
+    border-radius: 999px;
+    background: var(--helsa-surface);
+  }
+  .switch button {
+    border: 0;
+    background: transparent;
+    color: var(--helsa-ink-muted);
+    font: inherit;
+    font-size: 0.9rem;
+    padding: 0.4rem 1rem;
+    border-radius: 999px;
+    cursor: pointer;
+  }
+  .switch button:hover { color: var(--helsa-ink); }
+  .switch button[aria-pressed='true'] {
+    background: var(--helsa-brand);
+    color: var(--helsa-brand-contrast);
+  }
+  .switch button:focus-visible { outline: 2px solid var(--helsa-brand); outline-offset: 2px; }
+
+  .grid-shots {
+    display: grid;
+    gap: 2rem 1.6rem;
+    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  }
+  .grid-shots:has(.screen--wide) {
+    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+  }
+
+  .screen { margin: 0; }
+  .screen img {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: var(--helsa-radius);
+    border: 1px solid var(--helsa-border);
+    box-shadow: var(--helsa-shadow);
+    background: var(--helsa-surface);
+  }
+  .screen figcaption {
+    margin-top: 0.85rem;
+    font-size: 0.88rem;
+    color: var(--helsa-ink-muted);
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+  }
+  .screen figcaption strong { color: var(--helsa-ink); font-size: 0.95rem; }
+
+  .boundaries {
+    margin: 1.8rem 0;
+    display: grid;
+  }
+  .boundaries > div {
+    display: grid;
+    grid-template-columns: minmax(10rem, 16rem) 1fr;
+    gap: 0.4rem 1.6rem;
+    padding-block: 0.9rem;
+    border-top: 1px solid var(--helsa-border);
+  }
+  .boundaries > div:last-child { border-bottom: 1px solid var(--helsa-border); }
+  .boundaries dt { font-weight: 600; color: var(--helsa-ink); }
+  .boundaries dd { margin: 0; color: var(--helsa-ink-muted); font-size: 0.95rem; }
+  @media (max-width: 42rem) {
+    .boundaries > div { grid-template-columns: 1fr; gap: 0.25rem; }
+  }
+
+  .next-link { margin-top: 2.4rem; font-size: 1rem; }
+</style>

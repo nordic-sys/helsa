@@ -1,0 +1,300 @@
+---
+import { Image } from 'astro:assets';
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Architecture from '../components/Architecture.astro';
+import { url } from '../lib/url';
+
+import today from '../assets/screenshots/app/en-01-today.png';
+import trends from '../assets/screenshots/app/en-02-trends.png';
+import sleep from '../assets/screenshots/app/en-04-sleep.png';
+
+const reasonsFor = [
+  {
+    accent: 'var(--helsa-move)',
+    title: 'A history longer than the phone’s',
+    body: 'HealthKit keeps everything, but only as long as you keep the device and the backup chain intact. A server gives you a second, queryable copy that you control, with compression and no retention policy.',
+  },
+  {
+    accent: 'var(--helsa-nordlys)',
+    title: 'A browser view',
+    body: 'Apple Health is an iPhone app. There is no official web view of your own data. The dashboard here is one.',
+  },
+  {
+    accent: 'var(--helsa-ember)',
+    title: 'Automation',
+    body: 'Daily summaries into Home Assistant over MQTT, with discovery — including the sync-freshness sensor that tells you when the pipeline has quietly stopped.',
+  },
+  {
+    accent: 'var(--helsa-pulse)',
+    title: 'SQL',
+    body: 'It is a Postgres database with your data in it. Ask it whatever you want.',
+  },
+];
+
+const notThis = [
+  ['Medical advice, scoring, or diagnosis', 'Out of scope, permanently. It reports numbers you already have.'],
+  ['A hosted service', 'Nobody operates a Helsa cloud. There is no sign-up. Your data goes to your machine or nowhere.'],
+  ['Health data in iCloud', 'HealthKit is the store, and Apple already syncs and backs it up. The app keeps no second copy, so there is nothing to put in iCloud. Only app settings sync.'],
+  ['Keep its own copy of what you type', 'What you enter goes into Apple Health, not into a Helsa database: the water you log, and the symptoms and mood you record. Everything measured — steps, heart rate, sleep — is read-only, and your Apple activity goals are never touched.'],
+  ['Multiple users, sharing, family views', 'Single user by design. The schema keeps a user_id column so the door stays open, but nothing multi-tenant is built or tested.'],
+  ['Telemetry or analytics', 'The app and the server collect nothing about you. There is no identifier, no crash pipeline, no phone-home.'],
+  ['LLM-generated health insights', 'The /insights endpoint is rule-based and explainable: rolling averages, z-scores, Pearson correlation. Each rule has a data minimum, and stays silent below it.'],
+  ['A packaged mobile app', 'The iOS app is closed source and not distributed here. This repository is the server side.'],
+];
+
+const next = [
+  ['Getting started', '/getting-started/', 'Bring the stack up locally with Docker Compose, issue a device token, verify a first sync. Nothing is exposed to the internet.'],
+  ['Deployment', '/deployment/', 'TLS, mutual TLS with a private CA, the reverse proxy, backups and restore, and a hardening checklist. Read before you open a port.'],
+  ['API', '/api/', 'The contract: what /v1/ingest accepts, what the read endpoints return, and the conventions — UTC, SI units, cursors — that apply everywhere.'],
+  ['Integrations', '/integrations/', 'Home Assistant over MQTT with discovery, plus a REST fallback. Daily summaries only, and the page explains why that limit matters.'],
+];
+---
+
+<BaseLayout
+  title="Helsa — your Apple Health data, on a server you run"
+  description="Helsa is a local-first iPhone app for Apple Health data, and an optional self-hosted backend for the long-term history. MIT licensed. Not a medical device."
+  current="home"
+  wide
+>
+  <section class="hero">
+    <div class="shell">
+      <p class="section-label">Local-first · MIT licensed</p>
+      <h1>Your Apple Health data, read where it already lives.</h1>
+      <p class="lede">
+        The Helsa app reads HealthKit on your iPhone, does its analysis on the
+        device, and by default <strong>your health data never leaves the phone</strong>.
+        Sending it anywhere is a switch you turn on — and when you do, you type in
+        your own endpoint. This is the server that endpoint can point at.
+      </p>
+      <div class="cta">
+        <a class="btn btn-primary" href={url('/getting-started/')}>Run the server</a>
+        <a class="btn" href={url('/the-app/')}>See the app</a>
+      </div>
+      <p class="hero-note">
+        Go API · ingestion worker · TimescaleDB · web dashboard · deployment recipe.
+        Fork it, or replace it with your own that speaks the same <a href={url('/api/')}>API contract</a>.
+      </p>
+    </div>
+  </section>
+
+  <div class="shell">
+    <div class="callout callout--important">
+      <h2>The app is in closed testing</h2>
+      <p>
+        <strong>Helsa is not on the App Store yet.</strong> The iPhone app is in a
+        TestFlight round — invitation only, and the invitations go to people the
+        author already knows. There is no public link, and this site is not one.
+      </p>
+      <p>
+        What you can use today is the <strong>server</strong>: it is MIT licensed, it
+        is documented here, and its <a href={url('/api/')}>API contract</a> is the thing
+        to implement if you would rather write your own client. The contract can still
+        move while the app is in testing; a breaking change is described in the commit
+        that makes it, because nobody outside depends on a deprecation window yet.
+      </p>
+    </div>
+
+    <div class="callout callout--warning">
+      <h2>Not a medical device</h2>
+      <p>
+        Helsa is a hobby project for looking at your own fitness data. It is{' '}
+        <strong>not a medical device</strong>, it is <strong>not for diagnosis,
+        treatment, or monitoring of any medical condition</strong>, and its output
+        must not be used to make health decisions. It comes with no warranty of any
+        kind. See the <a href={url('/disclaimer/')}>full disclaimer</a>.
+      </p>
+    </div>
+  </div>
+
+  <section class="app-band">
+    <div class="shell">
+      <p class="section-label">On the phone</p>
+      <h2 class="section-title">The part that works without any of this</h2>
+      <p class="section-intro">
+        Everything below runs on the device: 120 metrics, sleep stages, workouts,
+        hydration, and a journal of what you felt at the time. The screenshots are
+        taken from the running app, and the person in them does not exist.
+      </p>
+
+      <div class="shots">
+        <figure><Image src={today} alt="The Today tab: four named bands of cards" widths={[280, 560]} sizes="(max-width: 40rem) 60vw, 260px" loading="eager" /><figcaption>Today</figcaption></figure>
+        <figure><Image src={trends} alt="The Trends tab: grouped metrics with a previous-period comparison" widths={[280, 560]} sizes="(max-width: 40rem) 60vw, 260px" /><figcaption>Trends</figcaption></figure>
+        <figure><Image src={sleep} alt="The Sleep tab: the night as recorded, with stages and efficiency" widths={[280, 560]} sizes="(max-width: 40rem) 60vw, 260px" /><figcaption>Sleep</figcaption></figure>
+      </div>
+
+      <p class="shots-more"><a href={url('/the-app/')}>See every screen, in both languages →</a></p>
+    </div>
+  </section>
+
+  <hr class="rule" />
+
+  <section>
+    <div class="shell">
+      <p class="section-label">What it is</p>
+      <h2 class="section-title">Two layers, and the second one is optional</h2>
+      <Architecture />
+    </div>
+  </section>
+
+  <hr class="rule" />
+
+  <section>
+    <div class="shell">
+      <p class="section-label">Why you might want it</p>
+      <h2 class="section-title">Four reasons to run a server</h2>
+      <div class="grid grid--pairs">
+        {reasonsFor.map((reason) => (
+          <article class="card">
+            <h3><span class="dot" style={`--accent: ${reason.accent}`}></span>{reason.title}</h3>
+            <p>{reason.body}</p>
+          </article>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="counterweight">
+    <div class="shell">
+      <p class="section-label">Why you might not</p>
+      <h2 class="section-title">You probably do not need this</h2>
+      <p class="section-intro">
+        If you just want to look at your numbers on your phone, <strong>you do not
+        need any of it</strong>. Run the app without a server. That is the intended
+        default, and the project is built so that the default is the complete
+        experience for a single device.
+      </p>
+      <p class="section-intro">
+        Running a server means running a server: TLS certificates that expire,
+        backups that must be tested, a port on your router, and a database that is
+        now your responsibility. The rest of these pages are honest about that cost.
+      </p>
+    </div>
+  </section>
+
+  <hr class="rule" />
+
+  <section>
+    <div class="shell">
+      <p class="section-label">Boundaries</p>
+      <h2 class="section-title">What it deliberately does not do</h2>
+      <dl class="boundaries">
+        {notThis.map(([title, why]) => (
+          <div>
+            <dt>{title}</dt>
+            <dd>{why}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  </section>
+
+  <hr class="rule" />
+
+  <section>
+    <div class="shell">
+      <p class="section-label">Where to go next</p>
+      <h2 class="section-title">The documentation</h2>
+      <div class="grid">
+        {next.map(([title, href, body]) => (
+          <a class="card card--link" href={url(href)}>
+            <h3>{title}</h3>
+            <p>{body}</p>
+          </a>
+        ))}
+      </div>
+
+      <div class="status">
+        <h3>Status and stability</h3>
+        <p>
+          The OpenAPI document in <code>backend/api/openapi.yaml</code> is the source
+          of truth; the server, the app and the web client all generate from it. It is
+          now a public interface, so breaking changes have a cost — but the version is{' '}
+          <code>0.x</code> and the project is one person’s hobby. Pin what you depend on.
+        </p>
+      </div>
+    </div>
+  </section>
+</BaseLayout>
+
+<style>
+  .hero .lede strong { color: var(--helsa-ink); font-weight: 600; }
+
+  .app-band { padding-block: clamp(3rem, 7vw, 5rem); }
+  .shots {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 1.4rem;
+    margin-top: 2.4rem;
+    max-width: 52rem;
+  }
+  .shots figure { margin: 0; }
+  .shots img {
+    width: 100%;
+    height: auto;
+    border-radius: var(--helsa-radius);
+    border: 1px solid var(--helsa-border);
+    box-shadow: var(--helsa-shadow);
+    display: block;
+  }
+  .shots figcaption {
+    margin-top: 0.7rem;
+    font-size: 0.87rem;
+    color: var(--helsa-ink-muted);
+  }
+  .shots-more { margin-top: 1.8rem; font-size: 0.95rem; }
+
+  .counterweight {
+    background: var(--helsa-bg-sunken);
+    border-block: 1px solid var(--helsa-border);
+  }
+  .counterweight .section-intro strong { color: var(--helsa-ink); }
+
+  .boundaries {
+    margin: 2.4rem 0 0;
+    display: grid;
+    gap: 0;
+    max-width: 58rem;
+  }
+  .boundaries > div {
+    display: grid;
+    grid-template-columns: minmax(11rem, 18rem) 1fr;
+    gap: 0.4rem 2rem;
+    padding-block: 1rem;
+    border-top: 1px solid var(--helsa-border);
+  }
+  .boundaries > div:last-child { border-bottom: 1px solid var(--helsa-border); }
+  .boundaries dt { font-weight: 600; color: var(--helsa-ink); }
+  .boundaries dd { margin: 0; color: var(--helsa-ink-muted); font-size: 0.95rem; }
+
+  @media (max-width: 42rem) {
+    .boundaries > div { grid-template-columns: 1fr; gap: 0.3rem; }
+  }
+
+  /* Four cards: a three-up auto-fit grid strands the fourth on its own row. */
+  .grid--pairs { grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr)); }
+  @media (max-width: 34rem) {
+    .grid--pairs { grid-template-columns: 1fr; }
+  }
+
+  .card--link {
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    transition: border-color 0.15s, transform 0.12s;
+  }
+  .card--link:hover {
+    border-color: var(--helsa-brand);
+    transform: translateY(-2px);
+    color: inherit;
+  }
+  .card--link h3 { color: var(--helsa-brand); }
+
+  .status {
+    margin-top: 2.6rem;
+    padding-top: 1.6rem;
+    border-top: 1px solid var(--helsa-border);
+    max-width: var(--helsa-measure);
+  }
+  .status h3 { font-size: 1.02rem; margin-bottom: 0.6rem; }
+  .status p { color: var(--helsa-ink-muted); font-size: 0.95rem; }
+</style>
