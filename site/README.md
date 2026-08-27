@@ -1,6 +1,6 @@
 # The Helsa site
 
-The public site at <https://nordic-sys.github.io/helsa/> — landing page, the
+The public site at <https://helsa.nordic-sys.com> — landing page, the
 screenshot tour, the legal pages, and the documentation.
 
 Built with [Astro](https://astro.build) and [Starlight](https://starlight.astro.build),
@@ -11,7 +11,7 @@ published by `.github/workflows/pages.yml`.
 ```bash
 cd site
 npm install
-npm run dev      # http://localhost:4321/helsa/  <- note the base path
+npm run dev      # http://localhost:4321/
 npm run build    # -> dist/
 npm run preview  # serves dist/ exactly as it will be published
 ```
@@ -37,10 +37,18 @@ Two shells share one set of design tokens:
 
 ## Things worth knowing before you change something
 
-**The base path.** The site is published under `/helsa`, set in
-`astro.config.mjs`. Get it wrong and the site builds cleanly while every
-internal link 404s. Use the `url()` helper in `src/lib/url.ts` for internal
-links in `.astro` files.
+**The base path.** The site is served from the root of its own domain, so
+`base` is `/` in `astro.config.mjs`. It used to be `/helsa`, back when this was
+a project page at `nordic-sys.github.io/helsa/`. Get `base` wrong and the site
+builds cleanly while every internal link 404s. Use the `url()` helper in
+`src/lib/url.ts` for internal links in `.astro` files — it is what made the
+domain move a three-line change.
+
+**The domain.** `helsa.nordic-sys.com` is a CNAME to `nordic-sys.github.io.`
+(the user/org domain, no repo path). The record is edited in Plesk, which syncs
+it to DigitalOcean; DigitalOcean holds the authoritative nameservers, so
+`dig @ns1.digitalocean.com helsa.nordic-sys.com CNAME` is what proves a change
+landed rather than a local resolver's cache.
 
 **Old addresses.** The Jekyll site served `page.html`; this one serves `page/`.
 `scripts/legacy-redirects.mjs` writes a redirecting file for each old address
@@ -70,6 +78,6 @@ full-page ones and either theme:
   --headless=new --disable-gpu --hide-scrollbars \
   --remote-debugging-port=9222 --user-data-dir=/tmp/edge-shot &
 
-node scripts/shot.mjs http://localhost:4321/helsa/ /tmp/home.png 1440 dark
-node scripts/shot.mjs http://localhost:4321/helsa/ /tmp/home-phone.png 390 light
+node scripts/shot.mjs http://localhost:4321/ /tmp/home.png 1440 dark
+node scripts/shot.mjs http://localhost:4321/ /tmp/home-phone.png 390 light
 ```

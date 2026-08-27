@@ -2,7 +2,7 @@
 
 Self-hosted backend for the Helsa app — your Apple Health data, on a server you run.
 
-**Documentation: https://nordic-sys.github.io/helsa/**
+**Documentation: https://helsa.nordic-sys.com/**
 
 ---
 
@@ -92,7 +92,7 @@ docker compose --profile tools run --rm migrate up
 
 Nothing in that sequence is reachable from the internet. Exposing the server is a
 separate, deliberate process — see
-[Deployment](https://nordic-sys.github.io/helsa/deployment/), and read it before you
+[Deployment](https://helsa.nordic-sys.com/deployment/), and read it before you
 forward a port.
 
 ## Licence

@@ -4,17 +4,24 @@ import starlight from '@astrojs/starlight';
 import sitemap from '@astrojs/sitemap';
 
 // ---------------------------------------------------------------------------
-// Published as a GitHub Pages *project* page, so every URL carries the repo
-// name as a prefix:
+// Published on its own domain, so the site sits at the root and `base` is '/'.
 //
-//   https://nordic-sys.github.io/helsa/
-//   ^^^^^^^^^^^^^^^^^^^^^^^^^^^ site   ^^^^^^ base
+// It used to be a GitHub Pages *project* page at nordic-sys.github.io/helsa/,
+// where every URL carried the repo name as a prefix and `base` was '/helsa'.
+// Moving to helsa.nordic-sys.com is what removed that prefix.
 //
-// If `base` is wrong the site still builds and every internal link 404s.
-// Moving to a custom domain later means: base: '/', and site: the new origin.
+// ⚠️ If `base` disagrees with how the site is published, it still builds
+// cleanly and every internal link 404s. That is the first thing to check when
+// the published site renders as unstyled text or every click fails.
+//
+// The DNS side: a CNAME for `helsa` pointing at `nordic-sys.github.io.` — the
+// user/org domain, with no repo path. GitHub finds the repo from the Host
+// header. The record is edited in Plesk, which syncs it to DigitalOcean; the
+// authoritative nameservers are DigitalOcean's, so `dig @ns1.digitalocean.com`
+// is what proves a change landed.
 // ---------------------------------------------------------------------------
-const site = 'https://nordic-sys.github.io';
-const base = '/helsa';
+const site = 'https://helsa.nordic-sys.com';
+const base = '/';
 
 // The old `page.html` addresses are kept alive by scripts/legacy-redirects.mjs,
 // which runs before every build and writes redirecting files into public/. See

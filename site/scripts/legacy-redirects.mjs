@@ -8,7 +8,7 @@
  *      *directory* named `privacy.html` — so the old address only resolves with
  *      a trailing slash appended, which no existing link has.
  *   2. It prefixes the base onto the redirect's source but not onto its target,
- *      producing `/privacy/` where this site needs `/helsa/privacy/`.
+ *      which produced the wrong address for as long as this site had a base.
  *
  * Files in public/ are copied verbatim, so writing them there sidesteps both.
  * They are generated rather than committed: the list below is the single source
@@ -17,7 +17,7 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 
-const BASE = '/helsa';
+const BASE = '';  // The site is served from the root of its own domain.
 const PUBLIC_DIR = new URL('../public/', import.meta.url).pathname;
 
 // Every page the Jekyll site published as `<name>.html`. The section index
