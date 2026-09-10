@@ -204,42 +204,52 @@ export default function Coverage() {
             })}
           </p>
 
-          <Gaps rows={broken} />
+          {/* ⚠️ The group cards used to be laid out with no space between them at
+              all — nine tables sharing a border, so the page read as one table
+              with headings dropped into it. `.sections` is where the space comes
+              from now, rather than a `marginBottom` this page never had. */}
+          <div className="sections">
+            <Gaps rows={broken} />
 
-          {groups.map((section) => (
-            <Card
-              key={section.group}
-              title={`${tGroup(groupKey(section.group))} · ${t('coverage.group.count', {
-                measured: f.num(section.measured),
-                total: f.num(section.total),
-              })}`}
-            >
-              {section.measured === 0 && (
-                <p className="subtle" style={{ marginTop: 0 }}>
-                  {t('coverage.group.empty')}
-                </p>
-              )}
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>{t('coverage.col.metric')}</th>
-                      <th>{t('coverage.col.state')}</th>
-                      <th>{t('coverage.col.days')}</th>
-                      <th>{t('coverage.col.samples')}</th>
-                      <th>{t('coverage.col.last')}</th>
-                      <th>{t('coverage.col.sources')}</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {section.rows.map((row) => (
-                      <Row key={row.data_type} row={row} />
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          ))}
+            {/* Six columns, one of them a list of source bundles: these stay the
+                full width of the page. Two of them side by side would each be
+                scrolling sideways inside their own card, which is denser only in
+                the sense that less of it is visible. */}
+            {groups.map((section) => (
+              <Card
+                key={section.group}
+                title={`${tGroup(groupKey(section.group))} · ${t('coverage.group.count', {
+                  measured: f.num(section.measured),
+                  total: f.num(section.total),
+                })}`}
+              >
+                {section.measured === 0 && (
+                  <p className="subtle" style={{ marginTop: 0 }}>
+                    {t('coverage.group.empty')}
+                  </p>
+                )}
+                <div className="table-wrap">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>{t('coverage.col.metric')}</th>
+                        <th>{t('coverage.col.state')}</th>
+                        <th>{t('coverage.col.days')}</th>
+                        <th>{t('coverage.col.samples')}</th>
+                        <th>{t('coverage.col.last')}</th>
+                        <th>{t('coverage.col.sources')}</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {section.rows.map((row) => (
+                        <Row key={row.data_type} row={row} />
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            ))}
+          </div>
         </>
       )}
     </>

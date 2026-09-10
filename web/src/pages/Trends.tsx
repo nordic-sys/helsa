@@ -365,10 +365,12 @@ export default function Trends() {
         />
       ) : (
         <Card title={`${label}${unit ? ` (${unit})` : ''}`}>
+          {/* Wide by nature, and tall in proportion: `.chart`'s height follows
+              the window, so a desktop gets a chart worth the room rather than a
+              laptop's chart with air under it. */}
           <div
+            className="chart"
             style={{
-              width: '100%',
-              height: 320,
               cursor: canDrill ? 'pointer' : 'default',
               // A load is in flight and the chart below is still the previous
               // window's. Fading it says so without blanking the page.

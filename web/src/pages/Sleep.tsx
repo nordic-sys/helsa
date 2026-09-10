@@ -160,7 +160,7 @@ export default function Sleep() {
         <Empty title={t('sleep.empty.title')} hint={t('sleep.empty.hint')} />
       ) : (
         <>
-          <div className="grid" style={{ marginBottom: 18 }}>
+          <div className="grid grid-stats" style={{ marginBottom: 18 }}>
             <Stat
               label={tp('sleep.avgSleep', avg.nights)}
               value={f.duration(avg.asleepMin)}
@@ -211,7 +211,7 @@ export default function Sleep() {
           {chart.length > 1 && (
             <div style={{ marginBottom: 16 }}>
               <Card title={t('sleep.stagesChart')}>
-                <div style={{ width: '100%', height: 260 }}>
+                <div className="chart-sm">
                   <ResponsiveContainer>
                     <BarChart
                       data={chart}
@@ -286,7 +286,7 @@ export default function Sleep() {
           {physioCards.length > 0 && (
             <div style={{ marginBottom: 16 }}>
               <Card title={t('sleep.physio.title')}>
-                <div className="grid">
+                <div className="grid grid-stats">
                   {physioCards.map(({ def, r }) => (
                     <Stat
                       key={def.key}
@@ -404,7 +404,14 @@ function NightCard({ night, isLatest }: { night: Night; isLatest: boolean }) {
           </p>
         )}
 
-        <div className="table-wrap" style={{ marginTop: 12, marginBottom: 12 }}>
+        {/* The night's own two tables — six figures about the night, and the
+            stages it was made of. Side by side when there is room for them: they
+            are two short tables about one night, and stacking them put the
+            stages a screenful below the night they belong to on a laptop. The
+            hypnogram above stays across the full card, because a proportional
+            bar squeezed to half a card stops being readable. */}
+        <div className="flow" style={{ marginTop: 12, marginBottom: 12 }}>
+        <div className="table-wrap">
           <table>
             <tbody>
               <tr>
@@ -468,6 +475,7 @@ function NightCard({ night, isLatest }: { night: Night; isLatest: boolean }) {
               ))}
             </tbody>
           </table>
+        </div>
         </div>
 
         <details style={{ marginTop: 12 }}>

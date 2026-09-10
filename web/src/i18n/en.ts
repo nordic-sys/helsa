@@ -616,6 +616,10 @@ export const en: Dict = {
     'nav.group.longView': 'The long view',
     'nav.group.areas': 'Areas',
     'nav.group.status': 'Status',
+    // The button that opens the same list in the bar layout. One word in both
+    // states — `aria-expanded` and the chevron say which one it is in, and a
+    // label that changes to "Close" makes the button move under the finger.
+    'nav.menu': 'Menu',
 
     // --- The bands of the Today page ---------------------------------------
     // The explanations are the app's own `DashboardBand.explanation` lines.

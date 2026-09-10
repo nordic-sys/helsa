@@ -37,16 +37,19 @@ export default function SettingsPage() {
       <h1>{t('settings.title')}</h1>
       <p className="subtle">{t('settings.subtitle')}</p>
 
-      <div style={{ marginBottom: 16 }}>
+      {/* ⚠️ Every card on this page is a switch, a short table or a sentence —
+          not one of them is wider than about 400px of actual content, and they
+          used to be a single stacked column with a third of a desktop window
+          empty beside them. `.flow` is the whole fix: they share a row as soon as
+          two fit, and fall back to the stack when they do not. */}
+      <div className="flow">
         <Card title={t('settings.language.title')}>
           <LanguageSwitcher />
           <p className="subtle" style={{ margin: '10px 0 0' }}>
             {t('settings.language.note')}
           </p>
         </Card>
-      </div>
 
-      <div style={{ marginBottom: 16 }}>
         <Card title={t('settings.token.title')}>
           {hasToken ? (
             <>
@@ -88,11 +91,9 @@ export default function SettingsPage() {
             </>
           )}
         </Card>
-      </div>
 
-      {hasToken && (
-        <>
-          <div style={{ marginBottom: 16 }}>
+        {hasToken && (
+          <>
             <Card title={t('settings.devices.title')}>
               {devices.isError ? (
                 <ErrorState error={devices.error} />
@@ -125,9 +126,7 @@ export default function SettingsPage() {
                 </div>
               )}
             </Card>
-          </div>
 
-          <div style={{ marginBottom: 16 }}>
             <Card title={t('settings.goals.title')}>
               {(goals.data?.length ?? 0) === 0 ? (
                 <p style={{ margin: 0, color: 'var(--text-dim)' }}>{t('settings.goals.empty')}</p>
@@ -150,28 +149,30 @@ export default function SettingsPage() {
                 {t('settings.goals.note')}
               </p>
             </Card>
-          </div>
 
-          <Card title={t('settings.system.title')}>
-            <table>
-              <tbody>
-                <tr>
-                  <td>{t('settings.system.browserTz')}</td>
-                  <td className="num">{browserTz()}</td>
-                </tr>
-                <tr>
-                  <td>{t('settings.system.serverTz')}</td>
-                  <td className="num">{settings.data?.time_zone ?? '–'}</td>
-                </tr>
-                <tr>
-                  <td>{t('settings.system.units')}</td>
-                  <td className="num">{settings.data?.unit_system ?? '–'}</td>
-                </tr>
-              </tbody>
-            </table>
-          </Card>
-        </>
-      )}
+            <Card title={t('settings.system.title')}>
+              <div className="table-wrap">
+                <table>
+                  <tbody>
+                    <tr>
+                      <td>{t('settings.system.browserTz')}</td>
+                      <td className="num">{browserTz()}</td>
+                    </tr>
+                    <tr>
+                      <td>{t('settings.system.serverTz')}</td>
+                      <td className="num">{settings.data?.time_zone ?? '–'}</td>
+                    </tr>
+                    <tr>
+                      <td>{t('settings.system.units')}</td>
+                      <td className="num">{settings.data?.unit_system ?? '–'}</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+          </>
+        )}
+      </div>
     </>
   )
 }

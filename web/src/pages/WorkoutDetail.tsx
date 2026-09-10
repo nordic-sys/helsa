@@ -135,14 +135,27 @@ export default function WorkoutDetail() {
         {indoor !== null && ` · ${t(indoor ? 'workouts.place.indoor' : 'workouts.place.outdoor')}`}
       </p>
 
-      <DuplicateSection workout={w} />
+      {/* ⚠️ These cards used to sit flush against one another — no wrapper had a
+          margin, so five bordered boxes shared their edges and read as one. The
+          space is the stack's now.
 
-      <MetricGrid workout={w} minutes={minutes} pace={pace} poolM={pool} />
-      <RouteSection id={id} distanceM={w.total_distance_m} />
-      <HeartRateSection workout={w} />
-      {laps.length > 0 && <LapsSection laps={laps} />}
-      {weather && <WeatherSection weather={weather} />}
-      <SourceSection workout={w} />
+          What is wide and what flows: the route and the pulse curve are drawings
+          and keep the page's width; the laps are a six-column table and keep it
+          too. The weather and the source are label-and-value lists about ten
+          words long, so they pair up as soon as two fit. */}
+      <div className="sections">
+        <DuplicateSection workout={w} />
+
+        <MetricGrid workout={w} minutes={minutes} pace={pace} poolM={pool} />
+        <RouteSection id={id} distanceM={w.total_distance_m} />
+        <HeartRateSection workout={w} />
+        {laps.length > 0 && <LapsSection laps={laps} />}
+
+        <div className="flow">
+          {weather && <WeatherSection weather={weather} />}
+          <SourceSection workout={w} />
+        </div>
+      </div>
     </>
   )
 }
@@ -259,7 +272,7 @@ function MetricGrid({
   }
 
   return (
-    <div className="grid grid-stats" style={{ marginBottom: 16 }}>
+    <div className="grid grid-stats">
       {cards.map((c) => (
         <Stat key={c.key} label={c.label} value={c.value} unit={c.unit} color={c.color} />
       ))}
@@ -471,7 +484,7 @@ function HeartRateSection({ workout }: { workout: Workout }) {
 
   return (
     <Card title={t('workout.hr.title')}>
-      <div style={{ height: 220 }}>
+      <div className="chart-sm">
         <ResponsiveContainer>
           <AreaChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: -8 }}>
             <defs>
@@ -705,31 +718,30 @@ function DuplicateSection({ workout }: { workout: Workout }) {
   const others = [group.primary, ...group.others].filter((o) => o.id !== workout.id)
   const secondary = group.primary.id !== workout.id
 
+  // The stack above supplies the space; nothing here carries its own.
   return (
-    <div style={{ marginBottom: 16 }}>
-      <Card title={t('workout.dup.title')}>
-        <p className="subtle" style={{ marginTop: 0 }}>
-          {tp('workout.dup.body', group.count)}
-        </p>
-        {/* The sentence that makes the fold safe to open: everything above is
-            ONE recording's, and the page never mixes the two. */}
-        <p className="subtle">{t('workout.dup.thisOnly')}</p>
-        {secondary && <p className="subtle">{t('workout.dup.secondary')}</p>}
+    <Card title={t('workout.dup.title')}>
+      <p className="subtle" style={{ marginTop: 0 }}>
+        {tp('workout.dup.body', group.count)}
+      </p>
+      {/* The sentence that makes the fold safe to open: everything above is
+          ONE recording's, and the page never mixes the two. */}
+      <p className="subtle">{t('workout.dup.thisOnly')}</p>
+      {secondary && <p className="subtle">{t('workout.dup.secondary')}</p>}
 
-        <div className="dup-list">
-          {others.map((o) => (
-            <OtherRecording key={o.id} workout={o} isListed={o.id === group.primary.id} />
-          ))}
-        </div>
+      <div className="dup-list">
+        {others.map((o) => (
+          <OtherRecording key={o.id} workout={o} isListed={o.id === group.primary.id} />
+        ))}
+      </div>
 
-        {/* ⚠️ Stated rather than acted on. Deleting a duplicate would mean
-            writing to somebody's Health data on a guess about which device to
-            trust — `ADR-0007` is where the app's line is. */}
-        <p className="subtle" style={{ marginBottom: 0 }}>
-          {t('workout.dup.keep')}
-        </p>
-      </Card>
-    </div>
+      {/* ⚠️ Stated rather than acted on. Deleting a duplicate would mean
+          writing to somebody's Health data on a guess about which device to
+          trust — `ADR-0007` is where the app's line is. */}
+      <p className="subtle" style={{ marginBottom: 0 }}>
+        {t('workout.dup.keep')}
+      </p>
+    </Card>
   )
 }
 

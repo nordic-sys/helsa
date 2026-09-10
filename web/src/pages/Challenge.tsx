@@ -112,7 +112,7 @@ function ChallengeBody({ c }: { c: ChallengeData }) {
 
   return (
     <>
-      <div className="grid" style={{ marginBottom: 18 }}>
+      <div className="grid grid-stats" style={{ marginBottom: 18 }}>
         <Stat
           label={t('challenge.steps')}
           value={f.num(c.steps)}
@@ -141,17 +141,25 @@ function ChallengeBody({ c }: { c: ChallengeData }) {
         <Empty title={t('challenge.empty.title')} hint={t('challenge.empty.hint')} />
       )}
 
-      <div style={{ marginBottom: 16 }}>
+      {/* ⚠️ The two goal cards, paired rather than stacked — and the streak has
+          MOVED, from under the day chart to beside the milestones. That is the
+          one reordering in this round, and the reason is that they answer the
+          same question: the milestones say how far into the month's goal the
+          walking has got, the streak says how many days in a row met the daily
+          one. Both are short, both were full-width, and the chart between them
+          is the detail underneath both. Nothing either of them says has changed. */}
+      <div className="flow" style={{ marginBottom: 16 }}>
         <Card title={t('challenge.milestones.title')}>
           <Milestones c={c} />
         </Card>
+        <Streak c={c} />
       </div>
 
       {c.thresholds_source === 'default' && (
         <Note title={t('challenge.source.title')}>{t('challenge.source.default')}</Note>
       )}
 
-      <div style={{ marginBottom: 16 }}>
+      <div>
         <Card title={t('challenge.days.title')}>
           {c.measured_days === 0 ? (
             <p className="subtle" style={{ margin: 0 }}>
@@ -159,7 +167,7 @@ function ChallengeBody({ c }: { c: ChallengeData }) {
             </p>
           ) : (
             <>
-              <div style={{ width: '100%', height: 240 }}>
+              <div className="chart-sm">
                 <ResponsiveContainer>
                   <BarChart
                     data={c.days.map((d) => ({
@@ -214,8 +222,6 @@ function ChallengeBody({ c }: { c: ChallengeData }) {
           )}
         </Card>
       </div>
-
-      <Streak c={c} />
     </>
   )
 }
@@ -318,61 +324,60 @@ function Streak({ c }: { c: ChallengeData }) {
           ? t('challenge.streak.broken.noData', { date: f.date(s.broken_by.day) })
           : t('challenge.streak.broken.startOfHistory')
 
+  // No margin of its own: it is a cell of the `.flow` it now sits in.
   return (
-    <div style={{ marginBottom: 16 }}>
-      <Card title={t('challenge.streak.title')}>
-        {s.daily_goal == null ? (
-          <p className="subtle" style={{ margin: 0 }}>
-            {t('challenge.streak.noGoal')}
-          </p>
-        ) : (
-          <>
-            <div className="grid" style={{ marginBottom: 12 }}>
-              <Stat
-                label={t('challenge.streak.current')}
-                value={
-                  s.length > 0
-                    ? tp('challenge.streak.length', s.length)
-                    : t('challenge.streak.none')
-                }
-                color="var(--helsa-fjord)"
-              />
-              <Stat
-                label={t('challenge.streak.dailyGoal')}
-                value={f.num(s.daily_goal)}
-                color="var(--helsa-nordlys)"
-              />
-              <Stat
-                label={t('challenge.streak.longest')}
-                value={f.num(s.longest)}
-                color="var(--helsa-move)"
-              />
-            </div>
-            {broken && (
-              <p className="subtle" style={{ margin: '0 0 6px' }}>
-                {broken}
-              </p>
-            )}
-            <p className="subtle" style={{ margin: 0 }}>
-              {t('challenge.streak.window', {
-                from: f.date(s.window_from),
-                to: f.date(s.window_to),
-              })}
-            </p>
-          </>
-        )}
-
-        {/* Always shown, whatever the number says: a streak that is quietly a
-            lower bound is worse than none, because the reader takes it for the
-            figure on their phone and concludes it broke. */}
-        {s.missing_inputs.length > 0 && (
-          <div style={{ marginTop: 14 }}>
-            <Note title={t('challenge.streak.lowerBound.title')}>
-              {t('challenge.streak.lowerBound.body')}
-            </Note>
+    <Card title={t('challenge.streak.title')}>
+      {s.daily_goal == null ? (
+        <p className="subtle" style={{ margin: 0 }}>
+          {t('challenge.streak.noGoal')}
+        </p>
+      ) : (
+        <>
+          <div className="grid grid-stats" style={{ marginBottom: 12 }}>
+            <Stat
+              label={t('challenge.streak.current')}
+              value={
+                s.length > 0
+                  ? tp('challenge.streak.length', s.length)
+                  : t('challenge.streak.none')
+              }
+              color="var(--helsa-fjord)"
+            />
+            <Stat
+              label={t('challenge.streak.dailyGoal')}
+              value={f.num(s.daily_goal)}
+              color="var(--helsa-nordlys)"
+            />
+            <Stat
+              label={t('challenge.streak.longest')}
+              value={f.num(s.longest)}
+              color="var(--helsa-move)"
+            />
           </div>
-        )}
-      </Card>
-    </div>
+          {broken && (
+            <p className="subtle" style={{ margin: '0 0 6px' }}>
+              {broken}
+            </p>
+          )}
+          <p className="subtle" style={{ margin: 0 }}>
+            {t('challenge.streak.window', {
+              from: f.date(s.window_from),
+              to: f.date(s.window_to),
+            })}
+          </p>
+        </>
+      )}
+
+      {/* Always shown, whatever the number says: a streak that is quietly a
+          lower bound is worse than none, because the reader takes it for the
+          figure on their phone and concludes it broke. */}
+      {s.missing_inputs.length > 0 && (
+        <div style={{ marginTop: 14 }}>
+          <Note title={t('challenge.streak.lowerBound.title')}>
+            {t('challenge.streak.lowerBound.body')}
+          </Note>
+        </div>
+      )}
+    </Card>
   )
 }

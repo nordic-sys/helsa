@@ -16,13 +16,18 @@
 // no cloud API, the iPhone is the sole uploader). A read-only dashboard has
 // nothing to put under that heading, so it does not draw the heading.
 //
-// # Why the cards are laid out three across rather than one under another
+// # Why the cards are laid out across rather than one under another
 //
-// A phone shows one card at a time and pages through the rest; a browser at 1440
-// shows the whole band at once. That is the web's one advantage over the app and
-// it is the reason not to copy the app's five tabs — so each band is a grid, and
-// the page ends where the day's information ends rather than 900 pixels down
-// with the screen half empty.
+// A phone shows one card at a time and pages through the rest; a browser shows
+// the whole band at once. That is the web's one advantage over the app and it is
+// the reason not to copy the app's five tabs — so each band is a grid, and the
+// page ends where the day's information ends rather than 900 pixels down with
+// the screen half empty.
+//
+// How MANY across is not decided here and is not decided anywhere: the bands are
+// `.grid`, whose tracks are sized from the window (`global.css`). Two on a
+// phone, three on a laptop, four on a desktop — the same cards, arranged by the
+// room there is.
 //
 // # The rules every card here obeys
 //
@@ -109,7 +114,11 @@ export default function Dashboard() {
       )}
 
       <Band title={t('today.band.today')} hint={t('today.band.today.hint')}>
-        <div className="grid">
+        {/* Four figures with a label each: `grid-stats` rather than `grid`,
+            because a tile that is a word and a number does not need a card's
+            width — which is what gives a phone two of them across instead of
+            one, and a wide screen four instead of four with a gap. */}
+        <div className="grid grid-stats">
           {TODAY.map((def) => {
             // For a summed metric, the sum of today's hourly buckets; for an
             // averaged one, their daily average — readSeries handles the
@@ -142,7 +151,7 @@ export default function Dashboard() {
       </Band>
 
       <Band title={t('nav.group.status')} hint={t('today.band.status.hint')}>
-        <div className="grid grid-fit">
+        <div className="grid grid-wide">
           <SyncCard query={devices} />
           <CoverageCard tz={tz} />
         </div>

@@ -28,21 +28,33 @@ a:hover {
   text-decoration: underline;
 }
 
-/* --- Layout --- */
+/* --- Layout ---
+ *
+ * # One rule, at both ends
+ *
+ * The page was built for one width — a 232px rail and a 1180px column — and a
+ * layout pinned to one width is wrong at every other one: cramped below it and
+ * wasteful above it. At 1920 it left five hundred pixels of empty ground on the
+ * right while the cards stayed 230px wide; at 390 the navigation was a
+ * horizontal scroller showing two links out of ten. Those are the same mistake.
+ *
+ * So the two numbers below are the only fixed ones, and both are ranges: the
+ * rail grows a little with the window, and the content column stops widening at
+ * a point where a card is still a card rather than a stripe.
+ *
+ * ⚠️ `--content-max` is a cap, not a target. Past it the column centres and the
+ * remaining width becomes margin — a table 1700px wide is not denser, it is
+ * further apart.
+ */
+:root {
+  --sidebar-w: clamp(200px, 15vw, 264px);
+  --content-max: 1440px;
+}
+
 .app {
   display: grid;
-  grid-template-columns: 232px 1fr;
+  grid-template-columns: var(--sidebar-w) 1fr;
   min-height: 100%;
-}
-@media (max-width: 820px) {
-  .app {
-    grid-template-columns: 1fr;
-  }
-  .sidebar {
-    position: sticky;
-    top: 0;
-    z-index: 10;
-  }
 }
 
 .sidebar {
@@ -53,15 +65,6 @@ a:hover {
   flex-direction: column;
   gap: 4px;
 }
-@media (max-width: 820px) {
-  .sidebar {
-    border-right: 0;
-    border-bottom: 1px solid var(--border);
-    flex-direction: row;
-    overflow-x: auto;
-    padding: 10px;
-  }
-}
 
 .brand {
   font-weight: 650;
@@ -70,20 +73,38 @@ a:hover {
   color: var(--helsa-fjord);
   padding: 4px 10px 16px;
 }
-@media (max-width: 820px) {
-  .brand {
-    padding: 6px 10px;
-    align-self: center;
-  }
+
+/* The disclosure that only exists in the bar. At rail width every link is
+ * already on screen, so there is nothing for it to reveal — see `nav.tsx`, which
+ * argues that the headings must never be something to open. */
+.nav-toggle {
+  display: none;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 13px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+.nav-toggle:hover {
+  color: var(--text);
+}
+.nav-toggle[aria-expanded='true'] {
+  color: var(--text);
+  background: var(--surface-2);
 }
 
 /* The sidebar's groups.
  *
  * On a wide screen the whole structure is visible at once — that is the reason
  * the web does not copy the app's five tabs, so the headings must never be a
- * disclosure to open. On a narrow screen the sidebar turns into a horizontal
- * scroller, and the groups turn with it: the heading becomes a label at the head
- * of its own run of links, separated by a hairline, rather than disappearing. */
+ * disclosure to open. In the bar the same list is a panel behind one button, and
+ * the groups keep their headings inside it: the trade is one press, not a lost
+ * heading. */
 .nav-groups {
   display: flex;
   flex-direction: column;
@@ -108,29 +129,6 @@ a:hover {
   white-space: nowrap;
 }
 
-@media (max-width: 820px) {
-  .nav-groups {
-    flex: 1 1 auto;
-    flex-direction: row;
-    align-items: center;
-    gap: 10px;
-    overflow-x: auto;
-    /* The links scroll under the language switcher, which stays put. Without the
-       margin the last one is clipped flush against it and reads as broken text
-       rather than as more to scroll to. */
-    margin-right: 10px;
-  }
-  .nav-group {
-    flex-direction: row;
-    align-items: center;
-    flex: none;
-  }
-  .nav-group-title {
-    padding: 0 4px 0 10px;
-    border-left: 1px solid var(--border);
-  }
-}
-
 .nav-item {
   display: block;
   padding: 9px 12px;
@@ -149,30 +147,22 @@ a:hover {
   color: var(--helsa-fjord);
 }
 
-/* The language switcher sits at the far end of the sidebar — below the nav on a
-   wide screen, after it on a narrow one. `margin-top: auto` does the pushing in
-   the column layout; in the row layout the axis flips, so `margin-left` takes
-   over. */
+/* The language switcher sits at the far end of the sidebar — below the nav in
+   the rail, beside the menu button in the bar. */
 .lang-switch {
   display: flex;
   gap: 6px;
   margin-top: auto;
   padding-top: 16px;
 }
-@media (max-width: 820px) {
-  .lang-switch {
-    margin-top: 0;
-    margin-left: auto;
-    padding-top: 0;
-    align-self: center;
-    flex: none;
-  }
-}
 
 .main {
   padding: 26px clamp(16px, 3vw, 34px) 60px;
-  max-width: 1180px;
+  max-width: var(--content-max);
   width: 100%;
+  /* Past the cap the column centres rather than staying pinned to the rail: a
+     hundred pixels of margin on one side only reads as a mistake. */
+  margin-inline: auto;
   /* A grid item defaults to `min-width: auto`, so it stretches its track out to
      its own min-content size — a wide table would therefore make the entire page
      scroll horizontally on mobile. Content should scroll inside its own
@@ -181,6 +171,82 @@ a:hover {
 }
 .sidebar {
   min-width: 0;
+}
+
+/* --- The rail becomes a bar ---
+ *
+ * ⚠️ **A column is the one thing it cannot stay.** Everything else was a choice
+ * between two ways of losing something: a horizontal scroller (which is what
+ * this was, and it hid seven links out of ten behind a gesture with no
+ * affordance) or a disclosure (which hides all ten behind a button that says so).
+ * The second is the honest one — nothing is unreachable without being announced —
+ * and it is the only one that keeps the three headings, which are the whole
+ * point of the grouping.
+ *
+ * The line is at 900 because that is where the rail costs a quarter of the
+ * window. An iPad in portrait (768 or 834) is on the bar side of it deliberately:
+ * that is the machine this is actually read on, and there the 232px it gives
+ * back is the difference between a month of workouts fitting and scrolling.
+ */
+@media (max-width: 899px) {
+  .app {
+    grid-template-columns: 1fr;
+    /* ⚠️ `auto 1fr`, and without it the bar floats. The grid is `min-height:
+       100%`, both rows were `auto`, and a grid distributes leftover height over
+       auto rows — so on any page shorter than the window the BAR grew by half
+       the slack and its contents centred inside eighty pixels of nothing. The
+       page has to be the row that absorbs the spare height. */
+    grid-template-rows: auto 1fr;
+  }
+
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 10px;
+    padding: 10px clamp(14px, 4vw, 24px);
+  }
+
+  .brand {
+    padding: 0;
+    /* Everything after it is pushed to the far end of the bar. */
+    margin-right: auto;
+  }
+
+  .nav-toggle {
+    display: inline-flex;
+    order: 3;
+  }
+
+  .lang-switch {
+    order: 2;
+    margin: 0;
+    padding: 0;
+  }
+
+  /* The panel: its own row under the bar, and scrollable rather than taller than
+     the screen — a menu you cannot see the bottom of is a menu with a hidden
+     last item, which is the failure this replaced. */
+  .nav-groups {
+    order: 4;
+    flex: 1 0 100%;
+    gap: 12px;
+    padding: 6px 0 4px;
+    max-height: min(72vh, 520px);
+    overflow-y: auto;
+  }
+  .nav-groups[data-open='false'] {
+    display: none;
+  }
+
+  .main {
+    padding: 20px clamp(14px, 4vw, 24px) 48px;
+  }
 }
 
 h1 {
@@ -192,6 +258,68 @@ h1 {
   color: var(--text-dim);
   font-size: 13.5px;
   margin: 0 0 22px;
+}
+
+/* The measure of the running text, capped independently of the column it sits
+ * in. Cards get wider with the window; a sentence does not get easier to read
+ * for being 1400px long — it gets harder, because the eye loses its way back to
+ * the start of the next line.
+ *
+ * The selector is a DIRECT child on purpose: these are the page's own
+ * paragraphs, the ones that stand between the heading and the cards. A `.subtle`
+ * inside a card is already as narrow as the card, and capping it there would
+ * fight the layout it lives in. */
+.main > .subtle,
+.band-hint,
+.note {
+  max-width: 78ch;
+}
+
+/* --- The page's sections ---
+ *
+ * A page is a run of sections with air between them. This replaces the
+ * `marginBottom` each page used to hang off its own wrappers, which is also how
+ * two pages ended up with none: the Completeness groups and the workout detail's
+ * cards sat flush against each other, sharing a border by accident.
+ */
+.sections {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+/* Sections that are only as wide as what is in them — a settings card, a family
+ * of medals, a nutrient table. They share a row the moment two fit, which is
+ * what stops a wide screen from being one narrow column down the middle.
+ *
+ * ⚠️ `align-items: start` because these have nothing to do with each other:
+ * stretching a three-row table to the height of a nine-row one next to it draws
+ * a box that is mostly nothing.
+ */
+.flow {
+  display: grid;
+  gap: var(--gap);
+  align-items: start;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
+}
+/* …and the same for sections carrying a table with four or more columns, which
+   need more than 380px before they start scrolling inside themselves. */
+.flow-wide {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 470px), 1fr));
+}
+
+/* ⚠️ A flowed card has a card's width, not the page's, and a heading or a label
+ * that refuses to wrap is what tips such a table into scrolling: "Thresholds in
+ * force then" is one unbreakable 190px word to the layout, and it pushed the
+ * last column off the edge, where a clipped heading reads as broken text rather
+ * than as more to scroll to.
+ *
+ * `normal` permits a wrap, it does not force one — so a column with room is
+ * unaffected, and the exception is the figures: a number broken over two lines
+ * is worse than a scrollbar, so `.num` keeps `nowrap`. */
+.flow th,
+.flow td:not(.num) {
+  white-space: normal;
 }
 
 /* --- Bands (the Today page) ---
@@ -228,23 +356,28 @@ h1 {
   margin: 3px 0 0;
 }
 
-/* --- Card + stat --- */
+/* --- Card + stat ---
+ *
+ * ⚠️ **`auto-fit`, not `auto-fill`, and that one word was the empty right-hand
+ * margin.** `auto-fill` lays out as many tracks as fit and leaves the unused ones
+ * standing: four cards in a six-track row stayed 230px wide with five hundred
+ * pixels of ground beside them. `auto-fit` collapses the empty tracks and the
+ * cards take the width back.
+ *
+ * `min(100%, …)` on the minimum is what keeps a 230px card out of a 200px
+ * container — without it the track floors at 230 and the page itself scrolls
+ * sideways.
+ */
 .grid {
   display: grid;
   gap: var(--gap);
-  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
 }
 
 /* A card with a heading and a handful of figures under it needs more room than
-   a single number does. `auto-fill` keeps the track width honest when a band has
-   fewer cards than columns — the row stays left-aligned instead of two cards
-   stretching to half the page each. */
+   a single number does. */
 .grid-wide {
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-}
-/* …except where the band only ever has two, and they should share the width. */
-.grid-fit {
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
 }
 
 .card {
@@ -404,6 +537,28 @@ h1 {
   }
 }
 
+/* --- Charts ---
+ *
+ * A chart is wide by nature: it never flows into a column beside something else,
+ * and its height follows the width it was given rather than a number typed once
+ * for a laptop. `ResponsiveContainer` needs a definite height from its parent,
+ * and a `clamp` is definite — so this is the whole mechanism.
+ *
+ * Tied to the VIEWPORT width and not the container's: `cqw` would be the honest
+ * unit, but the containers here are not query containers and making them so
+ * would change what `%` means inside every card. The two agree closely enough,
+ * because a chart always has the page's full column.
+ */
+.chart {
+  width: 100%;
+  height: clamp(240px, 18vw, 360px);
+}
+/* The shorter ones — a stacked night, a month of days, one session's pulse. */
+.chart-sm {
+  width: 100%;
+  height: clamp(200px, 14vw, 290px);
+}
+
 /* --- Table (workouts, sleep) --- */
 .table-wrap {
   overflow-x: auto;
@@ -555,17 +710,32 @@ button.linkish {
   margin-bottom: 10px;
 }
 
+/* A hundred types in a scroller: it grows with the window, because the reason to
+   keep it short is the screen behind it, not the list. */
 .picker-list {
-  max-height: 320px;
+  max-height: clamp(240px, 34vh, 460px);
   overflow-y: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   background: var(--surface-2);
   padding-bottom: 4px;
 }
-@media (max-width: 820px) {
+
+/* Groups side by side once there is room for them. A picker row is a dot, a
+   name, a glyph and a unit; in a 1300px column the unit ends up half a screen
+   from the name it belongs to. Two columns of groups halve that distance and
+   halve the scrolling.
+
+   ⚠️ Grid over `columns: 2`: multi-column inside an `overflow-y` scroller lays
+   its columns out sideways, so the list would have scrolled in the wrong
+   direction. The children are one element per group, which is exactly what a
+   grid cell wants. */
+@media (min-width: 1180px) {
   .picker-list {
-    max-height: 260px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+    align-content: start;
   }
 }
 
@@ -694,6 +864,7 @@ button.linkish {
 .cov-headline {
   font-size: 15px;
   margin: 0 0 16px;
+  max-width: 78ch;
 }
 
 /* The state dot. `never_arrived` is grey and not red on purpose: most of the
@@ -759,11 +930,15 @@ button.linkish {
   gap: 10px 14px;
   margin-top: 10px;
 }
+/* The six of them share whatever the row has: they used to be six 150px
+   dropdowns huddled on the left of a 1100px card. `1 1 170px` lets them grow
+   into the width and drop to two or three across when there is none. */
 .filter-field {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  flex: 0 1 auto;
+  flex: 1 1 170px;
+  min-width: 0;
 }
 .filter-field .subtle {
   margin: 0;
@@ -771,7 +946,8 @@ button.linkish {
 }
 .filter-field .field {
   flex: 0 0 auto;
-  min-width: 150px;
+  min-width: 0;
+  width: 100%;
 }
 .filter-summary {
   display: flex;
@@ -823,6 +999,19 @@ button.linkish {
   margin: 0 0 0 auto;
   font-size: 13px;
   font-variant-numeric: tabular-nums;
+}
+/* On a phone the count and the total do not fit beside the month's name, and
+   squeezing them there is what turns "12 sessions · 9 h 40 min" into a column of
+   single words. They drop to a second line, indented past the chevron so they
+   still read as belonging to the name above. */
+@media (max-width: 560px) {
+  .month-head {
+    flex-wrap: wrap;
+  }
+  .month-summary {
+    flex: 1 0 100%;
+    margin: 2px 0 0 23px;
+  }
 }
 .card.month .table-wrap {
   margin-top: 0 !important;
@@ -900,6 +1089,34 @@ tbody tr:has(+ .fold-caption) td {
   min-width: 60px;
 }
 
+/* ⚠️ The five fixed minimums add up to 384px before the padding, so on a 390px
+ * phone this row was what made the whole PAGE scroll sideways — the one place
+ * where `.table-wrap` could not catch it, because it is not a table. Below that
+ * the row folds: the night and its length on the first line, the efficiency and
+ * the awakenings at the end of it, and the stage bar across the second. Nothing
+ * is dropped; a row that hid two of its five figures on a phone would be a
+ * different row, not a narrower one. */
+@media (max-width: 560px) {
+  .night-row {
+    flex-wrap: wrap;
+    gap: 6px 12px;
+    padding: 9px 8px;
+  }
+  .night-date {
+    flex: 1 1 auto;
+    min-width: 0;
+  }
+  .night-length,
+  .night-eff,
+  .night-wakes {
+    min-width: 0;
+  }
+  .night-row .hypnogram {
+    flex: 1 0 100%;
+    min-width: 0;
+  }
+}
+
 /* The proportional stage bar. Shared by the night card and the rows, so that a
  * strip in a row means exactly what the strip in the card above it means. */
 .hypnogram {
@@ -930,11 +1147,18 @@ tbody tr:has(+ .fold-caption) td {
   border-radius: 3px;
 }
 
-/* The session's numbers. Narrower tracks than `.grid`, because these are single
- * figures and a six-card grid at 230px wraps to three rows on a laptop — the
- * phone's own grid adapts from 108pt for the same reason. */
+/* A row of single figures — the session's numbers, the day's four, the night's
+ * four. Narrower tracks than `.grid`, because a label and a number need less
+ * room than a card with a table in it; the phone's own grid adapts from 108pt
+ * for the same reason.
+ *
+ * ⚠️ The 150 is measured, not chosen. Two constraints meet at it: two tiles have
+ * to fit across a 390px phone (at `.grid`'s 230 a phone got ONE tile a row, a
+ * short label and a big number with half the screen empty beside it), and they
+ * have to fit inside a CARD on that phone too — the streak's three figures sit
+ * within another card, which costs a further 32px of padding. */
 .grid-stats {
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
 }
 
 /* The route, drawn by us. ⛔ There is no map under it and there will not be one:

@@ -115,20 +115,29 @@ export default function Workouts() {
         total={allSessions.length}
       />
 
+      {/* ⚠️ The months stay one under another, however wide the window is, and
+          that is a decision rather than an omission. A month is a seven-column
+          table of sessions — wide by nature — and two of them side by side would
+          each be scrolling sideways inside a card. The other half of the reason
+          is that this list is chronological: months in two columns have to be
+          read in a Z, and "when did I last swim" is a question you answer by
+          going down. */}
       {groups.length === 0 ? (
         <Empty
           title={t('workouts.filter.none.title')}
           hint={tp('workouts.filter.none.hint', allSessions.length)}
         />
       ) : (
-        months.map((m) => (
-          <MonthSection
-            key={m.id}
-            month={m}
-            open={expanded.has(m.id)}
-            onToggle={() => toggle(m.id)}
-          />
-        ))
+        <div className="sections" style={{ marginTop: 16 }}>
+          {months.map((m) => (
+            <MonthSection
+              key={m.id}
+              month={m}
+              open={expanded.has(m.id)}
+              onToggle={() => toggle(m.id)}
+            />
+          ))}
+        </div>
       )}
 
       <div className="grid" style={{ marginTop: 16 }}>
@@ -314,7 +323,7 @@ function MonthSection({
   const title = f.monthYearLong(month.startIso)
 
   return (
-    <div className="card month" style={{ marginBottom: 12 }}>
+    <div className="card month">
       <button
         type="button"
         className="month-head"

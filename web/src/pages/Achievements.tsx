@@ -39,9 +39,15 @@ export default function Achievements() {
             {tp('achievements.total', items.length)}
           </p>
 
-          {groups.map((group) => (
-            <div key={group.key} style={{ marginBottom: 16 }}>
-              <Card title={t(KIND_LABEL[group.key])}>
+          {/* Each family is a table of four or five short columns — a badge, a
+              month, a figure, a date. Down a single 1300px column those columns
+              drift so far apart that reading one row is a sweep of the head;
+              side by side they are a table again. `flow-wide` and not `flow`,
+              because five columns need more than 380px before the table starts
+              scrolling inside its own card. */}
+          <div className="flow flow-wide">
+            {groups.map((group) => (
+              <Card key={group.key} title={t(KIND_LABEL[group.key])}>
                 <div className="table-wrap">
                   <table>
                     <thead>
@@ -82,8 +88,8 @@ export default function Achievements() {
                   </>
                 )}
               </Card>
-            </div>
-          ))}
+            ))}
+          </div>
         </>
       )}
     </>

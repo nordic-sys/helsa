@@ -169,7 +169,7 @@ export default function Nutrition() {
         <Empty title={t('nutrition.empty.title')} hint={t('nutrition.empty.hint')} />
       ) : (
         <>
-          <div className="grid" style={{ marginBottom: 18 }}>
+          <div className="grid grid-stats" style={{ marginBottom: 18 }}>
             <Stat
               label={stat(ENERGY)}
               value={f.fmt(daily(of(ENERGY), range), 0)}
@@ -237,7 +237,7 @@ export default function Nutrition() {
               <Card
                 title={t(degraded ? 'nutrition.chart.perBucket' : 'nutrition.chart.perDay')}
               >
-                <div style={{ width: '100%', height: 300 }}>
+                <div className="chart">
                   <ResponsiveContainer>
                     <BarChart data={daysChart} margin={{ top: 8, right: 12, bottom: 4, left: -8 }}>
                       <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
@@ -295,17 +295,23 @@ export default function Nutrition() {
             </div>
           )}
 
-          {SECTIONS.map(({ title, defs }) => (
-            <NutrientTable
-              key={title}
-              title={t(title)}
-              defs={defs}
-              read={read}
-              range={range}
-              showAll={showAll}
-              degraded={degraded}
-            />
-          ))}
+          {/* Three narrow columns each — a nutrient, a figure, a unit. They are
+              the page's clearest case of a card only as wide as its content, so
+              they share a row; the two things above them (the split bar and the
+              day chart) are wide by nature and keep the page to themselves. */}
+          <div className="flow" style={{ marginBottom: 16 }}>
+            {SECTIONS.map(({ title, defs }) => (
+              <NutrientTable
+                key={title}
+                title={t(title)}
+                defs={defs}
+                read={read}
+                range={range}
+                showAll={showAll}
+                degraded={degraded}
+              />
+            ))}
+          </div>
 
           <button className="seg" onClick={() => setShowAll((v) => !v)} aria-pressed={showAll}>
             {showAll
@@ -338,40 +344,40 @@ function NutrientTable({
   const rows = defs.filter((d) => showAll || read.get(d.key)!.hasData)
   if (rows.length === 0) return null
 
+  // No wrapper and no margin of its own: it is a cell of the `.flow` above, and
+  // the gap between the cells is the grid's.
   return (
-    <div style={{ marginBottom: 16 }}>
-      <Card title={title}>
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>{t('nutrition.col.nutrient')}</th>
-                <th>{t(headlineKey(degraded, range))}</th>
-                {/* For a degraded series there is no "period total": the server
-                    returned an average, and making a sum out of that would be a lie. */}
-                {!degraded && <th>{t('nutrition.col.periodTotal')}</th>}
-                <th>{t('nutrition.col.unit')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {rows.map((d) => {
-                const r = read.get(d.key)!
-                return (
-                  <tr key={d.key} style={r.hasData ? undefined : { opacity: 0.5 }}>
-                    <td>
-                      <span className="picker-dot" style={{ background: d.color }} />{' '}
-                      {tMetric(d.key)}
-                    </td>
-                    <td className="num">{f.fmt(daily(r, range), d.digits)}</td>
-                    {!degraded && <td className="num">{f.fmt(r.total, d.digits)}</td>}
-                    <td className="num">{f.unit(r.unit)}</td>
-                  </tr>
-                )
-              })}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-    </div>
+    <Card title={title}>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>{t('nutrition.col.nutrient')}</th>
+              <th>{t(headlineKey(degraded, range))}</th>
+              {/* For a degraded series there is no "period total": the server
+                  returned an average, and making a sum out of that would be a lie. */}
+              {!degraded && <th>{t('nutrition.col.periodTotal')}</th>}
+              <th>{t('nutrition.col.unit')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((d) => {
+              const r = read.get(d.key)!
+              return (
+                <tr key={d.key} style={r.hasData ? undefined : { opacity: 0.5 }}>
+                  <td>
+                    <span className="picker-dot" style={{ background: d.color }} />{' '}
+                    {tMetric(d.key)}
+                  </td>
+                  <td className="num">{f.fmt(daily(r, range), d.digits)}</td>
+                  {!degraded && <td className="num">{f.fmt(r.total, d.digits)}</td>}
+                  <td className="num">{f.unit(r.unit)}</td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
+    </Card>
   )
 }

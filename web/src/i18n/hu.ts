@@ -608,6 +608,10 @@ export const hu = {
     'nav.group.longView': 'Hosszú táv',
     'nav.group.areas': 'Területek',
     'nav.group.status': 'Állapot',
+    // A gomb, ami a keskeny elrendezésben ugyanezt a listát nyitja ki. Egy szó
+    // mindkét állapotban — az `aria-expanded` és a nyíl mondja meg, melyikben
+    // van; egy „Bezárás”-ra váltó felirat elmozdítaná a gombot az ujj alól.
+    'nav.menu': 'Menü',
 
     // --- A Ma oldal sávjai -------------------------------------------------
     // A magyarázó mondatok az app `DashboardBand.explanation`-jei.

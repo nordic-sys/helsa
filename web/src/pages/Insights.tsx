@@ -62,9 +62,15 @@ export default function Insights() {
             {t('insights.serverLanguage')}
           </p>
 
-          {groups.map((group) => (
-            <div key={group.key} style={{ marginBottom: 16 }}>
-              <Card title={t(KIND_LABEL[group.key])}>
+          {/* ⚠️ These are paragraphs, and a paragraph has a width past which it
+              stops being readable — the eye loses the start of the next line. One
+              column of full-width sentences on a 1400px screen was worse than the
+              same sentences on a laptop, which is the opposite of what more room
+              should buy. Two or three columns of families instead: each one
+              narrow enough to read, and all of them on screen at once. */}
+          <div className="flow">
+            {groups.map((group) => (
+              <Card key={group.key} title={t(KIND_LABEL[group.key])}>
                 <p className="subtle" style={{ margin: '-2px 0 4px' }}>
                   {t(KIND_ABOUT[group.key])}
                 </p>
@@ -76,8 +82,8 @@ export default function Insights() {
                   />
                 ))}
               </Card>
-            </div>
-          ))}
+            ))}
+          </div>
         </>
       )}
     </>
