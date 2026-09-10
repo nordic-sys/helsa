@@ -18,6 +18,7 @@ import (
 
 	"github.com/nordic-sys/helsa/backend/internal/api"
 	"github.com/nordic-sys/helsa/backend/internal/auth"
+	"github.com/nordic-sys/helsa/backend/internal/baseline"
 	"github.com/nordic-sys/helsa/backend/internal/config"
 	"github.com/nordic-sys/helsa/backend/internal/db"
 	"github.com/nordic-sys/helsa/backend/internal/export"
@@ -38,6 +39,7 @@ type Server struct {
 	queue    *queue.Queue
 	auth     *auth.Service
 	summary  *summary.Service
+	baseline *baseline.Service
 	workouts *workouts.Service
 	samples  *samples.Service
 	export   *export.DBSource
@@ -46,12 +48,17 @@ type Server struct {
 }
 
 func New(cfg *config.Config, st *store.Store, q *queue.Queue) *Server {
+	// One summary service, shared: the baseline reads THROUGH it rather than
+	// straight from the pool, so the band rests on the same daily buckets the client
+	// is looking at.
+	sum := summary.New(st.DB, st.Redis)
 	return &Server{
 		cfg:      cfg,
 		store:    st,
 		queue:    q,
 		auth:     auth.New(cfg, st.DB, st.Redis),
-		summary:  summary.New(st.DB, st.Redis),
+		summary:  sum,
+		baseline: baseline.New(sum),
 		workouts: workouts.New(st.DB),
 		samples:  samples.New(st.DB),
 		export:   export.NewDBSource(st.DB),

@@ -268,18 +268,63 @@ func (e InsightSeverity) Valid() bool {
 	}
 }
 
+// Defines values for MetricBaselineAgg.
+const (
+	MetricBaselineAggAvg MetricBaselineAgg = "avg"
+	MetricBaselineAggSum MetricBaselineAgg = "sum"
+)
+
+// Valid indicates whether the value is a known member of the MetricBaselineAgg enum.
+func (e MetricBaselineAgg) Valid() bool {
+	switch e {
+	case MetricBaselineAggAvg:
+		return true
+	case MetricBaselineAggSum:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MetricBaselineStanding.
+const (
+	Above     MetricBaselineStanding = "above"
+	Below     MetricBaselineStanding = "below"
+	Typical   MetricBaselineStanding = "typical"
+	WellAbove MetricBaselineStanding = "wellAbove"
+	WellBelow MetricBaselineStanding = "wellBelow"
+)
+
+// Valid indicates whether the value is a known member of the MetricBaselineStanding enum.
+func (e MetricBaselineStanding) Valid() bool {
+	switch e {
+	case Above:
+		return true
+	case Below:
+		return true
+	case Typical:
+		return true
+	case WellAbove:
+		return true
+	case WellBelow:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MetricSeriesAgg.
 const (
-	Avg MetricSeriesAgg = "avg"
-	Sum MetricSeriesAgg = "sum"
+	MetricSeriesAggAvg MetricSeriesAgg = "avg"
+	MetricSeriesAggSum MetricSeriesAgg = "sum"
 )
 
 // Valid indicates whether the value is a known member of the MetricSeriesAgg enum.
 func (e MetricSeriesAgg) Valid() bool {
 	switch e {
-	case Avg:
+	case MetricSeriesAggAvg:
 		return true
-	case Sum:
+	case MetricSeriesAggSum:
 		return true
 	default:
 		return false
@@ -412,24 +457,42 @@ func (e SleepSegmentInStage) Valid() bool {
 	}
 }
 
+// Defines values for GetBaselineParamsRange.
+const (
+	GetBaselineParamsRangeMonth GetBaselineParamsRange = "month"
+	GetBaselineParamsRangeWeek  GetBaselineParamsRange = "week"
+)
+
+// Valid indicates whether the value is a known member of the GetBaselineParamsRange enum.
+func (e GetBaselineParamsRange) Valid() bool {
+	switch e {
+	case GetBaselineParamsRangeMonth:
+		return true
+	case GetBaselineParamsRangeWeek:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetSummaryParamsRange.
 const (
-	Day   GetSummaryParamsRange = "day"
-	Month GetSummaryParamsRange = "month"
-	Week  GetSummaryParamsRange = "week"
-	Year  GetSummaryParamsRange = "year"
+	GetSummaryParamsRangeDay   GetSummaryParamsRange = "day"
+	GetSummaryParamsRangeMonth GetSummaryParamsRange = "month"
+	GetSummaryParamsRangeWeek  GetSummaryParamsRange = "week"
+	GetSummaryParamsRangeYear  GetSummaryParamsRange = "year"
 )
 
 // Valid indicates whether the value is a known member of the GetSummaryParamsRange enum.
 func (e GetSummaryParamsRange) Valid() bool {
 	switch e {
-	case Day:
+	case GetSummaryParamsRangeDay:
 		return true
-	case Month:
+	case GetSummaryParamsRangeMonth:
 		return true
-	case Week:
+	case GetSummaryParamsRangeWeek:
 		return true
-	case Year:
+	case GetSummaryParamsRangeYear:
 		return true
 	default:
 		return false
@@ -486,6 +549,28 @@ type ActivitySummary struct {
 	ExerciseMinutes  *float32            `json:"exercise_minutes,omitempty"`
 	StandGoal        *float32            `json:"stand_goal,omitempty"`
 	StandHours       *float32            `json:"stand_hours,omitempty"`
+}
+
+// BaselineResponse defines model for BaselineResponse.
+type BaselineResponse struct {
+	// From the first day of the period being looked at
+	From    *openapi_types.Date        `json:"from,omitempty"`
+	Metrics *map[string]MetricBaseline `json:"metrics,omitempty"`
+
+	// MinDays 14 — how many measured days a band needs. Sent rather than assumed, so that a client does not have to keep a third copy of the number.
+	MinDays *int    `json:"min_days,omitempty"`
+	Range   *string `json:"range,omitempty"`
+
+	// ReferenceDays 60 — how far the reference reaches. Not 30: a 30-day reference under a 30-day chart would be the chart describing itself.
+	ReferenceDays *int                `json:"reference_days,omitempty"`
+	ReferenceFrom *openapi_types.Date `json:"reference_from,omitempty"`
+
+	// ReferenceTo the last day of the reference window, inclusive. It is `to`, or today if `to` is still ahead of us — the anchor rule in §2 of the endpoint description.
+	ReferenceTo *openapi_types.Date `json:"reference_to,omitempty"`
+
+	// To its last day, inclusive
+	To *openapi_types.Date `json:"to,omitempty"`
+	Tz *string             `json:"tz,omitempty"`
 }
 
 // Device defines model for Device.
@@ -622,6 +707,41 @@ type InsightKind string
 
 // InsightSeverity defines model for Insight.Severity.
 type InsightSeverity string
+
+// MetricBaseline One metric's usual range.
+//
+// ⚠️ **Everything but `day_count` may be absent, and the absence IS the answer:** too few measured days, or a reference window that never varied, means there is no band to draw. It does not mean zero, and it must not be shown as a narrower or a guessed one.
+type MetricBaseline struct {
+	Agg *MetricBaselineAgg `json:"agg,omitempty"`
+
+	// DayCount How many of the reference days carried a measurement. Worth naming on a UI: a band resting on 14 days and one resting on 60 are not equally strong claims.
+	DayCount *int `json:"day_count,omitempty"`
+
+	// High `mean + sd`
+	High *float32 `json:"high,omitempty"`
+
+	// Low `mean − sd`
+	Low  *float32 `json:"low,omitempty"`
+	Mean *float32 `json:"mean,omitempty"`
+
+	// PeriodValue The period's AVERAGE MEASURED DAY — not its total. For a summed metric the total of 7 days and the total of 30 are not comparable at all, while the average day of each is; for an averaged metric the two are the same number. Absent if the period holds no measurement.
+	PeriodValue *float32 `json:"period_value,omitempty"`
+
+	// Sd The SAMPLE standard deviation (n−1) of those days.
+	Sd *float32 `json:"sd,omitempty"`
+
+	// Standing Where `period_value` sits against the band; absent whenever either of them is. A TOKEN, not a sentence — the client words it in its own language, for the same reason `Insight.rule` exists.
+	Standing *MetricBaselineStanding `json:"standing,omitempty"`
+
+	// Unit The same convention as `MetricSeries.unit`, including the 0…100 percentages.
+	Unit *string `json:"unit,omitempty"`
+}
+
+// MetricBaselineAgg defines model for MetricBaseline.Agg.
+type MetricBaselineAgg string
+
+// MetricBaselineStanding Where `period_value` sits against the band; absent whenever either of them is. A TOKEN, not a sentence — the client words it in its own language, for the same reason `Insight.rule` exists.
+type MetricBaselineStanding string
 
 // MetricSeries One metric's time series, broken into buckets.
 //
@@ -836,6 +956,25 @@ type GetActivityParams struct {
 	Tz   *string             `form:"tz,omitempty" json:"tz,omitempty"`
 }
 
+// GetBaselineParams defines parameters for GetBaseline.
+type GetBaselineParams struct {
+	// Metrics a comma-separated list, as for /summary
+	Metrics string `form:"metrics" json:"metrics"`
+
+	// Range the period being looked at; its end anchors the reference window
+	Range GetBaselineParamsRange `form:"range" json:"range"`
+
+	// Tz IANA tz; if missing, user.time_zone
+	Tz *string `form:"tz,omitempty" json:"tz,omitempty"`
+
+	// From shifts the period, exactly as for /summary
+	From *openapi_types.Date `form:"from,omitempty" json:"from,omitempty"`
+	To   *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
+}
+
+// GetBaselineParamsRange defines parameters for GetBaseline.
+type GetBaselineParamsRange string
+
 // GetSamplesParams defines parameters for GetSamples.
 type GetSamplesParams struct {
 	DataType string     `form:"data_type" json:"data_type"`
@@ -915,6 +1054,9 @@ type ServerInterface interface {
 	// Refresh the access token with a refresh token
 	// (POST /auth/refresh)
 	PostAuthRefresh(w http.ResponseWriter, r *http.Request)
+	// The person's own usual range, and where a period stands against it
+	// (GET /baseline)
+	GetBaseline(w http.ResponseWriter, r *http.Request, params GetBaselineParams)
 	// Connected devices
 	// (GET /devices)
 	GetDevices(w http.ResponseWriter, r *http.Request)
@@ -1011,6 +1153,12 @@ func (_ Unimplemented) PostAuthLogout(w http.ResponseWriter, r *http.Request) {
 // Refresh the access token with a refresh token
 // (POST /auth/refresh)
 func (_ Unimplemented) PostAuthRefresh(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The person's own usual range, and where a period stands against it
+// (GET /baseline)
+func (_ Unimplemented) GetBaseline(w http.ResponseWriter, r *http.Request, params GetBaselineParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1279,6 +1427,97 @@ func (siw *ServerInterfaceWrapper) PostAuthRefresh(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostAuthRefresh(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetBaseline operation middleware
+func (siw *ServerInterfaceWrapper) GetBaseline(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetBaselineParams
+
+	// ------------- Required query parameter "metrics" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "metrics", r.URL.Query(), &params.Metrics, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "metrics"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "metrics", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "range" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "range", r.URL.Query(), &params.Range, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "range"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "range", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tz" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tz", r.URL.Query(), &params.Tz, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tz"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tz", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetBaseline(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2078,6 +2317,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/auth/refresh", wrapper.PostAuthRefresh)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/baseline", wrapper.GetBaseline)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/devices", wrapper.GetDevices)

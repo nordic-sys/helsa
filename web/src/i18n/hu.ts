@@ -83,6 +83,25 @@ export const hu = {
     'trends.periodTotal': 'Összesen az időszakban',
     'trends.bandNote': '· a halvány sáv a bucketen belüli minimum–maximum',
 
+    // --- Trends · a szokásos tartomány --------------------------------------
+    // ⚠️ „Szokásos”, soha nem „normális”: a normálisnak orvosi csengése van, amit
+    // ez a szám nem érdemel meg — az elmúlt két hónap leírása, nem laboratóriumi
+    // referenciatartomány. Az öt szó az appé (`TrendStanding.label`), és a
+    // kettőnek egyeznie kell: aki a telefonján ezt olvassa, a böngészőben ne
+    // találkozzon másik megfogalmazással ugyanarról a számról.
+    // Ugyanaz a mondat, ami az app grafikon-jelmagyarázatában áll: ugyanarra a
+    // kérdésre felel — mi az a halvány téglalap —, és a napok számának kimondása a
+    // lényege. Egy 14 napon és egy 60 napon nyugvó sáv nem egyformán erős állítás.
+    'trends.usual.band':
+      'A széles sáv a szokásos tartományod: az utolsó {days} mért nap közepe, annyi szórással, amennyi ezekben a napokban volt.',
+    'trends.usual.pending':
+      'Még nincs elég mért nap a szokásos tartományhoz ({days}/{min}). Addig nem rajzolunk sávot — egy kevesebb napra támaszkodó sáv nem szűkebb állítás lenne, hanem ugyanolyan magabiztos.',
+    'trends.standing.wellBelow': 'Jóval a szokásod alatt',
+    'trends.standing.below': 'A szokásod alatt',
+    'trends.standing.typical': 'A szokásos tartományodban',
+    'trends.standing.above': 'A szokásod fölött',
+    'trends.standing.wellAbove': 'Jóval a szokásod fölött',
+
     // --- Workouts ----------------------------------------------------------
     'workouts.title': 'Edzések',
     'workouts.subtitle': 'A legutóbbi edzések, a legfrissebbel kezdve.',
