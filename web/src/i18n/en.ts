@@ -80,6 +80,39 @@ export const en: Dict = {
     'trends.periodTotal': 'Total over the period',
     'trends.bandNote': '· the pale band is the minimum–maximum inside the bucket',
 
+    // --- Trends · stepping through periods -----------------------------------
+    // What a ROLLING window is called. It has no name of its own — nobody calls
+    // the stretch from last Friday to this one anything — so it is named by what
+    // it is. A calendar window gets its real name instead ("August 2026"), built
+    // from `Intl` rather than from a key here, because the month names are the
+    // one thing the browser already knows in every language.
+    'trends.window.day': 'Today, hour by hour',
+    'trends.window.week': 'The last 7 days',
+    'trends.window.month': 'The last 30 days',
+    'trends.window.year': 'The last 12 months',
+    'trends.step.back': 'Earlier period',
+    'trends.step.forward': 'Later period',
+    'trends.step.now': 'Back to now',
+    // ⚠️ The drill hint is spelled out per level, not assembled from a range
+    // name, because the month → week step is the one that surprises people: a
+    // month's bars are days, and a tap on one opens the week around it.
+    'trends.drill.toMonth': 'Tap the chart to open the month around that point.',
+    'trends.drill.toWeek':
+      'Tap the chart to open the week around that point — the bars are days, but the week is usually the level people mean.',
+    'trends.drill.toDay': 'Tap the chart to open that day, hour by hour.',
+
+    // --- Trends · against the previous period --------------------------------
+    // ⚠️ No colour and no verdict. A rise is sometimes a joy (steps) and
+    // sometimes a warning (resting heart rate); this page has no way of knowing
+    // which the reader is after, so it states the fact and stops.
+    'trends.compare.title': 'Against the previous period',
+    'trends.compare.unchanged': 'No change',
+    'trends.compare.previous': 'The previous period ({dates}): {value}',
+    'trends.compare.none':
+      'Nothing was measured in the previous period, so there is nothing to compare against. That is not a fall to zero — it is a gap.',
+    'trends.compare.clipped':
+      'This period is still running, so only the {days} days that have happened are compared — against the same {days} days of the previous period, not against all of it. Twenty-seven days beside thirty-one would read as a collapse.',
+
     // --- Trends · your usual range ------------------------------------------
     // ⚠️ "Usual", never "normal": normal has a medical ring to it that this number
     // does not deserve — it is a description of the last two months, not a

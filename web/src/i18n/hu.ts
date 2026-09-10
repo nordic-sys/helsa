@@ -85,6 +85,39 @@ export const hu = {
     'trends.periodTotal': 'Összesen az időszakban',
     'trends.bandNote': '· a halvány sáv a bucketen belüli minimum–maximum',
 
+    // --- Trendek · lépkedés az időszakok között ------------------------------
+    // Ahogy a GÖRDÜLŐ ablakot hívjuk. Saját neve nincs — a múlt péntektől a
+    // mostaniig tartó szakaszt senki nem nevezi sehogy —, ezért azzal nevezzük
+    // meg, ami. A naptári ablak a valódi nevét kapja („2026. augusztus”), amit
+    // az `Intl` állít elő, nem egy itteni kulcs: a hónapneveket a böngésző
+    // amúgy is tudja, minden nyelven.
+    'trends.window.day': 'Ma, óránként',
+    'trends.window.week': 'Az elmúlt 7 nap',
+    'trends.window.month': 'Az elmúlt 30 nap',
+    'trends.window.year': 'Az elmúlt 12 hónap',
+    'trends.step.back': 'Korábbi időszak',
+    'trends.step.forward': 'Későbbi időszak',
+    'trends.step.now': 'Vissza a mához',
+    // ⚠️ A lefúrás-súgó szintenként ki van írva, nem egy időtáv-névből áll
+    // össze, mert a hónap → hét lépés az, ami meglepi az embert: a hónap
+    // oszlopai napok, egy koppintás mégis a körülötte lévő hetet nyitja meg.
+    'trends.drill.toMonth': 'Koppints a grafikonra: megnyílik az a hónap.',
+    'trends.drill.toWeek':
+      'Koppints a grafikonra: megnyílik a köré eső hét — az oszlopok napok, de a hét az a szint, amire általában gondolunk.',
+    'trends.drill.toDay': 'Koppints a grafikonra: megnyílik az a nap, óránként.',
+
+    // --- Trendek · az előző időszakhoz képest --------------------------------
+    // ⚠️ Se szín, se ítélet. Egy növekedés hol öröm (lépés), hol figyelmeztetés
+    // (nyugalmi pulzus); ez az oldal nem tudhatja, melyikre kíváncsi az olvasó,
+    // ezért kimondja a tényt, és megáll.
+    'trends.compare.title': 'Az előző időszakhoz képest',
+    'trends.compare.unchanged': 'Nem változott',
+    'trends.compare.previous': 'Az előző időszak ({dates}): {value}',
+    'trends.compare.none':
+      'Az előző időszakban nem volt mérés, tehát nincs mihez hasonlítani. Ez nem nullára esés — ez hiány.',
+    'trends.compare.clipped':
+      'Ez az időszak még tart, ezért csak az eltelt {days} napot hasonlítjuk össze — az előző időszak ugyanazon {days} napjával, nem az egészével. Huszonhét nap harmincegy mellett zuhanásnak látszana.',
+
     // --- Trends · a szokásos tartomány --------------------------------------
     // ⚠️ „Szokásos”, soha nem „normális”: a normálisnak orvosi csengése van, amit
     // ez a szám nem érdemel meg — az elmúlt két hónap leírása, nem laboratóriumi

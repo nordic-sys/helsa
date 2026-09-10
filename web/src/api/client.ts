@@ -88,13 +88,32 @@ function qs(params: Record<string, string | number | undefined>): string {
 }
 
 export const api = {
-  summary: (range: Range, metrics: string[], tz?: string) =>
-    req<SummaryResponse>(`/summary${qs({ range, metrics: metrics.join(','), tz })}`),
+  /**
+   * `from`/`to` are inclusive calendar days. Without them the server picks the
+   * window itself — the stretch ending today — which is one window, and Trends
+   * needs several: the one being looked at, the one before it, and any earlier
+   * one the reader steps back to. `range` still travels either way, because that
+   * is what sets the bucket width.
+   */
+  summary: (range: Range, metrics: string[], tz?: string, from?: string, to?: string) =>
+    req<SummaryResponse>(`/summary${qs({ range, metrics: metrics.join(','), tz, from, to })}`),
 
   // A sibling of summary rather than a flag on it: the usual range is computed
   // over a 60-day window of its own, whichever window the chart happens to show.
-  baseline: (range: BaselineRange, metrics: string[], tz?: string) =>
-    req<BaselineResponse>(`/baseline${qs({ range, metrics: metrics.join(','), tz })}`),
+  //
+  // ⚠️ Give it the same `from`/`to` as the chart. The server anchors its 60-day
+  // reference window at the END of the period asked for, not at today — so when
+  // you walk back, your usual range walks with you. Without them, a month in
+  // 2024 would be told it was "above your usual" meaning above what is usual for
+  // you *now*: a comparison across two years wearing the words of one.
+  baseline: (
+    range: BaselineRange,
+    metrics: string[],
+    tz?: string,
+    from?: string,
+    to?: string,
+  ) =>
+    req<BaselineResponse>(`/baseline${qs({ range, metrics: metrics.join(','), tz, from, to })}`),
 
   activity: (from?: string, to?: string, tz?: string) =>
     req<ActivitySummary[]>(`/activity${qs({ from, to, tz })}`),

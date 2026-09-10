@@ -457,6 +457,79 @@ button.seg[aria-pressed='true'] {
   color: #fff;
 }
 
+/* --- The period stepper (Trends) ---
+ *
+ * Arrows at the edges, the window between them: its name, and under it the days
+ * it actually covers. The middle column takes all the free width so the name
+ * stays put as you step — a label that shifts sideways every tap is harder to
+ * read than one that changes in place.
+ */
+.stepper {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: -6px 0 16px;
+  /* Capped and centred rather than stretched across the content column: on a
+   * wide screen the two arrows would end up a thousand pixels apart, which is a
+   * pair of controls only in the markup. */
+  max-width: 460px;
+}
+.stepper-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  text-align: center;
+  /* Digits of the same width, so the dates do not jitter between two windows. */
+  font-variant-numeric: tabular-nums;
+}
+.stepper-label strong {
+  font-size: 14px;
+  font-weight: 600;
+}
+.stepper-label .subtle {
+  margin: 0;
+  font-size: 12.5px;
+}
+button.step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  flex: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+button.step:hover:not(:disabled) {
+  color: var(--text);
+}
+/* ⚠️ Visibly dead, not hidden: the edge of the data is something to feel, not
+ * something to discover by a tap that does nothing. */
+button.step:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* A button that reads as a link — for "Back to now", which is an action but not
+ * a control the eye should have to step over on its way to the chart. */
+button.linkish {
+  background: none;
+  border: 0;
+  padding: 2px 0 0;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--helsa-fjord);
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .field {
   flex: 1 1 220px;
   min-width: 0;
