@@ -223,8 +223,22 @@ export const en: Dict = {
     'workout.route.aria': 'The shape of the route: {points} recorded points, {length}.',
     'workout.route.dropped.one': '{n} inaccurate point left out.',
     'workout.route.dropped.other': '{n} inaccurate points left out.',
+    // ⚠️ Four states, and exactly one of them is true at a time. "No map" is the
+    // DEFAULT, and it is where anyone who never opens the setting stays.
     'workout.route.noTiles':
-      'Drawn from the recorded coordinates alone. Helsa loads no map tiles from anyone: asking a third party for the streets you ran on would tell them where you were.',
+      'Drawn from the recorded coordinates alone: there is no map under it because none is switched on. Settings has the choice — and says what each one tells whom.',
+    'workout.route.viaOwn':
+      'The map comes from your own tile server, through the Helsa server. Your browser talks only to the Helsa server, and the machine serving the tiles is yours too.',
+    'workout.route.viaPublic':
+      'The map comes from a public provider, through the Helsa server. Your browser talks only to the Helsa server — the provider sees the Helsa server’s address and which area you are looking at.',
+    'workout.route.mapUndrawable':
+      'A map source is chosen, but this browser could not draw it — it needs WebGL, or the source did not answer. The route is unchanged; the scale bar gives it its size.',
+    // Both the OpenStreetMap and the OpenMapTiles licence require a visible
+    // credit. ⚠️ Not translated and not shortened: this is a legal notice. And it
+    // comes from our own strings — an attribution fetched over the network would
+    // be one more thing the page asks of somebody else.
+    'workout.route.attribution.osm': '© OpenStreetMap contributors',
+    'workout.route.attribution.omt': '© OpenMapTiles © OpenStreetMap contributors',
 
     'workout.hr.title': 'Heart rate',
     'workout.hr.loading': 'Loading the heart-rate samples…',
@@ -465,6 +479,38 @@ export const en: Dict = {
     'settings.system.browserTz': 'Browser time zone',
     'settings.system.serverTz': 'Server time zone',
     'settings.system.units': 'Unit system',
+    // --- Settings · map source ----------------------------------------------
+    // ⚠️ The choice is a privacy trade-off and it is not ours: a tile request
+    // tells whoever serves it that somebody is looking at that square of the
+    // world. So the screen states the consequence of ALL THREE options before one
+    // is picked — and defaults to the one that sends nothing.
+    'settings.map.title': 'Map under the route',
+    'settings.map.intro':
+      'A workout route gets no map on its own. If it gets one, somebody has to serve the tiles — this is where you decide who.',
+    'settings.map.off.label': 'No map',
+    'settings.map.off.note': 'The drawn route only, as before. Nobody learns anything. This is the default.',
+    'settings.map.own.label': 'Your own tile server',
+    'settings.map.own.note':
+      'A machine of yours serves the tiles — the optional container in deploy/, or anything else you run. Nothing reaches a stranger.',
+    'settings.map.public.label': 'A public, open-source source',
+    'settings.map.public.note':
+      'OpenStreetMap-based tiles from the open internet. The provider — a stranger — sees the request: the Helsa server’s address, and which area you are looking at.',
+    'settings.map.url.label': 'The address of the tile service',
+    'settings.map.url.ok': 'This address can be used.',
+    'settings.map.problem.empty': 'Enter an address, or there will be no map.',
+    'settings.map.problem.scheme': 'This has to be an http:// or https:// address.',
+    'settings.map.problem.placeholders':
+      'The address needs the {z}, {x} and {y} placeholders — that is where a tile’s coordinates go.',
+    'settings.map.format.label': 'What kind of tiles this address serves',
+    'settings.map.format.raster': 'Images (png, jpg) — what public providers usually serve',
+    'settings.map.format.vector': 'Vector (pbf, mvt) — what your own server usually serves',
+    // ⚠️ This sentence is on the card whatever is chosen, and it says two
+    // separate things. "Your browser only talks to the Helsa server" is NOT the
+    // same claim as "nothing leaves".
+    'settings.map.proxyNote':
+      'Tiles always come through the Helsa server, never straight from your browser, so your browser never talks to a stranger’s machine. What the provider sees is therefore the Helsa server’s address and the area you are looking at — not yours.',
+    'settings.map.saved': 'Saved. This setting lives in this browser.',
+
     'settings.language.title': 'Language',
     'settings.language.note':
       'The language of the interface. It is stored in the browser only — text that comes from the server (insight sentences, error messages) stays in the server’s language regardless.',

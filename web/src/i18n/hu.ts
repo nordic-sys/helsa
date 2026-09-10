@@ -225,8 +225,22 @@ export const hu = {
     'workout.route.aria': 'Az útvonal alakja: {points} rögzített pont, {length}.',
     'workout.route.dropped.one': '{n} pontatlan pont kimaradt.',
     'workout.route.dropped.other': '{n} pontatlan pont kimaradt.',
+    // ⚠️ Négy állapot, és pontosan egy igaz belőlük egyszerre. A „nincs térkép"
+    // az ALAPÉRTELMEZETT, és aki soha nem nyitja meg a beállítást, ebben marad.
     'workout.route.noTiles':
-      'Kizárólag a rögzített koordinátákból rajzolva. A Helsa senkitől nem tölt le térképcsempét: ha az utcákat harmadik féltől kérnénk el, azzal megmondanánk neki, merre jártál.',
+      'Csak a rögzített koordinátákból rajzolva: térkép nincs alatta, mert nincs bekapcsolva. A Beállításokban választhatsz forrást — és ott az is ott áll, hogy melyik mit ad tudtára kinek.',
+    'workout.route.viaOwn':
+      'A térkép a saját csempeszervereidről jön, a Helsa szerverén keresztül. A böngésződ csak a Helsa szerverével beszél, és a csempéket kérő gép is a tiéd.',
+    'workout.route.viaPublic':
+      'A térkép egy nyilvános szolgáltatótól jön, a Helsa szerverén keresztül. A böngésződ csak a Helsa szerverével beszél — a szolgáltató a Helsa szerverének címét és azt látja, melyik területet nézed.',
+    'workout.route.mapUndrawable':
+      'Van kiválasztott térképforrás, de ez a böngésző nem tudta megrajzolni — WebGL kell hozzá, vagy a forrás nem válaszolt. Az útvonal változatlan; a méretét a lépték adja meg.',
+    // Az OpenStreetMap és az OpenMapTiles licence is látható feltüntetést kér.
+    // ⚠️ Nem fordítjuk le és nem rövidítjük: ez jogi szöveg, nem felirat. És a
+    // saját szövegünkből jön — egy hálózatról letöltött feltüntetés még egy dolog
+    // lenne, amit valaki mástól kérünk el.
+    'workout.route.attribution.osm': '© OpenStreetMap közreműködők',
+    'workout.route.attribution.omt': '© OpenMapTiles © OpenStreetMap közreműködők',
 
     'workout.hr.title': 'Pulzus',
     'workout.hr.loading': 'Töltődnek a pulzusmérések…',
@@ -462,6 +476,37 @@ export const hu = {
     'settings.system.browserTz': 'Böngésző időzónája',
     'settings.system.serverTz': 'Szerver időzónája',
     'settings.system.units': 'Mértékegység',
+    // --- Beállítások · térképforrás -----------------------------------------
+    // ⚠️ A választás egy adatvédelmi alku, és nem a miénk: a csempekérés annak,
+    // aki kiszolgálja, elárulja, hogy valaki épp azt a földdarabot nézi. Ezért a
+    // képernyő MINDHÁROM lehetőségnél kimondja a következményt, mielőtt
+    // választanál — és alapból a „semmit nem küld" állapotban áll.
+    'settings.map.title': 'Térkép az útvonal alatt',
+    'settings.map.intro':
+      'Az edzés útvonala magától nem kap térképet. Ha kap, a csempéket valakinek ki kell szolgálnia — itt dől el, hogy kinek.',
+    'settings.map.off.label': 'Nincs térkép',
+    'settings.map.off.note': 'Csak a megrajzolt útvonal, ahogy eddig. Senki nem tud meg semmit. Ez az alapértelmezés.',
+    'settings.map.own.label': 'Saját csempeszerver',
+    'settings.map.own.note':
+      'A te géped szolgálja ki a csempéket — a deploy/ mappában lévő opcionális konténer, vagy bármi más, ami a tiéd. Idegenhez semmi nem jut el.',
+    'settings.map.public.label': 'Nyilvános, nyílt forrású szolgáltató',
+    'settings.map.public.note':
+      'OpenStreetMap-alapú csempék az internetről. A szolgáltató — egy idegen — látja a kérést: a Helsa szerverének címét és azt, melyik területet nézed.',
+    'settings.map.url.label': 'A csempeszolgáltatás címe',
+    'settings.map.url.ok': 'Ez a cím használható.',
+    'settings.map.problem.empty': 'Adj meg egy címet, különben nem lesz térkép.',
+    'settings.map.problem.scheme': 'Ennek http:// vagy https:// címnek kell lennie.',
+    'settings.map.problem.placeholders':
+      'A címben szerepelnie kell a {z}, {x} és {y} helyőrzőnek — ezekbe kerül a csempe koordinátája.',
+    'settings.map.format.label': 'Milyen csempéket ad ez a cím',
+    'settings.map.format.raster': 'Kép (png, jpg) — a nyilvános szolgáltatók jellemzően ilyet adnak',
+    'settings.map.format.vector': 'Vektor (pbf, mvt) — a saját szerverek jellemzően ilyet adnak',
+    // ⚠️ Ez a mondat minden választásnál ott van, és két külön dolgot mond ki. A
+    // „csak a Helsa szerverével beszél" NEM azonos azzal, hogy „semmi nem jut ki".
+    'settings.map.proxyNote':
+      'A csempék mindig a Helsa szerverén keresztül jönnek, sosem közvetlenül a böngésződből: így a böngésződ egyetlen idegen géppel sem beszél. Amit a szolgáltató lát, az ezért a Helsa szerverének címe és a nézett terület — nem a tiéd.',
+    'settings.map.saved': 'Elmentve. Ez a beállítás ebben a böngészőben él.',
+
     'settings.language.title': 'Nyelv',
     'settings.language.note':
       'A felület nyelve. Csak a böngészőben tárolódik — a szervertől érkező szöveg (insights-mondatok, hibaüzenetek) ettől függetlenül a szerver nyelvén marad.',

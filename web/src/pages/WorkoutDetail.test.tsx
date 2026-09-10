@@ -113,15 +113,33 @@ describe('an outdoor run', () => {
     })
   })
 
-  it('draws the route as a line, without a map under it', async () => {
+  it('draws the route as a line, and nothing on the page points off-site', async () => {
     const { container } = open()
     await screen.findByRole('img', { name: /shape of the route|útvonal alakja/i })
     const path = container.querySelector('svg.route path')
     expect(path?.getAttribute('d')).toMatch(/^M[\d.]+ [\d.]+L/)
-    // ⛔ No tile request, from anywhere: nothing on the page may point off-site.
-    for (const el of container.querySelectorAll('img, image, iframe')) {
-      expect(el.getAttribute('src')).not.toMatch(/^https?:/)
+    // ⛔ Since 2026-09 there CAN be a map under this line, but only ever one
+    // served by our own Caddy — so the check is no longer "no map", it is "no
+    // absolute URL". Fonts and sprites are where a self-hosted map leaks, and
+    // both would show up here as an off-site `href`.
+    for (const el of container.querySelectorAll('[src], [href]')) {
+      const url = el.getAttribute('src') ?? el.getAttribute('href')
+      expect(url).not.toMatch(/^(https?:)?\/\//)
     }
+  })
+
+  it('draws no map at all until somebody chooses one, and says so', async () => {
+    // ⚠️ This is the DEFAULT state — nothing in localStorage — and it is where
+    // anyone who never opens the setting stays. jsdom also has no WebGL, so the
+    // map-less path is walked on every test run rather than reasoned about.
+    const { container } = open()
+    expect(await screen.findByText(s('workout.route.noTiles'))).toBeInTheDocument()
+    expect(container.querySelector('.route-map')).toBeNull()
+    expect(screen.queryByText(s('workout.route.attribution.osm'))).not.toBeInTheDocument()
+    expect(screen.queryByText(s('workout.route.attribution.omt'))).not.toBeInTheDocument()
+    // The measurement is untouched by the absence: the scale bar is what gives
+    // the shape its size when there are no streets to read one off.
+    expect(container.querySelector('.route-scale')).not.toBeNull()
   })
 
   it('says how many fixes it left out rather than quietly drawing a shorter line', async () => {

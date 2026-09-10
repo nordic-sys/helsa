@@ -17,10 +17,14 @@ FROM_SOURCE := HELSA_PULL_POLICY=build
 # The DEV VM runs the same thing as production, minus the mTLS gate
 # (docker-compose.devvm.yml).
 DEVVM := docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.devvm.yml
+# The optional tile server is an EXTRA file rather than part of either stack: it
+# is off unless asked for, and nothing else refers to it.
+TILES := docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.tiles.yml
 
 .PHONY: help up down restart logs ps psql redis-cli rabbit reset migrate mqtt-up mqtt-down mqtt-watch \
         prod-up prod-down prod-logs prod-ps prod-build prod-pull prod-up-source prod-migrate prod-caddy-check \
-        devvm-up devvm-down devvm-logs devvm-ps devvm-build devvm-migrate
+        devvm-up devvm-down devvm-logs devvm-ps devvm-build devvm-migrate \
+        tiles-build tiles-install tiles-up tiles-down tiles-list
 
 help: ## List the commands
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN{FS=":.*?## "}{printf "  \033[36m%-10s\033[0m %s\n", $$1, $$2}'
@@ -126,3 +130,29 @@ devvm-ps: ## [DEV VM] Containers
 
 devvm-logs: ## [DEV VM] Logs
 	$(DEVVM) logs -f --tail=100
+
+# --- The OPTIONAL tile server ------------------------------------------------
+# The "your own tile server" answer to Settings ▸ Map under the route. ⛔ Behind a
+# compose profile: `up` never starts it, and nothing depends on it. The archives
+# never enter git — the repository is public and a region is 300–600 MB.
+#
+#   make tiles-build REGION=hungary AREA=europe/hungary   (on a build machine)
+#   make tiles-install REGION=hungary HOST=helsa-dev      (copy it over)
+#   make tiles-up                                         (on the server)
+#
+# Then paste http://tiles:3000/<region>/{z}/{x}/{y} into the setting.
+
+tiles-build: ## [build machine] Build one region: REGION=hungary AREA=europe/hungary
+	scripts/tiles-build.sh $${REGION:?set REGION, e.g. hungary} $${AREA:?set AREA, e.g. europe/hungary}
+
+tiles-install: ## [build machine] Copy a built region to a server: REGION=hungary HOST=helsa-dev
+	scripts/tiles-install.sh $${TILES_BUILD_DIR:-$(PWD)/tiles-build}/$${REGION:?set REGION}.pmtiles $${HOST:-}
+
+tiles-up: ## [VM] Start the optional tile server (profile: tiles)
+	$(TILES) --profile tiles up -d tiles
+
+tiles-down: ## [VM] Stop the optional tile server
+	$(TILES) --profile tiles rm -sf tiles
+
+tiles-list: ## [any] What regions a server has, and how much room is left: HOST=helsa-dev
+	@ssh $${HOST:?set HOST} 'ls -lh $${TILES_DIR:-/opt/helsa/tiles} 2>/dev/null; df -h $${TILES_DIR:-/opt/helsa/tiles}'

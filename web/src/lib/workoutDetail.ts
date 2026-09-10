@@ -357,16 +357,31 @@ export type ProjectedRoute = {
   finish: { x: number; y: number }
   /** Metres per drawn pixel — what the scale bar is made of. */
   metresPerPixel: number
+  /** The mean latitude the projection was built about — the `cos` in `kx`.
+   * Exported because a map underneath has to be told the SAME number: it is what
+   * turns this drawing's pixels into a zoom level (`lib/routeMap.ts`). */
+  latMid: number
+  /** The geographic point that lands in the MIDDLE of the frame. The drawn
+   * bounding box is centred in the box by construction, so this is the centre of
+   * the bounds — and it is where a map underneath has to put its camera. */
+  center: { lon: number; lat: number }
 }
 
 /**
  * The route projected into a box, drawn by us.
  *
- * ⛔ **There is no map underneath and there will not be one.** Fetching tiles
- * would put a request to a third party on a page about somebody's location, and
- * the phone's App Privacy answer rests on the same rule (the project's
- * no-third-party posture). The shape of a run is the information; the streets
- * are not.
+ * ⛔ **The streets are not fetched from a third party.** Asking a tile host for
+ * the roads somebody ran on tells the tile host where they were, and the phone's
+ * App Privacy answer rests on the same rule. Since 2026-09 there CAN be a map
+ * under this drawing, and the way that was made to keep the rule is that the
+ * tiles are built on Bob's machine and served by Bob's server — see
+ * `lib/routeMap.ts`. Where no such region is installed, this drawing stands on
+ * its own exactly as before.
+ *
+ * ⚠️ Whatever goes underneath, THIS is the projection. The map is aligned to the
+ * drawing, never the other way round: the dropped-fix accounting, the scale bar
+ * and the aspect ratio below are the measurement, and a basemap is decoration
+ * that has to fit it.
  *
  * ⚠️ **The aspect ratio is preserved.** Stretching the bounding box to fill the
  * frame would bend every route: an out-and-back along one street would come out
@@ -425,6 +440,11 @@ export function projectRoute(
     start: at(0),
     finish: at(pts.length - 1),
     metresPerPixel: scale > 0 ? 1 / scale : 0,
+    latMid,
+    // Read back out of the projected extremes rather than recomputed from the
+    // points: this is the point that lands in the middle of the FRAME, and it has
+    // to come from the same three lines that put it there.
+    center: { lon: (minX + maxX) / 2 / kx, lat: -(minY + maxY) / 2 / M_PER_DEG },
   }
 }
 

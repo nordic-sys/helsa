@@ -9,3 +9,11 @@ pki/out/
 *.pem
 *.srl
 p12-password.txt
+
+# Map archives. ⛔ A region is 300–600 MB and this repository is PUBLIC: the
+# tiles are a deploy-time artefact built by scripts/tiles-build.sh and copied to
+# the server by scripts/tiles-install.sh, never a file in git. The scratch
+# directory the build script uses goes too — it holds the OSM extracts as well.
+*.pmtiles
+*.pmtiles.part
+tiles-build/

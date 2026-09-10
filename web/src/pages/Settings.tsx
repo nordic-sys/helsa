@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, browserTz, clearToken, getToken, setToken } from '../api/client'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
+import { MapSourceCard } from '../components/MapSourceCard'
 import { Card, ErrorState, Ring } from '../components/ui'
 import { useI18n } from '../i18n'
 import { useFormat } from '../lib/format'
@@ -49,6 +50,11 @@ export default function SettingsPage() {
             {t('settings.language.note')}
           </p>
         </Card>
+
+        {/* The map source sits high on the page on purpose: it is the only
+            setting here that decides whether something leaves this machine, and a
+            choice like that should not be below a table of devices. */}
+        <MapSourceCard />
 
         <Card title={t('settings.token.title')}>
           {hasToken ? (

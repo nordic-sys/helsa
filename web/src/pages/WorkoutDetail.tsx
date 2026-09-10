@@ -29,7 +29,7 @@
 // can and names what it cannot, rather than putting one confident badge in the
 // header that would quietly claim all of it.
 
-import { useMemo } from 'react'
+import { Suspense, lazy, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import {
@@ -65,6 +65,12 @@ import {
   workoutMinutes,
   type Lap,
 } from '../lib/workoutDetail'
+import { attributionKey, mapSourceUsable, mapSupported, readMapSource } from '../lib/routeMap'
+
+// ⚠️ Lazy, and the gate in front of it matters as much as the import: MapLibre is
+// bigger than everything else on this page put together, and it is wanted on one
+// card, sometimes. See the header of `components/RouteMap.tsx`.
+const RouteMap = lazy(() => import('../components/RouteMap'))
 
 /** How far either side of the session the neighbour walk has to reach. A day is
  * generous for a five-minute duplicate tolerance, and it is the walk's ONLY stop
@@ -296,6 +302,21 @@ function RouteSection({ id, distanceM }: { id: string; distanceM?: number }) {
   const projected = useMemo(() => projectRoute(track, ROUTE_W, ROUTE_H), [track])
   const bar = projected ? scaleBar(projected.metresPerPixel, ROUTE_W) : undefined
 
+  // ⚠️ **Off unless somebody chose otherwise**, and that is the whole design: a
+  // map under a GPS trace is a privacy decision belonging to the reader, so the
+  // default state of this card is the one it has always had. `readMapSource` is a
+  // localStorage read, cheap enough to do on render and correct after a change on
+  // the Settings page without any plumbing between the two.
+  const source = readMapSource()
+  const chosen = mapSourceUsable(source)
+
+  // The gate has three parts and all three are needed: a chosen source, a browser
+  // that can draw WebGL, and no earlier failure. Any of them missing means the
+  // map-less drawing — which is the SAME drawing, not a degraded one.
+  const [mapFailed, setMapFailed] = useState(false)
+  const canDrawMap = mapSupported()
+  const showMap = Boolean(projected && chosen && canDrawMap && !mapFailed)
+
   if (q.isLoading) {
     return (
       <Card title={t('workout.route.title')}>
@@ -323,51 +344,73 @@ function RouteSection({ id, distanceM }: { id: string; distanceM?: number }) {
 
   return (
     <Card title={t('workout.route.title')}>
-      <svg
-        className="route"
-        viewBox={`0 0 ${ROUTE_W} ${ROUTE_H}`}
-        role="img"
-        aria-label={t('workout.route.aria', {
-          points: track.points.length,
-          length: f.km(distanceM ?? track.drawnLengthM),
-        })}
-      >
-        <path
-          d={projected.d}
-          fill="none"
-          stroke="var(--helsa-fjord)"
-          strokeWidth={5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        {/* ⚠️ In a loop the two markers land on TOP of each other and the upper
-            one hides the lower: the reader sees one flag and cannot tell which.
-            One marker saying both is more information, not less. */}
-        {track.closedLoop ? (
-          <Endpoint x={projected.start.x} y={projected.start.y} color="var(--helsa-fjord)" />
-        ) : (
-          <>
-            <Endpoint x={projected.start.x} y={projected.start.y} color="var(--helsa-move)" />
-            <Endpoint x={projected.finish.x} y={projected.finish.y} color="var(--helsa-ember)" />
-          </>
-        )}
-        {bar && (
-          <g className="route-scale">
-            <line
-              x1={16}
-              y1={ROUTE_H - 16}
-              x2={16 + bar.pixels}
-              y2={ROUTE_H - 16}
-              stroke="currentColor"
-              strokeWidth={3}
-              strokeLinecap="round"
+      {/* The map goes BEHIND the drawing, in the same box, at the same scale.
+          The frame is what holds the two together: the SVG sets the height (it
+          has the viewBox), the map fills the frame absolutely, and the drawing
+          stacks on top of it. Remove the map and the SVG is unchanged. */}
+      <div className={`route-frame${showMap ? ' route-frame--mapped' : ''}`}>
+        {showMap && projected && (
+          <Suspense fallback={null}>
+            <RouteMap
+              source={source}
+              projected={projected}
+              viewBoxWidth={ROUTE_W}
+              onFailed={() => setMapFailed(true)}
             />
-            <text x={16} y={ROUTE_H - 26} fontSize={16}>
-              {f.km(bar.metres)}
-            </text>
-          </g>
+          </Suspense>
         )}
-      </svg>
+        <svg
+          className="route"
+          viewBox={`0 0 ${ROUTE_W} ${ROUTE_H}`}
+          role="img"
+          aria-label={t('workout.route.aria', {
+            points: track.points.length,
+            length: f.km(distanceM ?? track.drawnLengthM),
+          })}
+        >
+          <path
+            d={projected.d}
+            fill="none"
+            stroke="var(--helsa-fjord)"
+            strokeWidth={5}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          />
+          {/* ⚠️ In a loop the two markers land on TOP of each other and the upper
+              one hides the lower: the reader sees one flag and cannot tell which.
+              One marker saying both is more information, not less. */}
+          {track.closedLoop ? (
+            <Endpoint x={projected.start.x} y={projected.start.y} color="var(--helsa-fjord)" />
+          ) : (
+            <>
+              <Endpoint x={projected.start.x} y={projected.start.y} color="var(--helsa-move)" />
+              <Endpoint x={projected.finish.x} y={projected.finish.y} color="var(--helsa-ember)" />
+            </>
+          )}
+          {bar && (
+            <g className="route-scale">
+              <line
+                x1={16}
+                y1={ROUTE_H - 16}
+                x2={16 + bar.pixels}
+                y2={ROUTE_H - 16}
+                stroke="currentColor"
+                strokeWidth={3}
+                strokeLinecap="round"
+              />
+              <text x={16} y={ROUTE_H - 26} fontSize={16}>
+                {f.km(bar.metres)}
+              </text>
+            </g>
+          )}
+        </svg>
+        {/* ⚠️ OpenStreetMap's licence and OpenMapTiles' both ask for a VISIBLE
+            credit, and this is the only honest place for it. It is our own text,
+            not a string fetched with the tiles and not MapLibre's own control —
+            an attribution that arrived over the network would be one more thing
+            the page asks somebody else for. */}
+        {showMap && <p className="route-attrib">{t(attributionKey(source.format))}</p>}
+      </div>
 
       <p className="legend" style={{ marginTop: 8 }}>
         <span className="legend-item">
@@ -392,8 +435,23 @@ function RouteSection({ id, distanceM }: { id: string; distanceM?: number }) {
           {tp('workout.route.dropped', track.droppedCount)}
         </p>
       )}
+      {/* ⚠️ THREE states, not two, and the third was nearly missed: a browser
+          with no WebGL, or a map that failed to start, is NOT the same thing as
+          nobody having chosen a map — and telling somebody "no map is switched
+          on" when they plainly switched one on is exactly the kind of
+          confidently wrong sentence this page exists not to write. A reader who
+          is not told why the map is missing reads it as a fault; a reader told
+          the wrong reason goes looking in the wrong place. */}
       <p className="subtle" style={{ marginTop: 6 }}>
-        {t('workout.route.noTiles')}
+        {t(
+          showMap
+            ? source.mode === 'own'
+              ? 'workout.route.viaOwn'
+              : 'workout.route.viaPublic'
+            : chosen
+              ? 'workout.route.mapUndrawable'
+              : 'workout.route.noTiles',
+        )}
       </p>
     </Card>
   )

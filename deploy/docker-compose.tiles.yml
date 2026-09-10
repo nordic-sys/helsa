@@ -1,0 +1,63 @@
+# The OPTIONAL tile server — the "your own tile server" answer to the map setting.
+#
+# ⛔ **Nothing depends on this and it does not start on its own.** It sits behind
+# a compose profile, so `make prod-up` / `make devvm-up` never bring it up; the
+# stack runs exactly as before if this file is never mentioned. That is the point:
+# a map under a workout route is off by default, and the machinery for one should
+# be too.
+#
+# # What it is for
+#
+# Settings ▸ Map under the route offers three things: no map, a tile server of
+# your own, or a public provider. This is the middle one, ready-made. With it
+# running, the address to paste into the setting is:
+#
+#     http://tiles:3000/helsa/{z}/{x}/{y}
+#
+# ⚠️ A container name, not a public address — and that is deliberate. The BROWSER
+# never fetches tiles; the Helsa API does, from inside the compose network (the
+# reasoning is at the top of `backend/internal/server/tiles.go`). So this service
+# publishes no port and is reachable from nowhere but the API container.
+#
+# # What it needs, and what it does not
+#
+# It needs ONE file: a `.pmtiles` archive, built by `scripts/tiles-build.sh` on a
+# machine with RAM to spare, and copied to `${HELSA_TILES_DIR}` on the server.
+# ⛔ That file is NEVER in git — a region is 300–600 MB and this repository is
+# public; `.gitignore` refuses `*.pmtiles` tree-wide.
+#
+# It does not need a database, a renderer or a cache. Martin reads the archive
+# with range reads and serves vector tiles out of it; the resident set is a few
+# tens of megabytes, which is what makes this affordable beside everything else on
+# a 4 GB VM.
+#
+# Usage:
+#   make tiles-build REGION=hungary AREA=europe/hungary   # on a build machine
+#   make tiles-install REGION=hungary HOST=helsa-dev      # copy it over
+#   make tiles-up                                         # start this service
+services:
+  tiles:
+    profiles: ["tiles"]
+    image: ghcr.io/maplibre/martin:latest
+    container_name: helsa-tiles
+    # `--webui disable`: there is no browser on the other side of this service,
+    # only the API container, and an admin page nobody opens is surface for
+    # nothing.
+    #
+    # `--cache-size 64`: the default is 256 MB of tile cache plus more for sprites
+    # and fonts. On a 4 GB VM that is a lot of resident memory for a backdrop, and
+    # the archive is on local disk anyway — the cache is saving a read, not a
+    # round trip.
+    command: ["--listen-addresses", "0.0.0.0:3000", "--webui", "disable", "--cache-size", "64", "/tiles"]
+    volumes:
+      # Read-only, and OUTSIDE the checkout — the same reasoning as the PKI's: a
+      # `git clean` must not be able to delete a gigabyte of map, and a public
+      # repository must never be able to swallow one.
+      # ⚠️ **Only `.pmtiles` files belong in this directory.** Martin scans it and
+      # tries to make a source of everything it finds — a stray `.json` is read as
+      # GeoJSON and the container exits with a parse error, which reads as a
+      # broken image rather than as a stray file.
+      - ${HELSA_TILES_DIR:-/opt/helsa/tiles}:/tiles:ro
+    # ⛔ No `ports:`. Reachable only from the compose network, which is where the
+    # only client is.
+    restart: unless-stopped

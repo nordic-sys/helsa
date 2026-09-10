@@ -90,6 +90,13 @@ func (s *Server) Router() http.Handler {
 	r.Get("/healthz", s.GetHealthz)
 	r.Get("/readyz", s.GetReadyz)
 
+	// The map-tile proxy — hand-wired for the same kind of reason the probes are:
+	// it is not part of the phone's contract. The whole argument is at the top of
+	// tiles.go. It is registered BEFORE the mount so chi matches the explicit
+	// pattern rather than handing /v1/* to the generated router, and it carries
+	// the same device-token gate as every other /v1 route.
+	r.With(s.auth.Middleware).Get("/v1/tiles/{z}/{x}/{y}", s.GetTile)
+
 	// The ServerInterface routes are served under a /v1 prefix.
 	// Bearer protection is resolved per route (see the public-route list below).
 	apiHandler := api.HandlerWithOptions(s, api.ChiServerOptions{

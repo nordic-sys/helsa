@@ -2,3 +2,10 @@
 
 # Minden komponensnek saját .gitignore-ja van (backend/, deploy/, web/) —
 # ide csak az kerül, ami az egész fára érvényes.
+
+# ⛔ Map archives, anywhere in the tree. A region is 300–600 MB and this
+# repository is public; the tiles are built by deploy/scripts/tiles-build.sh and
+# copied to the server, never committed. Tree-wide because the mistake is easy to
+# make from any directory and impossible to undo from a public history.
+*.pmtiles
+*.osm.pbf

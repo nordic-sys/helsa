@@ -1161,9 +1161,11 @@ tbody tr:has(+ .fold-caption) td {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
 }
 
-/* The route, drawn by us. ⛔ There is no map under it and there will not be one:
- * asking a tile server for the streets somebody ran on tells the tile server
- * where they were. */
+/* The route, drawn by us. ⛔ Whatever is under it comes from OUR server: the
+ * tiles are built on Bob's machine and served by the same Caddy that serves this
+ * page, because asking a tile host for the streets somebody ran on tells the tile
+ * host where they were. Where no region is installed, this is the whole drawing —
+ * and that is a supported state, not a degraded one. */
 .route {
   display: block;
   width: 100%;
@@ -1171,8 +1173,98 @@ tbody tr:has(+ .fold-caption) td {
   background: var(--surface-2);
   border-radius: var(--radius-sm);
 }
-/* The scale bar is what gives the shape a size back, now that there are no
- * streets to read one off. */
+/* The frame stacks the two. ⚠️ The SVG keeps `position: static` and therefore
+ * keeps setting the height — the viewBox is the only thing that knows the aspect
+ * ratio, and an absolutely positioned drawing would collapse the frame to zero
+ * and take the map with it. The map is the one that goes absolute. */
+.route-frame {
+  position: relative;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  /* The stacking context that keeps the map from painting over the card. */
+  isolation: isolate;
+}
+.route-frame .route {
+  position: relative;
+  z-index: 1;
+}
+/* With a map underneath, the drawing's own backdrop has to get out of the way —
+ * it is opaque, and it would hide exactly what it was added to reveal. */
+.route-frame--mapped .route {
+  background: transparent;
+  border-radius: 0;
+}
+/* The three map-source options. A radio list rather than a dropdown on purpose:
+ * the consequence of each choice has to be readable WITHOUT picking it, and a
+ * <select> hides two thirds of the text behind an interaction. */
+.map-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+.map-choice {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+.map-choice.is-chosen {
+  border-color: var(--helsa-fjord);
+  background: var(--surface-2);
+}
+.map-choice input {
+  margin-top: 3px;
+  flex: none;
+}
+.map-choice > span {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.map-choice .subtle {
+  font-size: 12.5px;
+  line-height: 1.45;
+}
+
+/* ⚠️ TWO class names, and the second one is not decoration. MapLibre's own
+ * stylesheet arrives in the LAZY chunk, so it is parsed AFTER this file, and its
+ * `.maplibregl-map { position: relative }` has exactly the same specificity as a
+ * bare `.route-map` — later wins, the map goes back to `position: relative`,
+ * collapses to `height: 0`, and renders a canvas that asks for no tiles at all.
+ *
+ * That failure is silent in every way that matters: no console error, no failed
+ * request, a canvas element present in the DOM, and a screenshot that looks like
+ * an ordinary tile-less route. The only symptom was one range request for the
+ * PMTiles header and then nothing. `.route-frame > .route-map` outranks it. */
+.route-frame > .route-map {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  width: auto;
+  height: auto;
+}
+/* Required by the OpenStreetMap and OpenMapTiles licences, so it is small but
+ * never invisible: it sits on a scrim rather than on the map, because a credit
+ * that disappears over dark water is not a visible credit. */
+.route-attrib {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  z-index: 2;
+  margin: 0;
+  padding: 2px 6px;
+  border-top-left-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  color: var(--text-dim);
+  font-size: 10.5px;
+  line-height: 1.5;
+}
+/* The scale bar is what gives the shape a size back — the map underneath is
+ * muted on purpose and carries no numbers of its own. */
 .route-scale {
   color: var(--text-dim);
   fill: var(--text-dim);
