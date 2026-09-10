@@ -135,7 +135,8 @@ export const en: Dict = {
 
     // --- Workouts ----------------------------------------------------------
     'workouts.title': 'Workouts',
-    'workouts.subtitle': 'The most recent workouts, newest first.',
+    'workouts.subtitle':
+      'Sessions grouped by the month you trained in, newest first. A closed month is one line, and a session two devices recorded is one row.',
     'workouts.empty.title': 'No workouts yet',
     'workouts.empty.hint':
       'Workouts recorded on the Watch land in the paired iPhone’s HealthKit, and are uploaded from there.',
@@ -148,6 +149,45 @@ export const en: Dict = {
     'workouts.col.maxHr': 'Max HR',
     'workouts.hrNote':
       'Empty heart-rate columns: samples only know HealthKit’s {field}, and binding them to the server-side workout id happens in the ingest worker.',
+    'workouts.filter.title': 'Filter',
+    'workouts.filter.place': 'Place',
+    'workouts.place.any': 'Anywhere',
+    'workouts.place.indoor': 'Indoor',
+    'workouts.place.outdoor': 'Outdoor',
+    'workouts.filter.minDuration': 'Lasting at least',
+    'workouts.filter.minDistance': 'Distance at least',
+    'workouts.filter.minEnergy': 'Energy at least',
+    'workouts.filter.minHr': 'Avg HR from',
+    'workouts.filter.maxHr': 'Avg HR up to',
+    'workouts.filter.noLimit': 'No limit',
+    'workouts.filter.clear': 'Clear the filter',
+    'workouts.filter.count.one': '{shown} of {n} session',
+    'workouts.filter.count.other': '{shown} of {n} sessions',
+    'workouts.filter.none.title': 'No workout matches the filter',
+    'workouts.filter.none.hint.one':
+      'There is {n} session in the list — try widening the filter.',
+    'workouts.filter.none.hint.other':
+      'There are {n} sessions in the list — try widening the filter.',
+    'workouts.filter.missingNote':
+      'A workout that cannot answer a filter is not hidden by it. A strength session has no distance, so “at least 5 km” leaves it in rather than reading the missing distance as a zero.',
+    'workouts.month.count.one': '{n} session',
+    'workouts.month.count.other': '{n} sessions',
+    'workouts.month.open.one': '{n} with no end time, outside the total',
+    'workouts.month.open.other': '{n} with no end time, outside the total',
+    'workouts.fold.identical.one': '{n} recording of this session — the numbers are identical.',
+    'workouts.fold.identical.other': '{n} recordings of this session — the numbers are identical.',
+    'workouts.fold.differ.one': '{n} recording of this session — the numbers differ.',
+    'workouts.fold.differ.other': '{n} recordings of this session — the numbers differ.',
+    'workouts.dupNote':
+      '{sessions} sessions arrived in Health more than once — from a watch and an app, or from two apps. The list shows one row for each, so the monthly totals are not counted twice; {extra} further recordings sit behind those rows.',
+    'workouts.loading.title': 'Still loading the history',
+    'workouts.loading.body.one':
+      '{n} recording so far. The older months are still arriving, so their totals are not final yet.',
+    'workouts.loading.body.other':
+      '{n} recordings so far. The older months are still arriving, so their totals are not final yet.',
+    'workouts.truncated.title': 'The history stops here',
+    'workouts.truncated.body':
+      'Older workouts are not in this list: the walk through the pages reached its limit. What is above is complete — below it, there is more.',
 
     // --- Sleep -------------------------------------------------------------
     'sleep.title': 'Sleep',
@@ -169,6 +209,16 @@ export const en: Dict = {
     'sleep.physio.note':
       'These are averages over the whole period, not the sleep window alone — filtering samples to the sleep window is waiting on the backend’s {insights} layer (docs/23 §5).',
     'sleep.night.title': '{date} — {duration} asleep',
+    'sleep.night.latest': 'Last night · {date} — {duration} asleep',
+    'sleep.nights.title.one': 'The night in this period',
+    'sleep.nights.title.other': 'The {n} nights in this period',
+    'sleep.nights.hint':
+      'Pick a night to open it above. The bar is that night’s stages in proportion; the last two columns are efficiency and the number of awakenings.',
+    'sleep.stagesChart.hint': 'Click a bar to open that night above.',
+    'sleep.gap.one':
+      '{nights} of the last {n} night carries sleep data. The rest are nights nothing was recorded on — not nights of no sleep.',
+    'sleep.gap.other':
+      '{nights} of the last {n} nights carry sleep data. The rest are nights nothing was recorded on — not nights of no sleep.',
     'sleep.night.aria': 'Sleep stages on {date}',
     'sleep.overlap':
       'The sources wrote {duration} of overlap for this night; the overlap counts once, which is why the total is less than the sum of the stages.',
@@ -490,8 +540,15 @@ export const en: Dict = {
   },
 
   // --- Workout activity types (HealthKit `activity_type`) -------------------
+  // ⚠️ The wire vocabulary is the SHORT one the phone writes
+  // (`HealthKitMapping.workoutName`): running · walking · cycling · swimming ·
+  // hiking · yoga · strength · hiit · other. The long HealthKit spellings below
+  // never travel; `strength` and `hiit` do, and until they were added here the
+  // page printed the raw wire tokens at the reader.
   activity: {
     running: 'Running',
+    strength: 'Strength',
+    hiit: 'HIIT',
     walking: 'Walking',
     cycling: 'Cycling',
     hiking: 'Hiking',

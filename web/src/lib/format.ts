@@ -36,6 +36,9 @@ export type Formatters = {
   /** Chart-axis forms: no year, and only as much precision as a tick can hold. */
   monthDay: (iso?: string) => string
   yearMonth: (iso?: string) => string
+  /** "August 2026" — the month written out, for a heading rather than an axis.
+   * The app's `WorkoutMonth.title` uses the same `yMMMM` shape. */
+  monthYearLong: (iso?: string) => string
   hourMinute: (iso?: string) => string
   /** "3 perccel ezelőtt", "tegnap" — for showing how fresh the sync is. */
   relative: (iso?: string) => string
@@ -78,6 +81,7 @@ export function useFormat(): Formatters {
     const timeFmt = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' })
     const monthDayFmt = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' })
     const yearMonthFmt = new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short' })
+    const monthYearLongFmt = new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'long' })
     // `numeric: 'auto'` is what turns -1 day into "tegnap" / "yesterday" instead
     // of "1 nappal ezelőtt".
     const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto' })
@@ -134,6 +138,7 @@ export function useFormat(): Formatters {
       time: (iso) => on(iso, timeFmt),
       monthDay: (iso) => on(iso, monthDayFmt),
       yearMonth: (iso) => on(iso, yearMonthFmt),
+      monthYearLong: (iso) => on(iso, monthYearLongFmt),
       hourMinute: (iso) => on(iso, timeFmt),
       relative: (iso) => {
         if (!iso) return t('relative.never')

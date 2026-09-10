@@ -139,7 +139,8 @@ export const hu = {
 
     // --- Workouts ----------------------------------------------------------
     'workouts.title': 'Edzések',
-    'workouts.subtitle': 'A legutóbbi edzések, a legfrissebbel kezdve.',
+    'workouts.subtitle':
+      'Az edzések hónapokba rendezve, a legfrissebbel kezdve. Egy becsukott hónap egyetlen sor, és egy két készülékkel rögzített edzés is egyetlen sor.',
     'workouts.empty.title': 'Még nincs edzés',
     'workouts.empty.hint':
       'A Watch edzései a párosított iPhone HealthKitjébe kerülnek, onnan töltődnek fel.',
@@ -152,6 +153,43 @@ export const hu = {
     'workouts.col.maxHr': 'Max pulzus',
     'workouts.hrNote':
       'Üres pulzus-oszlop: a minták csak a HealthKit {field}-ját ismerik, a szerver-oldali edzés-azonosítóhoz kötés az ingest workerben történik.',
+    'workouts.filter.title': 'Szűrő',
+    'workouts.filter.place': 'Helyszín',
+    'workouts.place.any': 'Bárhol',
+    'workouts.place.indoor': 'Fedett',
+    'workouts.place.outdoor': 'Szabadtéri',
+    'workouts.filter.minDuration': 'Legalább ennyi ideig',
+    'workouts.filter.minDistance': 'Legalább ennyi táv',
+    'workouts.filter.minEnergy': 'Legalább ennyi energia',
+    'workouts.filter.minHr': 'Átlagpulzus ettől',
+    'workouts.filter.maxHr': 'Átlagpulzus eddig',
+    'workouts.filter.noLimit': 'Nincs korlát',
+    'workouts.filter.clear': 'Szűrő törlése',
+    'workouts.filter.count.one': '{n} edzésből {shown} látszik',
+    'workouts.filter.count.other': '{n} edzésből {shown} látszik',
+    'workouts.filter.none.title': 'Egyetlen edzés sem felel meg a szűrőnek',
+    'workouts.filter.none.hint.one': '{n} edzés van a listában — próbáld tágítani a szűrőt.',
+    'workouts.filter.none.hint.other': '{n} edzés van a listában — próbáld tágítani a szűrőt.',
+    'workouts.filter.missingNote':
+      'Amelyik edzés nem tud válaszolni egy szűrőre, azt a szűrő nem rejti el. Egy erősítő edzésnek nincs távja, így a „legalább 5 km” bent hagyja ahelyett, hogy a hiányzó távot nullának olvasná.',
+    'workouts.month.count.one': '{n} edzés',
+    'workouts.month.count.other': '{n} edzés',
+    'workouts.month.open.one': '{n} lezáratlan, az összegen kívül',
+    'workouts.month.open.other': '{n} lezáratlan, az összegen kívül',
+    'workouts.fold.identical.one': '{n} felvétel erről az edzésről — a számok azonosak.',
+    'workouts.fold.identical.other': '{n} felvétel erről az edzésről — a számok azonosak.',
+    'workouts.fold.differ.one': '{n} felvétel erről az edzésről — a számok eltérnek.',
+    'workouts.fold.differ.other': '{n} felvétel erről az edzésről — a számok eltérnek.',
+    'workouts.dupNote':
+      '{sessions} edzés egynél többször érkezett meg a Healthbe — óráról és appból, vagy két appból. A lista mindegyikről egyetlen sort mutat, így a havi összegek nem duplázódnak; további {extra} felvétel áll ezek mögött.',
+    'workouts.loading.title': 'A történet még töltődik',
+    'workouts.loading.body.one':
+      'Eddig {n} felvétel. A régebbi hónapok még érkeznek, az összegük tehát még nem végleges.',
+    'workouts.loading.body.other':
+      'Eddig {n} felvétel. A régebbi hónapok még érkeznek, az összegük tehát még nem végleges.',
+    'workouts.truncated.title': 'Itt megáll a történet',
+    'workouts.truncated.body':
+      'A régebbi edzések nincsenek ebben a listában: a lapozás elérte a korlátját. Ami fölötte van, az teljes — alatta van még.',
 
     // --- Sleep -------------------------------------------------------------
     'sleep.title': 'Alvás',
@@ -173,6 +211,16 @@ export const hu = {
     'sleep.physio.note':
       'Ezek az egész időszak átlagai, nem kizárólag az alvás-ablakból — a minták alvás-ablakra szűrése a backend {insights} rétegére vár (docs/23 §5).',
     'sleep.night.title': '{date} — alvás {duration}',
+    'sleep.night.latest': 'Múlt éjjel · {date} — alvás {duration}',
+    'sleep.nights.title.one': 'Az időszak éjszakája',
+    'sleep.nights.title.other': 'Az időszak {n} éjszakája',
+    'sleep.nights.hint':
+      'Válassz egy éjszakát, és fent kinyílik. A sáv az adott éjszaka szakaszainak aránya; az utolsó két oszlop a hatékonyság és a felébredések száma.',
+    'sleep.stagesChart.hint': 'Kattints egy oszlopra, és az az éjszaka nyílik meg fent.',
+    'sleep.gap.one':
+      'Az utolsó {n} éjszakából {nights} hordoz alvás-adatot. A többi olyan éjszaka, amiről semmi nem rögzült — nem alvás nélküli éjszaka.',
+    'sleep.gap.other':
+      'Az utolsó {n} éjszakából {nights} hordoz alvás-adatot. A többi olyan éjszaka, amiről semmi nem rögzült — nem alvás nélküli éjszaka.',
     'sleep.night.aria': 'Alvás-szakaszok {date}',
     'sleep.overlap':
       'A források {duration} átfedést írtak erre az éjszakára; az átfedés egyszer számít, ezért az összesen kevesebb, mint a szakaszok összege.',
@@ -486,8 +534,15 @@ export const hu = {
   },
 
   // --- Workout activity types (HealthKit `activity_type`) -------------------
+  // ⚠️ A dróton a RÖVID szótár utazik, amit a telefon ír
+  // (`HealthKitMapping.workoutName`): running · walking · cycling · swimming ·
+  // hiking · yoga · strength · hiit · other. A lenti hosszú HealthKit-nevek soha
+  // nem érkeznek meg; a `strength` és a `hiit` viszont igen, és amíg nem voltak
+  // itt, az oldal a nyers drót-kulcsot mutatta az olvasónak.
   activity: {
     running: 'Futás',
+    strength: 'Erősítés',
+    hiit: 'HIIT',
     walking: 'Séta',
     cycling: 'Kerékpár',
     hiking: 'Túra',

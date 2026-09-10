@@ -46,6 +46,10 @@ export type Workout = {
   total_distance_m?: number
   avg_heart_rate?: number
   max_heart_rate?: number
+  /** Whatever the recording app wrote alongside the workout. The one key the web
+   * reads is `indoor` (see `lib/workouts.ts`); everything else travels but is not
+   * interpreted, because it is another app's vocabulary. */
+  metadata?: Record<string, unknown>
 }
 
 export type WorkoutPage = {
