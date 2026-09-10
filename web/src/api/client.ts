@@ -3,6 +3,7 @@ import type {
   ActivitySummary,
   BaselineRange,
   BaselineResponse,
+  Challenge,
   Device,
   Goal,
   Insight,
@@ -120,6 +121,9 @@ export const api = {
 
   /** Earned badges, newest first. The web only ever reads this list. */
   achievements: () => req<Achievement[]>('/achievements'),
+  /** The monthly step challenge. `month` is `YYYY-MM`; without it, the month the
+   * time zone is in right now. */
+  challenge: (month?: string, tz?: string) => req<Challenge>(`/challenge${qs({ month, tz })}`),
 }
 
 /** The browser's time zone — for the timezone-aware aggregation (docs/03 §6.1). */

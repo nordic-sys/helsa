@@ -19,6 +19,7 @@ import (
 	"github.com/nordic-sys/helsa/backend/internal/api"
 	"github.com/nordic-sys/helsa/backend/internal/auth"
 	"github.com/nordic-sys/helsa/backend/internal/baseline"
+	"github.com/nordic-sys/helsa/backend/internal/challenge"
 	"github.com/nordic-sys/helsa/backend/internal/config"
 	"github.com/nordic-sys/helsa/backend/internal/db"
 	"github.com/nordic-sys/helsa/backend/internal/export"
@@ -44,7 +45,11 @@ type Server struct {
 	samples  *samples.Service
 	export   *export.DBSource
 	insights *insights.Service
-	q        *db.Queries
+	// challenge: the monthly step challenge (GET /v1/challenge) — the same
+	// milestones and streak the phone shows, as far as the server can honestly
+	// compute them.
+	challenge *challenge.Service
+	q         *db.Queries
 }
 
 func New(cfg *config.Config, st *store.Store, q *queue.Queue) *Server {
@@ -53,17 +58,18 @@ func New(cfg *config.Config, st *store.Store, q *queue.Queue) *Server {
 	// is looking at.
 	sum := summary.New(st.DB, st.Redis)
 	return &Server{
-		cfg:      cfg,
-		store:    st,
-		queue:    q,
-		auth:     auth.New(cfg, st.DB, st.Redis),
-		summary:  sum,
-		baseline: baseline.New(sum),
-		workouts: workouts.New(st.DB),
-		samples:  samples.New(st.DB),
-		export:   export.NewDBSource(st.DB),
-		insights: insights.New(st.DB),
-		q:        db.New(st.DB),
+		cfg:       cfg,
+		store:     st,
+		queue:     q,
+		auth:      auth.New(cfg, st.DB, st.Redis),
+		summary:   sum,
+		baseline:  baseline.New(sum),
+		workouts:  workouts.New(st.DB),
+		samples:   samples.New(st.DB),
+		export:    export.NewDBSource(st.DB),
+		insights:  insights.New(st.DB),
+		challenge: challenge.New(st.DB),
+		q:         db.New(st.DB),
 	}
 }
 

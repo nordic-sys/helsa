@@ -14,6 +14,7 @@ export const en: Dict = {
     'nav.workouts': 'Workouts',
     'nav.sleep': 'Sleep',
     'nav.nutrition': 'Nutrition',
+    'nav.challenge': 'Monthly challenge',
     'nav.settings': 'Settings',
     'lang.aria': 'Choose language',
     'lang.hu': 'Hungarian',
@@ -183,6 +184,59 @@ export const en: Dict = {
     'nutrition.hideEmpty': 'Hide the nutrients without data',
     'nutrition.showEmpty.one': 'Show the {n} nutrient without data',
     'nutrition.showEmpty.other': 'Show the {n} nutrients without data',
+
+    // --- Monthly challenge -------------------------------------------------
+    'challenge.title': 'Monthly challenge',
+    'challenge.subtitle':
+      "The month's step count against your own milestones. You set the milestones on the phone; what shows here is what has actually been uploaded.",
+    'challenge.prevMonth': 'Previous month',
+    'challenge.nextMonth': 'Next month',
+    'challenge.notStarted': 'This month has not begun yet.',
+    'challenge.empty.title': 'No measurement from this month yet',
+    'challenge.empty.hint':
+      'This is not zero steps: not one day has arrived. The iPhone is the only uploader — as soon as it syncs, the month shows up here.',
+    'challenge.steps': "The month's steps",
+    'challenge.stepsPerDay': 'Per day, over the days that have passed',
+    'challenge.ofGoal': 'Of the goal',
+    'challenge.daysRemaining': 'Days left (today included)',
+    'challenge.goalLabel': 'Goal: {steps} steps',
+    'challenge.complete': 'The goal is done.',
+    'challenge.overshoot': '{steps} steps past the goal.',
+    'challenge.milestones.title': 'Milestones',
+    'challenge.milestones.empty':
+      'No milestone is set, so there is nothing to measure the month against.',
+    'challenge.milestones.reached': 'reached',
+    'challenge.milestones.next': 'The next one is at {steps} steps — {remaining} to go.',
+    'challenge.source.title': 'Where the milestones come from',
+    'challenge.source.default':
+      'These are the factory milestones: the phone has never told this server which ones you set. What you see in the app may differ.',
+    'challenge.source.achievement':
+      'From the snapshot on the badge your phone recorded most recently. The milestones live on the phone; nothing syncs them on their own.',
+    'challenge.days.title': 'Day by day',
+    'challenge.days.empty': 'Not one day of this month has arrived yet.',
+    'challenge.days.gaps.one':
+      '{n} day with no measurement — the empty slot is missing data, not a day of sitting still.',
+    'challenge.days.gaps.other':
+      '{n} days with no measurement — the empty slots are missing data, not days of sitting still.',
+    'challenge.streak.title': 'Daily streak',
+    'challenge.streak.length.one': '{n}-day streak',
+    'challenge.streak.length.other': '{n}-day streak',
+    'challenge.streak.current': 'Current run',
+    'challenge.streak.none': 'No streak running.',
+    'challenge.streak.noGoal':
+      'Without a goal there is nothing to measure a day against, so no streak is claimed.',
+    'challenge.streak.dailyGoal': 'Daily goal',
+    'challenge.streak.longest': 'Longest in the period examined',
+    'challenge.streak.window': 'The period examined: {from} – {to}.',
+    'challenge.streak.broken.missed':
+      '{date} — stayed under the daily goal; the streak restarted here.',
+    'challenge.streak.broken.noData':
+      '{date} — no step count arrived for this day. Not a missed day, we simply do not know about it.',
+    'challenge.streak.broken.startOfHistory':
+      'The streak reaches back to the start of the period examined — we say nothing about days older than that.',
+    'challenge.streak.lowerBound.title': 'The phone knows more than this',
+    'challenge.streak.lowerBound.body':
+      'Sick days, and rest days you marked yourself, never break a streak — but neither of them reaches the server: the journal stays on the phone, and a marked rest day is a local setting. So the streak here can be shorter than the one in the app, never longer.',
 
     // --- Settings ----------------------------------------------------------
     'settings.title': 'Settings',
