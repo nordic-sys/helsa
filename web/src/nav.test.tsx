@@ -13,7 +13,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { I18nProvider, detectLang } from './i18n'
 import { en } from './i18n/en'
 import { hu } from './i18n/hu'
-import { LANDING, NAV, NAV_GROUPS, entriesIn } from './nav'
+import { DETAILS, LANDING, NAV, NAV_GROUPS, entriesIn } from './nav'
 
 // The frame is what is under test, not the pages inside it — but `nav.tsx`
 // imports all ten of them, so the module they all reach for has to answer.
@@ -66,8 +66,30 @@ describe('the route table and the sidebar are the same list', () => {
   })
 
   it('routes each path once', () => {
-    const paths = NAV.map((n) => n.path)
+    const paths = [...NAV.map((n) => n.path), ...DETAILS.map((d) => d.path)]
     expect(new Set(paths).size).toBe(paths.length)
+  })
+
+  /**
+   * The same rule, applied to the other kind of page. A sidebar entry has to
+   * name its group; a detail page has to name the listing it opens from —
+   * because a detail page belonging to no listing is a URL nothing links to,
+   * which is the flat-list failure wearing a different costume.
+   */
+  it('gives every detail page a listing it is opened from', () => {
+    const paths = new Set(NAV.map((n) => n.path))
+    for (const detail of DETAILS) {
+      expect(paths.has(detail.parent), `${detail.path} → ${detail.parent}`).toBe(true)
+      // A parameter is what makes it a detail route rather than a link.
+      expect(detail.path).toContain(':')
+      // …and it lives UNDER its listing, so the URL says where it came from.
+      expect(detail.path.startsWith(`${detail.parent}/`)).toBe(true)
+    }
+  })
+
+  it('keeps detail routes out of the sidebar', () => {
+    const detailPaths = new Set(DETAILS.map((d) => d.path))
+    for (const entry of NAV) expect(detailPaths.has(entry.path)).toBe(false)
   })
 
   it('labels every entry and every heading in both languages', () => {

@@ -10,9 +10,12 @@ import type {
   Insight,
   Range,
   Settings,
+  SamplePage,
   SleepSegment,
   SummaryResponse,
+  Workout,
   WorkoutPage,
+  WorkoutRoute,
 } from './types'
 
 // Access is layered (docs/08-auth-hozzaferes.md):
@@ -120,6 +123,28 @@ export const api = {
 
   workouts: (limit = 50, cursor?: string) =>
     req<WorkoutPage>(`/workouts${qs({ limit, cursor })}`),
+
+  /** One session, with the `metadata` object the recording app wrote — which is
+   * where indoor/outdoor, the weather and the laps live (`WorkoutMetadata.swift`). */
+  workout: (id: string) => req<Workout>(`/workouts/${encodeURIComponent(id)}`),
+
+  /** A session's GPS route. A separate call on purpose: a three-hour hike is
+   * points on the order of ten thousand, and no list should drag that along. */
+  workoutRoute: (id: string) =>
+    req<WorkoutRoute>(`/workouts/${encodeURIComponent(id)}/route`),
+
+  /**
+   * Raw samples of ONE type in a window.
+   *
+   * ⚠️ The parameter is `data_type`, not `type`. It is also **required** — the
+   * server refuses an unfiltered scan of the hypertable — so it is a positional
+   * argument here rather than an option.
+   *
+   * `from`/`to` are instants, not calendar days, and the window is half-open
+   * `[from, to)`.
+   */
+  samples: (dataType: string, from?: string, to?: string, limit = 2000, cursor?: string) =>
+    req<SamplePage>(`/samples${qs({ data_type: dataType, from, to, limit, cursor })}`),
 
   sleep: (from?: string, to?: string, tz?: string) =>
     req<SleepSegment[]>(`/sleep${qs({ from, to, tz })}`),

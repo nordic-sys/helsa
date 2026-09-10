@@ -31,6 +31,10 @@ export const hu = {
     // --- Shared units and separators ---------------------------------------
     'unit.minShort': 'p',
     'unit.hourShort': 'ó',
+    'unit.bpm': 'bpm',
+    'unit.kmh': 'km/h',
+    'unit.perKm': '/km',
+    'unit.per100m': '/100 m',
 
     // --- Duration ----------------------------------------------------------
     'duration.hm': '{h} ó {m} p',
@@ -190,6 +194,119 @@ export const hu = {
     'workouts.truncated.title': 'Itt megáll a történet',
     'workouts.truncated.body':
       'A régebbi edzések nincsenek ebben a listában: a lapozás elérte a korlátját. Ami fölötte van, az teljes — alatta van még.',
+
+    // --- One workout, opened -----------------------------------------------
+    'workout.back': '← Vissza az edzésekhez',
+    'workout.missing.title': 'Nincs ilyen edzés',
+    'workout.missing.hint':
+      'A hivatkozás olyan alkalomra mutat, ami ezen a szerveren nincs meg. Vagy törölték az Egészség appban, vagy egy másik szerver linkje.',
+
+    'workout.metric.time': 'Idő',
+    'workout.metric.distance': 'Táv',
+    'workout.metric.energy': 'Energia',
+    'workout.metric.pace': 'Tempó',
+    'workout.metric.speed': 'Sebesség',
+    'workout.metric.avgHr': 'Átlagos pulzus',
+    'workout.metric.maxHr': 'Csúcspulzus',
+    'workout.metric.pool': 'Medence',
+    'workout.metric.none.title': 'Ehhez az edzéshez nem érkezett mérés',
+    'workout.metric.none.hint':
+      'Az alkalmat rögzítették, de egyetlen szám sem jött vele. Ez a felvételről szóló tény, nem nulla.',
+
+    'workout.route.title': 'Útvonal',
+    'workout.route.loading': 'Töltődik az útvonal…',
+    'workout.route.none': 'Ehhez az edzéshez nincs útvonal.',
+    'workout.route.failed.title': 'Az útvonalat nem sikerült betölteni',
+    'workout.route.failed.body':
+      'Ez elbukott kérés, nem hiányzó útvonal — az edzéshez tartozhat útvonal.',
+    'workout.route.start': 'Rajt',
+    'workout.route.finish': 'Cél',
+    'workout.route.startFinish': 'Rajt / Cél',
+    'workout.route.aria': 'Az útvonal alakja: {points} rögzített pont, {length}.',
+    'workout.route.dropped.one': '{n} pontatlan pont kimaradt.',
+    'workout.route.dropped.other': '{n} pontatlan pont kimaradt.',
+    'workout.route.noTiles':
+      'Kizárólag a rögzített koordinátákból rajzolva. A Helsa senkitől nem tölt le térképcsempét: ha az utcákat harmadik féltől kérnénk el, azzal megmondanánk neki, merre jártál.',
+
+    'workout.hr.title': 'Pulzus',
+    'workout.hr.loading': 'Töltődnek a pulzusmérések…',
+    'workout.hr.none': 'Ehhez az edzéshez nincs pulzusmérés.',
+    'workout.hr.single':
+      'Egyetlen pulzusmérés esik ebbe az alkalomba — kevés ahhoz, hogy görbe legyen belőle, és ahhoz is, hogy átlagot mondjunk.',
+    'workout.hr.noWindow':
+      'Ennek a felvételnek nincs záró ideje, így nincs időablak, amin a pulzust végigolvashatnánk.',
+    'workout.hr.failed.title': 'A pulzusmérések nem tölthetők be',
+    'workout.hr.failed.body': 'Elbukott kérés, nem hiányzó mérés.',
+    'workout.hr.average': 'Átlag',
+    'workout.hr.peak': 'Csúcs',
+    'workout.hr.lowest': 'Legalacsonyabb',
+    'workout.hr.fromWindow':
+      'Ennek a felv\u00e9telnek nincs saj\u00e1t pulzus-\u00f6sszes\u00edt\u00e9se. A g\u00f6rbe minden olyan pulzusm\u00e9r\u00e9s, ami az alkalom id\u0151ablak\u00e1ba esik, b\u00e1rki r\u00f6gz\u00edtette is.',
+    'workout.hr.truncated':
+      'A görbe félbemarad: ebben az alkalomban több mérés van, mint amennyit a beolvasás követ.',
+
+    'workout.laps.title': 'Etapok',
+    'workout.laps.col.index': '#',
+    'workout.laps.note':
+      'Az etapok a rögzítő alkalmazástól jönnek. Az egyetlen szakaszból álló alkalomnál nem jelenik meg semmi — egy etap a rendszer saját alakja, nem általad csinált szakasz.',
+
+    'workout.weather.title': 'Időjárás',
+    'workout.weather.condition': 'Állapot',
+    'workout.weather.temperature': 'Hőmérséklet',
+    'workout.weather.humidity': 'Páratartalom',
+
+    'workout.dup.title': 'Ugyanez az alkalom, máshol is rögzítve',
+    'workout.dup.body.one': 'Ez az alkalom {n} alkalommal szerepel az Egészségben.',
+    'workout.dup.body.other':
+      'Ez az alkalom {n} alkalommal szerepel az Egészségben — órától és apptól, vagy két apptól. A lista egy sort mutat belőle; itt vannak a többiek, pontosan úgy, ahogy rögzítették őket.',
+    'workout.dup.thisOnly':
+      'Fentebb minden ennek az egy felvételnek a száma. Ez az oldal nem keveri össze a kettőt: két készülék ugyanarra a fél órára mást mér, és nem a mi dolgunk eldönteni, melyiknek higgy.',
+    'workout.dup.secondary': 'A listában ennek az alkalomnak a másik felvétele látszik, nem ez.',
+    'workout.dup.listed': 'ez látszik a listában',
+    'workout.dup.noMeasurement': 'Ezen a felvételen nincs mérés.',
+    'workout.dup.keep':
+      'A Helsa egyiket sem törli: ez a te egészségadatod, és nem a mi dolgunk eldönteni, melyik felvétel maradjon.',
+    'workout.dup.checking': 'Ellenőrizzük, rögzítették-e ezt az alkalmat többször is…',
+
+    'workout.source.title': 'Honnan jött',
+    'workout.source.uuid': 'HealthKit-azonosító',
+    'workout.source.gap':
+      'A dróton csak a mintákhoz tartozik forráskészülék, így ez csak azt mondja meg, ki írta a pulzust, mást nem. Hogy melyik app rögzítette magát az alkalmat, és melyik írta az útvonalat, az a telefonon, a HealthKitben van — a szerver nem tudja meg.',
+
+    'device.watch': 'Apple Watch',
+    'device.iphone': 'iPhone',
+
+    // --- Weather conditions (HKWeatherCondition) ---------------------------
+    // ⚠️ Saját kulcsokon, nem az angol szavakon. A telefonon az időjárás
+    // „Clear”-je egy kulcson ül a szűrő „Clear” gombjával, a magyar bundle
+    // pedig „Törlés”-nek fordítja — a derült ég ott „Törlés”-ként olvasható.
+    'weather.clear': 'Derült',
+    'weather.fair': 'Kellemes',
+    'weather.partlyCloudy': 'Részben felhős',
+    'weather.mostlyCloudy': 'Erősen felhős',
+    'weather.cloudy': 'Borult',
+    'weather.foggy': 'Ködös',
+    'weather.haze': 'Párás',
+    'weather.windy': 'Szeles',
+    'weather.blustery': 'Viharos szél',
+    'weather.smoky': 'Füstös',
+    'weather.dust': 'Poros',
+    'weather.snow': 'Havazás',
+    'weather.hail': 'Jégeső',
+    'weather.sleet': 'Havas eső',
+    'weather.freezingDrizzle': 'Ónos szitálás',
+    'weather.freezingRain': 'Ónos eső',
+    'weather.mixedRainAndHail': 'Eső jégesővel',
+    'weather.mixedRainAndSnow': 'Eső havazással',
+    'weather.mixedRainAndSleet': 'Eső havas esővel',
+    'weather.mixedSnowAndSleet': 'Hó havas esővel',
+    'weather.drizzle': 'Szitálás',
+    'weather.scatteredShowers': 'Szórványos zápor',
+    'weather.showers': 'Zápor',
+    'weather.thunderstorms': 'Zivatar',
+    'weather.tropicalStorm': 'Trópusi vihar',
+    'weather.hurricane': 'Hurrikán',
+    'weather.tornado': 'Tornádó',
 
     // --- Sleep -------------------------------------------------------------
     'sleep.title': 'Alvás',

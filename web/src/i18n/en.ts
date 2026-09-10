@@ -26,6 +26,10 @@ export const en: Dict = {
     // sleep is a genuinely confusing thing to read.
     'unit.minShort': 'min',
     'unit.hourShort': 'h',
+    'unit.bpm': 'bpm',
+    'unit.kmh': 'km/h',
+    'unit.perKm': '/km',
+    'unit.per100m': '/100 m',
 
     // --- Duration ----------------------------------------------------------
     'duration.hm': '{h} h {m} min',
@@ -188,6 +192,121 @@ export const en: Dict = {
     'workouts.truncated.title': 'The history stops here',
     'workouts.truncated.body':
       'Older workouts are not in this list: the walk through the pages reached its limit. What is above is complete — below it, there is more.',
+
+    // --- One workout, opened -----------------------------------------------
+    'workout.back': '← All workouts',
+    'workout.missing.title': 'No such workout',
+    'workout.missing.hint':
+      'The link points at a session this server does not hold. It may have been deleted in Health, or the link may be from another server.',
+
+    'workout.metric.time': 'Time',
+    'workout.metric.distance': 'Distance',
+    'workout.metric.energy': 'Energy',
+    'workout.metric.pace': 'Pace',
+    'workout.metric.speed': 'Speed',
+    'workout.metric.avgHr': 'Avg heart rate',
+    'workout.metric.maxHr': 'Max heart rate',
+    'workout.metric.pool': 'Pool',
+    'workout.metric.none.title': 'No measurement arrived for this workout',
+    'workout.metric.none.hint':
+      'The session was recorded, but not one number came with it. That is a fact about the recording, not a zero.',
+
+    'workout.route.title': 'Route',
+    'workout.route.loading': 'Loading the route…',
+    'workout.route.none': 'There is no route for this workout.',
+    'workout.route.failed.title': 'The route could not be loaded',
+    'workout.route.failed.body':
+      'This is a failed request, not an absent route — the workout may well have one.',
+    'workout.route.start': 'Start',
+    'workout.route.finish': 'Finish',
+    'workout.route.startFinish': 'Start / Finish',
+    'workout.route.aria': 'The shape of the route: {points} recorded points, {length}.',
+    'workout.route.dropped.one': '{n} inaccurate point left out.',
+    'workout.route.dropped.other': '{n} inaccurate points left out.',
+    'workout.route.noTiles':
+      'Drawn from the recorded coordinates alone. Helsa loads no map tiles from anyone: asking a third party for the streets you ran on would tell them where you were.',
+
+    'workout.hr.title': 'Heart rate',
+    'workout.hr.loading': 'Loading the heart-rate samples…',
+    'workout.hr.none': 'There is no heart-rate measurement for this workout.',
+    'workout.hr.single':
+      'One heart-rate sample falls inside this session — too few to draw a curve, and too few to average.',
+    'workout.hr.noWindow':
+      'This recording has no end time, so there is no window to read the heart rate over.',
+    'workout.hr.failed.title': 'The heart-rate samples cannot be loaded',
+    'workout.hr.failed.body': 'A failed request, not a missing measurement.',
+    'workout.hr.average': 'Average',
+    'workout.hr.peak': 'Peak',
+    'workout.hr.lowest': 'Lowest',
+    'workout.hr.fromWindow':
+      'This recording carries no heart-rate summary of its own. The curve is every heart-rate sample that falls inside the session\u2019s window, whoever recorded it.',
+    'workout.hr.truncated':
+      'The curve stops short: this session holds more samples than the read follows.',
+
+    'workout.laps.title': 'Splits',
+    'workout.laps.col.index': '#',
+    'workout.laps.note':
+      'Splits come from the recording app. A session with a single segment shows none — one lap is the system’s own shape, not a split you made.',
+
+    'workout.weather.title': 'Weather',
+    'workout.weather.condition': 'Conditions',
+    'workout.weather.temperature': 'Temperature',
+    'workout.weather.humidity': 'Humidity',
+
+    'workout.dup.title': 'The same session, recorded elsewhere',
+    'workout.dup.body.one':
+      'This session is in Health {n} time.',
+    'workout.dup.body.other':
+      'This session is in Health {n} times — from a watch and an app, or from two apps. The list shows one row for it; here are the others, exactly as they were recorded.',
+    'workout.dup.thisOnly':
+      'Everything above is this one recording’s. Nothing on this page mixes the two: two devices measuring the same half hour disagree, and which to believe is not ours to decide.',
+    'workout.dup.secondary':
+      'The list shows the other recording of this session, not this one.',
+    'workout.dup.listed': 'shown in the list',
+    'workout.dup.noMeasurement': 'No measurement on this recording.',
+    'workout.dup.keep':
+      'Helsa deletes neither of them: they are your Health data, and which recording to keep is not ours to decide.',
+    'workout.dup.checking': 'Checking whether this session was recorded more than once…',
+
+    'workout.source.title': 'Where it came from',
+    'workout.source.uuid': 'HealthKit id',
+    'workout.source.gap':
+      'Only samples carry a source device on the wire, so this says who wrote the heart rate and nothing more. Which app recorded the session itself, and which wrote the route, is in HealthKit on the phone — the server is not told.',
+
+    'device.watch': 'Apple Watch',
+    'device.iphone': 'iPhone',
+
+    // --- Weather conditions (HKWeatherCondition) ---------------------------
+    // ⚠️ Their own keys, not the English words. On the phone the weather’s
+    // “Clear” shares a key with the filter’s “Clear” button, and the Hungarian
+    // bundle translates it as “Törlés” — so a clear sky reads “Delete”.
+    'weather.clear': 'Clear',
+    'weather.fair': 'Fair',
+    'weather.partlyCloudy': 'Partly cloudy',
+    'weather.mostlyCloudy': 'Mostly cloudy',
+    'weather.cloudy': 'Overcast',
+    'weather.foggy': 'Foggy',
+    'weather.haze': 'Hazy',
+    'weather.windy': 'Windy',
+    'weather.blustery': 'Blustery',
+    'weather.smoky': 'Smoky',
+    'weather.dust': 'Dusty',
+    'weather.snow': 'Snow',
+    'weather.hail': 'Hail',
+    'weather.sleet': 'Sleet',
+    'weather.freezingDrizzle': 'Freezing drizzle',
+    'weather.freezingRain': 'Freezing rain',
+    'weather.mixedRainAndHail': 'Rain with hail',
+    'weather.mixedRainAndSnow': 'Rain with snow',
+    'weather.mixedRainAndSleet': 'Rain with sleet',
+    'weather.mixedSnowAndSleet': 'Snow with sleet',
+    'weather.drizzle': 'Drizzle',
+    'weather.scatteredShowers': 'Scattered showers',
+    'weather.showers': 'Showers',
+    'weather.thunderstorms': 'Thunderstorm',
+    'weather.tropicalStorm': 'Tropical storm',
+    'weather.hurricane': 'Hurricane',
+    'weather.tornado': 'Tornado',
 
     // --- Sleep -------------------------------------------------------------
     'sleep.title': 'Sleep',

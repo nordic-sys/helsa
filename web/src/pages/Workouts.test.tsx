@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { Workout, WorkoutPage } from '../api/types'
 import { I18nProvider } from '../i18n'
@@ -13,12 +14,18 @@ vi.mock('../api/client', () => ({
   browserTz: () => 'Europe/Budapest',
 }))
 
+/** ⚠️ A router, because each row's activity cell is now the link that opens the
+ * session. Without one, `<Link>` throws on the null context and every test in
+ * the file fails at once — which is what happened the moment the rows learned to
+ * open. */
 function show() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>
       <I18nProvider>
-        <Workouts />
+        <MemoryRouter>
+          <Workouts />
+        </MemoryRouter>
       </I18nProvider>
     </QueryClientProvider>,
   )
@@ -101,6 +108,17 @@ describe('one session, one row', () => {
     // One data row, one caption row, one header row.
     const rows = screen.getAllByRole('row')
     expect(rows).toHaveLength(3)
+  })
+
+  /** The row is the way in. Without it the detail page exists at a URL nothing
+   * links to, which is the same as not existing. */
+  it('opens the session it stands for', async () => {
+    workouts.mockResolvedValue({ items: twice })
+    show()
+    const link = await screen.findByRole('link', { name: /running|futás/i })
+    // ⚠️ The PRIMARY's id — the recording the row is showing. Linking to the
+    // other one would open a page whose numbers do not match the row above it.
+    expect(link).toHaveAttribute('href', expect.stringMatching(/^\/workouts\/id-\d+$/))
   })
 
   it('counts the doubled hour once in the month total', async () => {

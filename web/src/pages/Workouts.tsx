@@ -28,14 +28,13 @@
 // totals honest — a doubly recorded hour is in the list once, so it is in the
 // total once.
 
-import { useEffect, useMemo, useState } from 'react'
-import { useInfiniteQuery } from '@tanstack/react-query'
-import { api } from '../api/client'
-import type { Workout } from '../api/types'
+import { useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Card, Empty, ErrorState, Loading, Note } from '../components/ui'
 import { useI18n } from '../i18n'
 import type { UiKey } from '../i18n'
 import { useFormat } from '../lib/format'
+import { useWorkoutHistory } from '../lib/workoutHistory'
 import {
   EMPTY_FILTER,
   STEPS,
@@ -53,21 +52,6 @@ import {
   type WorkoutMonth,
 } from '../lib/workouts'
 
-/** 200 is the contract's maximum (`openapi.yaml`), and the walk below is a walk:
- * fewer, larger pages is fewer round trips over WireGuard. */
-const PAGE_SIZE = 200
-
-/**
- * The ceiling on how many pages the walk will take.
- *
- * ⚠️ Not a performance knob: it is the guard against a cursor that never
- * terminates, which on a page somebody is looking at is an infinite loop. When
- * it stops here, the page SAYS the history is cut off rather than presenting a
- * partial list as the whole thing — the same claim the old 100-row limit made
- * silently.
- */
-const MAX_PAGES = 20
-
 /** The place options, in the order they are offered. */
 const PLACES: { key: Place; label: UiKey }[] = [
   { key: 'any', label: 'workouts.place.any' },
@@ -82,38 +66,10 @@ export default function Workouts() {
    * so the default below keeps applying as the history pages in. */
   const [expandedOverride, setExpandedOverride] = useState<Set<string> | null>(null)
 
-  const q = useInfiniteQuery({
-    queryKey: ['workouts'],
-    queryFn: ({ pageParam }) => api.workouts(PAGE_SIZE, pageParam),
-    initialPageParam: undefined as string | undefined,
-    getNextPageParam: (last) => last.next_cursor ?? undefined,
-  })
-
-  const pages = q.data?.pages.length ?? 0
-  const capped = pages >= MAX_PAGES
-  // The walk. It runs itself rather than waiting for a "load more" click,
-  // because a filter over a truncated list does not show less — it ANSWERS
-  // WRONGLY, and nobody can tell from the answer.
-  useEffect(() => {
-    if (q.hasNextPage && !q.isFetchingNextPage && !capped) void q.fetchNextPage()
-  }, [q, capped])
-
-  /** ⚠️ De-duplicated by id rather than concatenated. A stale cursor answered
-   * with the first page again would otherwise grow the list for ever, and the
-   * repeated rows would read as repeated workouts. */
-  const items = useMemo(() => {
-    const seen = new Set<string>()
-    const all: Workout[] = []
-    for (const page of q.data?.pages ?? []) {
-      for (const w of page.items ?? []) {
-        const key = w.id ?? w.source_uuid ?? ''
-        if (key && seen.has(key)) continue
-        if (key) seen.add(key)
-        all.push(w)
-      }
-    }
-    return all
-  }, [q.data])
+  // The walk lives in `lib/workoutHistory` — it runs itself rather than waiting
+  // for a "load more" click, because a filter over a truncated list does not
+  // show less, it ANSWERS WRONGLY and nobody can tell from the answer.
+  const { items, isLoading, isError, error, capped, stillLoading } = useWorkoutHistory()
 
   const types = useMemo(() => activityTypesIn(items), [items])
   const allSessions = useMemo(() => groupSessions(items), [items])
@@ -132,8 +88,8 @@ export default function Workouts() {
     setExpandedOverride(next)
   }
 
-  if (q.isLoading) return <Loading rows={1} />
-  if (q.isError) return <ErrorState error={q.error} />
+  if (isLoading) return <Loading rows={1} />
+  if (isError) return <ErrorState error={error} />
 
   if (items.length === 0) {
     return (
@@ -144,7 +100,7 @@ export default function Workouts() {
     )
   }
 
-  const stillLoading = q.isFetchingNextPage || (q.hasNextPage && !capped)
+
 
   return (
     <>
@@ -181,7 +137,7 @@ export default function Workouts() {
             {tp('workouts.loading.body', items.length)}
           </Note>
         )}
-        {capped && q.hasNextPage && (
+        {capped && (
           <Note title={t('workouts.truncated.title')}>{t('workouts.truncated.body')}</Note>
         )}
       </div>
@@ -415,7 +371,20 @@ function SessionRows({ group }: { group: WorkoutGroup }) {
   return (
     <>
       <tr>
-        <td>{f.activityName(w.activity_type)}</td>
+        {/* The way in. It is the activity cell rather than the whole row because
+            a row is not a link and faking one costs the keyboard its focus
+            order — but the accessible name carries the date too, so a screen
+            reader hears which session it is opening rather than "Running" nine
+            times. */}
+        <td>
+          <Link
+            className="row-link"
+            to={`/workouts/${w.id ?? ''}`}
+            aria-label={`${f.activityName(w.activity_type)}, ${f.dateTime(w.started_at)}`}
+          >
+            {f.activityName(w.activity_type)}
+          </Link>
+        </td>
         <td>{f.dateTime(w.started_at)}</td>
         {/* ⚠️ `durationMin` returns null for a recording with no end, and null
             prints as a dash. A zero here would be a claim that it lasted no time. */}

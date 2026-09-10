@@ -57,6 +57,50 @@ export type WorkoutPage = {
   next_cursor?: string | null
 }
 
+/**
+ * One GPS fix of a workout's route (`GET /workouts/{id}/route`).
+ *
+ * ⚠️ `altitude_m`, `speed_mps` and `accuracy_m` may be absent, and 0 is a REAL
+ * value for all three — sea level, a full stop, a perfect fix. The contract says
+ * so explicitly (openapi.yaml, `RoutePoint`), because the phone had to strip
+ * CoreLocation's "-1 means invalid" convention before uploading: a −1 stored as a
+ * number is a lie nothing downstream can recognise as missing.
+ */
+export type RoutePoint = {
+  ts?: string
+  lat: number
+  lon: number
+  altitude_m?: number
+  speed_mps?: number
+  /** Horizontal error in metres — what lets the drawing throw the junk away. */
+  accuracy_m?: number
+}
+
+/** ⚠️ An empty `points` is a **full answer**, not a 404: an indoor workout has no
+ * route, and neither does anything recorded before route support. */
+export type WorkoutRoute = {
+  points?: RoutePoint[]
+}
+
+/**
+ * A raw sample (`GET /samples`).
+ *
+ * ⚠️ Newest first. Anything that draws a line out of these has to sort them, or
+ * the line runs backwards.
+ */
+export type Sample = {
+  ts?: string
+  data_type?: string
+  value?: number
+  unit?: string
+  source_device?: string
+}
+
+export type SamplePage = {
+  items?: Sample[]
+  next_cursor?: string | null
+}
+
 export type SleepSegment = {
   started_at?: string
   ended_at?: string

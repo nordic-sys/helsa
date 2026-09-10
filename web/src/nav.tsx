@@ -56,6 +56,7 @@ import Nutrition from './pages/Nutrition'
 import Challenge from './pages/Challenge'
 import Coverage from './pages/Coverage'
 import SettingsPage from './pages/Settings'
+import WorkoutDetail from './pages/WorkoutDetail'
 
 export type NavGroupKey = 'longView' | 'areas' | 'status'
 
@@ -90,6 +91,31 @@ export const NAV: NavEntry[] = [
 
   { path: '/coverage', label: 'nav.coverage', element: <Coverage />, group: 'status' },
   { path: '/settings', label: 'nav.settings', element: <SettingsPage />, group: 'status' },
+]
+
+/**
+ * Pages that are opened FROM a page rather than from the sidebar.
+ *
+ * ⚠️ **This is not a loophole in the rule above, it is the rule applied to a
+ * second kind of page.** A sidebar entry has to name the group it belongs to; a
+ * detail page has to name the listing it opens from — because a detail page that
+ * belongs to no listing is a URL nothing links to, and that is the same failure
+ * the grouping exists to prevent. `nav.test.tsx` checks that every `parent`
+ * below is a real `NAV` path.
+ *
+ * They stay out of `NAV` because they are not links: `/workouts/:id` has no
+ * standalone meaning to put in a sidebar, and a route with a parameter cannot be
+ * one.
+ */
+export type DetailEntry = {
+  path: string
+  /** The `NAV` path this page is reached from. */
+  parent: string
+  element: ReactElement
+}
+
+export const DETAILS: DetailEntry[] = [
+  { path: '/workouts/:id', parent: '/workouts', element: <WorkoutDetail /> },
 ]
 
 /** The landing page — the one entry that stands outside the groups. */

@@ -1,7 +1,7 @@
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
 import { useI18n } from './i18n'
-import { LANDING, NAV, NAV_GROUPS, entriesIn, type NavEntry } from './nav'
+import { DETAILS, LANDING, NAV, NAV_GROUPS, entriesIn, type NavEntry } from './nav'
 
 /**
  * The frame: a grouped sidebar and the router, both read off `nav.tsx`.
@@ -50,6 +50,12 @@ export default function App() {
         <Routes>
           {NAV.map((n) => (
             <Route key={n.path} path={n.path} element={n.element} />
+          ))}
+          {/* The pages a listing opens. They are routed here and NOT drawn in
+              the sidebar — see `DETAILS` in `nav.tsx` for why that is a second
+              rule rather than an exception to the first. */}
+          {DETAILS.map((d) => (
+            <Route key={d.path} path={d.path} element={d.element} />
           ))}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

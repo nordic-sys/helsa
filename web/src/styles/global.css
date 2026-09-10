@@ -908,3 +908,80 @@ tbody tr:has(+ .fold-caption) td {
   overflow: hidden;
   background: var(--surface-2);
 }
+
+/* --- One workout, opened ---
+ *
+ * The row that opens it. It is the activity cell rather than the whole row: a
+ * `<tr>` is not a link, and the usual fakes (an overlay, a click handler on the
+ * row) cost the keyboard its focus order.
+ */
+.row-link {
+  color: var(--text);
+  text-decoration: none;
+  border-bottom: 1px solid color-mix(in srgb, var(--helsa-fjord) 45%, transparent);
+}
+.row-link:hover {
+  color: var(--helsa-fjord);
+  border-bottom-color: var(--helsa-fjord);
+}
+.row-link:focus-visible {
+  outline: 2px solid var(--helsa-fjord);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+/* The session's numbers. Narrower tracks than `.grid`, because these are single
+ * figures and a six-card grid at 230px wraps to three rows on a laptop — the
+ * phone's own grid adapts from 108pt for the same reason. */
+.grid-stats {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
+/* The route, drawn by us. ⛔ There is no map under it and there will not be one:
+ * asking a tile server for the streets somebody ran on tells the tile server
+ * where they were. */
+.route {
+  display: block;
+  width: 100%;
+  height: auto;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+}
+/* The scale bar is what gives the shape a size back, now that there are no
+ * streets to read one off. */
+.route-scale {
+  color: var(--text-dim);
+  fill: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The other recordings of one session. A list rather than a table: there are two
+ * of them, and a two-row table is a table's worth of ceremony for one fact. */
+.dup-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 10px 0;
+}
+.dup-row {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 10px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 13.5px;
+  font-variant-numeric: tabular-nums;
+}
+.dup-row:last-child {
+  border-bottom: 0;
+}
+.dup-badge {
+  margin-left: auto;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--surface-2);
+  color: var(--text-dim);
+  font-size: 12px;
+  white-space: nowrap;
+}
