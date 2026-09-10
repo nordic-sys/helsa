@@ -22,6 +22,7 @@ export const hu = {
     'nav.sleep': 'Alvás',
     'nav.nutrition': 'Táplálkozás',
     'nav.challenge': 'Havi kihívás',
+    'nav.coverage': 'Adat-teljesség',
     'nav.settings': 'Beállítások',
     'lang.aria': 'Nyelv megválasztása',
     'lang.hu': 'Magyar',
@@ -352,6 +353,54 @@ export const hu = {
     'achievements.thresholds.missed': 'nem elért',
     'achievements.thresholds.note':
       'A küszöbök pillanatfelvételek arról, mi volt érvényben az érem megszerzésekor — ezért nem veszíthet az értékéből egy érem, ha a célokat később átírják.',
+    // --- Adat-teljesség ----------------------------------------------------
+    'coverage.title': 'Adat-teljesség',
+    'coverage.subtitle': 'Melyik mérésed érkezik ide, és ki írja őket.',
+    // ⚠️ Szándékosan úgy fogalmazva, hogy egyik szám se kapjon toldalékot: a
+    // magyar illeszkedés a számnév UTOLSÓ kimondott tagjához igazodik, tehát
+    // nincs egyetlen jó konstans (egy**re**, harminchét**re**, százhúsz**ra**).
+    'coverage.headline':
+      'A megnézett {total} típusból {measured} hozott adatot az elmúlt {days} napban.',
+    'coverage.window.30': '30 nap',
+    'coverage.window.90': '90 nap',
+    'coverage.window.365': 'Egy év',
+    'coverage.window.aria': 'A vizsgált időszak hossza',
+    'coverage.limits.title': 'Mit mond ez az oldal, és mit nem',
+    'coverage.limits.body':
+      'Ez az, ami a szerverre megérkezett. Az engedélyeket nem látja: egy típus, amire sosem adtál engedélyt, egy típus, ami mögött nincs érzékelő, és egy típus, amit a telefon nem tudott feltölteni, innen nézve egyformán néz ki — hiányként. A telefonon lévő app meg tudja különböztetni őket, és típusonként ki is mondja.',
+    'coverage.state.measured': 'Van adat',
+    'coverage.state.outside_window': 'Ebben az időszakban semmi',
+    'coverage.state.never_arrived': 'Soha nem érkezett',
+    'coverage.col.metric': 'Metrika',
+    'coverage.col.state': 'Állapot',
+    'coverage.col.days': 'Mért napok',
+    'coverage.col.samples': 'Minták',
+    'coverage.col.last': 'Utoljára',
+    'coverage.col.sources': 'Ki írja',
+    'coverage.group.count': '{total} típusból {measured} hoz adatot',
+    'coverage.group.empty': 'Ebből a körből még semmi nem érkezett ide.',
+    'coverage.notInCatalog': 'nincs a katalógusban',
+    'coverage.notInCatalogTitle':
+      'Ez a típus megérkezett, de a katalógus nem ismeri — valószínűleg egy újabb iOS-ből jön. Inkább felsoroljuk, mint hogy eldobjuk.',
+    'coverage.device.watch': 'óra',
+    'coverage.device.iphone': 'telefon',
+    'coverage.device.unknown': 'nem mondta meg, milyen eszköz',
+    'coverage.device.unknownTitle':
+      'A feltöltés nem mondta meg, milyen eszközről jött. Ez pontosan ennyit jelent — nem azt, hogy a telefon mérte.',
+    'coverage.gaps.title': 'Abbamaradt',
+    'coverage.gaps.body':
+      'Ezek eddig ritmusban érkeztek, és a ritmus megtört. Ez megfigyelés, nem hiba — nem tudjuk, miért, és lehet, hogy nincs is miért.',
+    'coverage.gaps.silent.one': '{n} napja semmi',
+    'coverage.gaps.silent.other': '{n} napja semmi',
+    'coverage.gaps.cadence': 'eddig nagyjából {cadence} érkezett',
+    'coverage.cadence.daily': 'naponta',
+    'coverage.cadence.everyOtherDay': 'kétnaponta',
+    'coverage.cadence.weekly': 'hetente',
+    'coverage.cadence.fortnightly': 'kéthetente',
+    'coverage.cadence.everyNDays': '{n} naponta',
+    'coverage.empty.title': 'Még semmi nem érkezett',
+    'coverage.empty.hint':
+      'A katalógus egyetlen típusa sem jutott el erre a szerverre. Ha a telefon tölt fel, lehet, hogy az első szinkron még fut.',
   },
 
   // --- Metric group names ---------------------------------------------------
@@ -438,6 +487,25 @@ export const hu = {
     standHours: 'Állásórák',
     nikeFuel: 'Nike Fuel',
     physicalEffort: 'Fizikai megterhelés',
+    // ⚠️ Ez a tizenöt benne van a szerver katalógusában (és az appéban is), de a
+    // `lib/metrics.ts`-ben NINCS: a webes katalógus 105 típusnál megállt, míg a
+    // másik kettő 120-ra nőtt. A nevek azért kellenek ide, hogy az adat-teljesség
+    // oldal — ami minden típust felsorol, amit a szerver ismer — ne gépi angolt
+    // mutasson magyar olvasónak. A `numberOfAlcoholicBeverages` mögött már van
+    // valódi adat, az volt az elmászás látható fele.
+    distanceCrossCountrySkiing: 'Sífutott táv',
+    distancePaddleSports: 'Kajak-kenu táv',
+    distanceRowing: 'Evezett táv',
+    distanceSkatingSports: 'Korcsolyázott táv',
+    cyclingCadence: 'Kerékpáros kadencia',
+    cyclingPower: 'Kerékpáros teljesítmény',
+    cyclingFunctionalThresholdPower: 'Funkcionális küszöbteljesítmény',
+    cyclingSpeed: 'Kerékpáros sebesség',
+    crossCountrySkiingSpeed: 'Sífutás-sebesség',
+    paddleSportsSpeed: 'Kajak-kenu sebesség',
+    rowingSpeed: 'Evezési sebesség',
+    workoutEffortScore: 'Edzés-megterhelés',
+    estimatedWorkoutEffortScore: 'Becsült edzés-megterhelés',
 
     // 3.2 Heart and circulation
     heartRate: 'Pulzus',
@@ -458,6 +526,7 @@ export const hu = {
     forcedExpiratoryVolume1: 'FEV1',
     peakExpiratoryFlowRate: 'Kilégzési csúcsáramlás',
     inhalerUsage: 'Inhalátor-használat',
+    appleSleepingBreathingDisturbances: 'Alvási légzészavarok',
 
     // 3.4 Body composition
     bodyMass: 'Testsúly',
@@ -545,6 +614,7 @@ export const hu = {
     electrodermalActivity: 'Bőrvezetés',
     waterTemperature: 'Vízhőmérséklet',
     underwaterDepth: 'Merülési mélység',
+    numberOfAlcoholicBeverages: 'Alkoholos italok',
   },
 }
 // No `as const` on purpose: the key union is what we want to pin down, not the

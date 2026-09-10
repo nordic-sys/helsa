@@ -115,6 +115,87 @@ func (e ChallengeStreakBreakReason) Valid() bool {
 	}
 }
 
+// Defines values for CoverageSourceDevice.
+const (
+	CoverageSourceDeviceIphone CoverageSourceDevice = "iphone"
+	CoverageSourceDeviceWatch  CoverageSourceDevice = "watch"
+)
+
+// Valid indicates whether the value is a known member of the CoverageSourceDevice enum.
+func (e CoverageSourceDevice) Valid() bool {
+	switch e {
+	case CoverageSourceDeviceIphone:
+		return true
+	case CoverageSourceDeviceWatch:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CoverageTypeGroup.
+const (
+	Activity         CoverageTypeGroup = "activity"
+	Body             CoverageTypeGroup = "body"
+	Environment      CoverageTypeGroup = "environment"
+	Heart            CoverageTypeGroup = "heart"
+	Mobility         CoverageTypeGroup = "mobility"
+	NutritionMacro   CoverageTypeGroup = "nutritionMacro"
+	NutritionMineral CoverageTypeGroup = "nutritionMineral"
+	NutritionVitamin CoverageTypeGroup = "nutritionVitamin"
+	Other            CoverageTypeGroup = "other"
+	Respiratory      CoverageTypeGroup = "respiratory"
+)
+
+// Valid indicates whether the value is a known member of the CoverageTypeGroup enum.
+func (e CoverageTypeGroup) Valid() bool {
+	switch e {
+	case Activity:
+		return true
+	case Body:
+		return true
+	case Environment:
+		return true
+	case Heart:
+		return true
+	case Mobility:
+		return true
+	case NutritionMacro:
+		return true
+	case NutritionMineral:
+		return true
+	case NutritionVitamin:
+		return true
+	case Other:
+		return true
+	case Respiratory:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CoverageTypeState.
+const (
+	Measured      CoverageTypeState = "measured"
+	NeverArrived  CoverageTypeState = "never_arrived"
+	OutsideWindow CoverageTypeState = "outside_window"
+)
+
+// Valid indicates whether the value is a known member of the CoverageTypeState enum.
+func (e CoverageTypeState) Valid() bool {
+	switch e {
+	case Measured:
+		return true
+	case NeverArrived:
+		return true
+	case OutsideWindow:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DevicePlatform.
 const (
 	DevicePlatformIos     DevicePlatform = "ios"
@@ -417,16 +498,16 @@ func (e PushRegisterPlatform) Valid() bool {
 
 // Defines values for SampleInSourceDevice.
 const (
-	Iphone SampleInSourceDevice = "iphone"
-	Watch  SampleInSourceDevice = "watch"
+	SampleInSourceDeviceIphone SampleInSourceDevice = "iphone"
+	SampleInSourceDeviceWatch  SampleInSourceDevice = "watch"
 )
 
 // Valid indicates whether the value is a known member of the SampleInSourceDevice enum.
 func (e SampleInSourceDevice) Valid() bool {
 	switch e {
-	case Iphone:
+	case SampleInSourceDeviceIphone:
 		return true
-	case Watch:
+	case SampleInSourceDeviceWatch:
 		return true
 	default:
 		return false
@@ -721,6 +802,90 @@ type ChallengeStreakBreak struct {
 
 // ChallengeStreakBreakReason Why the run does not reach further back. `missed` and `no_data` are deliberately not the same answer: one is a day under the goal, the other a day we know nothing about, and reporting the second as the first is the same lie as treating a missing measurement as a zero. `start_of_history` means the window simply ends there.
 type ChallengeStreakBreakReason string
+
+// CoverageGap The metric had settled into a rhythm and that rhythm has broken. **An observation, not a problem** — a flat battery, a holiday, a broken sensor and a deliberate break all look the same from here, and the server does not guess which.
+//
+// The rules are the phone's (`Coverage/MetricGap.swift`), value for value: at least 6 intervals spanning at least 14 days before a rhythm is claimed at all, a silence of at least 3 days AND at least 3× the typical interval, no judgement above a 30-day cadence, and nothing after 90 silent days — past that the metric is not silent but discontinued, and the rhythm being compared against would itself be stale.
+type CoverageGap struct {
+	// HistoryDays the span the observed arrivals cover
+	HistoryDays       *int `json:"history_days,omitempty"`
+	ObservedIntervals *int `json:"observed_intervals,omitempty"`
+
+	// SilentDays whole days between the last arrival and the end of the window
+	SilentDays *int `json:"silent_days,omitempty"`
+
+	// TypicalIntervalDays The MEDIAN of the intervals between arrivals — a median, so that one two-week holiday cannot make a daily series look sparse.
+	TypicalIntervalDays *float32 `json:"typical_interval_days,omitempty"`
+}
+
+// CoverageResponse The completeness report of one window. `types` carries the WHOLE catalog, in catalog order — including the types nothing has ever been received for, because "this entire area is empty" is exactly the thing this endpoint exists to make visible.
+type CoverageResponse struct {
+	// Days the length of the window in days, `to` included
+	Days *int                `json:"days,omitempty"`
+	From *openapi_types.Date `json:"from,omitempty"`
+
+	// To inclusive
+	To    *openapi_types.Date `json:"to,omitempty"`
+	Types *[]CoverageType     `json:"types,omitempty"`
+	Tz    *string             `json:"tz,omitempty"`
+}
+
+// CoverageSource defines model for CoverageSource.
+type CoverageSource struct {
+	// BundleId The writing app's bundle identifier. Absent for samples that arrived without one.
+	BundleId *string `json:"bundle_id,omitempty"`
+
+	// Device The coarse device kind the client guessed at upload time. Absent when the client did not say — and an absence means exactly that, NOT "the phone measured it".
+	Device      *CoverageSourceDevice `json:"device,omitempty"`
+	LastDay     *openapi_types.Date   `json:"last_day,omitempty"`
+	SampleCount *int                  `json:"sample_count,omitempty"`
+}
+
+// CoverageSourceDevice The coarse device kind the client guessed at upload time. Absent when the client did not say — and an absence means exactly that, NOT "the phone measured it".
+type CoverageSourceDevice string
+
+// CoverageType One metric type's row. Every count here is about the **window**; `state` and `last_day` also take into account whether anything ever arrived outside it.
+type CoverageType struct {
+	DataType *string `json:"data_type,omitempty"`
+
+	// Gap The metric had settled into a rhythm and that rhythm has broken. **An observation, not a problem** — a flat battery, a holiday, a broken sensor and a deliberate break all look the same from here, and the server does not guess which.
+	//
+	// The rules are the phone's (`Coverage/MetricGap.swift`), value for value: at least 6 intervals spanning at least 14 days before a rhythm is claimed at all, a silence of at least 3 days AND at least 3× the typical interval, no judgement above a 30-day cadence, and nothing after 90 silent days — past that the metric is not silent but discontinued, and the rhythm being compared against would itself be stale.
+	Gap *CoverageGap `json:"gap,omitempty"`
+
+	// Group The catalog group, in the app's own vocabulary (`HealthMetricGroup` raw values), so that the two lists can be lined up without a translation table in the middle.
+	Group *CoverageTypeGroup `json:"group,omitempty"`
+
+	// InCatalog `false` for a type that arrived but the server's catalog does not know — `data_type` is an open string on purpose, and a type from a newer iOS release must not vanish from a completeness report of all places. Such a row lands in the `other` group.
+	InCatalog *bool `json:"in_catalog,omitempty"`
+
+	// LastDay The day of the most recent sample, in `tz`. Day-level and not a timestamp on purpose: it is what the app says as well, and an exact time here would invite reading a precision into the row that a daily completeness view does not have.
+	LastDay *openapi_types.Date `json:"last_day,omitempty"`
+
+	// MeasuredDays How many distinct days of the window carried a measurement. **Absent, never 0, when nothing arrived.**
+	MeasuredDays *int `json:"measured_days,omitempty"`
+
+	// SampleCount Samples within the window. Absent when nothing arrived.
+	SampleCount *int `json:"sample_count,omitempty"`
+
+	// Sources Who wrote the samples of this type in the window, biggest contributor first. Absent when nothing arrived.
+	//
+	// ⚠️ **This is a much thinner fact than the app's provenance screen** (`SampleProvenance.swift`). The upload path keeps a bundle identifier and a coarse `watch`/`iphone` guess per sample; manufacturer, model, firmware, the writing app's version, and the fact that a sample carried no device at all do not survive the wire. So this list can say WHICH APP wrote it, and must not be read as which hardware measured it.
+	Sources *[]CoverageSource `json:"sources,omitempty"`
+
+	// State `measured` — at least one sample of this type arrived within the window.
+	// `outside_window` — nothing within the window, but this type HAS reached the server before; `last_day` says when.
+	// `never_arrived` — no sample of this type has ever reached this server. ⚠️ This is not the same claim as the phone's "no data": it does not say the measurement does not exist, only that it never got here. A refused permission and a missing sensor both look like this.
+	State *CoverageTypeState `json:"state,omitempty"`
+}
+
+// CoverageTypeGroup The catalog group, in the app's own vocabulary (`HealthMetricGroup` raw values), so that the two lists can be lined up without a translation table in the middle.
+type CoverageTypeGroup string
+
+// CoverageTypeState `measured` — at least one sample of this type arrived within the window.
+// `outside_window` — nothing within the window, but this type HAS reached the server before; `last_day` says when.
+// `never_arrived` — no sample of this type has ever reached this server. ⚠️ This is not the same claim as the phone's "no data": it does not say the measurement does not exist, only that it never got here. A refused permission and a missing sensor both look like this.
+type CoverageTypeState string
 
 // Device defines model for Device.
 type Device struct {
@@ -1136,6 +1301,18 @@ type GetChallengeParams struct {
 	Thresholds *string `form:"thresholds,omitempty" json:"thresholds,omitempty"`
 }
 
+// GetCoverageParams defines parameters for GetCoverage.
+type GetCoverageParams struct {
+	// From the first day of the window; by default 365 days back
+	From *openapi_types.Date `form:"from,omitempty" json:"from,omitempty"`
+
+	// To the last day of the window, inclusive; by default today
+	To *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
+
+	// Tz IANA tz; if missing, user.time_zone. The day boundaries are cut in this zone.
+	Tz *string `form:"tz,omitempty" json:"tz,omitempty"`
+}
+
 // GetSamplesParams defines parameters for GetSamples.
 type GetSamplesParams struct {
 	DataType string     `form:"data_type" json:"data_type"`
@@ -1221,6 +1398,9 @@ type ServerInterface interface {
 	// The monthly step challenge — milestones, progress and the streak
 	// (GET /challenge)
 	GetChallenge(w http.ResponseWriter, r *http.Request, params GetChallengeParams)
+	// Data completeness — which metric types arrive, and who writes them
+	// (GET /coverage)
+	GetCoverage(w http.ResponseWriter, r *http.Request, params GetCoverageParams)
 	// Connected devices
 	// (GET /devices)
 	GetDevices(w http.ResponseWriter, r *http.Request)
@@ -1329,6 +1509,12 @@ func (_ Unimplemented) GetBaseline(w http.ResponseWriter, r *http.Request, param
 // The monthly step challenge — milestones, progress and the streak
 // (GET /challenge)
 func (_ Unimplemented) GetChallenge(w http.ResponseWriter, r *http.Request, params GetChallengeParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Data completeness — which metric types arrive, and who writes them
+// (GET /coverage)
+func (_ Unimplemented) GetCoverage(w http.ResponseWriter, r *http.Request, params GetCoverageParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1753,6 +1939,71 @@ func (siw *ServerInterfaceWrapper) GetChallenge(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetChallenge(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetCoverage operation middleware
+func (siw *ServerInterfaceWrapper) GetCoverage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCoverageParams
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tz" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tz", r.URL.Query(), &params.Tz, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tz"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tz", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetCoverage(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2558,6 +2809,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/challenge", wrapper.GetChallenge)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/coverage", wrapper.GetCoverage)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/devices", wrapper.GetDevices)

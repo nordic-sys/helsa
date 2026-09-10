@@ -45,9 +45,10 @@ migrate: ## Apply the goose migrations (idempotent against an already bootstrapp
 	GOOSE_DRIVER=postgres GOOSE_DBSTRING="$(GOOSE_DBSTRING)" GOOSE_MIGRATION_DIR=db/migrations go tool goose up
 
 # The smoke suite is not only test/smoke: internal/insights carries the
-# database-level tests of the sleep series, which need the same live Timescale
-# and would be meaningless without it.
-SMOKE_PKGS := ./test/smoke ./internal/insights
+# database-level tests of the sleep series, and internal/coverage the ones that
+# check the day grid is cut in the user's timezone — both need the same live
+# Timescale and would be meaningless without it.
+SMOKE_PKGS := ./test/smoke ./internal/insights ./internal/coverage
 
 smoke: $(ENV_FILE) ## E2E smoke: auth -> ingest -> summary (against the running infrastructure)
 	HELSA_AUTH_DEV_MODE=true go test -tags smoke -count=1 -v $(SMOKE_PKGS)

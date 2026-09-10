@@ -15,6 +15,7 @@ export const en: Dict = {
     'nav.sleep': 'Sleep',
     'nav.nutrition': 'Nutrition',
     'nav.challenge': 'Monthly challenge',
+    'nav.coverage': 'Completeness',
     'nav.settings': 'Settings',
     'lang.aria': 'Choose language',
     'lang.hu': 'Hungarian',
@@ -351,6 +352,59 @@ export const en: Dict = {
     'achievements.thresholds.missed': 'not reached',
     'achievements.thresholds.note':
       'The thresholds are a snapshot of what was in force at the moment the medal was earned, which is why a medal cannot lose its value when the targets are later rewritten.',
+    // --- Data completeness -------------------------------------------------
+    'coverage.title': 'Data completeness',
+    'coverage.subtitle': 'Which of your measurements are arriving here, and who writes them.',
+    // ⚠️ Worded so that no number needs a suffix — the same reason the app's
+    // headline is (Hungarian suffix harmony follows the last spoken part of the
+    // numeral, so there is no single correct constant).
+    'coverage.headline': '{measured} of the {total} types examined brought data in the last {days} days.',
+    'coverage.window.30': '30 days',
+    'coverage.window.90': '90 days',
+    'coverage.window.365': 'A year',
+    'coverage.window.aria': 'Length of the examined period',
+    // The honesty note. It is not a caveat that can be dropped once the page is
+    // familiar: the page's central claim is a distinction, and this is where the
+    // limits of that distinction are stated.
+    'coverage.limits.title': 'What this page can and cannot tell you',
+    'coverage.limits.body':
+      'This is what has arrived at the server. It cannot see permissions: a type you never granted, a type with no sensor behind it, and a type the phone failed to upload all look the same from here — as an absence. The app on your phone can tell those apart, and it says so per type.',
+    'coverage.state.measured': 'There is data',
+    'coverage.state.outside_window': 'Nothing in this period',
+    'coverage.state.never_arrived': 'Nothing has ever arrived',
+    'coverage.col.metric': 'Metric',
+    'coverage.col.state': 'State',
+    'coverage.col.days': 'Days measured',
+    'coverage.col.samples': 'Samples',
+    'coverage.col.last': 'Last arrival',
+    'coverage.col.sources': 'Written by',
+    'coverage.group.count': '{measured} of {total} bring data',
+    'coverage.group.empty': 'Nothing in this area has ever arrived here.',
+    'coverage.notInCatalog': 'not in the catalogue',
+    'coverage.notInCatalogTitle':
+      'This type arrived but the catalogue does not know it — probably from a newer iOS release. It is listed rather than dropped.',
+    'coverage.device.watch': 'watch',
+    'coverage.device.iphone': 'phone',
+    'coverage.device.unknown': 'device not stated',
+    'coverage.device.unknownTitle':
+      'The upload did not say which device this came from. That means exactly that — not that the phone measured it.',
+    // The gaps section. An observation, never an alarm: we say what we saw and
+    // stop there, because a flat battery, a holiday and a broken sensor all look
+    // identical from here.
+    'coverage.gaps.title': 'Stopped arriving',
+    'coverage.gaps.body':
+      'These used to arrive in a rhythm, and the rhythm has broken. That is an observation, not a fault — we do not know why, and there may be no reason worth knowing.',
+    'coverage.gaps.silent.one': 'nothing for {n} day',
+    'coverage.gaps.silent.other': 'nothing for {n} days',
+    'coverage.gaps.cadence': 'until now it arrived roughly {cadence}',
+    'coverage.cadence.daily': 'daily',
+    'coverage.cadence.everyOtherDay': 'every other day',
+    'coverage.cadence.weekly': 'weekly',
+    'coverage.cadence.fortnightly': 'every fortnight',
+    'coverage.cadence.everyNDays': 'every {n} days',
+    'coverage.empty.title': 'Nothing has arrived yet',
+    'coverage.empty.hint':
+      'Not one of the catalogue’s types has reached this server. If the phone is uploading, the first sync may still be running.',
   },
 
   // --- Metric group names ---------------------------------------------------
@@ -427,6 +481,25 @@ export const en: Dict = {
     standHours: 'Stand hours',
     nikeFuel: 'Nike Fuel',
     physicalEffort: 'Physical effort',
+    // ⚠️ These fifteen are in the server catalog (and in the app's) but NOT in
+    // `lib/metrics.ts` — the web catalog stopped at 105 types while the other two
+    // grew to 120. The names are here so that the completeness page, which lists
+    // every type the server knows, does not print machine-generated English at a
+    // Hungarian reader. `numberOfAlcoholicBeverages` is the one that already has
+    // real data behind it, so it was the visible half of the drift.
+    distanceCrossCountrySkiing: 'Cross-country skiing distance',
+    distancePaddleSports: 'Paddle sports distance',
+    distanceRowing: 'Rowing distance',
+    distanceSkatingSports: 'Skating distance',
+    cyclingCadence: 'Cycling cadence',
+    cyclingPower: 'Cycling power',
+    cyclingFunctionalThresholdPower: 'Functional threshold power',
+    cyclingSpeed: 'Cycling speed',
+    crossCountrySkiingSpeed: 'Cross-country skiing speed',
+    paddleSportsSpeed: 'Paddle sports speed',
+    rowingSpeed: 'Rowing speed',
+    workoutEffortScore: 'Workout effort',
+    estimatedWorkoutEffortScore: 'Estimated workout effort',
 
     // 3.2 Heart and circulation
     heartRate: 'Heart rate',
@@ -447,6 +520,7 @@ export const en: Dict = {
     forcedExpiratoryVolume1: 'FEV1',
     peakExpiratoryFlowRate: 'Peak expiratory flow',
     inhalerUsage: 'Inhaler usage',
+    appleSleepingBreathingDisturbances: 'Breathing disturbances',
 
     // 3.4 Body composition
     bodyMass: 'Body mass',
@@ -534,5 +608,6 @@ export const en: Dict = {
     electrodermalActivity: 'Electrodermal activity',
     waterTemperature: 'Water temperature',
     underwaterDepth: 'Underwater depth',
+    numberOfAlcoholicBeverages: 'Alcoholic drinks',
   },
 }

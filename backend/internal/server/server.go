@@ -21,6 +21,7 @@ import (
 	"github.com/nordic-sys/helsa/backend/internal/baseline"
 	"github.com/nordic-sys/helsa/backend/internal/challenge"
 	"github.com/nordic-sys/helsa/backend/internal/config"
+	"github.com/nordic-sys/helsa/backend/internal/coverage"
 	"github.com/nordic-sys/helsa/backend/internal/db"
 	"github.com/nordic-sys/helsa/backend/internal/export"
 	"github.com/nordic-sys/helsa/backend/internal/ingest"
@@ -49,6 +50,7 @@ type Server struct {
 	// milestones and streak the phone shows, as far as the server can honestly
 	// compute them.
 	challenge *challenge.Service
+	coverage  *coverage.Service
 	q         *db.Queries
 }
 
@@ -69,6 +71,7 @@ func New(cfg *config.Config, st *store.Store, q *queue.Queue) *Server {
 		export:    export.NewDBSource(st.DB),
 		insights:  insights.New(st.DB),
 		challenge: challenge.New(st.DB),
+		coverage:  coverage.New(st.DB),
 		q:         db.New(st.DB),
 	}
 }

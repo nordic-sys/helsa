@@ -4,6 +4,7 @@ import type {
   BaselineRange,
   BaselineResponse,
   Challenge,
+  CoverageResponse,
   Device,
   Goal,
   Insight,
@@ -103,6 +104,9 @@ export const api = {
 
   sleep: (from?: string, to?: string, tz?: string) =>
     req<SleepSegment[]>(`/sleep${qs({ from, to, tz })}`),
+
+  coverage: (from?: string, to?: string, tz?: string) =>
+    req<CoverageResponse>(`/coverage${qs({ from, to, tz })}`),
 
   goals: () => req<Goal[]>('/goals'),
 

@@ -432,3 +432,73 @@ button.seg[aria-pressed='true'] {
   color: var(--text);
   margin-bottom: 3px;
 }
+
+/* --- Data completeness --- */
+
+/* The metric cell is a ROW header (`<th scope="row">`), which is what lets a
+   screen reader announce "Steps · There is data" instead of reading six loose
+   cells. But the table's `th` rule is written for COLUMN headers — small caps,
+   letter-spaced, dimmed — and it turned all 120 metric names into shouting. */
+.cov-metric {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.cov-headline {
+  font-size: 15px;
+  margin: 0 0 16px;
+}
+
+/* The state dot. `never_arrived` is grey and not red on purpose: most of the
+   catalogue is empty for any given person, and sixty-eight red rows would drown
+   the two that are actually worth looking at. */
+.cov-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-right: 7px;
+  vertical-align: 1px;
+}
+
+/* A type that arrived without being in the catalogue — from a newer iOS release,
+   most likely. Listed rather than dropped, and marked so that it does not read
+   as one of ours. */
+.cov-flag {
+  margin-left: 7px;
+  padding: 1px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.cov-source {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-right: 10px;
+}
+.cov-source code {
+  font-size: 12px;
+  color: var(--text);
+}
+.cov-source em {
+  font-style: normal;
+  font-size: 11.5px;
+  color: var(--text-dim);
+}
+
+.cov-gaps {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 14px;
+}
+.cov-gaps li {
+  margin-bottom: 5px;
+}
