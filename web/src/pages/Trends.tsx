@@ -6,17 +6,19 @@ import {
   CartesianGrid,
   ComposedChart,
   Line,
+  ReferenceArea,
   ResponsiveContainer,
   Tooltip,
   XAxis,
   YAxis,
 } from 'recharts'
 import { api, browserTz } from '../api/client'
-import type { Range } from '../api/types'
+import type { BaselineRange, Range } from '../api/types'
 import { MetricPicker } from '../components/MetricPicker'
 import { Card, Empty, ErrorState, Loading, Note } from '../components/ui'
 import { useI18n } from '../i18n'
 import type { UiKey } from '../i18n'
+import { STANDING_ARROW, bandOf, pickBaseline } from '../lib/baseline'
 import { useFormat, type Formatters } from '../lib/format'
 import { metricDef, pickSeries, readSeries } from '../lib/metrics'
 import { useAvailability } from '../lib/useAvailability'
@@ -53,6 +55,24 @@ export default function Trends() {
     queryKey: ['summary', range, def.key, tz],
     queryFn: () => api.summary(range, [def.key, ...def.aliases], tz),
   })
+
+  // The person's own usual range — a second, 60-day window, so a request of its
+  // own. ⚠️ Only the daily-bucketed ranges may have one: the reference is daily,
+  // and a daily band under the hourly buckets of `day` or the monthly ones of
+  // `year` would be drawn against numbers of an entirely different size.
+  const usualRange: BaselineRange | null =
+    range === 'week' || range === 'month' ? range : null
+  const bq = useQuery({
+    queryKey: ['baseline', usualRange, def.key, tz],
+    queryFn: () => api.baseline(usualRange as BaselineRange, [def.key, ...def.aliases], tz),
+    enabled: usualRange !== null,
+  })
+  // ⚠️ A failed baseline must not take the curve down with it, so `bq.isError` is
+  // never rendered as an error here: the band is context around the measurement,
+  // and one band fewer is a far smaller loss than an error banner over a perfectly
+  // good chart. The app makes the same call in `TrendsViewModel.loadBaseline`.
+  const usual = pickBaseline(def, bq.data?.metrics)
+  const band = bandOf(usual)
 
   const r = readSeries(def, pickSeries(def, q.data?.metrics))
   const label = tMetric(def.key)
@@ -118,6 +138,34 @@ export default function Trends() {
             <ResponsiveContainer>
               <ComposedChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: -8 }}>
                 <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                {band && (
+                  // The furthest back layer, so that everything else is read THROUGH
+                  // it: the band is a property of the person, not of any particular
+                  // day, which is why it has no x extent and spans the whole plot.
+                  //
+                  // `extendDomain` because the axis has to make room for it — a band
+                  // clipped at the top of the chart would say the period sat inside a
+                  // range it never reached. Swift Charts does the same on its own, by
+                  // letting the rectangle mark take part in the automatic y scale.
+                  //
+                  // ⚠️ The axis ids are spelled out because recharts' own defaults for
+                  // them do not survive this React version, and the domain-extending
+                  // pass matches reference elements BY axis id
+                  // (`detectReferenceElementsDomain`). Without them the band drew
+                  // fine and silently failed to widen the axis — the one failure
+                  // shape a green test suite cannot see.
+                  <ReferenceArea
+                    y1={band.low}
+                    y2={band.high}
+                    xAxisId={0}
+                    yAxisId={0}
+                    ifOverflow="extendDomain"
+                    stroke="none"
+                    fill={def.color}
+                    fillOpacity={0.1}
+                    isFront={false}
+                  />
+                )}
                 <XAxis
                   dataKey="t"
                   tick={{ fill: 'var(--text-dim)', fontSize: 12 }}
@@ -191,6 +239,41 @@ export default function Trends() {
               {r.effectiveAgg === 'avg' ? t('trends.periodAverage') : t('trends.periodTotal')}:{' '}
               <strong>{f.fmt(r.total, def.digits)}</strong> {unit}
               {showBand && ` ${t('trends.bandNote')}`}
+            </p>
+          )}
+
+          {/* Where this period stands against the person's own usual.
+              ⚠️ No colour, and the arrow only repeats the words. The direction is a
+              fact; whether it is welcome is not something this screen can know —
+              more steps than usual is probably good, a higher resting heart rate
+              than usual probably is not, and we have no idea which the reader is
+              after. The number of reference days is named on purpose: a band
+              resting on 14 days and one resting on 60 are not equally strong
+              claims, and the reader is entitled to tell them apart. */}
+          {band && usual?.standing && (
+            <p style={{ margin: '8px 0 0', display: 'flex', alignItems: 'baseline', gap: 6 }}>
+              <span aria-hidden="true" className="subtle">
+                {STANDING_ARROW[usual.standing]}
+              </span>
+              <strong>{t(`trends.standing.${usual.standing}`)}</strong>
+            </p>
+          )}
+
+          {/* What the pale rectangle is, and how many days it rests on. */}
+          {band && usual?.day_count != null && (
+            <p className="subtle" style={{ margin: '4px 0 0' }}>
+              {t('trends.usual.band', { days: usual.day_count })}
+            </p>
+          )}
+
+          {/* ⚠️ And when there is not enough yet, SAY so. A band that quietly fails
+              to appear looks like a band that does not exist for this metric. */}
+          {usualRange && !band && bq.data?.min_days != null && (
+            <p className="subtle" style={{ margin: '8px 0 0' }}>
+              {t('trends.usual.pending', {
+                days: usual?.day_count ?? 0,
+                min: bq.data.min_days,
+              })}
             </p>
           )}
         </Card>

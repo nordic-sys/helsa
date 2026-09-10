@@ -78,6 +78,26 @@ export const en: Dict = {
     'trends.periodTotal': 'Total over the period',
     'trends.bandNote': '· the pale band is the minimum–maximum inside the bucket',
 
+    // --- Trends · your usual range ------------------------------------------
+    // ⚠️ "Usual", never "normal": normal has a medical ring to it that this number
+    // does not deserve — it is a description of the last two months, not a
+    // reference range from a laboratory. The five words are the app's
+    // (`TrendStanding.label`), and the two have to agree: someone who reads this on
+    // the phone should not meet a second wording of the same number in a browser.
+    // The same sentence the app's chart legend carries, because it answers the same
+    // question — what the pale rectangle is — and naming the day count is the point
+    // of it: a band resting on 14 days and one resting on 60 are not equally strong
+    // claims, and the reader is entitled to tell them apart without asking.
+    'trends.usual.band':
+      'The wide band is your usual range: the middle of the last {days} days measured, give or take how much they scattered.',
+    'trends.usual.pending':
+      'Not enough measured days yet for a usual range ({days}/{min}). Until then no band is drawn — one resting on fewer days would not be a narrower claim, just an equally confident one.',
+    'trends.standing.wellBelow': 'Well below your usual',
+    'trends.standing.below': 'Below your usual',
+    'trends.standing.typical': 'Your usual',
+    'trends.standing.above': 'Above your usual',
+    'trends.standing.wellAbove': 'Well above your usual',
+
     // --- Workouts ----------------------------------------------------------
     'workouts.title': 'Workouts',
     'workouts.subtitle': 'The most recent workouts, newest first.',

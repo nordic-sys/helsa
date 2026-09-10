@@ -540,6 +540,81 @@ paths:
         '200': { description: Ready }
         '503': { $ref: '#/components/responses/Problem' }
 
+  /baseline:
+    get:
+      tags: [read]
+      summary: The person's own usual range, and where a period stands against it
+      description: >
+        The middle of the person's **own last 60 days** for a metric, and where the period being
+        looked at sits against it — five levels, no verdict.
+
+
+        A sibling of `/summary` rather than a field on it, for three reasons. It has a window of its
+        own (60 days, daily buckets), so `from`/`to` on a single response would have to mean two
+        different windows at once; it exists for two of the four ranges only, and a field that
+        silently disappears on `day` and `year` reads like "no data"; and `/summary` is cached per
+        (range, tz, metrics, window), which a second, differently shaped window would either poison
+        or bypass. Internally it is computed FROM `/summary`'s own daily buckets, so the band rests
+        on exactly the numbers a client would receive itself.
+
+
+        **The rule, matching `TrendBaseline` in the app.** A formula changed on one side is carried
+        to the other: a server that computes "your usual" differently from the phone is worse than a
+        server that does not compute it, because the two would quietly disagree about the same
+        person.
+
+
+        1. The reference is the **60 days ending on the anchor day** (`reference_days`), in daily
+        buckets.
+
+
+        2. The anchor is the **end of the period being looked at, not today** (`min(period end,
+        today)`). Browsing back to a month in 2024 and being told it was "above your usual" would
+        otherwise mean "above what is usual for you NOW" — a comparison across two years wearing the
+        words of one.
+
+
+        3. At least **14 of those days must carry a measurement** (`min_days`). Below that there is
+        NO band — not a wider one, not a guess: `mean`/`sd`/`low`/`high` stay absent and only
+        `day_count` comes back. A day without a measurement is never counted as a zero.
+
+
+        4. The band is `mean` ± one **sample** standard deviation (n−1) — a sample of the usual, not
+        the whole population of it. One sigma, so it covers roughly the middle two thirds of the
+        usual days: two would never be left, and a band that is never left says nothing. A reference
+        window whose days never varied gets no band either, because a zero-width band is a line
+        pretending to be one.
+
+
+        5. `standing` compares the period's **average measured day** (`period_value`) with the band,
+        at ±0.5 and ±1.5 sigma. Deliberately NOT at the edges of the band: the middle level has to be
+        wider than a hair, or the label would flicker between "typical" and "above" on noise alone.
+
+
+        ⚠️ `range` is `week` or `month` ONLY. The reference is daily, and a daily band drawn against
+        hourly (`day`) or monthly (`year`) buckets would compare quantities that differ by a factor
+        of 24 or 30 — for a summed metric it would be wrong by exactly that much. Silence is the only
+        correct answer there, so those ranges are not offered at all.
+
+
+        ⚠️ The five levels are a **description of the person's own two months, not a grade.** More
+        steps than usual is probably welcome; a higher resting heart rate than usual probably is not;
+        a heavier body mass is whatever the person is working towards. The server cannot know which,
+        so it states the position and stops — and a client must not paint it as good or bad.
+      parameters:
+        - { name: metrics, in: query, required: true, schema: { type: string }, description: "a comma-separated list, as for /summary" }
+        - { name: range, in: query, required: true, schema: { type: string, enum: [week, month] }, description: "the period being looked at; its end anchors the reference window" }
+        - { name: tz, in: query, required: false, schema: { type: string }, description: "IANA tz; if missing, user.time_zone" }
+        - { name: from, in: query, required: false, schema: { type: string, format: date }, description: "shifts the period, exactly as for /summary" }
+        - { name: to, in: query, required: false, schema: { type: string, format: date } }
+      responses:
+        '200':
+          description: The usual range per metric
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BaselineResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+
 components:
   securitySchemes:
     deviceToken:
@@ -998,3 +1073,38 @@ components:
         status: { type: string, enum: [pending, ready, failed] }
         url: { type: [string, 'null'] }
         expires_at: { type: [string, 'null'], format: date-time }
+
+    BaselineResponse:
+      type: object
+      properties:
+        range: { type: string }
+        tz: { type: string }
+        from: { type: string, format: date, description: "the first day of the period being looked at" }
+        to: { type: string, format: date, description: "its last day, inclusive" }
+        reference_from: { type: string, format: date }
+        reference_to: { type: string, format: date, description: "the last day of the reference window, inclusive. It is `to`, or today if `to` is still ahead of us — the anchor rule in §2 of the endpoint description." }
+        reference_days: { type: integer, description: "60 — how far the reference reaches. Not 30: a 30-day reference under a 30-day chart would be the chart describing itself." }
+        min_days: { type: integer, description: "14 — how many measured days a band needs. Sent rather than assumed, so that a client does not have to keep a third copy of the number." }
+        metrics:
+          type: object
+          additionalProperties: { $ref: '#/components/schemas/MetricBaseline' }
+
+    MetricBaseline:
+      type: object
+      description: >
+        One metric's usual range.
+
+
+        ⚠️ **Everything but `day_count` may be absent, and the absence IS the answer:** too few
+        measured days, or a reference window that never varied, means there is no band to draw. It
+        does not mean zero, and it must not be shown as a narrower or a guessed one.
+      properties:
+        agg: { type: string, enum: [sum, avg] }
+        unit: { type: string, description: "The same convention as `MetricSeries.unit`, including the 0…100 percentages." }
+        day_count: { type: integer, description: "How many of the reference days carried a measurement. Worth naming on a UI: a band resting on 14 days and one resting on 60 are not equally strong claims." }
+        mean: { type: number }
+        sd: { type: number, description: "The SAMPLE standard deviation (n−1) of those days." }
+        low: { type: number, description: "`mean − sd`" }
+        high: { type: number, description: "`mean + sd`" }
+        period_value: { type: number, description: "The period's AVERAGE MEASURED DAY — not its total. For a summed metric the total of 7 days and the total of 30 are not comparable at all, while the average day of each is; for an averaged metric the two are the same number. Absent if the period holds no measurement." }
+        standing: { type: string, enum: [wellBelow, below, typical, above, wellAbove], description: "Where `period_value` sits against the band; absent whenever either of them is. A TOKEN, not a sentence — the client words it in its own language, for the same reason `Insight.rule` exists." }

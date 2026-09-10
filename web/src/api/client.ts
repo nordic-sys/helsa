@@ -1,6 +1,8 @@
 import type {
   Achievement,
   ActivitySummary,
+  BaselineRange,
+  BaselineResponse,
   Device,
   Goal,
   Insight,
@@ -86,6 +88,11 @@ function qs(params: Record<string, string | number | undefined>): string {
 export const api = {
   summary: (range: Range, metrics: string[], tz?: string) =>
     req<SummaryResponse>(`/summary${qs({ range, metrics: metrics.join(','), tz })}`),
+
+  // A sibling of summary rather than a flag on it: the usual range is computed
+  // over a 60-day window of its own, whichever window the chart happens to show.
+  baseline: (range: BaselineRange, metrics: string[], tz?: string) =>
+    req<BaselineResponse>(`/baseline${qs({ range, metrics: metrics.join(','), tz })}`),
 
   activity: (from?: string, to?: string, tz?: string) =>
     req<ActivitySummary[]>(`/activity${qs({ from, to, tz })}`),

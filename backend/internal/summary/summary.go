@@ -121,6 +121,15 @@ func (s *Service) Compute(ctx context.Context, userID uuid.UUID, req Request) (a
 	return resp, nil
 }
 
+// Window is window() for the packages that have to line up with it.
+//
+// The baseline needs it because its 60-day reference window is anchored to the END
+// of the period being looked at, and this is the only function that knows where
+// that end falls — recomputing it elsewhere would be two answers to one question.
+func Window(req Request, loc *time.Location) (bucket string, start, end time.Time) {
+	return window(req, loc)
+}
+
 // window derives the bucket width and the [start,end) window in the user's
 // timezone from range (or from/to).
 func window(req Request, loc *time.Location) (bucket string, start, end time.Time) {
