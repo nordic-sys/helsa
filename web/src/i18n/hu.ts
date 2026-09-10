@@ -208,6 +208,79 @@ export const hu = {
     'picker.noDataYet': '{key} — még nincs adat',
     'picker.selected':
       'Kiválasztva: {name} · a {sum} jelű metrikák összegződnek az időszakra, az {avg} jelűek átlagolódnak.',
+
+    // --- Observations ------------------------------------------------------
+    // The two nav labels belong with the block above; they are down here because
+    // several pages were being added at once and appending is the only way to do
+    // that without three agents rewriting the same lines.
+    'nav.insights': 'Megfigyelések',
+    'nav.achievements': 'Érmek',
+
+    'insights.title': 'Megfigyelések',
+    'insights.subtitle':
+      'Amit a szabályok a mért napokban találtak. Mozgóátlag, z-érték és korreláció — nincs mögötte modell, és egyetlen szabály sem tippel meg nem mért napot.',
+    'insights.serverLanguage':
+      'Az alábbi mondatokat a szerver fogalmazza, és azon a nyelven jelennek meg, amelyen a szerver beszél. A nyelvváltó ezt a felületet állítja, nem őket.',
+    'insights.empty.title': 'Most nincs mit jelenteni',
+    'insights.empty.hint':
+      'Ez teljes válasz, nem hiba. Minden szabálynak van egy minimum mért napszáma, és amelyik ez alatt van, inkább hallgat, mint hogy kitaláljon valamit.',
+    'insights.kind.anomaly': 'Eltérés a saját alapvonaladtól',
+    'insights.kind.anomaly.about':
+      'A közeli napok a saját, hosszabb alapvonal-ablakodhoz mérve.',
+    'insights.kind.trend': 'Változás az előző ablakhoz képest',
+    'insights.kind.trend.about': 'Egy ablak összevetve a közvetlenül előtte lévővel.',
+    'insights.kind.correlation': 'Két sor együtt mozog',
+    'insights.kind.correlation.about':
+      'Együttmozgás egy hosszabb ablakon. Az együttmozgás nem azt jelenti, hogy az egyik okozza a másikat.',
+    'insights.kind.pattern': 'Az ablak egy tulajdonsága',
+    'insights.kind.pattern.about':
+      'Nem időbeli változás: mennyire szórnak az értékek, miben tér el a hétvége a hétköznaptól.',
+    'insights.kind.other': 'Egyéb megfigyelések',
+    'insights.kind.other.about':
+      'A szervernek van egy szabálycsaládja, amit a web ezen builde még nem ismer név szerint.',
+    'insights.severity.info': 'Tájékoztatás',
+    'insights.severity.notice': 'Érdemes ránézni',
+    'insights.generatedAt': 'számítva: {when}',
+    'insights.unnamed': 'A szerver nem küldött mondatot ehhez a szabályhoz.',
+    'insights.values.summary': 'A szabály által számolt számok',
+    'insights.values.note':
+      'Ezek a megfigyeléssel együtt utaznak, hogy a kliens maga fogalmazhassa meg a mondatot. A szabály saját számításai, nem pontszám.',
+    'insights.col.value': 'Érték',
+
+    // --- Medals ------------------------------------------------------------
+    'achievements.title': 'Érmek',
+    'achievements.subtitle':
+      'A már megszerzett mérföldkövek. Mindegyik történeti tény — egy adott pillanatban teljesült feltétel feljegyzése, úgy megőrizve, ahogy akkor állt.',
+    'achievements.empty.title': 'Még nincs érem',
+    'achievements.empty.hint':
+      'Ezeket a telefon számolja ki és tölti fel; a web csak olvassa a listát. Eddig semmi nem érkezett.',
+    'achievements.total.one': '{n} érem',
+    'achievements.total.other': '{n} érem',
+    'achievements.kind.month': 'Havi',
+    'achievements.kind.year': 'Éves',
+    'achievements.kind.streak': 'Sorozatok',
+    'achievements.kind.record': 'Rekordok',
+    'achievements.kind.milestone': 'Mérföldkövek',
+    'achievements.kind.other': 'Egyéb érmek',
+    'achievements.col.badge': 'Érem',
+    'achievements.col.period': 'Időszak',
+    'achievements.col.value': 'Érték a szerzéskor',
+    'achievements.col.thresholds': 'Akkor érvényes küszöbök',
+    'achievements.col.earned': 'Megszerezve',
+    'achievements.code.complete': 'Teljesítve',
+    'achievements.code.progress': 'Haladás',
+    'achievements.code.bestMonth': 'Legjobb hónap',
+    'achievements.code.streak': 'Sorozat',
+    'achievements.code.total': 'Halmozott összeg',
+    'achievements.months.one': '{n} hónap',
+    'achievements.months.other': '{n} hónap',
+    'achievements.thresholds.aria':
+      'A szerzéskor érvényes küszöbök: {all}. Ebből elért: {reached}.',
+    'achievements.thresholds.none': 'egyik sem',
+    'achievements.thresholds.reached': 'elért',
+    'achievements.thresholds.missed': 'nem elért',
+    'achievements.thresholds.note':
+      'A küszöbök pillanatfelvételek arról, mi volt érvényben az érem megszerzésekor — ezért nem veszíthet az értékéből egy érem, ha a célokat később átírják.',
   },
 
   // --- Metric group names ---------------------------------------------------

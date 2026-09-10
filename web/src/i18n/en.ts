@@ -204,6 +204,79 @@ export const en: Dict = {
     'picker.noDataYet': '{key} — no data yet',
     'picker.selected':
       'Selected: {name} · metrics marked {sum} are summed over the period, those marked {avg} are averaged.',
+
+    // --- Observations ------------------------------------------------------
+    // The two nav labels belong with the block above; they are down here because
+    // several pages were being added at once and appending is the only way to do
+    // that without three agents rewriting the same lines.
+    'nav.insights': 'Observations',
+    'nav.achievements': 'Medals',
+
+    'insights.title': 'Observations',
+    'insights.subtitle':
+      'What the rules found in the measured days. A rolling average, a z-score and a correlation — there is no model here, and no rule guesses at a day that was not measured.',
+    'insights.serverLanguage':
+      'The sentences below are composed by the server and appear in the language it speaks. The language switch governs this interface, not them.',
+    'insights.empty.title': 'Nothing to report right now',
+    'insights.empty.hint':
+      'That is a complete answer, not a failure. Every rule has a minimum number of measured days, and a rule short of them stays quiet rather than inventing something.',
+    'insights.kind.anomaly': 'Deviation from your baseline',
+    'insights.kind.anomaly.about':
+      'Recent days measured against a longer baseline window of your own.',
+    'insights.kind.trend': 'Change against the previous window',
+    'insights.kind.trend.about': 'One window compared with the one immediately before it.',
+    'insights.kind.correlation': 'Two series moving together',
+    'insights.kind.correlation.about':
+      'Co-movement over a longer window. Moving together is not one causing the other.',
+    'insights.kind.pattern': 'A property of the window',
+    'insights.kind.pattern.about':
+      'Not a change over time: how much something scatters, how the weekend differs from the week.',
+    'insights.kind.other': 'Other observations',
+    'insights.kind.other.about':
+      'The server has a rule family this build of the web does not know by name yet.',
+    'insights.severity.info': 'Information',
+    'insights.severity.notice': 'Worth a look',
+    'insights.generatedAt': 'computed {when}',
+    'insights.unnamed': 'The server sent no sentence for this rule.',
+    'insights.values.summary': 'The numbers the rule computed',
+    'insights.values.note':
+      'These travel with the observation so a client can word the sentence itself. They are the rule’s own working, not a score.',
+    'insights.col.value': 'Value',
+
+    // --- Medals ------------------------------------------------------------
+    'achievements.title': 'Medals',
+    'achievements.subtitle':
+      'Milestones already earned. Each one is a historical fact — the record of a condition that was met at a given moment, kept as it stood then.',
+    'achievements.empty.title': 'No medals yet',
+    'achievements.empty.hint':
+      'The phone works these out and uploads them; the web only reads the list. Nothing has arrived so far.',
+    'achievements.total.one': '{n} medal',
+    'achievements.total.other': '{n} medals',
+    'achievements.kind.month': 'Monthly',
+    'achievements.kind.year': 'Yearly',
+    'achievements.kind.streak': 'Streaks',
+    'achievements.kind.record': 'Records',
+    'achievements.kind.milestone': 'Milestones',
+    'achievements.kind.other': 'Other medals',
+    'achievements.col.badge': 'Medal',
+    'achievements.col.period': 'Period',
+    'achievements.col.value': 'Value as earned',
+    'achievements.col.thresholds': 'Thresholds then in force',
+    'achievements.col.earned': 'Earned',
+    'achievements.code.complete': 'Complete',
+    'achievements.code.progress': 'Progress',
+    'achievements.code.bestMonth': 'Best month',
+    'achievements.code.streak': 'Streak',
+    'achievements.code.total': 'Running total',
+    'achievements.months.one': '{n} month',
+    'achievements.months.other': '{n} months',
+    'achievements.thresholds.aria':
+      'Thresholds in force when earned: {all}. Of these, reached: {reached}.',
+    'achievements.thresholds.none': 'none',
+    'achievements.thresholds.reached': 'reached',
+    'achievements.thresholds.missed': 'not reached',
+    'achievements.thresholds.note':
+      'The thresholds are a snapshot of what was in force at the moment the medal was earned, which is why a medal cannot lose its value when the targets are later rewritten.',
   },
 
   // --- Metric group names ---------------------------------------------------

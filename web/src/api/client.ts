@@ -1,7 +1,9 @@
 import type {
+  Achievement,
   ActivitySummary,
   Device,
   Goal,
+  Insight,
   Range,
   Settings,
   SleepSegment,
@@ -101,6 +103,16 @@ export const api = {
   settings: () => req<Settings>('/settings'),
 
   me: () => req<{ id?: string; display_name?: string }>('/me'),
+
+  /**
+   * Rule-based observations. **An empty list is a complete answer**, not a
+   * failure: every rule has a data minimum, and until it is met the rule stays
+   * out rather than inventing something (openapi.yaml, `/insights`).
+   */
+  insights: () => req<Insight[]>('/insights'),
+
+  /** Earned badges, newest first. The web only ever reads this list. */
+  achievements: () => req<Achievement[]>('/achievements'),
 }
 
 /** The browser's time zone — for the timezone-aware aggregation (docs/03 §6.1). */

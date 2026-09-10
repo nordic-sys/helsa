@@ -92,3 +92,50 @@ export type Problem = {
 }
 
 export type Range = 'day' | 'week' | 'month' | 'year'
+
+// --- Insights and achievements ----------------------------------------------
+
+export type InsightKind = 'trend' | 'anomaly' | 'correlation' | 'pattern'
+export type InsightSeverity = 'info' | 'notice'
+
+/**
+ * A rule-based observation. There is no model behind it: a rolling average, a
+ * z-score and a Pearson correlation (openapi.yaml, `/insights`).
+ *
+ * ⚠️ `title` and `detail` are SERVER TEXT. They arrive already worded, in the
+ * language the server speaks, and the web prints them as they came — the
+ * interface language switch governs our own strings, not these. `rule` +
+ * `values` is what a client that words the sentence itself keys on; the web does
+ * not word it, so it shows those numbers as numbers instead.
+ */
+export type Insight = {
+  id?: string
+  kind?: InsightKind
+  metric?: string
+  rule?: string
+  values?: Record<string, number>
+  title?: string
+  detail?: string
+  severity?: InsightSeverity
+  generated_at?: string
+}
+
+export type AchievementKind = 'month' | 'year' | 'streak' | 'record' | 'milestone'
+
+/**
+ * A badge is a HISTORICAL FACT: the record of a condition met at a given moment.
+ * That is why `value` and `thresholds` travel with it — the thresholds are a
+ * snapshot of what was in force when it was earned, so a month completed long
+ * ago cannot "degrade back" when the user rewrites their targets.
+ */
+export type Achievement = {
+  id?: string
+  kind?: AchievementKind
+  code?: string
+  /** `YYYY-MM` or `YYYY`, when the badge belongs to a calendar period. */
+  period?: string
+  value?: number
+  unit?: string
+  thresholds?: number[]
+  earned_at?: string
+}

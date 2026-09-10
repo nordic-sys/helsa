@@ -4,7 +4,9 @@ import { useI18n } from './i18n'
 import type { UiKey } from './i18n'
 import Dashboard from './pages/Dashboard'
 import Trends from './pages/Trends'
+import Insights from './pages/Insights'
 import Workouts from './pages/Workouts'
+import Achievements from './pages/Achievements'
 import Sleep from './pages/Sleep'
 import Nutrition from './pages/Nutrition'
 import SettingsPage from './pages/Settings'
@@ -12,7 +14,9 @@ import SettingsPage from './pages/Settings'
 const NAV: { to: string; label: UiKey; end?: boolean }[] = [
   { to: '/', label: 'nav.today', end: true },
   { to: '/trends', label: 'nav.trends' },
+  { to: '/insights', label: 'nav.insights' },
   { to: '/workouts', label: 'nav.workouts' },
+  { to: '/achievements', label: 'nav.achievements' },
   { to: '/sleep', label: 'nav.sleep' },
   { to: '/nutrition', label: 'nav.nutrition' },
   { to: '/settings', label: 'nav.settings' },
@@ -41,7 +45,9 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/trends" element={<Trends />} />
+          <Route path="/insights" element={<Insights />} />
           <Route path="/workouts" element={<Workouts />} />
+          <Route path="/achievements" element={<Achievements />} />
           <Route path="/sleep" element={<Sleep />} />
           <Route path="/nutrition" element={<Nutrition />} />
           <Route path="/settings" element={<SettingsPage />} />
