@@ -540,6 +540,41 @@ paths:
         '200': { description: Ready }
         '503': { $ref: '#/components/responses/Problem' }
 
+  /coverage:
+    get:
+      tags: [read]
+      summary: Data completeness — which metric types arrive, and who writes them
+      description: >
+        Per catalog type: does anything arrive at all, on how many days of the window, when the most
+        recent measurement was, and which source wrote it.
+
+
+        ⚠️ **This answers a NARROWER question than the app's completeness screen, and its vocabulary
+        is deliberately different so that the two cannot be confused.** The phone knows about
+        *permissions*: it can tell "the read ran and nothing came" from "the system will still ask
+        about this group" from "HealthKit refused this type" from "there is no HealthKit here". None
+        of that reaches the server — a type that was never granted and a type that genuinely has no
+        sensor arrive here identically, as an absence. So `state` has three values, all of them
+        statements about **what reached this server**, and it never borrows the phone's four
+        (`empty`, `notRequested`, `refused`, `unavailable`) for a weaker claim.
+
+
+        The one thing the server can compute exactly as the phone does is the **rhythm** of a metric
+        and the silence that breaks it (`gap`): that is derived from the arrival days themselves,
+        with the same thresholds (`Coverage/MetricGap.swift`). Where the server cannot answer, the
+        field is absent — a missing measurement is never reported as a zero.
+      parameters:
+        - { name: from, in: query, required: false, schema: { type: string, format: date }, description: "the first day of the window; by default 365 days back" }
+        - { name: to, in: query, required: false, schema: { type: string, format: date }, description: "the last day of the window, inclusive; by default today" }
+        - { name: tz, in: query, required: false, schema: { type: string }, description: "IANA tz; if missing, user.time_zone. The day boundaries are cut in this zone." }
+      responses:
+        '200':
+          description: Coverage report
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CoverageResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+
 components:
   securitySchemes:
     deviceToken:
@@ -998,3 +1033,113 @@ components:
         status: { type: string, enum: [pending, ready, failed] }
         url: { type: [string, 'null'] }
         expires_at: { type: [string, 'null'], format: date-time }
+
+    CoverageResponse:
+      type: object
+      description: >
+        The completeness report of one window. `types` carries the WHOLE catalog, in catalog order —
+        including the types nothing has ever been received for, because "this entire area is empty"
+        is exactly the thing this endpoint exists to make visible.
+      properties:
+        from: { type: string, format: date }
+        to: { type: string, format: date, description: "inclusive" }
+        tz: { type: string }
+        days: { type: integer, description: "the length of the window in days, `to` included" }
+        types:
+          type: array
+          items: { $ref: '#/components/schemas/CoverageType' }
+
+    CoverageType:
+      type: object
+      description: >
+        One metric type's row. Every count here is about the **window**; `state` and `last_day` also
+        take into account whether anything ever arrived outside it.
+      properties:
+        data_type: { type: string }
+        group:
+          type: string
+          enum: [activity, heart, respiratory, body, nutritionMacro, nutritionMineral, nutritionVitamin, mobility, environment, other]
+          description: >
+            The catalog group, in the app's own vocabulary (`HealthMetricGroup` raw values), so that
+            the two lists can be lined up without a translation table in the middle.
+        in_catalog:
+          type: boolean
+          description: >
+            `false` for a type that arrived but the server's catalog does not know — `data_type` is
+            an open string on purpose, and a type from a newer iOS release must not vanish from a
+            completeness report of all places. Such a row lands in the `other` group.
+        state:
+          type: string
+          enum: [measured, outside_window, never_arrived]
+          description: >
+            `measured` — at least one sample of this type arrived within the window.
+
+            `outside_window` — nothing within the window, but this type HAS reached the server
+            before; `last_day` says when.
+
+            `never_arrived` — no sample of this type has ever reached this server. ⚠️ This is not
+            the same claim as the phone's "no data": it does not say the measurement does not exist,
+            only that it never got here. A refused permission and a missing sensor both look like this.
+        measured_days:
+          type: integer
+          description: "How many distinct days of the window carried a measurement. **Absent, never 0, when nothing arrived.**"
+        sample_count:
+          type: integer
+          description: "Samples within the window. Absent when nothing arrived."
+        last_day:
+          type: string
+          format: date
+          description: >
+            The day of the most recent sample, in `tz`. Day-level and not a timestamp on purpose: it
+            is what the app says as well, and an exact time here would invite reading a precision
+            into the row that a daily completeness view does not have.
+        sources:
+          type: array
+          description: >
+            Who wrote the samples of this type in the window, biggest contributor first. Absent when
+            nothing arrived.
+
+
+            ⚠️ **This is a much thinner fact than the app's provenance screen** (`SampleProvenance.swift`).
+            The upload path keeps a bundle identifier and a coarse `watch`/`iphone` guess per sample;
+            manufacturer, model, firmware, the writing app's version, and the fact that a sample carried
+            no device at all do not survive the wire. So this list can say WHICH APP wrote it, and must
+            not be read as which hardware measured it.
+          items: { $ref: '#/components/schemas/CoverageSource' }
+        gap: { $ref: '#/components/schemas/CoverageGap' }
+
+    CoverageSource:
+      type: object
+      properties:
+        bundle_id:
+          type: string
+          description: "The writing app's bundle identifier. Absent for samples that arrived without one."
+        device:
+          type: string
+          enum: [watch, iphone]
+          description: >
+            The coarse device kind the client guessed at upload time. Absent when the client did not
+            say — and an absence means exactly that, NOT "the phone measured it".
+        sample_count: { type: integer }
+        last_day: { type: string, format: date }
+
+    CoverageGap:
+      type: object
+      description: >
+        The metric had settled into a rhythm and that rhythm has broken. **An observation, not a
+        problem** — a flat battery, a holiday, a broken sensor and a deliberate break all look the
+        same from here, and the server does not guess which.
+
+
+        The rules are the phone's (`Coverage/MetricGap.swift`), value for value: at least 6 intervals
+        spanning at least 14 days before a rhythm is claimed at all, a silence of at least 3 days AND
+        at least 3× the typical interval, no judgement above a 30-day cadence, and nothing after 90
+        silent days — past that the metric is not silent but discontinued, and the rhythm being
+        compared against would itself be stale.
+      properties:
+        silent_days: { type: integer, description: "whole days between the last arrival and the end of the window" }
+        typical_interval_days:
+          type: number
+          description: "The MEDIAN of the intervals between arrivals — a median, so that one two-week holiday cannot make a daily series look sparse."
+        observed_intervals: { type: integer }
+        history_days: { type: integer, description: "the span the observed arrivals cover" }

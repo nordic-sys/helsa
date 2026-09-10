@@ -19,6 +19,7 @@ import (
 	"github.com/nordic-sys/helsa/backend/internal/api"
 	"github.com/nordic-sys/helsa/backend/internal/auth"
 	"github.com/nordic-sys/helsa/backend/internal/config"
+	"github.com/nordic-sys/helsa/backend/internal/coverage"
 	"github.com/nordic-sys/helsa/backend/internal/db"
 	"github.com/nordic-sys/helsa/backend/internal/export"
 	"github.com/nordic-sys/helsa/backend/internal/ingest"
@@ -42,6 +43,7 @@ type Server struct {
 	samples  *samples.Service
 	export   *export.DBSource
 	insights *insights.Service
+	coverage *coverage.Service
 	q        *db.Queries
 }
 
@@ -56,6 +58,7 @@ func New(cfg *config.Config, st *store.Store, q *queue.Queue) *Server {
 		samples:  samples.New(st.DB),
 		export:   export.NewDBSource(st.DB),
 		insights: insights.New(st.DB),
+		coverage: coverage.New(st.DB),
 		q:        db.New(st.DB),
 	}
 }

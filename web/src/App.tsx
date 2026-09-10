@@ -7,6 +7,7 @@ import Trends from './pages/Trends'
 import Workouts from './pages/Workouts'
 import Sleep from './pages/Sleep'
 import Nutrition from './pages/Nutrition'
+import Coverage from './pages/Coverage'
 import SettingsPage from './pages/Settings'
 
 const NAV: { to: string; label: UiKey; end?: boolean }[] = [
@@ -15,6 +16,7 @@ const NAV: { to: string; label: UiKey; end?: boolean }[] = [
   { to: '/workouts', label: 'nav.workouts' },
   { to: '/sleep', label: 'nav.sleep' },
   { to: '/nutrition', label: 'nav.nutrition' },
+  { to: '/coverage', label: 'nav.coverage' },
   { to: '/settings', label: 'nav.settings' },
 ]
 
@@ -44,6 +46,7 @@ export default function App() {
           <Route path="/workouts" element={<Workouts />} />
           <Route path="/sleep" element={<Sleep />} />
           <Route path="/nutrition" element={<Nutrition />} />
+          <Route path="/coverage" element={<Coverage />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
