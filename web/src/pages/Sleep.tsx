@@ -12,7 +12,7 @@ import {
 import { api, browserTz } from '../api/client'
 import { Card, Empty, ErrorState, Legend, Loading, Stat } from '../components/ui'
 import { useI18n } from '../i18n'
-import { STAGE_CHART, STAGE_COLOR, STAGE_ORDER, useFormat } from '../lib/format'
+import { STAGE_CHART, STAGE_COLOR, STAGE_ORDER, isoDaysAgo, useFormat } from '../lib/format'
 import { metricDef, pickSeries, readSeries } from '../lib/metrics'
 import { averages, groupByNight, segmentMinutes, sliceMinutes, type Night } from '../lib/sleep'
 
@@ -26,13 +26,6 @@ const PHYSIO = [
   'appleSleepingWristTemperature',
   'oxygenSaturation',
 ].map(metricDef)
-
-/** The ISO date N days ago, in local time. */
-function isoDaysAgo(days: number): string {
-  const d = new Date()
-  d.setDate(d.getDate() - days)
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-}
 
 export default function Sleep() {
   const tz = browserTz()

@@ -401,6 +401,41 @@ export const hu = {
     'coverage.empty.title': 'Még semmi nem érkezett',
     'coverage.empty.hint':
       'A katalógus egyetlen típusa sem jutott el erre a szerverre. Ha a telefon tölt fel, lehet, hogy az első szinkron még fut.',
+
+    // --- A menü csoportjai ------------------------------------------------
+    // A címek egy állítást fogalmaznak meg arról, mi tartozik össze — ezért
+    // kettő közülük szó szerint az app sávneve (`DashboardBand.title`). Ha a
+    // kettő szétcsúszik, ugyanaz a tartalom két nevet kap.
+    'nav.aria': 'Szakaszok',
+    'nav.group.longView': 'Hosszú táv',
+    'nav.group.areas': 'Területek',
+    'nav.group.status': 'Állapot',
+
+    // --- A Ma oldal sávjai -------------------------------------------------
+    // A magyarázó mondatok az app `DashboardBand.explanation`-jei.
+    'today.band.today': 'Ma rólad',
+    'today.band.today.hint': 'A mai mérések, olvasásra.',
+    'today.band.longView.hint': 'Hetek és hónapok — amit egyetlen nap nem mutat meg.',
+    'today.band.status.hint': 'Hogy működik-e, ami az adatodat mozgatja.',
+
+    // --- A Ma oldal kártyái ------------------------------------------------
+    'today.workout.title': 'Legutóbbi edzés',
+    'today.workout.empty': 'Még nem érkezett edzés.',
+    'today.sleep.title': 'A múlt éjszaka',
+    'today.sleep.empty': 'Az elmúlt két napra nem érkezett alvás-szakasz.',
+    'today.sync.title': 'Szinkron',
+    'today.insights.serverLanguage':
+      'A mondatokat a szerver fogalmazza, azon a nyelven, amelyen beszél.',
+    'today.insights.more.one': 'és további {n} megfigyelés',
+    'today.insights.more.other': 'és további {n} megfigyelés',
+    'today.medals.newest': 'Legutóbb: {badge} · {period}',
+    'today.medals.newest.noPeriod': 'Legutóbb: {badge}',
+    'today.coverage.gaps.one': '{n} mérés ritmusa megtört.',
+    'today.coverage.gaps.other': '{n} mérés ritmusa megtört.',
+    'today.coverage.noGaps': 'Egyetlen mérés ritmusa sem tört meg.',
+    // A kártya-hiba egy sor, mert a 401 az egész oldalt viszi: ide már csak egy
+    // végpont rossz napja jut el.
+    'today.cardError': 'Nem sikerült betölteni: {reason}',
   },
 
   // --- Metric group names ---------------------------------------------------

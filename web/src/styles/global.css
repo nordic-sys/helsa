@@ -77,6 +77,60 @@ a:hover {
   }
 }
 
+/* The sidebar's groups.
+ *
+ * On a wide screen the whole structure is visible at once — that is the reason
+ * the web does not copy the app's five tabs, so the headings must never be a
+ * disclosure to open. On a narrow screen the sidebar turns into a horizontal
+ * scroller, and the groups turn with it: the heading becomes a label at the head
+ * of its own run of links, separated by a hairline, rather than disappearing. */
+.nav-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.nav-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.nav-group-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--text-dim);
+  padding: 0 12px 4px;
+  white-space: nowrap;
+}
+
+@media (max-width: 820px) {
+  .nav-groups {
+    flex: 1 1 auto;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    overflow-x: auto;
+    /* The links scroll under the language switcher, which stays put. Without the
+       margin the last one is clipped flush against it and reads as broken text
+       rather than as more to scroll to. */
+    margin-right: 10px;
+  }
+  .nav-group {
+    flex-direction: row;
+    align-items: center;
+    flex: none;
+  }
+  .nav-group-title {
+    padding: 0 4px 0 10px;
+    border-left: 1px solid var(--border);
+  }
+}
+
 .nav-item {
   display: block;
   padding: 9px 12px;
@@ -140,11 +194,57 @@ h1 {
   margin: 0 0 22px;
 }
 
+/* --- Bands (the Today page) ---
+ *
+ * A band is a heading plus the claim it makes, and then the cards it claims
+ * about. Three levels of type, so the reader can tell them apart at a glance:
+ * the page title is large, the band heading is normal case and full strength,
+ * and a card heading is the small dimmed capitals it has always been. */
+.band {
+  margin-bottom: 28px;
+}
+.band > .grid + .grid {
+  margin-top: var(--gap);
+}
+
+/* The heading and the claim it makes are one block, and the rule goes under both
+   — a rule between them would read as a caption for the cards instead. */
+.band-header {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 8px;
+  margin-bottom: 14px;
+}
+.band-title {
+  font-size: 15px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  margin: 0;
+  text-transform: none;
+}
+.band-hint {
+  color: var(--text-dim);
+  font-size: 13px;
+  margin: 3px 0 0;
+}
+
 /* --- Card + stat --- */
 .grid {
   display: grid;
   gap: var(--gap);
   grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+}
+
+/* A card with a heading and a handful of figures under it needs more room than
+   a single number does. `auto-fill` keeps the track width honest when a band has
+   fewer cards than columns — the row stays left-aligned instead of two cards
+   stretching to half the page each. */
+.grid-wide {
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+}
+/* …except where the band only ever has two, and they should share the width. */
+.grid-fit {
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
 }
 
 .card {
@@ -161,6 +261,77 @@ h1 {
   letter-spacing: 0.05em;
   color: var(--text-dim);
   margin: 0 0 10px;
+}
+
+/* A summary card's heading is the way to the page it summarises: the link is the
+   heading itself rather than a "more" line under it, so there is one thing to
+   click and it is named after where it goes. */
+.card-link {
+  color: inherit;
+  display: inline-flex;
+  gap: 4px;
+}
+.card-link:hover {
+  color: var(--helsa-fjord);
+  text-decoration: none;
+}
+.card-link:focus-visible {
+  outline: 2px solid var(--helsa-fjord);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+
+/* The one figure a summary card leads with. Smaller than `.stat`, because a
+   summary card carries a heading, a figure and a short table, and a 30px number
+   in that stack reads as the card's subject rather than its headline. */
+.card-headline {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+  margin: 0 0 2px;
+}
+
+/* Label on the left, figure on the right — the shape most summary cards want.
+   `auto` on the second track lets a long label wrap instead of squeezing the
+   number, which is the failure mode in the language with the longer words. */
+.kv {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 5px 14px;
+  margin: 0;
+  font-size: 13.5px;
+}
+.kv dt {
+  color: var(--text-dim);
+  min-width: 0;
+}
+.kv dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.card-list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13.5px;
+}
+.card-list li {
+  margin-bottom: 5px;
+}
+
+/* The three rings, side by side and centred, at the size a third of a row can
+   hold. */
+.rings {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  justify-content: center;
+  padding: 4px 0;
 }
 
 /* A stat headline wraps to two lines in one language and fits on one in another

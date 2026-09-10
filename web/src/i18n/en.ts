@@ -405,6 +405,41 @@ export const en: Dict = {
     'coverage.empty.title': 'Nothing has arrived yet',
     'coverage.empty.hint':
       'Not one of the catalogue’s types has reached this server. If the phone is uploading, the first sync may still be running.',
+
+    // --- Navigation groups -------------------------------------------------
+    // The headings make a claim about what belongs together, which is why two of
+    // them are the app's band names word for word (`DashboardBand.title`). If
+    // the two drift apart, the same content ends up with two names.
+    'nav.aria': 'Sections',
+    'nav.group.longView': 'The long view',
+    'nav.group.areas': 'Areas',
+    'nav.group.status': 'Status',
+
+    // --- The bands of the Today page ---------------------------------------
+    // The explanations are the app's own `DashboardBand.explanation` lines.
+    'today.band.today': 'Today, about you',
+    'today.band.today.hint': 'Today’s measurements, to read.',
+    'today.band.longView.hint': 'Weeks and months — what a single day cannot show.',
+    'today.band.status.hint': 'Whether the thing that moves your data is working.',
+
+    // --- The cards of the Today page ---------------------------------------
+    'today.workout.title': 'Latest workout',
+    'today.workout.empty': 'No workout has arrived yet.',
+    'today.sleep.title': 'Last night',
+    'today.sleep.empty': 'No sleep segment has arrived for the last two days.',
+    'today.sync.title': 'Sync',
+    'today.insights.serverLanguage':
+      'The server composes these sentences, in the language it speaks.',
+    'today.insights.more.one': 'and {n} more observation',
+    'today.insights.more.other': 'and {n} more observations',
+    'today.medals.newest': 'Most recently: {badge} · {period}',
+    'today.medals.newest.noPeriod': 'Most recently: {badge}',
+    'today.coverage.gaps.one': '{n} measurement has broken its rhythm.',
+    'today.coverage.gaps.other': '{n} measurements have broken their rhythm.',
+    'today.coverage.noGaps': 'No measurement has broken its rhythm.',
+    // A card's failure is one line, because a 401 takes the whole page: only one
+    // endpoint having a bad day ever reaches this.
+    'today.cardError': 'Could not be loaded: {reason}',
   },
 
   // --- Metric group names ---------------------------------------------------

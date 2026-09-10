@@ -3,35 +3,15 @@ import { api } from '../api/client'
 import type { Achievement } from '../api/types'
 import { Card, Empty, ErrorState, Legend, Loading } from '../components/ui'
 import { useI18n } from '../i18n'
-import type { I18n, UiKey } from '../i18n'
+import type { I18n } from '../i18n'
 import { useFormat, type Formatters } from '../lib/format'
 import {
+  ACHIEVEMENT_KIND_LABEL as KIND_LABEL,
+  badgeLabel,
   groupAchievements,
+  periodLabel,
   reachedThresholds,
-  type AchievementGroupKey,
 } from '../lib/achievements'
-
-const KIND_LABEL: Record<AchievementGroupKey, UiKey> = {
-  milestone: 'achievements.kind.milestone',
-  record: 'achievements.kind.record',
-  streak: 'achievements.kind.streak',
-  year: 'achievements.kind.year',
-  month: 'achievements.kind.month',
-  other: 'achievements.kind.other',
-}
-
-/**
- * The badge names we know. `code` is an open string formed by the phone, so
- * anything not in here is printed as it arrived rather than guessed at — the
- * same fallback the metric and activity dictionaries use. The `total-1000000`
- * family is matched by prefix: its tail is the figure, which the value column
- * already prints.
- */
-const CODE_LABEL: Record<string, UiKey> = {
-  complete: 'achievements.code.complete',
-  progress: 'achievements.code.progress',
-  'best-month': 'achievements.code.bestMonth',
-}
 
 const THRESHOLD_REACHED = 'var(--helsa-move)'
 const THRESHOLD_MISSED = 'var(--surface-2)'
@@ -173,25 +153,6 @@ function Thresholds({ achievement: a }: { achievement: Achievement }) {
       ))}
     </span>
   )
-}
-
-function badgeLabel(a: Achievement, t: (key: UiKey) => string): string {
-  if (!a.code) return '–'
-  const known = CODE_LABEL[a.code]
-  if (known) return t(known)
-  // A streak's code is its length ("3", "12") and a milestone's is its figure
-  // ("total-1000000"); both are already in the value column, so the name says
-  // only what family it belongs to.
-  if (a.kind === 'streak') return t('achievements.code.streak')
-  if (a.code.startsWith('total-')) return t('achievements.code.total')
-  return a.code
-}
-
-/** `2026-08` → "Aug 2026", `2025` → "2025". An absent period prints a dash. */
-function periodLabel(period: string | undefined, f: Formatters): string {
-  if (!period) return '–'
-  if (/^\d{4}-\d{2}$/.test(period)) return f.yearMonth(`${period}-01`)
-  return period
 }
 
 /**

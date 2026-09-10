@@ -152,6 +152,23 @@ export function useFormat(): Formatters {
   }, [locale, t, tUnit, tActivity, tStage])
 }
 
+/**
+ * The ISO calendar date `days` days ago, on the reader's own clock.
+ *
+ * ⚠️ Built out of the local getters rather than `toISOString().slice(0, 10)`,
+ * which is the same trap `on()` above guards against from the other side: east
+ * of Greenwich the UTC date is tomorrow for part of every evening, so a window
+ * asked for with a UTC date starts and ends on the wrong day.
+ *
+ * It lives here rather than in three pages because it was already in two of
+ * them, under two names, and the Today page needed a third.
+ */
+export function isoDaysAgo(days: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() - days)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 /** The drawing order of the stages: from deep sleep to being awake. */
 export const STAGE_ORDER = ['deep', 'rem', 'core', 'light', 'asleep', 'awake']
 

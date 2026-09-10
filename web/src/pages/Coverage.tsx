@@ -26,7 +26,7 @@ import type { CoverageSource, CoverageState, CoverageType } from '../api/types'
 import { Card, Empty, ErrorState, Loading, Note } from '../components/ui'
 import { useI18n } from '../i18n'
 import type { UiKey } from '../i18n'
-import { useFormat } from '../lib/format'
+import { isoDaysAgo, useFormat } from '../lib/format'
 import { cadenceWord, gaps, groupKey, sections, tally } from '../lib/coverage'
 
 /** The same dash the formatter uses for "this has not arrived". */
@@ -61,12 +61,7 @@ const STATE_LABEL: Record<CoverageState, UiKey> = {
 
 /** From today back `days` days, as the ISO dates the endpoint takes. */
 function windowDates(days: number): { from: string; to: string } {
-  const today = new Date()
-  const start = new Date(today)
-  start.setDate(start.getDate() - (days - 1))
-  const iso = (d: Date) =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  return { from: iso(start), to: iso(today) }
+  return { from: isoDaysAgo(days - 1), to: isoDaysAgo(0) }
 }
 
 function Sources({ sources }: { sources?: CoverageSource[] }) {
