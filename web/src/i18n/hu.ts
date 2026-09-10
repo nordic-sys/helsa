@@ -21,6 +21,7 @@ export const hu = {
     'nav.workouts': 'Edzések',
     'nav.sleep': 'Alvás',
     'nav.nutrition': 'Táplálkozás',
+    'nav.challenge': 'Havi kihívás',
     'nav.settings': 'Beállítások',
     'lang.aria': 'Nyelv megválasztása',
     'lang.hu': 'Magyar',
@@ -168,6 +169,57 @@ export const hu = {
     'nutrition.hideEmpty': 'Az adat nélküli tápanyagok elrejtése',
     'nutrition.showEmpty.one': 'Az adat nélküli {n} tápanyag mutatása',
     'nutrition.showEmpty.other': 'Az adat nélküli {n} tápanyag mutatása',
+
+    // --- Havi kihívás ------------------------------------------------------
+    'challenge.title': 'Havi kihívás',
+    'challenge.subtitle':
+      'A hónap lépésszáma a saját mérföldköveidhez mérve. A mérföldköveket a telefonon állítod be; itt csak az látszik, ami fel is töltődött.',
+    'challenge.prevMonth': 'Előző hónap',
+    'challenge.nextMonth': 'Következő hónap',
+    'challenge.notStarted': 'Ez a hónap még el sem kezdődött.',
+    'challenge.empty.title': 'Ebből a hónapból még nincs mérés',
+    'challenge.empty.hint':
+      'Ez nem nulla lépés: egyetlen nap sem érkezett meg. A feltöltő egyedül az iPhone — amint szinkronizál, megjelenik itt.',
+    'challenge.steps': 'A hónap lépésszáma',
+    'challenge.stepsPerDay': 'Naponta, az eltelt napokra osztva',
+    'challenge.ofGoal': 'A célból',
+    'challenge.daysRemaining': 'Hátralévő napok (a maival együtt)',
+    'challenge.goalLabel': 'Cél: {steps} lépés',
+    'challenge.complete': 'A cél megvan.',
+    'challenge.overshoot': '{steps} lépéssel a célon túl.',
+    'challenge.milestones.title': 'Mérföldkövek',
+    'challenge.milestones.empty':
+      'Egyetlen mérföldkő sincs beállítva, így nincs mihez mérni a hónapot.',
+    'challenge.milestones.reached': 'megvan',
+    'challenge.milestones.next': 'A következő {steps} lépésnél van — {remaining} lépésre.',
+    'challenge.source.title': 'Honnan jönnek a mérföldkövek',
+    'challenge.source.default':
+      'A gyári sor látszik: a telefon még nem mondta el ennek a szervernek, milyen mérföldköveket állítottál be. Ami a telefonon látszik, eltérhet ettől.',
+    'challenge.source.achievement':
+      'A telefon által legutóbb rögzített érem pillanatképéből. A mérföldkövek a telefonon élnek, külön nem szinkronizálódnak.',
+    'challenge.days.title': 'Napról napra',
+    'challenge.days.empty': 'Ebből a hónapból még egyetlen nap sem érkezett meg.',
+    'challenge.days.gaps.one':
+      '{n} nap mérés nélkül — az üres hely hiányzó adat, nem mozdulatlan nap.',
+    'challenge.days.gaps.other':
+      '{n} nap mérés nélkül — az üres helyek hiányzó adatok, nem mozdulatlan napok.',
+    'challenge.streak.title': 'Napi sorozat',
+    'challenge.streak.length.one': '{n} napos sorozat',
+    'challenge.streak.length.other': '{n} napos sorozat',
+    'challenge.streak.current': 'A most futó sorozat',
+    'challenge.streak.none': 'Nincs élő sorozat.',
+    'challenge.streak.noGoal': 'Cél nélkül nincs mihez mérni egy napot, így sorozatot sem állítunk.',
+    'challenge.streak.dailyGoal': 'Napi cél',
+    'challenge.streak.longest': 'A leghosszabb a vizsgált időszakban',
+    'challenge.streak.window': 'A vizsgált időszak: {from} – {to}.',
+    'challenge.streak.broken.missed': '{date} — a napi cél alatt maradt; a sorozat itt indult újra.',
+    'challenge.streak.broken.noData':
+      '{date} — erről a napról nem érkezett lépésszám. Nem kihagyott nap: egyszerűen nem tudunk róla.',
+    'challenge.streak.broken.startOfHistory':
+      'A sorozat a vizsgált időszak elejéig ér — az annál régebbi napokról nem állítunk semmit.',
+    'challenge.streak.lowerBound.title': 'A telefon ennél többet tud',
+    'challenge.streak.lowerBound.body':
+      'A betegnapok és az általad megjelölt pihenőnapok nem törik meg a sorozatot — de egyik sem jut el a szerverig: a napló a telefonon marad, a pihenőnap pedig helyi beállítás. Az itteni sorozat ezért rövidebb lehet a telefonon látszónál, hosszabb soha.',
 
     // --- Settings ----------------------------------------------------------
     'settings.title': 'Beállítások',

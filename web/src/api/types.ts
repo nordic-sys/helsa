@@ -92,3 +92,66 @@ export type Problem = {
 }
 
 export type Range = 'day' | 'week' | 'month' | 'year'
+
+// --- The monthly challenge (GET /v1/challenge) -----------------------------
+//
+// ⚠️ Note which fields are optional, and why. `steps`, `percent` and the rest of
+// the derived numbers are ABSENT when not one day of the month carried a
+// measurement — the backend refuses to send a 0 for "nothing has arrived yet",
+// and the page must not put one back.
+
+export type ChallengeMilestone = {
+  steps: number
+  /** Exactly at the threshold counts as reached; nothing is reached without data. */
+  reached: boolean
+}
+
+/** One day of the month. `steps` absent = a gap, not a day of sitting still. */
+export type ChallengeDay = {
+  day: string
+  steps?: number
+}
+
+export type ChallengeStreakBreak = {
+  reason: 'missed' | 'no_data' | 'start_of_history'
+  day?: string
+}
+
+export type ChallengeStreak = {
+  daily_goal?: number
+  length: number
+  active_days: number
+  longest: number
+  broken_by?: ChallengeStreakBreak
+  window_from: string
+  window_to: string
+  /**
+   * What the server cannot see: `illness_days` and `chosen_rest_days`. Both make
+   * a day neutral on the phone, so this streak is a LOWER BOUND on the one in the
+   * app — which the page has to say out loud.
+   */
+  missing_inputs: string[]
+}
+
+export type Challenge = {
+  month: string
+  tz: string
+  days_in_month: number
+  days_elapsed: number
+  days_remaining: number
+  steps?: number
+  steps_per_day?: number
+  measured_days: number
+  goal?: number
+  percent?: number
+  complete: boolean
+  remaining_steps?: number
+  overshoot_steps?: number
+  next_threshold?: number
+  steps_to_next_threshold?: number
+  thresholds: ChallengeMilestone[]
+  /** Where the milestones came from — the user's own phone, or our factory row. */
+  thresholds_source: 'request' | 'achievement' | 'default'
+  days: ChallengeDay[]
+  streak: ChallengeStreak
+}

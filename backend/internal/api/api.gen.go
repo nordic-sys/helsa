@@ -73,6 +73,48 @@ func (e AchievementInputKind) Valid() bool {
 	}
 }
 
+// Defines values for ChallengeResponseThresholdsSource.
+const (
+	ChallengeResponseThresholdsSourceAchievement ChallengeResponseThresholdsSource = "achievement"
+	ChallengeResponseThresholdsSourceDefault     ChallengeResponseThresholdsSource = "default"
+	ChallengeResponseThresholdsSourceRequest     ChallengeResponseThresholdsSource = "request"
+)
+
+// Valid indicates whether the value is a known member of the ChallengeResponseThresholdsSource enum.
+func (e ChallengeResponseThresholdsSource) Valid() bool {
+	switch e {
+	case ChallengeResponseThresholdsSourceAchievement:
+		return true
+	case ChallengeResponseThresholdsSourceDefault:
+		return true
+	case ChallengeResponseThresholdsSourceRequest:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ChallengeStreakBreakReason.
+const (
+	Missed         ChallengeStreakBreakReason = "missed"
+	NoData         ChallengeStreakBreakReason = "no_data"
+	StartOfHistory ChallengeStreakBreakReason = "start_of_history"
+)
+
+// Valid indicates whether the value is a known member of the ChallengeStreakBreakReason enum.
+func (e ChallengeStreakBreakReason) Valid() bool {
+	switch e {
+	case Missed:
+		return true
+	case NoData:
+		return true
+	case StartOfHistory:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for DevicePlatform.
 const (
 	DevicePlatformIos     DevicePlatform = "ios"
@@ -488,6 +530,111 @@ type ActivitySummary struct {
 	StandHours       *float32            `json:"stand_hours,omitempty"`
 }
 
+// ChallengeDay defines model for ChallengeDay.
+type ChallengeDay struct {
+	Day openapi_types.Date `json:"day"`
+
+	// Steps ABSENT where nothing was measured. A grid drawn from zeros shows a fortnight of doing nothing for a fortnight the phone spent in a drawer.
+	Steps *float32 `json:"steps,omitempty"`
+}
+
+// ChallengeMilestone defines model for ChallengeMilestone.
+type ChallengeMilestone struct {
+	// Reached Exactly at the threshold counts as reached. Without data nothing counts as reached — we do not know whether the user has even started.
+	Reached bool `json:"reached"`
+	Steps   int  `json:"steps"`
+}
+
+// ChallengeResponse defines model for ChallengeResponse.
+type ChallengeResponse struct {
+	// Complete never true without data, and never without a goal
+	Complete bool `json:"complete"`
+
+	// Days The month day by day, up to today. A day beyond today is LEFT OUT rather than sent empty: an empty cell for a day that has not happened reads as a day missed.
+	Days []ChallengeDay `json:"days"`
+
+	// DaysElapsed The days of the month that have happened, TODAY INCLUDED. This is the denominator of `steps_per_day`: dividing a month's total by 31 on the third of the month gives a "daily average" a third of the truth, and it does so most visibly at the start of every month.
+	DaysElapsed int `json:"days_elapsed"`
+
+	// DaysInMonth 28/29/30/31 — a calendar fact, leap year included
+	DaysInMonth int `json:"days_in_month"`
+
+	// DaysRemaining Today counts, because there are still steps to be taken today: on the last day of the month the honest answer is 1, not 0. A closed month has 0, a future month the whole of it.
+	DaysRemaining int `json:"days_remaining"`
+
+	// Goal the largest milestone. Absent if the user deleted every milestone — then there is nothing to scale to.
+	Goal *int `json:"goal,omitempty"`
+
+	// MeasuredDays How many days of the month actually carried a step measurement. `days_elapsed` minus this is the gap — the part of the month we know nothing about, which is exactly what a reader needs in order to know how much weight `steps` can bear.
+	MeasuredDays int `json:"measured_days"`
+
+	// Month `YYYY-MM` — the same period key the badges use
+	Month string `json:"month"`
+
+	// NextThreshold the first milestone not yet reached; absent when every one is done, or there are none
+	NextThreshold *int `json:"next_threshold,omitempty"`
+
+	// OvershootSteps By how much the goal was passed, 0 if it was not. It is stated separately because the clamped `percent` would otherwise conceal that the goal was met twice over.
+	OvershootSteps *float32 `json:"overshoot_steps,omitempty"`
+
+	// Percent 0…100, CLAMPED at the goal: someone who walked twice the goal is done, not at 200%. Absent without data or without a goal — a 0 here would read as a measured zero.
+	Percent *float32 `json:"percent,omitempty"`
+
+	// RemainingSteps steps left to the goal, 0 once it is reached. Absent without data or goal.
+	RemainingSteps *float32 `json:"remaining_steps,omitempty"`
+
+	// Steps The month's measured step count, **as measured** — not clipped to the goal. ABSENT if not one day of the month carried a measurement; that is not the same statement as 0.
+	Steps *float32 `json:"steps,omitempty"`
+
+	// StepsPerDay `steps` spread over `days_elapsed`. Absent without data.
+	StepsPerDay          *float32             `json:"steps_per_day,omitempty"`
+	StepsToNextThreshold *float32             `json:"steps_to_next_threshold,omitempty"`
+	Streak               ChallengeStreak      `json:"streak"`
+	Thresholds           []ChallengeMilestone `json:"thresholds"`
+
+	// ThresholdsSource Where the milestones came from: the `thresholds` parameter, the newest threshold snapshot on a recorded badge, or the factory row. `default` means the phone has never told this server what the user's milestones are.
+	ThresholdsSource ChallengeResponseThresholdsSource `json:"thresholds_source"`
+	Tz               string                            `json:"tz"`
+}
+
+// ChallengeResponseThresholdsSource Where the milestones came from: the `thresholds` parameter, the newest threshold snapshot on a recorded badge, or the factory row. `default` means the phone has never told this server what the user's milestones are.
+type ChallengeResponseThresholdsSource string
+
+// ChallengeStreak defines model for ChallengeStreak.
+type ChallengeStreak struct {
+	// ActiveDays Of those, the days that reached the daily goal. On the server the two numbers are always equal, because the days that could differ (illness, chosen rest) are exactly the ones that do not reach it — see `missing_inputs`. The field stays so that a client reads the same shape from both sides.
+	ActiveDays int                   `json:"active_days"`
+	BrokenBy   *ChallengeStreakBreak `json:"broken_by,omitempty"`
+
+	// DailyGoal The goal over the days of the month, rounded, at least 1 — derived, deliberately not a second setting the user could put in conflict with the monthly one. Absent when there is no goal, and then no streak is claimed at all.
+	DailyGoal *int `json:"daily_goal,omitempty"`
+
+	// Length the current run in calendar days. 0 = no live streak.
+	Length int `json:"length"`
+
+	// Longest the longest run inside the window examined
+	Longest int `json:"longest"`
+
+	// MissingInputs The inputs the phone has and the server does not: `illness_days` (derived from the daily journal, which never leaves the device) and `chosen_rest_days` (a local setting). Both make a day neutral on the phone. Here they are missing, so this streak is a lower bound on the phone's.
+	MissingInputs []string           `json:"missing_inputs"`
+	WindowFrom    openapi_types.Date `json:"window_from"`
+
+	// WindowTo today — the streak is a statement about today, whichever month was asked for
+	WindowTo openapi_types.Date `json:"window_to"`
+}
+
+// ChallengeStreakBreak defines model for ChallengeStreakBreak.
+type ChallengeStreakBreak struct {
+	// Day absent for `start_of_history`
+	Day *openapi_types.Date `json:"day,omitempty"`
+
+	// Reason Why the run does not reach further back. `missed` and `no_data` are deliberately not the same answer: one is a day under the goal, the other a day we know nothing about, and reporting the second as the first is the same lie as treating a missing measurement as a zero. `start_of_history` means the window simply ends there.
+	Reason ChallengeStreakBreakReason `json:"reason"`
+}
+
+// ChallengeStreakBreakReason Why the run does not reach further back. `missed` and `no_data` are deliberately not the same answer: one is a day under the goal, the other a day we know nothing about, and reporting the second as the first is the same lie as treating a missing measurement as a zero. `start_of_history` means the window simply ends there.
+type ChallengeStreakBreakReason string
+
 // Device defines model for Device.
 type Device struct {
 	// Id the server-side identifier; optional on POST (if given, that row is updated)
@@ -836,6 +983,18 @@ type GetActivityParams struct {
 	Tz   *string             `form:"tz,omitempty" json:"tz,omitempty"`
 }
 
+// GetChallengeParams defines parameters for GetChallenge.
+type GetChallengeParams struct {
+	// Month `YYYY-MM`; the default is the month `tz` is in right now
+	Month *string `form:"month,omitempty" json:"month,omitempty"`
+
+	// Tz IANA tz; if missing, user.time_zone. A month is a span in the user's calendar, not an instant — 2026-08-31 22:30 UTC is already September in Budapest.
+	Tz *string `form:"tz,omitempty" json:"tz,omitempty"`
+
+	// Thresholds a comma-separated list of step milestones (`20000,35000,70000`), overriding what the server knows. Cleaned up exactly as the phone cleans up the same input: non-positive entries dropped, duplicates removed, the rest sorted.
+	Thresholds *string `form:"thresholds,omitempty" json:"thresholds,omitempty"`
+}
+
 // GetSamplesParams defines parameters for GetSamples.
 type GetSamplesParams struct {
 	DataType string     `form:"data_type" json:"data_type"`
@@ -915,6 +1074,9 @@ type ServerInterface interface {
 	// Refresh the access token with a refresh token
 	// (POST /auth/refresh)
 	PostAuthRefresh(w http.ResponseWriter, r *http.Request)
+	// The monthly step challenge — milestones, progress and the streak
+	// (GET /challenge)
+	GetChallenge(w http.ResponseWriter, r *http.Request, params GetChallengeParams)
 	// Connected devices
 	// (GET /devices)
 	GetDevices(w http.ResponseWriter, r *http.Request)
@@ -1011,6 +1173,12 @@ func (_ Unimplemented) PostAuthLogout(w http.ResponseWriter, r *http.Request) {
 // Refresh the access token with a refresh token
 // (POST /auth/refresh)
 func (_ Unimplemented) PostAuthRefresh(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The monthly step challenge — milestones, progress and the streak
+// (GET /challenge)
+func (_ Unimplemented) GetChallenge(w http.ResponseWriter, r *http.Request, params GetChallengeParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -1279,6 +1447,71 @@ func (siw *ServerInterfaceWrapper) PostAuthRefresh(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostAuthRefresh(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetChallenge operation middleware
+func (siw *ServerInterfaceWrapper) GetChallenge(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetChallengeParams
+
+	// ------------- Optional query parameter "month" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "month", r.URL.Query(), &params.Month, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "month"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "month", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tz" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tz", r.URL.Query(), &params.Tz, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tz"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tz", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "thresholds" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "thresholds", r.URL.Query(), &params.Thresholds, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "thresholds"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "thresholds", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetChallenge(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2078,6 +2311,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/auth/refresh", wrapper.PostAuthRefresh)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/challenge", wrapper.GetChallenge)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/devices", wrapper.GetDevices)

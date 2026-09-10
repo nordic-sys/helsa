@@ -1,5 +1,6 @@
 import type {
   ActivitySummary,
+  Challenge,
   Device,
   Goal,
   Range,
@@ -101,6 +102,10 @@ export const api = {
   settings: () => req<Settings>('/settings'),
 
   me: () => req<{ id?: string; display_name?: string }>('/me'),
+
+  /** The monthly step challenge. `month` is `YYYY-MM`; without it, the month the
+   * time zone is in right now. */
+  challenge: (month?: string, tz?: string) => req<Challenge>(`/challenge${qs({ month, tz })}`),
 }
 
 /** The browser's time zone — for the timezone-aware aggregation (docs/03 §6.1). */
