@@ -10,7 +10,7 @@ You need a running server ([Quick start](quick-start/)) and a device token
 ([Device token](device-token/)).
 
 If the phone will reach the server **from outside your home network**, you also
-need the certificate work in [TLS and mutual TLS](../deployment/tls-mtls/)
+need the certificate work in [TLS and mutual TLS](/deployment/tls-mtls/)
 first — the public interface rejects connections without a client certificate at
 the TLS handshake, before any token is examined. If the phone is on the same LAN
 or on your VPN, you can do a first sync against the LAN interface and add
@@ -62,7 +62,7 @@ idempotent anyway: every item carries its HealthKit `source_uuid`, which is the
 deduplication key.
 
 A phone that has been offline for weeks catches up by repeating this loop.
-Details: [API — Ingest](../api/ingest/).
+Details: [API — Ingest](/api/ingest/).
 
 ## Verify it landed
 
@@ -74,7 +74,7 @@ curl -s -H "Authorization: Bearer $TOKEN" \
 ```
 
 You should see one entry with a recent `last_seen_at`. That timestamp is also what
-the [staleness alert](../integrations/home-assistant/#the-alert-that-matters)
+the [staleness alert](/integrations/home-assistant/#the-alert-that-matters)
 watches.
 
 **Did samples arrive?**
@@ -109,20 +109,20 @@ database or the broker — check `/readyz`.
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| App reports a TLS or "cannot connect" error | The CA certificate is installed on the phone but **not trusted**. Installing a root CA and trusting it are two separate steps on iOS. | Settings → General → About → Certificate Trust Settings, and enable it. See [TLS and mutual TLS](../deployment/tls-mtls/#installing-on-the-phone). |
+| App reports a TLS or "cannot connect" error | The CA certificate is installed on the phone but **not trusted**. Installing a root CA and trusting it are two separate steps on iOS. | Settings → General → About → Certificate Trust Settings, and enable it. See [TLS and mutual TLS](/deployment/tls-mtls/#installing-on-the-phone). |
 | Connection refused at the TLS handshake, no HTTP status | No client certificate, or one signed by a different CA. | Reimport the `.p12`. Confirm with `openssl verify -CAfile ca.crt client.crt`. |
 | `401` | Token missing, mistyped, revoked, or signed with a different `HELSA_JWT_SECRET`. | Issue a fresh token and paste it again. |
 | `413` | The chunk exceeded the server limit. | The app should shrink its chunk and retry; the `202` body advertises `max_items`. If it persists, the client-side chunk size is too large. |
 | `202` but nothing in the database | The worker is down, or the queue is unreachable. | `docker compose ps`, `docker compose logs worker`, `curl /readyz`. |
-| Data arrives but daily totals look wrong | Time zone. Daily buckets are computed in a specific zone. | Set `time_zone` in settings to a valid IANA zone, or pass `tz=` explicitly. See [API conventions](../api/#conventions). |
+| Data arrives but daily totals look wrong | Time zone. Daily buckets are computed in a specific zone. | Set `time_zone` in settings to a valid IANA zone, or pass `tz=` explicitly. See [API conventions](/api/#conventions). |
 | Steps look roughly doubled | Both the iPhone and the Watch recorded them. | Expected in the raw `samples` table, which keeps the source. Aggregates use HealthKit's deduplicated statistics. |
 
 ## Then what
 
 - The phone keeps syncing in the background. It does not need you.
 - Point a browser at the dashboard from your LAN or VPN.
-- Set up the [staleness alert](../integrations/home-assistant/) — this system's
+- Set up the [staleness alert](/integrations/home-assistant/) — this system's
   characteristic failure is not a crash but silence, and silence is invisible
   unless something watches for it.
 - Take a backup and **restore it once** before you trust the setup:
-  [Backups and restore](../deployment/backups/).
+  [Backups and restore](/deployment/backups/).

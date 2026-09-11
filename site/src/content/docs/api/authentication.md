@@ -41,7 +41,7 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 ```
 
 Lifetime is long by design. The reasoning — and the revocation options — are on the
-[Device token](../getting-started/device-token/) page.
+[Device token](/getting-started/device-token/) page.
 
 ## `/v1/auth/refresh` and `/v1/auth/logout`
 

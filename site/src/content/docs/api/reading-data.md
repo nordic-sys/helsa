@@ -260,7 +260,7 @@ The same rules run in the iOS app, and both implementations are held to the
 
 :::danger
 These are arithmetic on your own numbers, not clinical findings. See the
-[disclaimer](../disclaimer/).
+[disclaimer](/disclaimer/).
 :::
 
 ## Achievements
@@ -284,6 +284,140 @@ starts from an empty set, and a replace-everything semantic would erase years of
 history on the first sync.
 
 Resending an existing id does not change its original `earned_at`.
+
+## Your usual range
+
+```http
+GET /v1/baseline?range=month&metrics=stepCount,restingHeartRate&tz=Europe/Budapest
+```
+
+The middle of **your own last 60 days** for a metric, and where the period you are
+looking at sits against it — five levels, and no verdict.
+
+```json
+{
+  "range": "month",
+  "from": "2026-08-01", "to": "2026-08-31",
+  "reference_from": "2026-07-03", "reference_to": "2026-08-31",
+  "reference_days": 60,
+  "min_days": 14,
+  "metrics": {
+    "restingHeartRate": {
+      "mean": 54.8, "sd": 2.9, "low": 51.9, "high": 57.7,
+      "day_count": 58, "value": 58.1, "level": "above"
+    }
+  }
+}
+```
+
+Four rules decide what comes back, and they are the same four the app applies in
+`TrendBaseline`. **A formula changed on one side has to be carried to the other** —
+a server that computes "your usual" differently from the phone is worse than a
+server that does not compute it at all, because the two would quietly disagree
+about the same person.
+
+1. The reference is the **60 days ending on the anchor day**, in daily buckets.
+   Not 30: a 30-day reference under a 30-day chart would be the chart describing
+   itself.
+2. The anchor is **the end of the period you are looking at, not today**. Browsing
+   back to a month in 2024 and being told it was "above your usual" would
+   otherwise mean *above what is usual for you now* — a comparison across two
+   years wearing the words of one.
+3. At least **14 of those days must carry a measurement**. Below that there is no
+   band at all — not a wider one, not a guess: `mean`, `sd`, `low` and `high` stay
+   absent and only `day_count` comes back.
+4. The band is `mean` ± one **sample** standard deviation (n−1). One sigma, so it
+   covers roughly the middle two thirds of your usual days: two would never be
+   left, and a band that is never left says nothing.
+
+:::caution
+A day without a measurement is never counted as a zero, here or anywhere else. A
+reference window whose days never varied gets no band either — a zero-width band
+is a line pretending to be one.
+:::
+
+Why this is a sibling of `/summary` rather than a field on it: it has a window of
+its own, so `from`/`to` would have to mean two different windows at once; it
+exists for two of the four ranges only, and a field that silently disappears on
+`day` and `year` reads like "no data"; and `/summary` is cached per (range, tz,
+metrics, window), which a second, differently shaped window would either poison or
+bypass. It is computed **from** `/summary`'s own daily buckets, so the band rests
+on exactly the numbers you would receive yourself.
+
+## The monthly challenge
+
+```http
+GET /v1/challenge?month=2026-08&tz=Europe/Budapest
+```
+
+The same challenge the iPhone draws as a trail, in numbers: what the month has
+added up to, which milestones that passed, and how many days are left.
+
+| Parameter | |
+|---|---|
+| `month` | `YYYY-MM`. Defaults to the month `tz` is in right now. |
+| `tz` | IANA zone. A month is a span in your calendar, not an instant — 2026-08-31 22:30 UTC is already September in Budapest. |
+| `thresholds` | `20000,35000,70000` — override what the server thinks your milestones are. Cleaned up exactly as the phone cleans the same input: non-positive dropped, duplicates removed, sorted. |
+
+**The milestones are yours, and they live on the phone.** Nothing syncs them, so
+the server takes them in this order: the `thresholds` parameter, then the newest
+threshold snapshot on a recorded badge, then the factory row. `thresholds_source`
+says which happened — "your milestones" and "our guess at your milestones" are
+different statements and should not be told apart by guessing.
+
+Three things about the numbers:
+
+- **`steps` is the real figure, never clipped to the goal.** Someone who walked
+  200 000 against a 100 000 goal walked 200 000. It is `percent` that stops at
+  100, and `overshoot_steps` carries the difference.
+- **`days_elapsed` excludes today**, because there are still steps to be taken
+  today; today is counted in `days_remaining` instead, so the two always add up to
+  `days_in_month`. This matters because `days_elapsed` is the denominator of
+  `steps_per_day`: dividing a month's total by 31 on the third of the month gives
+  a daily average a third of the truth.
+- **A missing measurement is not a zero.** With no measured day at all, `steps` is
+  absent along with everything derived from it, and no milestone counts as
+  reached — we do not know whether the month has begun.
+
+:::caution
+**The streak is a lower bound**, and `streak.missing_inputs` says why. The phone
+also knows days that do *not* break a streak — an illness day derived from the
+daily journal, and a rest day you chose — and neither reaches the server. The
+journal stays on the device, so a day the phone counts as neutral is a plain
+missed day here. This streak can be shorter than the one on your phone, never
+longer.
+:::
+
+## Coverage
+
+```http
+GET /v1/coverage?from=2025-09-11&to=2026-09-11&tz=Europe/Budapest
+```
+
+Per catalog type: whether anything arrives at all, on how many days of the window,
+when the most recent measurement was, and which source wrote it. `types` carries
+the **whole catalog, in catalog order** — including types nothing has ever been
+received for, because "this entire area is empty" is exactly what this endpoint
+exists to make visible. The window defaults to the last 365 days.
+
+:::caution
+**This answers a narrower question than the app's completeness screen, and its
+vocabulary is deliberately different so the two cannot be confused.** The phone
+knows about *permissions*: it can tell "the read ran and nothing came" from "the
+system will still ask about this group" from "HealthKit refused this type" from
+"there is no HealthKit here". None of that reaches the server — a type that was
+never granted and a type that has no sensor arrive here identically, as an
+absence.
+
+So `state` has three values, all of them statements about **what reached this
+server**, and it never borrows the phone's four (`empty`, `notRequested`,
+`refused`, `unavailable`) for a weaker claim.
+:::
+
+The one thing the server computes exactly as the phone does is the **rhythm** of a
+metric and the silence that breaks it (`gap`), derived from the arrival days
+themselves with the same thresholds. Where the server cannot answer, the field is
+absent — a missing measurement is never reported as a zero.
 
 ## Export
 

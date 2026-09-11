@@ -142,7 +142,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml images
 :::note
 **The proxy wants certificates.** The production overlay expects a private CA and
 a server certificate in `/opt/helsa/pki` — see [TLS and mutual
-TLS](../deployment/tls-mtls/). Until they exist the `proxy` container will not
+TLS](/deployment/tls-mtls/). Until they exist the `proxy` container will not
 start, while the API, worker and dashboard are unaffected. Bring those up on their
 own with `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d api worker web`.
 :::
@@ -228,7 +228,7 @@ docker compose down -v
 :::danger
 **`down -v` deletes your health history.** There is no confirmation prompt and
 no undo. On a machine that holds real data, take a dump first — see
-[Backups and restore](../deployment/backups/).
+[Backups and restore](/deployment/backups/).
 :::
 
 ## Keeping it up to date
@@ -254,4 +254,4 @@ This local stack is **not a deployment**. Without the proxy it has no TLS and no
 client certificate check, and a database whose only protection is that nothing is
 published beyond loopback. It is fine for trying things out and for development.
 Before you point a phone at it from outside your machine, work through
-[Deployment](../deployment/).
+[Deployment](/deployment/).

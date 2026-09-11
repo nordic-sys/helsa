@@ -55,6 +55,10 @@ export default defineConfig({
           items: [{ autogenerate: { directory: 'getting-started' } }],
         },
         {
+          label: 'The web dashboard',
+          items: [{ autogenerate: { directory: 'dashboard' } }],
+        },
+        {
           label: 'Deployment',
           items: [{ autogenerate: { directory: 'deployment' } }],
         },

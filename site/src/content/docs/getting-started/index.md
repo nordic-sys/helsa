@@ -8,7 +8,7 @@ Get a working Helsa server on your own machine, reachable only from that machine
 This section takes you from an empty directory to a running API that has accepted
 real data from your phone. **Nothing here listens on a public interface**, and no
 router configuration is involved. Exposing the server to the internet is a
-separate, deliberate step described in [Deployment](../deployment/).
+separate, deliberate step described in [Deployment](/deployment/).
 
 ## The order
 
@@ -29,7 +29,7 @@ separate, deliberate step described in [Deployment](../deployment/).
 | **About 30 minutes** | Longer if you go on to real deployment — certificates are the slow part. |
 
 Not needed yet: a domain name, a router change, a public IP, or a certificate
-authority. Those belong to [Deployment](../deployment/).
+authority. Those belong to [Deployment](/deployment/).
 
 ## What gets deployed
 
@@ -54,6 +54,6 @@ only the proxy.
 ## A note on data
 
 The database is the only durable copy of what you upload. Before you rely on it,
-read [Backups and restore](../deployment/backups/) — in particular the part
+read [Backups and restore](/deployment/backups/) — in particular the part
 about TimescaleDB not restoring like plain PostgreSQL. An untested backup is not
 a backup, and this is the failure mode most likely to actually cost you something.

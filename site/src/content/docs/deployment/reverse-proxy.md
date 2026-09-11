@@ -196,7 +196,7 @@ the updater is the classic cause — **syncing stops silently**. The phone buffe
 so nothing is lost, but nothing arrives either.
 
 - Put the expiry of any dynamic-DNS API token in your calendar.
-- Rely on the [freshness alert](../integrations/home-assistant/#the-alert-that-matters)
+- Rely on the [freshness alert](/integrations/home-assistant/#the-alert-that-matters)
   to catch it, since it catches every cause of "no new data" at once.
 
 ## Request size

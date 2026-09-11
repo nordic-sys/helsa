@@ -15,7 +15,7 @@ devices? That is answered in two independent layers.
 
 | Layer | Mechanism | Checked by |
 |---|---|---|
-| **Transport** | Mutual TLS. The client presents a certificate signed by *your* private CA. | The reverse proxy, before any HTTP is parsed. See [TLS and mutual TLS](../deployment/tls-mtls/). |
+| **Transport** | Mutual TLS. The client presents a certificate signed by *your* private CA. | The reverse proxy, before any HTTP is parsed. See [TLS and mutual TLS](/deployment/tls-mtls/). |
 | **Application** | A long-lived bearer token in the `Authorization` header. | The API. |
 
 Both are required on the public interface. The browser dashboard uses only the
@@ -93,7 +93,7 @@ usually right:
 |---|---|
 | One device compromised or retired | Log it out, then issue a fresh token for the replacement. |
 | `HELSA_JWT_SECRET` leaked | Change the secret and restart the API. **Every existing token stops working**; reissue for each device. |
-| Phone lost | Rotate the secret *and* rotate the CA — the client certificate went with the phone. See [certificate rotation](../deployment/tls-mtls/#rotating). |
+| Phone lost | Rotate the secret *and* rotate the CA — the client certificate went with the phone. See [certificate rotation](/deployment/tls-mtls/#rotating). |
 
 :::danger
 **Redis holds the deny-list.** If you wipe the Redis volume, revocations

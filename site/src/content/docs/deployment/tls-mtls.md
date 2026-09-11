@@ -234,7 +234,7 @@ so nothing appears wrong until you go looking for last month's numbers.
 Two mitigations, and you want both:
 
 1. Put the expiry dates in a calendar. `make server` and `make client` print them.
-2. Run the [freshness alert](../integrations/home-assistant/#the-alert-that-matters).
+2. Run the [freshness alert](/integrations/home-assistant/#the-alert-that-matters).
    It catches expiry, stale DNS, a dead worker, and a full disk with one mechanism,
    because all of them look identical from the outside: no new data.
 

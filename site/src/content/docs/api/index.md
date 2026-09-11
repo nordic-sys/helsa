@@ -73,7 +73,7 @@ look weird".
 | `GET /v1/workouts/{id}/route` | GPS track for one workout. Separate endpoint — a three-hour hike is tens of thousands of points, and the list must never carry them. |
 | `GET /v1/sleep` | Sleep segments, or a daily roll-up. |
 | `GET /v1/samples` | Raw samples for one `data_type`, keyset-paginated. Debugging and export. |
-| `GET /v1/insights` | Rule-based observations. Statistics, not medicine — see the [disclaimer](../disclaimer/). |
+| `GET /v1/insights` | Rule-based observations. Statistics, not medicine — see the [disclaimer](/disclaimer/). |
 | `GET /v1/achievements` | Earned badges, newest first. |
 
 [Details](reading-data/)

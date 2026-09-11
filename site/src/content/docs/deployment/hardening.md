@@ -80,7 +80,7 @@ just stop noticing for a month.
 
 Build it as a **dead man's switch**: the server pushes a heartbeat, and something
 *else* decides when the silence has gone on too long. A system cannot report its
-own death. See [Home Assistant](../integrations/home-assistant/#the-alert-that-matters).
+own death. See [Home Assistant](/integrations/home-assistant/#the-alert-that-matters).
 
 ## Updates
 

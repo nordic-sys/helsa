@@ -35,7 +35,7 @@ of data and compresses it.
 
 So: a handful of daily numbers — steps, active energy, sleep duration, resting
 heart rate — updated a few times a day. If you want the detail, query the
-database or use [`GET /v1/samples`](../api/reading-data/#raw-samples).
+database or use [`GET /v1/samples`](/api/reading-data/#raw-samples).
 :::
 
 ## What is worth sending
