@@ -153,7 +153,13 @@ var entities = []entity{
 		//     a stale value. Home Assistant restores the state itself and keeps the
 		//     remaining expiry time.
 		objectID: "helsa_sync_freshness",
-		name:     "Helsa sync freshness",
+		// ⚠️ "Sync freshness", not "Helsa sync freshness". Home Assistant composes an
+		// entity's displayed name as DEVICE NAME + entity name, and the device here is
+		// already called Helsa — so the prefixed form came out as "Helsa Helsa sync
+		// freshness", alone among the six. The other five never carried the prefix, which
+		// is why only this one doubled. The `objectID` keeps its prefix: that one is not a
+		// display name, it is part of the discovery topic and the entity id.
+		name:     "Sync freshness",
 		suffix:   "sync/freshness_hours",
 		unit:     "h",
 		stateCls: "measurement",

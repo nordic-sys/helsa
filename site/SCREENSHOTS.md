@@ -156,14 +156,36 @@ dashboard. Under 250 KB. PNG.
 
 ## Status (2026-09-11)
 
-| File | State |
+**All five are real.** Nothing on the site is a placeholder tile any more.
+
+| File | How it was taken |
 |---|---|
-| `app/*` (32) | ✅ real — mock plan, both languages, iPhone + iPad |
-| `web-dashboard.png` | ✅ real — the Trends page, populated |
-| `web-first-data.png` | ✅ real — Today after a sync, cropped above the fold |
-| `ios-sync-settings.png` | ✅ real — "Your own server", sending off by default |
-| `ios-certificate-trust.png` | ⛔ **needs a person.** It is a screen of the iOS Settings app; a simulator can be given a root certificate (`simctl keychain add-root-cert`) but not a tap, so nothing can reach it unattended. |
-| `home-assistant-card.png` | ⛔ **needs a Home Assistant with Helsa entities.** The development server publishes nothing to MQTT, and the live one carries real measurements — so neither is the right thing to photograph. Bringing up the `mosquitto` profile against a throwaway HA would do it. |
+| `app/*` (32) | simulator, mock plan, both languages, iPhone + iPad |
+| `web-dashboard.png` | the Trends page on the development server |
+| `web-first-data.png` | Today after a sync, cropped above the observations card |
+| `ios-sync-settings.png` | "Your own server", reached by `-HelsaScreen server` |
+| `ios-certificate-trust.png` | iOS Settings, driven by synthesised taps — see below |
+| `home-assistant-card.png` | a throwaway Home Assistant, fed by the real publisher |
+
+### The two that needed more than a launch argument
+
+**`ios-certificate-trust.png`** is a screen of the **iOS Settings app**, which no launch
+argument of ours can reach. `App-prefs:root=General` opens Settings without a confirmation
+dialog, but ⚠️ the `path=` component is ignored on iOS 26 — it always lands on the root. So the
+route is: `simctl keychain add-root-cert` with a **throwaway CA named "Helsa Root CA"** (never
+the real PKI), then three synthesised taps.
+
+The tap mapping is **measured, not guessed**: the device screenshot is template-matched against
+a capture of the Simulator window, which gives the screen's origin inside the window and a scale
+of exactly 1/3. Re-read the window position before every tap — a window that moved turns the next
+tap into a tap on whatever is now under that point, and nothing reports it.
+
+**`home-assistant-card.png`** needed a Home Assistant that was neither of the two that exist: the
+development server publishes nothing to MQTT, and the live one carries real measurements. A
+throwaway VM with mosquitto and Home Assistant, with the **real Helsa publisher** pointed at it,
+produces genuine entities rather than hand-written ones — which is how the doubled
+"Helsa Helsa sync freshness" name was found. ⛔ Delete the VM afterwards, and take the
+`HELSA_MQTT_URL` line back out of the development server's `.env`.
 
 
 ## Notes on format

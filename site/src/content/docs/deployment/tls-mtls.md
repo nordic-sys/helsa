@@ -118,10 +118,9 @@ in this whole setup.
 
 ![iOS Certificate Trust Settings with the Helsa root CA enabled](../../../assets/screenshots/ios-certificate-trust.png)
 
-> **Screenshot still missing.** This one is a screen of the iOS **Settings** app, not
-> of Helsa, and nothing can reach it unattended — a simulator can be handed a root
-> certificate but not a tap. It has to be taken by hand on a device. The brief is in
-> `site/SCREENSHOTS.md`.
+⚠️ **The toggle is the whole point.** Installing the certificate is not the same
+as trusting it: without that switch the app reports what looks like a network
+error, and nothing anywhere says the certificate is the reason.
 
 **2. `<name>.p12` — so the phone can identify itself.**
 

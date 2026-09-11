@@ -3,6 +3,7 @@ package hass
 import (
 	"encoding/json"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 )
@@ -147,6 +148,25 @@ func TestStateClassesAreDeliberate(t *testing.T) {
 			t.Errorf("new entity %q: decide its state_class deliberately and add it here", e.objectID)
 		} else if e.stateCls != w {
 			t.Errorf("%s: state_class = %q, want %q", e.objectID, e.stateCls, w)
+		}
+	}
+}
+
+// ⚠️ Home Assistant displays DEVICE NAME + entity name. The device here is called "Helsa", so an
+// entity name that repeats it comes out doubled — "Helsa Helsa sync freshness", which is exactly
+// what shipped, alone among the six, because only that one carried the prefix.
+//
+// Nothing failed: the sensor worked, the value was right, and the name was only visible to
+// somebody looking at a Home Assistant dashboard. It was found by taking a screenshot of one.
+func TestEntityNamesDoNotRepeatTheDeviceName(t *testing.T) {
+	for _, e := range entities {
+		if e.name == "" {
+			t.Errorf("%s has no name", e.objectID)
+			continue
+		}
+		if strings.HasPrefix(strings.ToLower(e.name), "helsa") {
+			t.Errorf("%s: name %q repeats the device name — Home Assistant would show it twice",
+				e.objectID, e.name)
 		}
 	}
 }
