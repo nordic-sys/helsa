@@ -29,10 +29,11 @@ In the app's settings, in the section for sending data to your own server:
 3. paste the **device token**;
 4. save, and use the connection test if the app offers one.
 
-![Helsa app sync settings with a server endpoint configured](../../../assets/screenshots/ios-sync-settings.png)
+![The app's "Your own server" screen, with sending switched off by default](../../../assets/screenshots/ios-sync-settings.png)
 
-> **Screenshot placeholder.** Not in the repository yet — see `docs/SCREENSHOTS.md`
-> for what this should show.
+This is the screen the four steps above happen on. It opens with **Sending
+switched off** — that is the shipping default, not a screenshot of a fresh
+install: the data stays on the phone until you give it an address.
 
 :::danger
 **Type the URL carefully.** A typo that resolves to somebody else's host means
@@ -101,9 +102,12 @@ The worker logs per-batch counts: items processed, duplicates skipped, dead-lett
 messages. A growing queue with an idle worker means the worker cannot reach the
 database or the broker — check `/readyz`.
 
-![Web dashboard showing the first synced day](../../../assets/screenshots/web-first-data.png)
+![The dashboard's Today page after a first sync](../../../assets/screenshots/web-first-data.png)
 
-> **Screenshot placeholder.** Not in the repository yet — see `docs/SCREENSHOTS.md`.
+⚠️ Note what this picture actually shows: yesterday arrived — rings, a workout, a
+night's sleep — and **today has not**, so today's figures are dashes rather than
+zeros. That is the normal state between syncs, and it is the distinction the whole
+app is built on: a missing measurement is never drawn as a measured nought.
 
 ## When it does not work
 

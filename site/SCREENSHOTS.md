@@ -1,12 +1,31 @@
-# Screenshots to capture
+# Screenshots
 
-This file is **not published** — it sits outside the Astro `src/` tree. It is the
-instruction list for filling in the five image placeholders on the site.
+**Not published** — this file sits outside the Astro `src/` tree.
 
-Each of the five names below already exists as a generated placeholder image: a
-Helsa-marked tile that says SCREENSHOT PENDING. **Overwrite the file in place**
-and it is picked up with no other change. The page also carries a visible
-"screenshot placeholder" note — delete that paragraph once the real image is in.
+## What is captured, and how
+
+**The 32 app screenshots** (`app/{en,hu,ipad-en,ipad-hu}-0N-*.png`) are produced by
+`scripts/screenshots.sh` in the **helsa-apple** repository, against a simulator:
+
+```bash
+scripts/screenshots.sh <device-udid> <out-dir> en en_US
+scripts/screenshots.sh <device-udid> <out-dir> hu hu_HU
+```
+
+⚠️ **Reproducible by construction, and that is a rule rather than a nicety.** The plan has a
+fixed seed, every screen is reached by a launch argument and never by a coordinate, and the
+status bar is overridden — so the same set can be rebuilt months from now. A tap at (x, y)
+stops being the right screen the first time a row moves.
+
+⚠️ **`-HelsaMockData YES` must cover every source a captured screen reads from.** It used to
+substitute only the raw sample reader, so the water and events screens came out EMPTY beside
+screens holding five months of data — and that went onto the public site before anyone noticed.
+An empty screen next to a full one does not read as "no data", it reads as a broken feature.
+See `DevTools/MockPlanContextStores.swift`.
+
+**The web images** come from a browser pointed at the development server, with a device token
+injected into `localStorage`. ⛔ Never photograph a screen that displays the token, and never
+photograph the live server — that one holds real measurements.
 
 ## Where the files go
 
@@ -132,6 +151,20 @@ it out.
 dashboard. Under 250 KB. PNG.
 
 ---
+
+---
+
+## Status (2026-09-11)
+
+| File | State |
+|---|---|
+| `app/*` (32) | ✅ real — mock plan, both languages, iPhone + iPad |
+| `web-dashboard.png` | ✅ real — the Trends page, populated |
+| `web-first-data.png` | ✅ real — Today after a sync, cropped above the fold |
+| `ios-sync-settings.png` | ✅ real — "Your own server", sending off by default |
+| `ios-certificate-trust.png` | ⛔ **needs a person.** It is a screen of the iOS Settings app; a simulator can be given a root certificate (`simctl keychain add-root-cert`) but not a tap, so nothing can reach it unattended. |
+| `home-assistant-card.png` | ⛔ **needs a Home Assistant with Helsa entities.** The development server publishes nothing to MQTT, and the live one carries real measurements — so neither is the right thing to photograph. Bringing up the `mosquitto` profile against a throwaway HA would do it. |
+
 
 ## Notes on format
 

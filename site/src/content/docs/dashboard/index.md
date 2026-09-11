@@ -35,6 +35,8 @@ Point a browser at it from your LAN or over WireGuard, paste a device token once
 and it is stored in that browser only. See
 [device token](/getting-started/device-token/).
 
+![The dashboard's Trends page: a metric picker, a week of steps, and the usual-range band](../../../assets/screenshots/web-dashboard.png)
+
 ## How it is organised
 
 Ten pages in three groups, plus the landing page. The grouping is not decoration:

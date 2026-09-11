@@ -118,7 +118,10 @@ in this whole setup.
 
 ![iOS Certificate Trust Settings with the Helsa root CA enabled](../../../assets/screenshots/ios-certificate-trust.png)
 
-> **Screenshot placeholder.** Not in the repository yet — see `docs/SCREENSHOTS.md`.
+> **Screenshot still missing.** This one is a screen of the iOS **Settings** app, not
+> of Helsa, and nothing can reach it unattended — a simulator can be handed a root
+> certificate but not a tap. It has to be taken by hand on a device. The brief is in
+> `site/SCREENSHOTS.md`.
 
 **2. `<name>.p12` — so the phone can identify itself.**
 

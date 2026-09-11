@@ -196,7 +196,10 @@ next to your electricity meter is simply wrong.
 
 ![Home Assistant dashboard card with Helsa entities](../../../assets/screenshots/home-assistant-card.png)
 
-> **Screenshot placeholder.** Not in the repository yet — see `docs/SCREENSHOTS.md`.
+> **Screenshot still missing.** It needs a Home Assistant with Helsa entities in it,
+> and the two that exist are the wrong ones to photograph: the development server
+> publishes nothing to MQTT, and the live one carries real measurements. The brief
+> is in `site/SCREENSHOTS.md`.
 
 ## The alert that matters
 Everything above is convenience. This part is the reason the integration exists.
