@@ -1,6 +1,7 @@
 ---
 title: Insight test vectors
 sidebar:
+  label: Insight rules and test vectors
   order: 5
 ---
 The insight rules exist **twice**: in Go, for a server that anyone can run, and in

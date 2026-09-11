@@ -16,6 +16,8 @@
 export const hu = {
   ui: {
     // --- Navigation and chrome ---------------------------------------------
+    'app.notMedical':
+      'Statisztika, nem orvoslás. A Helsa nem orvostechnikai eszköz, és semmi itt nem diagnózis vagy tanács. Ami aggaszt, arról orvossal beszélj.',
     'nav.today': 'Ma',
     'nav.trends': 'Trendek',
     'nav.workouts': 'Edzések',

@@ -13,10 +13,17 @@ policy that governs it is your own.
 
 ## The short version
 
-**Nothing is collected.** There is no account, no analytics, no crash reporting,
-no advertising, and no server operated by the developer — so there is no place
-for your data to be sent to, even by mistake. Your health data is read from
-Apple Health on your device, analysed on your device, and stays there.
+**The app collects nothing.** There is no account, no analytics, no crash reporting,
+no advertising, and no server operated by the developer — so there is no place for
+your data to be sent to, even by mistake. Your health data is read from Apple Health
+on your device, analysed on your device, and stays there.
+
+⚠️ **The one channel that is not nothing is the one you choose to use: writing to
+support.** Anything you send in an email — including a screenshot with figures on it —
+arrives in a mailbox and sits there until it is deleted. It is read by one person, it
+is never added to anything, and nothing else happens to it. If you would rather it did
+not exist at all, [open an issue](https://github.com/nordic-sys/helsa/issues) without
+the health data instead. Please crop what you do not need to send.
 
 The one way data leaves your phone is a server **you** set up and whose address
 **you** type in. That is off by default.
@@ -25,11 +32,15 @@ The one way data leaves your phone is a server **you** set up and whose address
 
 ## What the app reads
 
-With your permission, from Apple Health: steps and distances, heart rate and its
-variability, sleep, workouts and their routes, body measurements, nutrition,
-gait measurements, environmental audio exposure, and the events your watch
-records (a fall, a high or low heart rate, an irregular rhythm, a loud
-environment).
+With your permission, from Apple Health: **every quantity type Apple Health offers —
+120 of them today** — plus sleep, workouts and their routes, and the events your watch
+records (a fall, a high or low heart rate, an irregular rhythm, a loud environment).
+
+That list is not only steps and heart rate. It includes the measurements people most
+want named: **blood pressure, blood glucose, blood oxygen, atrial-fibrillation burden,
+spirometry and inhaler use, body temperature.** Helsa reads whichever of them you have,
+because a health app that quietly skipped the serious types would be the less honest
+design — and because it never decides what your data means.
 
 Permission is requested **group by group**, and refusing a group is a normal
 outcome the app is built to handle. It reads nothing you have not allowed.
@@ -53,7 +64,8 @@ By default, **nothing**.
 | | When | Where to |
 |---|---|---|
 | Health data | Only if you turn on uploading and enter an address | The server you named, over mutual TLS with a device certificate |
-| Map tiles | When you look at a map or share a route on one | Apple, through MapKit — Apple's own privacy policy applies |
+| Map tiles (the app) | When you look at a map or share a route on one | Apple, through MapKit — Apple's own privacy policy applies |
+| Map tiles (the web dashboard) | Only if you switch a map on; it is off by default | Whatever tile source you chose, reached **through your own server**, never from the browser. [What each choice sends](/deployment/map-tiles/) |
 | Settings | If you have iCloud on | Your own iCloud account (preferences only — never health data) |
 
 There is no fourth row. In particular there is no telemetry, no "anonymous
@@ -90,7 +102,7 @@ device. Nothing is sent through a push server. They are off by default.
 
 ## Children
 
-The app is not directed at children and collects nothing from anyone.
+The app is not directed at children, and it collects nothing from anyone.
 
 ## Changes
 
@@ -102,4 +114,5 @@ in this repository's commit log.
 Questions about privacy, or about this page: open an issue in
 [the repository](https://github.com/nordic-sys/helsa), or see
 [SECURITY.md](https://github.com/nordic-sys/helsa/blob/main/SECURITY.md) for
-anything that should not be public.
+anything that should not be public. If you would rather write, the address and what
+happens to what you send are on the [support page](/support/).

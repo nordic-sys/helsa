@@ -32,6 +32,11 @@ a guess.
 
 ## Observations
 
+:::danger
+**Statistics, not medicine.** Nothing on this page is a diagnosis or advice, and no
+threshold on it is a clinical one. See the [disclaimer](/disclaimer/).
+:::
+
 What the rules found in the measured days: a rolling average, a z-score, a
 correlation. **There is no model here**, and no rule guesses at a day that was not
 measured. Each observation says which rule produced it and on how much data, so an
@@ -91,7 +96,9 @@ day.
 ## Nutrition
 
 Energy consumed, macros and micronutrients. A meal-logging app writes these into
-Health; **Helsa only reads them** and writes nothing back.
+Health and the dashboard only reads them — ⚠️ with one exception, and it is on this
+page: **water**. That is the one nutrition value Helsa writes, from the phone, when
+you log a glass.
 
 ## Completeness
 

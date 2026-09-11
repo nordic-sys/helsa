@@ -60,7 +60,7 @@ any change to the proxy or the network.
 
 - [ ] `/healthz` returns something trivial. No versions, no dependency status, no
       hostnames.
-- [ ] Ingest body size is limited — in the application, and preferably at the proxy
+- [ ] Ingest body size is limited — **at the proxy** (`request_body { max_size 32MB }` in the Caddyfile, which ships enabled) and, one layer later, by the application's 50,000-item cap. ⚠️ The application's limit alone is not enough: it applies after the body has been read and decoded.
       too.
 - [ ] Logs go to stdout as structured JSON and you know how to read them:
       `docker compose logs -f api`.

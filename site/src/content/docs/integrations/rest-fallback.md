@@ -41,10 +41,10 @@ visible rather than imaginary.
 
 ## Token
 
-Issue a dedicated device token so it can be revoked without affecting your phone:
+Issue a dedicated device token so it can be revoked on its own, and so the logs tell it apart from your phone:
 
 ```bash
-docker compose --profile tools run --rm token -subject home-assistant
+make prod-token SUBJECT=home-assistant
 ```
 
 Put it in `secrets.yaml`, never in `configuration.yaml`:
@@ -97,29 +97,20 @@ Pass `tz` explicitly. Without it the server falls back to the stored user settin
 and if those two ever disagree your daily totals will be cut at a different
 midnight than you expect.
 
-### Sleep
+### Sleep — the one the REST path cannot give you
 
-```yaml
-rest:
-  - resource: !secret helsa_base_summary_sleep
-    scan_interval: 3600
-    headers:
-      Authorization: !secret helsa_auth_header
-    sensor:
-      - name: "Helsa sleep last night"
-        unique_id: helsa_sleep_last_night
-        value_template: >-
-          {% raw %}{{ (value_json.metrics.sleepHours.total | float(0)) | round(1) }}{% endraw %}
-        unit_of_measurement: "h"
-        device_class: duration
-        state_class: measurement
-```
+⛔ **There is no sleep figure on `/v1/summary`.** Sleep is not a sample: it lives in
+`sleep_segments`, and turning a night's segments into hours means flattening overlaps —
+the phone and the watch both record the same night, and `inBed` wraps all of it. That is
+`GET /v1/sleep`, which returns the segments, and the arithmetic is then yours.
 
-:::note
-Check the actual metric key and unit your server returns before copying this. The
-response states its own `unit`, and the server's answer is authoritative — a
-hard-coded client-side assumption is how unit bugs happen.
-:::
+This page used to carry a `rest` sensor reading `value_json.metrics.sleepHours.total`,
+under a note telling you to "check the actual metric key before copying this". There is
+no such key and never was; the hedge hid a dead example rather than flagging it.
+
+If you want last night's hours as one number in Home Assistant, **use the MQTT
+publisher** — it does exactly this flattening on the server and publishes
+`sensor.helsa_sleep_last_night`. See [Home Assistant](/integrations/home-assistant/).
 
 ## Freshness, without MQTT
 
@@ -191,7 +182,7 @@ automation:
 
 | Endpoint | Sensible interval | Why not faster |
 |---|---|---|
-| `/v1/summary?range=day` | 30 minutes | Answers come from continuous aggregates refreshed on a schedule. Polling every minute returns the same number 30 times. |
+| `/v1/summary?range=day` | 30 minutes | The answer is cached for 60 s and recomputed when a batch lands. Polling every minute mostly returns the same number, and the phone syncs far less often than that. |
 | `/v1/summary?range=week` | 6 hours | It is a weekly figure. |
 | `/v1/devices` | 15 minutes | Enough resolution for a 12-hour threshold. |
 | `/v1/samples` | **Never** | This is the raw-data endpoint. It is not for Home Assistant. |

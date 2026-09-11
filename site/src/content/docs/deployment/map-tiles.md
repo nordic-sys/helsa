@@ -3,6 +3,7 @@ title: The map under a route
 description: "Whether a workout route gets a basemap, where the tiles come from, and what each choice tells whom. Off by default."
 sidebar:
   order: 5
+  label: Map tiles (optional)
 ---
 The workout detail page in the web dashboard draws a GPS route. Since 2026-09
 there **can** be a map behind it — and whether there is one is a setting whose
@@ -18,7 +19,10 @@ screen says what each choice means **before** you pick it.
 
 ## The three options
 
-Settings ▸ **Map under the route**:
+Settings ▸ **Map under the route**. ⚠️ The choice is stored **in that browser**
+(`localStorage`), not on the server: a second browser, or the same one after its site
+data is cleared, starts again at *no map*. On a page whose subject is where things are
+stored, that belongs here.
 
 | Option | Who fetches the tiles | Who learns what |
 |---|---|---|
@@ -137,6 +141,20 @@ the current numbers and the flags that go with them; pass them through
 actually move around in, and let the public option cover everywhere else. That is
 why the setting offers three choices rather than two.
 
+## Attribution is yours to get right
+
+The credit drawn under the map is chosen by tile **format**, not by provider: a raster
+source is credited to OpenStreetMap, a vector one to OpenMapTiles and OpenStreetMap.
+That is correct for `tile.openstreetmap.org` and for an OpenMapTiles-derived archive
+like the one `tiles-build` produces.
+
+⛔ **It is not correct for every provider you could paste in.** A commercial OSM-derived
+service (Carto, Stadia, Thunderforest and others) requires its own credit, and a
+provider whose data is not OSM at all requires something else entirely. The setting has
+no way to know which you chose, so it prints the OSM line and **you** are the one bound
+by the provider's terms. If you point it somewhere else, read what that somewhere else
+asks for.
+
 ## Using a public provider
 
 Paste the provider's template into the same field, with the tile format set to
@@ -150,8 +168,9 @@ https://tile.openstreetmap.org/{z}/{x}/{y}.png
 Read [the OSM tile usage policy](https://operations.osmfoundation.org/policies/tiles/)
 before pointing anything at it. The proxy sends a `User-Agent` that identifies
 Helsa, which the policy requires — an anonymous one gets blocked, and a block
-looks like a broken map rather than like a rule. Tiles are cached for a day, so a
-route re-opened is not a second round of requests.
+looks like a broken map rather than like a rule. Your browser is told to cache them for a day (`Cache-Control: private, max-age=86400`),
+so re-opening the same route usually costs nothing. ⚠️ There is no cache on the server:
+a different browser, or one that ignores the header, is a second round of requests.
 :::
 
 ## What a route looks like in each state
@@ -181,3 +200,10 @@ Dropping labels is not only defensive. The route is the hero here and the map is
 background, so street names would compete with the line for the same ink. A
 label-free basemap under an overlay is an ordinary cartographic choice — Positron
 and Dark Matter both ship one.
+
+## Where this shows up
+
+The setting is on the dashboard's [Settings screen](/dashboard/screens/#settings); what
+it changes is the [workout detail page](/dashboard/screens/#workout-detail). If you are
+deciding whether to open anything outward at all, [hardening](/deployment/hardening/) is
+the page that argues it.

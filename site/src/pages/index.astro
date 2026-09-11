@@ -46,6 +46,7 @@ const next = [
   ['Getting started', '/getting-started/', 'Bring the stack up locally with Docker Compose, issue a device token, verify a first sync. Nothing is exposed to the internet.'],
   ['Deployment', '/deployment/', 'TLS, mutual TLS with a private CA, the reverse proxy, backups and restore, and a hardening checklist. Read before you open a port.'],
   ['API', '/api/', 'The contract: what /v1/ingest accepts, what the read endpoints return, and the conventions — UTC, SI units, cursors — that apply everywhere.'],
+  ['The web dashboard', '/dashboard/', 'What the browser reader shows once the server is up: nine screens that compute what the app computes, from the same rules.'],
   ['Integrations', '/integrations/', 'Home Assistant over MQTT with discovery, plus a REST fallback. Daily summaries only, and the page explains why that limit matters.'],
 ];
 ---
@@ -70,8 +71,13 @@ const next = [
         <a class="btn btn-primary" href={url('/getting-started/')}>Run the server</a>
         <a class="btn" href={url('/the-app/')}>See the app</a>
       </div>
+      {/* The fact that governs an app reader's visit, attached to the button it
+          qualifies rather than left two screens further down. */}
       <p class="hero-note">
-        Go API · ingestion worker · TimescaleDB · web dashboard · deployment recipe.
+        The app is in closed testing and is not on the App Store yet.
+      </p>
+      <p class="hero-note">
+        Go API · ingestion worker · TimescaleDB · <a href={url('/dashboard/')}>web dashboard</a> · deployment recipe.
         Fork it, or replace it with your own that speaks the same <a href={url('/api/')}>API contract</a>.
       </p>
     </div>
@@ -166,7 +172,7 @@ const next = [
       <p class="section-intro">
         Running a server means running a server: TLS certificates that expire,
         backups that must be tested, a port on your router, and a database that is
-        now your responsibility. The rest of these pages are honest about that cost.
+        now your responsibility. The rest of these pages spell out that cost.
       </p>
     </div>
   </section>
@@ -207,7 +213,7 @@ const next = [
         <h3>Status and stability</h3>
         <p>
           The OpenAPI document in <code>backend/api/openapi.yaml</code> is the source
-          of truth; the server, the app and the web client all generate from it. It is
+          of truth; the server and the web client generate their types from it, and the app is written against it by hand. It is
           now a public interface, so breaking changes have a cost — but the version is{' '}
           <code>0.x</code> and the project is one person’s hobby. Pin what you depend on.
         </p>

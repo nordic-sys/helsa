@@ -58,16 +58,33 @@ func Validate(b *api.IngestBatch) error {
 // idempotent (ON CONFLICT DO NOTHING), so a retry or a duplicate does not
 // duplicate rows. After the commit it invalidates the user's summary cache
 // (docs/05 §5), so fresh data shows up immediately.
-func Process(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, body []byte) error {
+// Counts is what one batch turned out to contain.
+//
+// ⚠️ It exists because the documentation promised per-batch counts in the worker log
+// and the worker logged only the byte length. Somebody debugging a sync at midnight was
+// told to look for lines that did not exist — which is worse than silence, because it
+// sends them looking for the fault in the wrong place.
+//
+// These are ITEMS RECEIVED, not rows changed. The inserts are upserts, so a chunk
+// replayed after a failed acknowledgement reports the same numbers and writes nothing
+// new; the log says what arrived, and the database decides what that means. Reporting
+// "duplicates skipped" would need a rows-affected count the queries do not return, and
+// a number invented to fill a column is the thing this project does not do.
+type Counts struct {
+	Workouts, Samples, SleepSegments, ActivitySummaries, Deletions int
+}
+
+func Process(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, body []byte) (Counts, error) {
+	var counts Counts
 	var msg Message
 	if err := json.Unmarshal(body, &msg); err != nil {
-		return fmt.Errorf("decode message: %w", err)
+		return counts, fmt.Errorf("decode message: %w", err)
 	}
 	uid := pgconv.UUID(msg.UserID)
 
 	tx, err := pool.Begin(ctx)
 	if err != nil {
-		return fmt.Errorf("begin tx: %w", err)
+		return counts, fmt.Errorf("begin tx: %w", err)
 	}
 	defer tx.Rollback(ctx) //nolint: a no-op after a successful Commit
 	q := db.New(pool).WithTx(tx)
@@ -87,18 +104,19 @@ func Process(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, body []
 		for _, w := range *b.Workouts {
 			p, err := workoutParams(uid, w)
 			if err != nil {
-				return err
+				return counts, err
 			}
 			if err := q.UpsertWorkout(ctx, p); err != nil {
-				return fmt.Errorf("upsert workout %s: %w", w.SourceUuid, err)
+				return counts, fmt.Errorf("upsert workout %s: %w", w.SourceUuid, err)
 			}
 			// The route goes AFTER its own workout: the points hang off the
 			// server-side workouts.id, which can only be resolved from the stored
 			// workout row.
 			if err := writeRoute(ctx, tx, q, uid, w); err != nil {
-				return err
+				return counts, err
 			}
 			srcUUIDs = append(srcUUIDs, w.SourceUuid)
+			counts.Workouts++
 		}
 		// Backfill: wire up the samples orphaned by earlier chunks.
 		if len(srcUUIDs) > 0 {
@@ -106,41 +124,45 @@ func Process(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, body []
 				UserID:      uid,
 				SourceUuids: srcUUIDs,
 			}); err != nil {
-				return fmt.Errorf("link samples to workouts: %w", err)
+				return counts, fmt.Errorf("link samples to workouts: %w", err)
 			}
 		}
 	}
 	if b.Samples != nil {
 		for _, s := range *b.Samples {
 			if err := q.InsertSample(ctx, sampleParams(uid, s)); err != nil {
-				return fmt.Errorf("insert sample %s: %w", s.SourceUuid, err)
+				return counts, fmt.Errorf("insert sample %s: %w", s.SourceUuid, err)
 			}
+			counts.Samples++
 		}
 	}
 	if b.SleepSegments != nil {
 		for _, sl := range *b.SleepSegments {
 			if err := q.UpsertSleepSegment(ctx, sleepParams(uid, sl)); err != nil {
-				return fmt.Errorf("upsert sleep %s: %w", sl.SourceUuid, err)
+				return counts, fmt.Errorf("upsert sleep %s: %w", sl.SourceUuid, err)
 			}
+			counts.SleepSegments++
 		}
 	}
 	if b.ActivitySummaries != nil {
 		for _, a := range *b.ActivitySummaries {
 			if err := q.UpsertActivitySummary(ctx, activityParams(uid, a)); err != nil {
-				return fmt.Errorf("upsert activity: %w", err)
+				return counts, fmt.Errorf("upsert activity: %w", err)
 			}
+			counts.ActivitySummaries++
 		}
 	}
 	if b.Deletions != nil && len(*b.Deletions) > 0 {
 		ids := *b.Deletions
+		counts.Deletions = len(ids)
 		if err := q.DeleteSamplesByUUID(ctx, db.DeleteSamplesByUUIDParams{UserID: uid, SourceUuids: ids}); err != nil {
-			return fmt.Errorf("delete samples: %w", err)
+			return counts, fmt.Errorf("delete samples: %w", err)
 		}
 		if err := q.DeleteWorkoutsByUUID(ctx, db.DeleteWorkoutsByUUIDParams{UserID: uid, SourceUuids: ids}); err != nil {
-			return fmt.Errorf("delete workouts: %w", err)
+			return counts, fmt.Errorf("delete workouts: %w", err)
 		}
 		if err := q.DeleteSleepByUUID(ctx, db.DeleteSleepByUUIDParams{UserID: uid, SourceUuids: ids}); err != nil {
-			return fmt.Errorf("delete sleep: %w", err)
+			return counts, fmt.Errorf("delete sleep: %w", err)
 		}
 	}
 
@@ -154,18 +176,18 @@ func Process(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, body []
 			UserID:   uid,
 			TimeZone: b.TimeZone,
 		}); err != nil {
-			return fmt.Errorf("touch device: %w", err)
+			return counts, fmt.Errorf("touch device: %w", err)
 		}
 	}
 
 	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit: %w", err)
+		return counts, fmt.Errorf("commit: %w", err)
 	}
 	// Cache busting: the fresh data makes the user's range keys stale.
 	if rdb != nil {
 		_ = summary.InvalidateUser(ctx, rdb, msg.UserID)
 	}
-	return nil
+	return counts, nil
 }
 
 func sampleParams(uid pgtype.UUID, s api.SampleIn) db.InsertSampleParams {

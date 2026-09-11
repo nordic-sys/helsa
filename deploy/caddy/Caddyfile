@@ -25,6 +25,20 @@ https://:443 {
 		}
 	}
 
+	# ⚠️ A body cap, at the first thing that touches the request.
+	#
+	# The application refuses a batch of more than 50,000 ITEMS — but only after the
+	# whole JSON body has been read and decoded, so a single enormous body is already
+	# in memory by the time that limit has an opinion. The hardening checklist claimed
+	# this was covered; it was covered one layer too late.
+	#
+	# 32 MB against a documented chunk of 50,000 items: a sample serialises to roughly
+	# 200 bytes, so a legitimate maximum chunk is around 10 MB. The cap is meant to stop
+	# the absurd, not to second-guess the contract.
+	request_body {
+		max_size 32MB
+	}
+
 	# This is how the backend knows which device is speaking (docs/08 §4).
 	handle /v1/* {
 		reverse_proxy api:8080 {

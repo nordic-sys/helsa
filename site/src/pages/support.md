@@ -6,6 +6,10 @@ current: support
 lede: "One person makes Helsa. That is the whole support department, and it is worth knowing before you write."
 ---
 
+Before writing about something that is not working: the
+[symptom index](/troubleshooting/) lists what each failure usually is, and which page
+explains it.
+
 ## Write to
 
 **[helsa@nordic-sys.com](mailto:helsa@nordic-sys.com)**

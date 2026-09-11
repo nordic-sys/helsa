@@ -129,7 +129,7 @@ and you will not be in a mood to work it out from first principles.
 
 | Not backed up | Why |
 |---|---|
-| Redis | Cache and deny-list. Rebuilds itself. Note that revocations are lost with it. |
+| Redis | Cache, refresh tokens and the revocation deny-list. The cache rebuilds itself; ⚠️ the revocations do not — wiping the volume makes a revoked token work again until it expires. |
 | RabbitMQ | Transient. The phone re-sends anything not acknowledged. |
 | Generated exports | Regenerable from the data. |
 | Docker images | Rebuilt from source. |

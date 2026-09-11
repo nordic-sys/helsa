@@ -9,7 +9,9 @@ package server
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/go-chi/chi/v5"
@@ -155,6 +157,17 @@ func (s *Server) PostAuthRefresh(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, sessionDTO(sess))
 }
 
+// PostAuthLogout ends this device's session: the refresh token is dropped AND the
+// access token presented on the request is put on the deny-list.
+//
+// ⚠️ The second half is the half that matters here, and it used to be missing. This
+// route deleted a refresh token — which the phone never holds, because it is handed a
+// long-lived access token instead — so "log out" left the only credential in play
+// working exactly as before. A device could be logged out and keep uploading.
+//
+// It revokes the token on the REQUEST rather than one named in the body, deliberately:
+// that way the route can only ever end the caller's own session. A body-named token
+// would let anyone holding one valid token revoke somebody else's.
 func (s *Server) PostAuthLogout(w http.ResponseWriter, r *http.Request) {
 	var body refreshBody
 	_ = json.NewDecoder(r.Body).Decode(&body)
@@ -162,6 +175,18 @@ func (s *Server) PostAuthLogout(w http.ResponseWriter, r *http.Request) {
 		body.RefreshToken = r.Header.Get("X-Refresh-Token")
 	}
 	_ = s.auth.Logout(r.Context(), body.RefreshToken)
+
+	if tok, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer "); ok && tok != "" {
+		if _, err := s.auth.Revoke(r.Context(), tok); err != nil &&
+			!errors.Is(err, auth.ErrUnauthorized) {
+			// ⛔ The one case that must not answer 204. If the deny-list could not be
+			// written, the session is NOT over, and a success here would tell somebody
+			// with a stolen phone that they had dealt with it.
+			problem(w, http.StatusServiceUnavailable, "Not logged out",
+				"the token could not be revoked: "+err.Error())
+			return
+		}
+	}
 	w.WriteHeader(http.StatusNoContent)
 }
 

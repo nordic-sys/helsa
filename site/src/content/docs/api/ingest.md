@@ -183,8 +183,13 @@ The worker normalises units to SI, resolves workout references, applies deletion
 and writes with `ON CONFLICT DO NOTHING`. Unprocessable messages go to a
 dead-letter queue rather than blocking the queue behind them.
 
-Per-batch counts are logged: processed, duplicates, dead-lettered. That is normally
-enough to diagnose a chunking problem without adding instrumentation.
+Each batch is logged with what it contained — `samples`, `workouts`,
+`sleep_segments`, `activity_summaries`, `deletions` — beside its byte size, which is
+normally enough to diagnose a chunking problem without adding instrumentation.
+
+⚠️ Those are items **received**, not rows changed. The writes are upserts, so a chunk
+replayed after a failed acknowledgement logs the same numbers and stores nothing new;
+the log says what arrived, and the database decides what that means.
 
 ## Failure modes
 

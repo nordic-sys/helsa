@@ -57,11 +57,21 @@ func main() {
 
 	log.Info("worker started", "queue", cfg.IngestQueue)
 	err = q.Consume(ctx, 8, func(ctx context.Context, body []byte) error {
-		if err := ingest.Process(ctx, st.DB, st.Redis, body); err != nil {
-			log.Error("process batch", "err", err)
+		counts, err := ingest.Process(ctx, st.DB, st.Redis, body)
+		if err != nil {
+			log.Error("process batch", "err", err, "bytes", len(body))
 			return err // → nack → dead-letter
 		}
-		log.Info("batch processed", "bytes", len(body))
+		// ⚠️ What ARRIVED, not what changed. The writes are upserts, so a chunk replayed
+		// after a failed acknowledgement reports the same numbers and stores nothing new.
+		// The alternative — printing a "duplicates skipped" figure — would need a
+		// rows-affected count the queries do not return, and a number invented to fill a
+		// column is worse than a column that is not there.
+		log.Info("batch processed", "bytes", len(body),
+			"samples", counts.Samples, "workouts", counts.Workouts,
+			"sleep_segments", counts.SleepSegments,
+			"activity_summaries", counts.ActivitySummaries,
+			"deletions", counts.Deletions)
 		return nil
 	})
 	if err != nil && ctx.Err() == nil {

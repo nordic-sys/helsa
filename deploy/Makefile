@@ -102,8 +102,17 @@ prod-logs: ## [VM] Follow the logs
 prod-migrate: ## [VM] Migration — a SEPARATE, DELIBERATE step (docs/07 §3.1)
 	$(PROD) --profile tools run --rm migrate up
 
+prod-exec-api: ## [VM] Run a command inside the api container (CMD="wget -qO- http://127.0.0.1:8080/readyz")
+	@# ⚠️ The api container publishes NO port on the production path — only the proxy faces
+	@# outwards. A `curl http://127.0.0.1:8080/...` on the host therefore hits nothing, which
+	@# reads as a broken API rather than as a closed door. This asks the container instead.
+	$(PROD) exec api sh -c "$${CMD:?set CMD, e.g. wget -qO- http://127.0.0.1:8080/readyz}"
+
 prod-token: ## [VM] Issue a device token (SUBJECT=bob-web)
 	$(PROD) --profile tools run --rm token -subject $${SUBJECT:-bob}
+
+prod-token-revoke: ## [VM] Revoke ONE device token; the others keep working (TOKEN=...)
+	$(PROD) --profile tools run --rm token -revoke "$${TOKEN:?set TOKEN to the access token to revoke}"
 
 prod-caddy-check: ## [VM] Validate the Caddyfile BEFORE DEPLOYING (handle takes ONE path!)
 	docker run --rm -e LAN_SUBNET -e WG_SUBNET \

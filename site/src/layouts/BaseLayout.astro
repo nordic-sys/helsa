@@ -62,7 +62,16 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
   <body class={wide ? 'is-wide' : ''}>
     <a class="skip-link" href="#main">Skip to content</a>
     <SiteHeader current={current} />
-    <main id="main">
+    <!--
+      ⚠️ `data-pagefind-body` is what puts these pages in the search index.
+
+      Without it Pagefind indexed only the Starlight docs — 20 pages — and the five
+      custom routes were invisible: the landing page, the app tour, support, privacy
+      and the disclaimer. Those are exactly the pages somebody arriving from the App
+      Store listing looks for, and searching the site for "privacy" returned the map
+      page instead.
+    -->
+    <main id="main" data-pagefind-body>
       <slot />
     </main>
     <SiteFooter />

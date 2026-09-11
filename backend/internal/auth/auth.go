@@ -10,6 +10,7 @@ package auth
 import (
 	"context"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -27,11 +28,28 @@ import (
 	"github.com/nordic-sys/helsa/backend/internal/pgconv"
 )
 
-var ErrUnauthorized = errors.New("unauthorized")
+var (
+	ErrUnauthorized = errors.New("unauthorized")
+	// ErrRevoked is separate from ErrUnauthorized so that the caller can say which
+	// happened. They lead to the same status code and to very different sentences.
+	ErrRevoked = errors.New("token revoked")
+)
 
 type ctxKey int
 
 const userIDKey ctxKey = 0
+
+// tokenDenyList is the deny-list's storage, narrowed to the two calls it makes.
+//
+// ⚠️ It exists so the FAILURE path can be tested. The valuable behaviour here is not
+// "a revoked token is refused" — that one is easy and would pass either way — but
+// "a deny-list that cannot be read refuses everything", and a test for that needs a
+// store that can be told to break. A live Redis cannot be, without a dependency whose
+// only job is to be stopped.
+type tokenDenyList interface {
+	Get(ctx context.Context, key string) *redis.StringCmd
+	Set(ctx context.Context, key string, value any, ttl time.Duration) *redis.StatusCmd
+}
 
 // Service bundles the auth dependencies.
 type Service struct {
@@ -39,6 +57,7 @@ type Service struct {
 	pool  *pgxpool.Pool
 	q     *db.Queries
 	redis *redis.Client
+	deny  tokenDenyList
 	jwks  *jwksCache
 }
 
@@ -48,6 +67,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client) *Service {
 		pool:  pool,
 		q:     db.New(pool),
 		redis: rdb,
+		deny:  rdb,
 		jwks:  newJWKSCache(cfg.AppleIssuer + "/auth/keys"),
 	}
 }
@@ -182,7 +202,27 @@ func (s *Service) Logout(ctx context.Context, refresh string) error {
 }
 
 // VerifyAccess validates our own session JWT and returns the user_id.
-func (s *Service) VerifyAccess(token string) (uuid.UUID, error) {
+//
+// # Why this touches Redis, when a JWT is supposed to be checkable on its own
+//
+// A device token here lives for a year (`HELSA_ACCESS_TTL=8760h` is the documented
+// setting). A signature-and-expiry check alone therefore means that a phone which is
+// lost on day two keeps full access for the remaining three hundred and sixty-three
+// days, and the only way to stop it is to rotate `HELSA_JWT_SECRET` — which logs out
+// every other device at the same time. That is not a revocation, it is an evacuation.
+//
+// So a revoked token is written to a deny-list and every request checks it. The cost
+// is one Redis lookup per request against a store that is already on the request path
+// for `/v1/summary`'s cache.
+//
+// ⚠️ **The check fails CLOSED.** If Redis cannot be reached, this returns
+// unauthorised rather than waving the request through. A deny-list that can be
+// bypassed by taking Redis down is not one, and "revoked" has to mean revoked on the
+// worst day rather than the ordinary one. The cost is honest and bounded: Redis is
+// already part of `/readyz` (`store.Ready`), so an instance that cannot reach it is
+// reporting itself unready anyway — this makes the data path agree with the probe
+// instead of quietly outliving it.
+func (s *Service) VerifyAccess(ctx context.Context, token string) (uuid.UUID, error) {
 	parser := jwt.NewParser(jwt.WithValidMethods([]string{"HS256"}), jwt.WithExpirationRequired())
 	var claims jwt.RegisteredClaims
 	_, err := parser.ParseWithClaims(token, &claims, func(*jwt.Token) (any, error) {
@@ -195,7 +235,54 @@ func (s *Service) VerifyAccess(token string) (uuid.UUID, error) {
 	if err != nil {
 		return uuid.Nil, ErrUnauthorized
 	}
+	switch err := s.deny.Get(ctx, revokedKey(token)).Err(); {
+	case err == redis.Nil:
+		// Not revoked — the ordinary case, and the only one that proceeds.
+	case err == nil:
+		return uuid.Nil, ErrRevoked
+	default:
+		return uuid.Nil, fmt.Errorf("deny-list unavailable: %w", err)
+	}
 	return id, nil
+}
+
+// Revoke puts one token on the deny-list and reports when the entry will expire.
+//
+// ⚠️ Keyed by a HASH of the token, not by a `jti` claim, and the reason is the tokens
+// that already exist. A `jti` would have to be minted into new tokens, so every token
+// in the field on the day this shipped — the ones on a phone, in a browser, in a Home
+// Assistant configuration — would have stayed unrevocable. Hashing needs nothing of
+// the token but the string the operator already holds.
+//
+// The entry's TTL is the token's own remaining life. After that the JWT is refused on
+// expiry anyway, so keeping the row would only grow a list that can never shrink.
+func (s *Service) Revoke(ctx context.Context, token string) (time.Time, error) {
+	parser := jwt.NewParser(jwt.WithValidMethods([]string{"HS256"}), jwt.WithExpirationRequired())
+	var claims jwt.RegisteredClaims
+	if _, err := parser.ParseWithClaims(token, &claims, func(*jwt.Token) (any, error) {
+		return []byte(s.cfg.JWTSecret), nil
+	}); err != nil {
+		// ⚠️ An expired or forged token is not an error worth reporting as a failure to
+		// revoke: it already cannot be used. Saying "revoked" about it would be a lie in
+		// the reassuring direction, so say what it is.
+		return time.Time{}, ErrUnauthorized
+	}
+	expiry := claims.ExpiresAt.Time
+	ttl := time.Until(expiry)
+	if ttl <= 0 {
+		return expiry, ErrUnauthorized
+	}
+	if err := s.deny.Set(ctx, revokedKey(token), "1", ttl).Err(); err != nil {
+		return time.Time{}, fmt.Errorf("deny-list write: %w", err)
+	}
+	return expiry, nil
+}
+
+// revokedKey is the deny-list key for a token: a SHA-256 of the token string, so the
+// list never holds anything that could be replayed if Redis were read.
+func revokedKey(token string) string {
+	sum := sha256.Sum256([]byte(token))
+	return "revoked:" + hex.EncodeToString(sum[:])
 }
 
 // Middleware guards the /v1/* routes: Bearer access token → user_id in the context.
@@ -207,9 +294,21 @@ func (s *Service) Middleware(next http.Handler) http.Handler {
 			http.Error(w, "missing bearer token", http.StatusUnauthorized)
 			return
 		}
-		userID, err := s.VerifyAccess(tok)
-		if err != nil {
+		userID, err := s.VerifyAccess(r.Context(), tok)
+		switch {
+		case errors.Is(err, ErrRevoked):
+			// ⚠️ Said out loud on purpose. "Invalid token" would send somebody whose
+			// phone was stolen to check their typing; this tells them the thing they
+			// did worked.
+			http.Error(w, "this token has been revoked", http.StatusUnauthorized)
+			return
+		case errors.Is(err, ErrUnauthorized):
 			http.Error(w, "invalid token", http.StatusUnauthorized)
+			return
+		case err != nil:
+			// The deny-list could not be read. Not 401: nothing is wrong with the
+			// token, and a 503 is what a client should retry.
+			http.Error(w, "the deny-list cannot be reached", http.StatusServiceUnavailable)
 			return
 		}
 		ctx := context.WithValue(r.Context(), userIDKey, userID)

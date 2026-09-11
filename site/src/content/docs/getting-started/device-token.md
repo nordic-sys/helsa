@@ -30,7 +30,7 @@ by you, with a command.
 
 ```bash
 cd helsa/deploy
-docker compose --profile tools run --rm token -subject iphone
+make prod-token SUBJECT=iphone
 ```
 
 Output:
@@ -46,8 +46,8 @@ The `access_token` is what you paste into the app or the dashboard.
 Issue **one token per device**, with a name you will recognise later:
 
 ```bash
-docker compose --profile tools run --rm token -subject iphone
-docker compose --profile tools run --rm token -subject browser
+make prod-token SUBJECT=iphone
+make prod-token SUBJECT=browser
 ```
 
 ## Lifetime
@@ -69,7 +69,7 @@ as well.
 Set your own value when issuing:
 
 ```bash
-HELSA_DEVICE_TOKEN_TTL=8760h docker compose --profile tools run --rm token -subject iphone
+HELSA_DEVICE_TOKEN_TTL=8760h make prod-token SUBJECT=iphone
 ```
 
 ## Treat it as a credential
@@ -78,27 +78,55 @@ A device token is a bearer credential. Whoever holds it can read your entire
 health history through the API — subject to also getting past the mutual-TLS gate
 on the public interface, or being on your LAN or VPN for the dashboard.
 
-- Store it in a password manager. The app keeps it in the iOS Keychain; the
-  dashboard keeps it in an `httpOnly` cookie.
+- Store it in a password manager. The app keeps it in the iOS **Keychain**; the
+  dashboard keeps it in that browser's **`localStorage`** — ⚠️ not a cookie, and not
+  `httpOnly`. Any script running on that origin could read it, which is one more
+  reason `8443` never faces the internet.
 - Do not paste it into a shell history, a chat, a screenshot, or an issue report.
 - Do not commit it. Not to a private repository either — git history is forever.
 
+## `HELSA_AUTH_DEV_MODE=true` in production is not a mistake
+
+`docker-compose.prod.yml` sets it, and a hardening reader grepping their own compose
+file will find "DEV_MODE true" and worry. It is what lets the `token` CLI mint a
+session for a named subject instead of going through Apple's identity flow — which is
+the only way tokens are issued here, because there is no sign-in
+([ADR-0003](https://github.com/nordic-sys/helsa)). It opens **no HTTP route**: there is
+no endpoint that issues tokens, in any mode.
+
 ## Revoking
 
-Tokens can be revoked through the Redis deny-list, which is what `POST
-/v1/auth/logout` writes to. With one or two devices, the blunter instruments are
-usually right:
+A device token can be taken back on its own, from the server:
+
+```bash
+make prod-token-revoke TOKEN="<the access token>"
+```
+
+The device using it is refused from its next request onwards; every other device
+carries on. The deny-list entry is kept only until the token would have expired
+anyway — after that the token is refused on expiry, and a list that only grows is
+its own kind of problem.
+
+`POST /v1/auth/logout` does the same thing for the device making the call: it
+revokes **the token on that request**, never one named in the body. That way the
+route can only ever end the caller's own session.
 
 | Situation | Do this |
 |---|---|
-| One device compromised or retired | Log it out, then issue a fresh token for the replacement. |
+| One device compromised or retired | Revoke its token, then issue a fresh one for the replacement. The other devices are untouched. |
+| You no longer have the token string | You cannot revoke it individually — rotate `HELSA_JWT_SECRET` and reissue for every device. Keep the tokens you issue somewhere you can find them. |
 | `HELSA_JWT_SECRET` leaked | Change the secret and restart the API. **Every existing token stops working**; reissue for each device. |
-| Phone lost | Rotate the secret *and* rotate the CA — the client certificate went with the phone. See [certificate rotation](/deployment/tls-mtls/#rotating). |
+| Phone lost | Revoke that phone's token, and rotate the CA — the client certificate went with the phone. See [certificate rotation](/deployment/tls-mtls/#rotating). |
 
-:::danger
-**Redis holds the deny-list.** If you wipe the Redis volume, revocations
-disappear with it and previously revoked tokens work again until they expire.
-Rotating the JWT secret is the reliable way to invalidate everything.
+:::caution
+**Revocation lives in Redis, and the check fails closed.** If the API cannot reach
+Redis it answers `503` rather than letting requests through — a deny-list that can
+be bypassed by stopping Redis is not one. Redis is already part of `/readyz`, so an
+instance in that state is reporting itself unready anyway.
+
+⚠️ If you **wipe** the Redis volume, the deny-list goes with it and a revoked token
+works again until it expires. Rotating the secret remains the only thing that
+invalidates everything at once.
 :::
 
 ## Next

@@ -51,9 +51,16 @@ Note `agg`: some metrics sum (steps, energy) and some average (heart rate). The
 server states which, so the client never has to hold that table itself.
 
 :::note
-**The dashboard never aggregates raw samples at request time.** These answers
-come from TimescaleDB continuous aggregates, refreshed on a schedule. Which is
-why a sample uploaded thirty seconds ago may not be in the weekly total yet.
+**How fresh these numbers are.** They are computed from the `samples` table with
+`time_bucket` cut in your time zone, and cached in Redis for 60 seconds. The cache is
+dropped the moment the worker commits a batch — so a sample that has just been
+ingested appears immediately, not on the next refresh of a schedule.
+
+⚠️ This page used to claim the answers came from TimescaleDB continuous aggregates
+"refreshed on a schedule", and warned that a recent sample might not be in the total
+yet. The aggregates exist in the schema, but nothing on this path reads them, and the
+real behaviour is the better of the two. The tz-aware bucketing is why: it cannot be
+precomputed per day without choosing a zone in advance.
 :::
 
 ### Time zones matter more than they look
@@ -220,7 +227,9 @@ set of `values` is per rule and pinned by the shared vectors
 (`insight-vectors.md`), which is also what keeps a rule from publishing too little
 to be worded.
 
-Current rules and what each needs before it will say anything:
+Current rules and what each needs before it will say anything. ⚠️ This table and
+[the test vectors](/api/insight-vectors/) describe the same rules — if they ever
+disagree, the vectors are the ones with tests behind them:
 
 | Rule | Requirements |
 |---|---|
@@ -231,6 +240,9 @@ Current rules and what each needs before it will say anything:
 | **Free days vs work days** (sleep timing, sleep length, steps) | 28-day window, at least 4 free and 10 work days measured, ≥60 minutes of midpoint shift / ≥1 hour and 10% of sleep / ≥1500 steps and 15%. A free **night** is one starting Friday or Saturday; a free **day**, for steps, is Saturday or Sunday. |
 | **Training load** (last 7 days vs last 28) | At least 8 sessions in the 28 days **and at least one in every one of the four weeks**, 2 sessions and 90 minutes in the last 7, ratio ≥ 1.5. |
 | **Efficiency** (pace at a given heart rate, per activity) | Two consecutive 28-day windows, at least 4 sessions with distance *and* average heart rate in each, the two windows' average heart rate within 5 bpm, pace ≥5% and ≥5 m/min apart. |
+| **Baseline drift** (per metric, including ones no other rule reads) | The last 28 days against days 90–120 back: Welch *t* ≥ 2.5 **and** an absolute floor, with ≥14 measured days in each window (8 for body mass). |
+| **Sleep debt** | The last 14 nights against the median of the preceding 90: ≥5 hours owed **and** ≥5% of what those nights should have held. |
+| **Social jetlag** (free days versus work days, week by week) | Median weekly midpoint shift ≥90 minutes across ≥6 usable weeks out of 8, with two thirds of them ≥30 minutes. |
 
 The partial current day never enters a window, and missing days are never filled
 with zeroes or interpolated.

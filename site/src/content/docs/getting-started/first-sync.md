@@ -27,11 +27,16 @@ In the app's settings, in the section for sending data to your own server:
 2. enter the **base URL** of your server, including the `/v1` prefix — for example
    `https://helsa.example.net/v1`;
 3. paste the **device token**;
-4. save, and use the connection test if the app offers one.
+4. **test the connection** — the button is on that screen and sends one request
+   without saving anything;
+5. save;
+6. ⚠️ **restart the app.** The connection is built at launch, so a saved setting
+   does not take effect until then. The app says so under the field; this page used
+   to leave it out, and the symptom is a device that never registers.
 
 ![The app's "Your own server" screen, with sending switched off by default](../../../assets/screenshots/ios-sync-settings.png)
 
-This is the screen the four steps above happen on. It opens with **Sending
+This is the screen those steps happen on. It opens with **Sending
 switched off** — that is the shipping default, not a screenshot of a fresh
 install: the data stays on the phone until you give it an address.
 
@@ -70,8 +75,11 @@ Details: [API — Ingest](/api/ingest/).
 **Did a device register?**
 
 ```bash
-curl -s -H "Authorization: Bearer $TOKEN" \
-  http://127.0.0.1:8080/v1/devices | jq
+# Through the proxy, which is the only thing that publishes a port. `--cert`/`--key`
+# are your client certificate — the API is behind mutual TLS.
+curl -s --cert client.crt --key client.key --cacert ca.crt \
+  -H "Authorization: Bearer $TOKEN" \
+  https://helsa.example.net/v1/devices | jq
 ```
 
 You should see one entry with a recent `last_seen_at`. That timestamp is also what
@@ -81,8 +89,9 @@ watches.
 **Did samples arrive?**
 
 ```bash
-curl -s -H "Authorization: Bearer $TOKEN" \
-  'http://127.0.0.1:8080/v1/summary?range=week&metrics=stepCount,heartRate&tz=Europe/Budapest' | jq
+curl -s --cert client.crt --key client.key --cacert ca.crt \
+  -H "Authorization: Bearer $TOKEN" \
+  'https://helsa.example.net/v1/summary?range=week&metrics=stepCount,heartRate&tz=Europe/Budapest' | jq
 ```
 
 **What does the database say?**
@@ -98,8 +107,10 @@ docker compose exec timescaledb psql -U helsa -d helsa -c \
 docker compose logs -f worker
 ```
 
-The worker logs per-batch counts: items processed, duplicates skipped, dead-lettered
-messages. A growing queue with an idle worker means the worker cannot reach the
+The worker logs what each batch contained — `samples`, `workouts`, `sleep_segments`,
+`activity_summaries`, `deletions` — beside its size. ⚠️ Those are items **received**,
+not rows changed: the writes are upserts, so a chunk replayed after a failed
+acknowledgement reports the same numbers and stores nothing new. A growing queue with an idle worker means the worker cannot reach the
 database or the broker — check `/readyz`.
 
 ![The dashboard's Today page after a first sync](../../../assets/screenshots/web-first-data.png)
@@ -119,12 +130,13 @@ app is built on: a missing measurement is never drawn as a measured nought.
 | `413` | The chunk exceeded the server limit. | The app should shrink its chunk and retry; the `202` body advertises `max_items`. If it persists, the client-side chunk size is too large. |
 | `202` but nothing in the database | The worker is down, or the queue is unreachable. | `docker compose ps`, `docker compose logs worker`, `curl /readyz`. |
 | Data arrives but daily totals look wrong | Time zone. Daily buckets are computed in a specific zone. | Set `time_zone` in settings to a valid IANA zone, or pass `tz=` explicitly. See [API conventions](/api/#conventions). |
-| Steps look roughly doubled | Both the iPhone and the Watch recorded them. | Expected in the raw `samples` table, which keeps the source. Aggregates use HealthKit's deduplicated statistics. |
+| Steps look roughly doubled | Both the iPhone and the Watch recorded them, and **the server sums everything it received**. | ⚠️ Not a fault, and not something the server can fix: HealthKit's merged statistics exist only on the phone, so the dashboard, the MQTT sensors and the REST answers are all higher than what Health shows you. The `samples` table keeps `source_device`, so you can see which device contributed what. |
 
 ## Then what
 
 - The phone keeps syncing in the background. It does not need you.
-- Point a browser at the dashboard from your LAN or VPN.
+- Work through [Deployment](/deployment/) — the dashboard is served by the proxy, and the proxy does not start until the certificates exist.
+- Then point a browser at [the dashboard](/dashboard/) from your LAN or VPN.
 - Set up the [staleness alert](/integrations/home-assistant/) — this system's
   characteristic failure is not a crash but silence, and silence is invisible
   unless something watches for it.

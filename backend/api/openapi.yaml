@@ -48,9 +48,38 @@ paths:
   /auth/logout:
     post:
       tags: [auth]
-      summary: Sign out (revoke the refresh token)
+      summary: End this device's session — the token on the request stops working
+      description: >
+        Drops the refresh token **and puts the access token presented on this request on the
+        deny-list**, so the device that made the call is refused from its next request on. Other
+        devices are untouched.
+
+
+        ⚠️ **The second half used to be missing, and the gap was the whole feature.** This route
+        deleted a refresh token — which a phone never holds, because it is issued a long-lived
+        access token instead — so "log out" left the only credential in play working exactly as
+        before. A device could be logged out and keep uploading for the rest of the year.
+
+
+        ⚠️ **It revokes the token on the REQUEST, never one named in the body.** That way the
+        route can only end the caller's own session; a body-named token would let anyone holding
+        one valid token revoke somebody else's.
+
+
+        To revoke a token from a device you no longer have — the case this exists for — use the
+        `token` CLI on the server: `token -revoke "<the access token>"`. Revocation is an
+        operator action for the same reason issuance is: a route that hands out or takes away
+        tokens is a route somebody else can call.
       responses:
-        '204': { description: OK }
+        '204': { description: The session is over — the token is refused from now on }
+        '503':
+          description: >
+            The deny-list could not be written, so the session is **not** over. Deliberately not
+            a 204: answering success here would tell somebody with a stolen phone that they had
+            dealt with it.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /me:
     get:
@@ -1117,7 +1146,10 @@ components:
             The keys are per rule and are pinned by the shared vectors
             (`docs/api/insight-vectors.md`), so a threshold that quietly drifts fails a test
             rather than merely reading differently. Directions are encoded as `+1` / `-1`
-            (`direction`), never as a word — a word is language.
+            never as a word — a word is language. ⚠️ There is no `direction` key: the spec used
+            to describe one (`+1`/`-1`) and nothing has ever sent it. A trend's direction is the
+            SIGN of `changePct`, which is how `docs/api/insight-vectors.md` describes it and how
+            every client reads it.
         title:
           type: string
           description: >

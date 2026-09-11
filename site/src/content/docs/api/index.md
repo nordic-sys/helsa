@@ -71,7 +71,9 @@ look weird".
 | `GET /v1/activity` | Daily Move / Exercise / Stand values with the goal that applied that day. |
 | `GET /v1/workouts` · `/{id}` | Paged workout list; detail with average and maximum heart rate. |
 | `GET /v1/workouts/{id}/route` | GPS track for one workout. Separate endpoint — a three-hour hike is tens of thousands of points, and the list must never carry them. |
-| `GET /v1/sleep` | Sleep segments, or a daily roll-up. |
+| `GET /v1/sleep` | Sleep segments. There is no daily roll-up on this route — `/v1/summary` is where a per-day figure comes from. |
+| `GET /v1/me` | The user the token belongs to. |
+| `GET /v1/tiles/{z}/{x}/{y}` | ⚠️ **Not in the OpenAPI contract**, deliberately — it is a browser convenience with no counterpart on the phone. The [map tile proxy](/deployment/map-tiles/). |
 | `GET /v1/samples` | Raw samples for one `data_type`, keyset-paginated. Debugging and export. |
 | `GET /v1/insights` | Rule-based observations. Statistics, not medicine — see the [disclaimer](/disclaimer/). |
 | `GET /v1/achievements` | Earned badges, newest first. |

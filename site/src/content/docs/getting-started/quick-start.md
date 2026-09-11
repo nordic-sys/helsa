@@ -38,23 +38,17 @@ cd helsa/deploy
 cp .env.example .env
 ```
 
-### Log in to the registry
-:::danger
-**If the images are private, GHCR will not serve them anonymously.** A pull
-fails with `denied` or `unauthorized`, which reads like a missing image rather
-than a missing login. Package visibility is set per package and is independent
-of this repository's, so public source does not guarantee public images.
-Authenticate first, with a GitHub personal access token that has the
-`read:packages` scope:
+### The images are public
 
-```bash
-echo "$GITHUB_TOKEN" | docker login ghcr.io -u YOUR_GITHUB_USER --password-stdin
-```
+No registry login is needed: `ghcr.io/nordic-sys/helsa/backend` and `.../web` serve
+anonymously.
 
-Once the repository is public, the images are public with it and this step goes
-away. If you would rather not create a token, [build from
-source](#building-from-source-instead) instead — that path needs no registry at
-all.
+:::note
+Package visibility is set per package and is independent of the repository's, so if
+you fork this and your own images come back `denied`, that is a visibility setting
+rather than a missing image. `docker login ghcr.io` with a token carrying
+`read:packages` is the fix — or [build from
+source](#building-from-source-instead), which needs no registry at all.
 :::
 
 ## 2. Configure secrets
@@ -75,6 +69,12 @@ openssl rand -base64 36   # REDIS_PASSWORD
 openssl rand -base64 36   # RABBITMQ_PASSWORD
 openssl rand -base64 48   # HELSA_JWT_SECRET
 ```
+
+⚠️ **`HELSA_JWT_SECRET` is not in `.env.example`, and neither are `LAN_SUBNET` or
+`WG_SUBNET`** — you add those lines yourself. They are not forgotten: the compose
+files read them as `$${VAR:?…}`, so a missing one stops the stack with a message
+naming it rather than starting with a default somebody might never notice. Adding
+them to the example would be adding a value to copy.
 
 | Variable | What it is | If you get it wrong |
 |---|---|---|
@@ -104,7 +104,7 @@ and that is the intended state.
 ## 4. Run migrations — deliberately
 
 ```bash
-docker compose --profile tools run --rm migrate up
+make prod-migrate
 ```
 
 :::note
@@ -121,9 +121,9 @@ docker compose exec timescaledb \
   psql -U helsa -d helsa -c '\dt'
 ```
 
-You should see `users`, `devices`, `workouts`, `sleep_segments`,
-`activity_summary`, `goals`, `sync_state`, `achievements`, and the `samples`
-hypertable.
+You should see `users`, `devices`, `workouts`, `workout_route_points`,
+`sleep_segments`, `activity_summary`, `goals`, `sync_state`, `achievements`,
+`push_tokens`, and the `samples` hypertable — eleven in all.
 
 ## 5. Pull and start the application
 
@@ -166,13 +166,19 @@ TLS and without the mutual-TLS gate. Stop, fix the port binding, and start again
 
 ## 6. Confirm it answers
 
+⚠️ **On the production path the API publishes no port at all** — only the proxy does,
+on 443 and 8443. So ask the container, not the host:
+
 ```bash
-curl -s http://127.0.0.1:8080/healthz
+make prod-exec-api CMD="wget -qO- http://127.0.0.1:8080/healthz"
 # {"status":"ok"}
 
-curl -s http://127.0.0.1:8080/readyz
+make prod-exec-api CMD="wget -qO- http://127.0.0.1:8080/readyz"
 # {"status":"ready"}   — database, Redis, and the queue are all reachable
 ```
+
+On the **development** path above (`make run-api` on the host) 8080 is yours directly,
+and plain `curl http://127.0.0.1:8080/readyz` works.
 
 `/readyz` is the one to trust: `/healthz` only proves the process is alive, while
 `/readyz` proves it can talk to its dependencies.
@@ -180,9 +186,8 @@ curl -s http://127.0.0.1:8080/readyz
 Anything else needs a token:
 
 ```bash
-curl -s -o /dev/null -w '%{http_code}\n' \
-  'http://127.0.0.1:8080/v1/summary?range=day&metrics=stepCount'
-# 401
+make prod-exec-api CMD="wget -qO- -S http://127.0.0.1:8080/v1/summary?range=day&metrics=stepCount"
+# 401 Unauthorized
 ```
 
 A `401` here is a **pass**, not a failure. Next step: [issue a device

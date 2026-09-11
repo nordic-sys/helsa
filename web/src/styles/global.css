@@ -1301,3 +1301,15 @@ tbody tr:has(+ .fold-caption) td {
   font-size: 12px;
   white-space: nowrap;
 }
+
+/* The line that says what the numbers above it are not. Quiet — it is a standing
+   condition, not a warning that fires — but on every page, because a reader who only
+   ever opens this dashboard would otherwise never meet it. */
+.app-footer {
+  margin: 3rem 0 0;
+  padding: 1rem 0 0;
+  border-top: 1px solid var(--line);
+  color: var(--text-dim);
+  font-size: 0.8125rem;
+  line-height: 1.5;
+}

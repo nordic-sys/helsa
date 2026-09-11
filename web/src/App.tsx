@@ -97,6 +97,13 @@ export default function App() {
           ))}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        {/* ⚠️ On EVERY page, not only the Observations one.
+            The dashboard draws rule output — "your resting heart rate is above your
+            usual" — and carried no medical line anywhere at all, while the app and
+            the documentation site both state it in several places. A reader who only
+            ever opens the browser reader saw none of it. It is one line, and the
+            argument for it is exactly the argument for the app's version. */}
+        <footer className="app-footer">{t('app.notMedical')}</footer>
       </main>
     </div>
   )

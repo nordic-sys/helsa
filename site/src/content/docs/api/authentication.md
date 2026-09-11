@@ -26,7 +26,7 @@ over LAN or VPN, presents the token alone — there the network is the first lay
 A JWT signed with `HELSA_JWT_SECRET`, issued on the server by an operator command:
 
 ```bash
-docker compose --profile tools run --rm token -subject iphone
+make prod-token SUBJECT=iphone
 ```
 
 There is deliberately **no HTTP endpoint that issues tokens**. An endpoint that
@@ -45,15 +45,21 @@ Lifetime is long by design. The reasoning — and the revocation options — are
 
 ## `/v1/auth/refresh` and `/v1/auth/logout`
 
-These exist for the browser session, which uses a short access token plus a refresh
-token in an `httpOnly` cookie.
+These exist for a session that rotates. ⚠️ The dashboard is **not** one of them: it
+keeps the device token you paste into it in `localStorage`, like any other device.
+There is no cookie and no browser-specific session — one more reason `8443` stays off
+the internet.
 
 - `POST /v1/auth/refresh` — exchange a refresh token for a new session. No bearer
   token needed.
-- `POST /v1/auth/logout` — revoke the refresh token, adding it to the Redis
-  deny-list. `204`.
+- `POST /v1/auth/logout` — ends the calling device's session: drops the refresh token
+  **and revokes the access token presented on the request**. `204`, or `503` if the
+  deny-list could not be written — because answering success when the session is still
+  alive would be the worst possible lie here.
 
-Native clients normally use their long-lived device token and never touch either.
+Native clients normally use their long-lived device token and never touch either. To
+revoke a token from a device you no longer have, use the CLI — see
+[revoking](/getting-started/device-token/#revoking).
 
 ## Client certificate details reaching the application
 
@@ -107,8 +113,8 @@ RFC 9457 problem documents:
 
 | Status | Meaning |
 |---|---|
-| `401` | No token, malformed token, wrong signing secret, or revoked. |
+| `401` | No token, malformed token, wrong signing secret, or revoked. A revoked token says so in the body, rather than "invalid token" — somebody whose phone was stolen should not be sent to check their typing. |
 | `404` | Unknown route, or a resource that does not exist. |
 | `413` | Ingest chunk too large. Split it and retry. |
 | `501` | In the contract but not implemented — currently only PDF export. |
-| `503` | `/readyz` when a dependency is unreachable. |
+| `503` | `/readyz` when a dependency is unreachable — and any `/v1` request when the revocation deny-list cannot be read. Nothing is wrong with the token; retry. |

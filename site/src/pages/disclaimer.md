@@ -90,6 +90,12 @@ for.
 ## Third-party components
 
 Helsa builds on PostgreSQL, TimescaleDB, Redis, RabbitMQ, Caddy, Go and React
-libraries, and the Just the Docs theme for this site. Each carries its own licence
-and its own warranty disclaimer. Helsa's licence does not extend to them, and
-their behaviour is not something this project can vouch for.
+libraries, **MapLibre GL** in the web dashboard, **Astro and Starlight** for this site,
+and — if you run the optional tile service — **martin** and **planetiler**. Each carries
+its own licence and its own warranty disclaimer. Helsa's licence does not extend to
+them, and their behaviour is not something this project can vouch for. The full list is
+in [THIRD-PARTY.md](https://github.com/nordic-sys/helsa/blob/main/THIRD-PARTY.md).
+
+**Map data** shown in the web dashboard, and the walking routes bundled with the app,
+are © OpenStreetMap contributors, available under the
+[Open Database License](https://www.openstreetmap.org/copyright).

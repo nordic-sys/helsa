@@ -39,7 +39,7 @@ and it is stored in that browser only. See
 
 ## How it is organised
 
-Ten pages in three groups, plus the landing page. The grouping is not decoration:
+Nine pages in three groups, plus the landing page. The grouping is not decoration:
 the router is generated from the same list the sidebar is, so a page cannot reach
 the web without being handed a group.
 
@@ -73,8 +73,10 @@ container, so the page body never scrolls sideways.
 ## Language
 
 The interface is English and Hungarian, chosen from the browser and switchable.
-Every string goes through the translation files; there is no hardcoded interface
-text, which is checked rather than trusted.
+Every string goes through the translation files, and a key that does not exist is a
+type error — ⚠️ though nothing yet stops somebody writing a literal into a component
+instead of reaching for a key. The app has a guard script for exactly that; the web
+does not.
 
 ## What is missing on purpose
 
@@ -83,3 +85,5 @@ text, which is checked rather than trusted.
 - **No PDF export.** The medical PDF is generated on the phone, where the daily
   journal it draws on lives — and the journal never leaves the device.
 - **No notifications.** The quiet reminder is a local notification on the phone.
+- **No map, unless you ask for one.** A workout route is drawn, not mapped, until you
+  choose a tile source — [what each choice sends](/deployment/map-tiles/).

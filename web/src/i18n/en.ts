@@ -9,6 +9,8 @@ import type { Dict } from './types'
 export const en: Dict = {
   ui: {
     // --- Navigation and chrome ---------------------------------------------
+    'app.notMedical':
+      'Statistics, not medicine. Helsa is not a medical device and nothing here is a diagnosis or advice. Talk to a doctor about anything that worries you.',
     'nav.today': 'Today',
     'nav.trends': 'Trends',
     'nav.workouts': 'Workouts',

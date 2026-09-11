@@ -36,11 +36,11 @@ authority. Those belong to [Deployment](/deployment/).
 | Service | Role | Exposed |
 |---|---|---|
 | `timescaledb` | PostgreSQL + TimescaleDB. The samples table is a hypertable. | Never. Internal Docker network only. |
-| `redis` | Cache and token deny-list. | Never. |
+| `redis` | Cache, refresh tokens, and the revocation deny-list. | Never. |
 | `rabbitmq` | Ingestion queue between the API and the worker. | Never. |
 | `api` | The HTTP API. Accepts uploads, serves reads. | Behind the proxy in production; `127.0.0.1` locally. |
 | `worker` | Consumes the queue, writes to the database, resolves references. | Never. |
-| `web` | The static dashboard bundle. | LAN / VPN only, never the public internet. |
+| `web` | The static [dashboard](/dashboard/) bundle. | LAN / VPN only, never the public internet. |
 | `proxy` | Caddy. TLS termination and the mutual-TLS gate. | The only service with a public port — and only after you set it up. |
 
 :::note

@@ -50,17 +50,25 @@ export default defineConfig({
       // Starlight only renders the documentation sections. The landing page,
       // the screenshot tour and the legal pages are custom routes in src/pages/.
       sidebar: [
+        // The product itself, above everything about running it: a reader who arrives
+        // in the docs from a search engine otherwise never meets it.
+        { label: 'The app', link: '/the-app/' },
         {
           label: 'Getting started',
           items: [{ autogenerate: { directory: 'getting-started' } }],
         },
-        {
-          label: 'The web dashboard',
-          items: [{ autogenerate: { directory: 'dashboard' } }],
-        },
+        // ⚠️ Deployment BEFORE the dashboard, and the order is the reader's rather than
+        // the subject's. The dashboard is served by the proxy and the proxy does not
+        // start until the certificates exist, so a reader sent from "First sync"
+        // straight to the dashboard is shown a thing they cannot yet open. Run it,
+        // expose it, then use it.
         {
           label: 'Deployment',
           items: [{ autogenerate: { directory: 'deployment' } }],
+        },
+        {
+          label: 'The web dashboard',
+          items: [{ autogenerate: { directory: 'dashboard' } }],
         },
         {
           label: 'API',
@@ -70,6 +78,9 @@ export default defineConfig({
           label: 'Integrations',
           items: [{ autogenerate: { directory: 'integrations' } }],
         },
+        // A symptom index rather than a section: the explanations stay where they are,
+        // and this is the page that knows which one owns a given symptom.
+        { label: 'When it does not work', link: '/troubleshooting/' },
         {
           label: 'About',
           items: [
