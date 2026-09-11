@@ -137,16 +137,16 @@ devvm-logs: ## [DEV VM] Logs
 # never enter git — the repository is public and a region is 300–600 MB.
 #
 #   make tiles-build REGION=hungary AREA=europe/hungary   (on a build machine)
-#   make tiles-install REGION=hungary HOST=helsa-dev      (copy it over)
+#   make tiles-install REGION=hungary HOST=your-server    (copy it over)
 #   make tiles-up                                         (on the server)
 #
 # Then paste http://tiles:3000/<region>/{z}/{x}/{y} into the setting.
 
-tiles-build: ## [build machine] Build one region: REGION=hungary AREA=europe/hungary
-	scripts/tiles-build.sh $${REGION:?set REGION, e.g. hungary} $${AREA:?set AREA, e.g. europe/hungary}
+tiles-build: ## [build machine] Build one region: REGION=hungary AREA=europe/hungary (a Geofabrik path, a URL, or a local .osm.pbf)
+	scripts/tiles-build.sh "$${REGION:?set REGION, e.g. hungary}" "$${AREA:?set AREA, e.g. europe/hungary}"
 
-tiles-install: ## [build machine] Copy a built region to a server: REGION=hungary HOST=helsa-dev
-	scripts/tiles-install.sh $${TILES_BUILD_DIR:-$(PWD)/tiles-build}/$${REGION:?set REGION}.pmtiles $${HOST:-}
+tiles-install: ## [build machine] Copy a built region to a server: REGION=hungary HOST=your-server
+	scripts/tiles-install.sh "$${TILES_BUILD_DIR:-$(PWD)/tiles-build}/$${REGION:?set REGION}.pmtiles" "$${HOST:-}"
 
 tiles-up: ## [VM] Start the optional tile server (profile: tiles)
 	$(TILES) --profile tiles up -d tiles
@@ -154,5 +154,5 @@ tiles-up: ## [VM] Start the optional tile server (profile: tiles)
 tiles-down: ## [VM] Stop the optional tile server
 	$(TILES) --profile tiles rm -sf tiles
 
-tiles-list: ## [any] What regions a server has, and how much room is left: HOST=helsa-dev
+tiles-list: ## [any] What regions a server has, and how much room is left: HOST=your-server
 	@ssh $${HOST:?set HOST} 'ls -lh $${TILES_DIR:-/opt/helsa/tiles} 2>/dev/null; df -h $${TILES_DIR:-/opt/helsa/tiles}'

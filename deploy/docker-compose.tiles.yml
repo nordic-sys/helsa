@@ -33,7 +33,7 @@
 #
 # Usage:
 #   make tiles-build REGION=hungary AREA=europe/hungary   # on a build machine
-#   make tiles-install REGION=hungary HOST=helsa-dev      # copy it over
+#   make tiles-install REGION=hungary HOST=your-server      # copy it over
 #   make tiles-up                                         # start this service
 services:
   tiles:

@@ -178,6 +178,33 @@ Measured on an M-series Mac:
 ⛔ **The archive never enters git.** A region is 300–600 MB and this repository is
 public; `.gitignore` refuses `*.pmtiles` tree-wide, and it should stay that way.
 
+#### How far this scales, including the whole planet
+
+⚠️ **Nothing in this pipeline is limited to a country.** martin reads a `.pmtiles`
+archive with range reads whatever its size, `tiles-install.sh` only checks that the
+disk has room, and the setting takes a single address. How much world you can host
+is therefore a question about **your hardware**, not about Helsa.
+
+The one thing that is not a Geofabrik path is the planet itself — Geofabrik
+publishes extracts *of* the planet, not the planet — so that input is fetched from
+the OSM mirrors and passed in directly:
+
+```bash
+JAVA_HEAP=100g PLANETILER_ARGS='--nodemap-type=array --storage=mmap' \
+  make tiles-build REGION=planet AREA=https://planet.openstreetmap.org/pbf/planet-latest.osm.pbf
+```
+
+`AREA` accepts three forms — a Geofabrik path, any `https://` URL to an
+`.osm.pbf`, or a file already on the build machine. ⚠️ A planet build is a
+different class of machine from a country: far more heap than the 6 GB default, a
+large scratch area beside the output, and hours rather than minutes;
+[planetiler's README](https://github.com/onthegomap/planetiler) carries the
+current numbers and the flags that go with them.
+
+**For most people the answer is not the planet.** Self-host the few countries you
+actually move around in, and let the public option cover everywhere else — that
+is why the setting offers three choices rather than two.
+
 ⚠️ **Disk is the binding constraint on a small VM, so it fails loudly rather than
 quietly.** `tiles-install.sh` checks free space *before* copying and keeps a
 `KEEP_FREE_G` margin (2 GB), because the machine that runs out is the one that

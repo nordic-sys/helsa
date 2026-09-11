@@ -2,7 +2,7 @@
 # Put a built region on a Helsa server, without ever half-putting it there.
 #
 # Usage:
-#   scripts/tiles-install.sh /path/to/hungary.pmtiles helsa-dev
+#   scripts/tiles-install.sh /path/to/hungary.pmtiles your-server
 #   scripts/tiles-install.sh /path/to/hungary.pmtiles            # local install
 #
 #   $1  the archive built by `tiles-build.sh`
