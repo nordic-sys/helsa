@@ -52,6 +52,11 @@ two places here:
    [the map page](https://helsa.nordic-sys.com/deployment/map-tiles/) for what the
    setting can and cannot know about a provider you choose yourself.
 2. **The walking routes bundled with the iOS app** — their tracks are derived from OSM.
+   ⚠️ **Attribution alone does not settle this one.** The app does not merely *draw* with
+   those coordinates, it **computes** with them — where along the route you are — so what it
+   ships is a derivative database rather than only a produced work, and share-alike applies.
+   That obligation is met by publishing the derived data: [`data/journey-tracks/`](data/journey-tracks/),
+   under ODbL, with the recipe that produced each file.
 
 ## The iOS app
 
