@@ -48,7 +48,7 @@ paste a device token once, and it is stored in that browser only.
 
 ## How it is organised
 
-Sixteen pages in three groups, plus the landing page. The grouping is not decoration:
+Seventeen pages in three groups, plus the landing page. The grouping is not decoration:
 the router is generated from the same list the sidebar is, so a page cannot reach
 the web without being handed a group.
 
@@ -56,7 +56,7 @@ the web without being handed a group.
 |---|---|---|
 | — | **Today** | the landing page: where you are right now |
 | **The long view** | Trends · Year in numbers · Year by year · Health summary · Observations · Medals · Monthly challenge · Virtual journey | something to look at, over weeks, months and years |
-| **Areas** | Workouts · Training progress · Sleep · Nutrition · Measurements | one domain each, read entry by entry |
+| **Areas** | Workouts · Training progress · Sleep · Nutrition · Measurements · Journal and events | one domain each, read entry by entry |
 | **Status** | Completeness · Sync queue · Settings | whether the thing that moves your data is working |
 
 Two of those group names are taken word for word from the phone's own bands
@@ -92,9 +92,11 @@ does not.
 - **No analytics, no third-party script, nothing measured.** Same rule as this
   documentation site.
 - **No PDF export.** The raw CSV and JSON export is on
-  [Settings](/dashboard/screens/#settings); the medical PDF is generated on the
-  phone, where the daily journal it draws on lives — and the journal never leaves
-  the device.
+  [Settings](/dashboard/screens/#settings), and the
+  [Health summary](/dashboard/screens/#health-summary) prints through the
+  browser's own "Save as PDF". Its journal part is filled only if the phone sends
+  its journal, which it does only when you turn on **Journal and events** — off
+  by default.
 - **No notifications.** The quiet reminder is a local notification on the phone.
 - **No map, unless you ask for one.** A workout route is drawn, not mapped, until you
   choose a tile source — [what each choice sends](/deployment/map-tiles/).

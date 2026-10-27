@@ -411,7 +411,7 @@ milestones" are different statements and should not be told apart by guessing.
 day is neutral, at most two count in any seven days, a third breaks the streak
 (`broken_by.reason: rest_over_budget`), and a run of rest days alone is no streak.
 `streak.chosen_rest_days` and `streak.rest_days` describe the current run.
-`missing_inputs` always lists `illness_days` (the journal never leaves the phone)
+`missing_inputs` always lists `illness_days` (the streak does not read the journal, even when the opt-in sync has sent it)
 and lists `chosen_rest_days` too until the phone has sent them.
 
 Three things about the numbers:
@@ -431,11 +431,38 @@ Three things about the numbers:
 :::caution
 **The streak is a lower bound**, and `streak.missing_inputs` says why. The phone
 also knows days that do *not* break a streak — an illness day derived from the
-daily journal, and a rest day you chose — and neither reaches the server. The
-journal stays on the device, so a day the phone counts as neutral is a plain
-missed day here. This streak can be shorter than the one on your phone, never
+daily journal, and a rest day you chose. The rest days reach the server; the
+journal reaches it only with the opt-in sync, and the streak does not use it even
+then, so a day the phone counts as neutral is a plain missed day here. This streak can be shorter than the one on your phone, never
 longer.
 :::
+
+## Journal and events
+
+```http
+GET /v1/journal?from=2026-08-01&to=2026-10-27&tz=Europe/Budapest
+```
+
+The phone's journal as the server holds it: HealthKit **category samples** (the
+symptoms, `highHeartRateEvent`, `lowHeartRateEvent`, `irregularHeartRhythmEvent`,
+`environmentalAudioExposureEvent`, `appleWalkingSteadinessEvent`) and
+**state-of-mind** samples (`stateOfMind`: the daily mood and its tags). They are
+there **only if the phone's Journal and events switch is on** — off by default,
+app 1.0 (7) on.
+
+| Field | Meaning |
+|---|---|
+| `entries` | Oldest first, by `started_at` inside the window. A category entry has `value` (the raw `HKCategoryValue` — its meaning depends on the type: severity 0 unspecified / 1 not present / 2 mild / 3 moderate / 4 severe, presence 0 / 1, appetite 0–3, steadiness 1–4). A mood has `valence` (−1…1), `mood_kind` and `associations`. |
+| `event_key` · `follow_up_hours` · `workout_source_uuid` · `day_key` | The phone's own marks on the samples it wrote: the event a symptom was noted on (`kind:epochSeconds`, or `selfReported:…` for a moment marked by hand), the 24/48-hour follow-up answer, the workout it was attributed to, the journal day. |
+| `total` | Every entry the server holds, inside the window or not. |
+| `last_received_at` | When the phone last sent one. **Absent = never**: the switch is off, or the app is older. Read this before reading an empty `entries` as "nothing noted". |
+
+`from`/`to` are days in `tz` (to included; the last 90 days without them; at most
+1100 days). An older server answers **404** — version skew, not an empty journal.
+
+The rows are a **mirror of HealthKit**, never a second record: one per HealthKit
+UUID, removed when the sample is deleted in Health, when a backfill's sweep finds
+it was not re-sent, or with `DELETE /v1/journal`; they go with the user row too.
 
 ## Coverage
 
@@ -481,7 +508,7 @@ filename.
 | Format | Contents |
 |---|---|
 | `csv` | Long format, one sample per row: `ts,data_type,value,unit,source_device` |
-| `json` | `{meta, samples, workouts, sleep_segments}` |
+| `json` | `{meta, samples, workouts, sleep_segments, journal}` — `journal` carries entries only in an export of everything (empty `metrics`) or one that names `journal` |
 | `pdf` | In the contract, **not implemented** — returns `501` |
 
 `from`/`to` are days in your time zone and `to` is inclusive. Omitted, they mean

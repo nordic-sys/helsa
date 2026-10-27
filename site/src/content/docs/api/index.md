@@ -63,6 +63,7 @@ look weird".
 |---|---|
 | `POST /v1/ingest` | The only write path for health data. Chunked, idempotent, asynchronous. [Details](ingest/) |
 | `GET /v1/ingest/status` | The queue between the two: waiting and dead-lettered batches (with why the recent ones failed), workers connected, the recent drain rate and an estimated time left. No health data. [Details](ingest/#watching-the-queue) |
+| `POST /v1/journal` · `DELETE /v1/journal` | The opt-in journal sync: category samples (symptoms, heart-rate / loud-environment / steadiness events) and state of mind. **Synchronous**, so the phone's anchor waits for the `200` and an older server's `404` loses nothing; `sweep_before` closes a backfill. `DELETE` removes the server's whole copy. [Details](ingest/#the-journal-opt-in) |
 | `POST /v1/ingest/dead-letter/redrive` | Moves dead-lettered batches back onto the ingest queue for another try. Never retries on its own; never loses a batch. [Details](ingest/#retrying-dead-lettered-batches) |
 
 ### Reading
@@ -79,6 +80,7 @@ look weird".
 | `GET /v1/samples` | Raw samples for one `data_type`, keyset-paginated. Debugging and export. |
 | `GET /v1/insights` | Rule-based observations. Statistics, not medicine — see the [disclaimer](/disclaimer/). |
 | `GET /v1/achievements` | Earned badges, newest first. |
+| `GET /v1/journal` | The phone's journal and events in a window of days — only there if its opt-in **Journal and events** switch sent them. `last_received_at` absent = never sent. [Details](reading-data/#journal-and-events) |
 
 [Details](reading-data/)
 
@@ -96,7 +98,7 @@ look weird".
 
 | | |
 |---|---|
-| `POST /v1/export` | Synchronous. The response *is* the file, streamed, with a `Content-Disposition` filename. `csv` gives one sample per row; `json` gives `{meta, samples, workouts, sleep_segments}`. `pdf` is in the contract but returns `501`. |
+| `POST /v1/export` | Synchronous. The response *is* the file, streamed, with a `Content-Disposition` filename. `csv` gives one sample per row; `json` gives `{meta, samples, workouts, sleep_segments, journal}` (the journal only in an export of everything, or one that names `journal`). `pdf` is in the contract but returns `501`. |
 | `GET /v1/export/{id}` | Reserved for a future asynchronous path. **Always returns `404` today**, because no export job exists. A permanently `pending` fake job would be a lie. |
 
 ### Health

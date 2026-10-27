@@ -1,10 +1,10 @@
 ---
 title: The screens
-description: "What each of the nineteen pages shows, and the rules behind the numbers on it."
+description: "What each of the twenty pages shows, and the rules behind the numbers on it."
 sidebar:
   order: 1
 ---
-Seventeen pages in the sidebar, plus two that open from a listing: a workout and a month's medal.
+Eighteen pages in the sidebar, plus two that open from a listing: a workout and a month's medal.
 
 ## Today
 
@@ -165,11 +165,17 @@ print dialog ("Save as PDF"): the server's own export does not make PDFs.
   not a medical reference range, and the page says so.
 - A measurement with no data says *no measurement*, never 0; a range with too
   little data says *little data (9 days)*, never a blank.
-- **What it cannot show, it says.** The journal and symptom marks never leave the
-  phone, and events (falls, heart-rate notifications) are put together on the
-  phone — both sections are on the page as one sentence each, so their absence
-  does not read as "nothing happened". The source marks the phone prints are not
-  here either.
+- **What I noted** and **Recorded events** are filled from the phone's journal
+  when it has sent one ([Journal and events](#journal-and-events)): the coverage
+  line first ("noted on 22 of 30 days — the rest carry no note, which is not the
+  same as nothing to note"), then the symptoms and tags by how many days carried
+  them, the longest run of symptom days and the marked days one by one; the
+  heart-rate, loud-environment and walking-steadiness alerts with what was noted
+  on them. **What it cannot show, it says**: a phone that never sent its journal
+  (the switch is off) and a server too old for it each get one sentence, so the
+  empty section does not read as "nothing happened". Falls and unusual blood
+  pressure are put together on the phone and are never in the events list; the
+  source marks the phone prints are not here either.
 - **No chart**, as on the phone: a sparkline invites the eye to find a trend.
 - On paper it is black on white whatever the screen's theme, the header and the
   honesty block repeat on every sheet, pages are numbered, and a long workout list
@@ -384,13 +390,46 @@ Two kinds of measurement are kept out of the grid on purpose:
 - **The five gait measurements share one time axis**: the last 7 finished days
   against the 28 before them, with your own band, the phone's thresholds, and the
   wording "higher/lower", never "better/worse". Falls are drawn on the same axis.
-  Apple's walking-steadiness *notifications* are not: they are a kind of HealthKit
-  record the phone does not upload, and the card says so.
+  Apple's walking-steadiness *notifications* are not: they reach the server only
+  with the phone's opt-in journal sync, and are listed on
+  [Journal and events](#journal-and-events).
 
 The latest values come from **`GET /v1/latest`**, one call for the whole page
 instead of one per metric. **An older server answers 404**; the page then shows
 each card's last measured day from the past 30 days and says the server needs
 updating.
+
+## Journal and events
+
+What you noted on the phone — the daily mood with its tags, the symptoms, the
+symptoms marked on an event and the answers to its follow-up questions — and the
+alerts your watch recorded: high, low and irregular heart rate, a loud
+environment, a walking-steadiness notification. **It is empty until you switch it
+on**: the phone sends the journal only when **Your own server ▸ Journal and
+events** is on (app 1.0 (7) on), and it is off by default, because it is the most
+personal part of your data.
+
+The page keeps three nothings apart, and never draws one as another:
+
+- **the phone never sent a journal** — it says where the switch is, and that an
+  empty page says nothing about what you noted;
+- **the server is older than the journal** (`GET /v1/journal` answers 404) — it
+  says to update the server;
+- **nothing in the period** — "nothing noted", which is not "nothing happened".
+
+With data: the coverage line first (how many of the period's days carry any
+note), then a **mood strip** — one cell per day, a day without a note left as an
+outline, never a neutral colour, and a dot under a day that carried a symptom —
+the **illness episodes** (the phone's rule: a symptom typical of an infection
+opens one, fatigue or a headache only extends it, one day without a note is
+bridged, two end it), the **events** with what you noted on them and after 24 and
+48 hours, and the **days one by one**. Choose 30 days, 3 months or a year. No
+score and no "your mood is improving": the phone says nothing about the journal,
+and the web is not the place to be bolder.
+
+At the foot, **Delete the journal from this server** removes the server's copy
+(`DELETE /v1/journal`) after a confirmation. Apple Health on the phone is not
+touched; if the switch is still on, the next sync sends it again.
 
 ## Completeness
 
@@ -487,7 +526,8 @@ The device token, the devices that have one, the goals, the language, the time
 zone — and [the map source](/deployment/map-tiles/).
 
 **Export** downloads your raw samples from the server (`POST /v1/export`): CSV, one
-sample per row, or JSON with the period's workouts and sleep segments as well. The
+sample per row, or JSON with the period's workouts and sleep segments as well —
+and, when all metrics are chosen, the journal entries the phone sent. The
 period is 30 days, 90 days, a year (each ending today, today included) or two dates
 you choose; the metrics are all of them or the ones you tick from those that have
 data — the choice narrows the samples only. The server streams the file, so the
