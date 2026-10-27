@@ -19,13 +19,13 @@ import (
 // Two things this endpoint has to be careful about, both of them ways of
 // asserting more than we know:
 //
-//  1. The milestones live on the phone and nothing syncs them, so the server
-//     takes them from the request, from the newest badge's snapshot, or from the
-//     factory row — and SAYS which (`thresholds_source`).
-//  2. The streak's neutral days (illness, chosen rest) cannot reach the server at
-//     all, so the streak it computes is a lower bound on the phone's. The
-//     response names the missing inputs rather than presenting a shorter streak
-//     as the streak.
+//  1. The milestones are set on the phone. The server takes them from the
+//     request, from the phone's uploaded settings, from the newest badge's
+//     snapshot, or from the factory row — and SAYS which (`thresholds_source`).
+//  2. The streak's illness days never reach the server, and the chosen rest days
+//     only once the phone has uploaded them, so the streak it computes is a lower
+//     bound on the phone's. The response names the missing inputs rather than
+//     presenting a shorter streak as the streak.
 
 func (s *Server) GetChallenge(w http.ResponseWriter, r *http.Request, params api.GetChallengeParams) {
 	uid, ok := auth.UserID(r.Context())

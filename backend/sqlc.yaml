@@ -10,6 +10,7 @@ sql:
       - "db/migrations/00005_push_tokens.sql"
       - "db/migrations/00007_achievements.sql"
       - "db/migrations/00008_workout_routes.sql"
+      - "db/migrations/00010_phone_settings.sql"
     queries: "db/queries"
     gen:
       go:

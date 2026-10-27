@@ -221,3 +221,25 @@ func TestTheStreakAlwaysNamesItsMissingInputs(t *testing.T) {
 		}
 	}
 }
+
+// Once the phone has uploaded its rest days, they stop being missing — even when
+// the list is empty, because "I marked none" is an answer. The journal never
+// reaches the server, so the illness days stay missing whatever the phone sends.
+func TestUploadedRestDaysAreNoLongerMissing(t *testing.T) {
+	m, err := ParseMonth("2026-09")
+	if err != nil {
+		t.Fatalf("parse month: %v", err)
+	}
+	got := Compute(Input{
+		Month:      m,
+		Thresholds: NewThresholds(DefaultThresholds),
+		Source:     api.ChallengeResponseThresholdsSourceSettings,
+		Daily:      septDays(20_000, 20_000),
+		RestDays:   map[string]bool{},
+		Now:        sept(10),
+		Loc:        time.UTC,
+	})
+	if len(got.Streak.MissingInputs) != 1 || got.Streak.MissingInputs[0] != "illness_days" {
+		t.Errorf("missing inputs = %v, want only illness_days", got.Streak.MissingInputs)
+	}
+}

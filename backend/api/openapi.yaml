@@ -95,7 +95,18 @@ paths:
   /settings:
     get:
       tags: [profile]
-      summary: Settings (units, language, time zone, notifications)
+      summary: Settings (units, language, time zone, notifications, and what the phone decided)
+      description: >
+        Two kinds of setting share this object. `time_zone`, `locale`, `unit_system` and
+        `notif_prefs` are the server's own. `challenge`, `hydration` and `journey` are **decisions
+        made on the phone** and uploaded by it so that the web can show the same milestones, the
+        same water goal and the same journey (docs/35). They are preferences, never measurements:
+        the steps, the water and the distance they are read against stay in the samples.
+
+
+        A block the phone has never sent is **absent**, not empty. An absent block means "this
+        server has not been told" — an older phone, or no phone at all — and a client must say
+        so rather than show a default as if it were the user's.
       responses:
         '200':
           description: Settings
@@ -109,6 +120,14 @@ paths:
         A **partial** change: only the fields that are sent change, the missing ones are left untouched
         (`notif_prefs` is merged field by field as well). `time_zone` must be a valid IANA zone —
         the daily bucketing of summary/activity/sleep is built on it.
+
+
+        ⚠️ **The phone's blocks (`challenge`, `hydration`, `journey`) are NOT merged — each one is
+        replaced as a whole.** A block is the phone's complete statement about one feature, and
+        "absent inside a sent block" has a meaning of its own: `hydration: {}` says the user has
+        no goal of their own, `journey: {}` says no journey is running. Merging field by field
+        would make "I cleared my goal" impossible to say. A block that is not sent is untouched,
+        so an older phone that knows nothing about them can keep calling this endpoint safely.
       requestBody:
         required: true
         content:
@@ -694,12 +713,13 @@ paths:
         which milestones that passed, and how many days of the month are left.
 
 
-        **The milestones are the user's own, and they live on the phone.** Nothing syncs them —
-        `ChallengeThresholds` is written to the App Group defaults, not to `/settings`. So the
-        server takes them, in this order: from the `thresholds` parameter if the caller sent one;
-        from the newest threshold snapshot on a recorded badge (`achievements.thresholds`) if
-        there is one; from the factory row otherwise. `thresholds_source` says which happened,
-        because "your milestones" and "our guess at your milestones" are different statements.
+        **The milestones are the user's own, and they are set on the phone.** A phone from build
+        `1.0 (7)` on uploads them to `/settings` (`challenge.thresholds`); an older one never
+        does. So the server takes them, in this order: from the `thresholds` parameter if the
+        caller sent one; from the phone's uploaded settings if it has sent any; from the newest
+        threshold snapshot on a recorded badge (`achievements.thresholds`) if there is one; from
+        the factory row otherwise. `thresholds_source` says which happened, because "your
+        milestones" and "our guess at your milestones" are different statements.
 
 
         **`steps` is the real figure, never clipped to the goal.** Someone who walked 200 000
@@ -715,10 +735,13 @@ paths:
 
         ⚠️ **The streak is a lower bound**, and `streak.missing_inputs` says why: the phone also
         knows days that do NOT break a streak — an illness day derived from the daily journal, and
-        a rest day the user chose — and neither reaches the server. The journal stays on the device
-        (ADR-0007, and App Store rule 5.1.3(ii): health information may not be stored in iCloud),
-        and the chosen days are a local setting. A day the phone counts as neutral is a plain
-        missed day here, so this streak can be shorter than the one on the phone, never longer.
+        a rest day the user chose. The journal stays on the device (ADR-0007, and App Store rule
+        5.1.3(ii): health information may not be stored in iCloud), so an illness day is always a
+        plain missed day here. The chosen rest days DO reach the server once the phone has
+        uploaded its settings (`challenge.rest_days`), and are then applied exactly as the phone
+        applies them — neutral, at most two in any seven days, a third one breaking the streak
+        (`rest_over_budget`). Until then `chosen_rest_days` is listed as missing too. Either way
+        this streak can be shorter than the one on the phone, never longer.
       parameters:
         - { name: month, in: query, required: false, schema: { type: string }, description: "`YYYY-MM`; the default is the month `tz` is in right now" }
         - { name: tz, in: query, required: false, schema: { type: string }, description: "IANA tz; if missing, user.time_zone. A month is a span in the user's calendar, not an instant — 2026-08-31 22:30 UTC is already September in Budapest." }
@@ -956,6 +979,90 @@ components:
         locale: { type: string, enum: [hu, en] }
         unit_system: { type: string, enum: [metric, imperial] }
         notif_prefs: { $ref: '#/components/schemas/NotifPrefs' }
+        challenge: { $ref: '#/components/schemas/ChallengeSettings' }
+        hydration: { $ref: '#/components/schemas/HydrationSettings' }
+        journey: { $ref: '#/components/schemas/JourneySettings' }
+
+    ChallengeSettings:
+      type: object
+      description: >
+        The monthly challenge as the phone has it set: the milestones from "Monthly challenge" and
+        the days the user marked as rest days. `GET /v1/challenge` reads both — the milestones
+        as `thresholds_source: settings`, the rest days as neutral days in the streak, under the
+        phone's own weekly allowance.
+      properties:
+        thresholds:
+          type: array
+          items: { type: integer }
+          maxItems: 50
+          description: >
+            The step milestones. ABSENT means the user never touched them, so the phone uses its
+            factory row (and so does the server). An EMPTY array is a different statement — the
+            user deleted every milestone — and it is kept: there is then no goal and no streak,
+            exactly as on the phone. Stored cleaned up the way the phone cleans the same input:
+            non-positive entries dropped, duplicates removed, sorted; no milestone may exceed
+            10 000 000.
+        rest_days:
+          type: array
+          items: { type: string, format: date }
+          maxItems: 20000
+          description: >
+            The chosen rest days, as the day keys the phone stores (`YYYY-MM-DD`, the user's own
+            calendar day — not an instant). The whole list, every time: the phone never prunes it,
+            and neither does the server. Absent or empty = none.
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: "set by the server: when the phone last sent this block"
+
+    HydrationSettings:
+      type: object
+      description: >
+        The water goal. **Only a goal the user chose travels**: a phone with no goal of its own
+        offers a suggestion derived from body mass, and that suggestion is deliberately not stored
+        on the phone either (`HydrationGoalRules.resolve`), so there is nothing to upload. A client
+        may compute the same suggestion from the latest body mass, but must label it a suggestion.
+      properties:
+        goal_ml:
+          type: integer
+          minimum: 500
+          maximum: 6000
+          description: >
+            Millilitres per day, in the phone's own 500–6000 bracket. ABSENT inside a sent block
+            means the user has no goal of their own.
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: "set by the server: when the phone last sent this block"
+
+    JourneySettings:
+      type: object
+      description: >
+        The virtual journey the phone is walking. The route catalogue itself is not here — it is
+        part of the app (and of the web's bundle), so only its id and the start day travel; the
+        distance is the walked or cycled distance in `/summary` from `started_on` until today.
+        `route_id` and `started_on` come together or not at all; neither means no journey is
+        running.
+      properties:
+        route_id:
+          type: string
+          maxLength: 64
+          pattern: '^[a-z0-9][a-z0-9-]*$'
+          description: >
+            The route's id in the app's catalogue (`balatoni-bringakorut`). Checked for shape, NOT
+            against a list: the catalogue ships with the app, and a phone a version ahead of this
+            server must not have its journey refused. A client that does not know the id says so.
+        started_on:
+          type: string
+          format: date
+          description: "the first day of the journey, inclusive, in the user's calendar"
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+          description: "set by the server: when the phone last sent this block"
 
     NotifPrefs:
       type: object
@@ -1636,11 +1743,13 @@ components:
           items: { $ref: '#/components/schemas/ChallengeMilestone' }
         thresholds_source:
           type: string
-          enum: [request, achievement, default]
+          enum: [request, settings, achievement, default]
           description: >
-            Where the milestones came from: the `thresholds` parameter, the newest threshold
-            snapshot on a recorded badge, or the factory row. `default` means the phone has never
-            told this server what the user's milestones are.
+            Where the milestones came from: the `thresholds` parameter, the phone's uploaded
+            settings (`/settings` → `challenge`), the newest threshold snapshot on a recorded badge,
+            or the factory row. `settings` is the user's own row as of the phone's last upload —
+            including the factory row when the phone itself is still on it. `default` means the
+            phone has never told this server what the user's milestones are.
         days:
           type: array
           items: { $ref: '#/components/schemas/ChallengeDay' }
@@ -1669,7 +1778,7 @@ components:
 
     ChallengeStreak:
       type: object
-      required: [length, active_days, longest, window_from, window_to, missing_inputs]
+      required: [length, active_days, chosen_rest_days, rest_days, longest, window_from, window_to, missing_inputs]
       properties:
         daily_goal:
           type: integer
@@ -1677,14 +1786,30 @@ components:
             The goal over the days of the month, rounded, at least 1 — derived, deliberately not a
             second setting the user could put in conflict with the monthly one. Absent when there
             is no goal, and then no streak is claimed at all.
-        length: { type: integer, description: "the current run in calendar days. 0 = no live streak." }
+        length:
+          type: integer
+          description: >
+            The current run in calendar days, chosen rest days included. 0 = no live streak — and
+            a run made only of rest days is not a streak, exactly as on the phone: a rest day can
+            only protect a streak that already exists.
         active_days:
           type: integer
           description: >
-            Of those, the days that reached the daily goal. On the server the two numbers are always
-            equal, because the days that could differ (illness, chosen rest) are exactly the ones
-            that do not reach it — see `missing_inputs`. The field stays so that a client reads the
-            same shape from both sides.
+            Of those, the days that reached the daily goal. It differs from `length` only by the
+            chosen rest days (`chosen_rest_days`); the illness days the phone also counts never
+            reach the server — see `missing_inputs`.
+        chosen_rest_days:
+          type: integer
+          description: >
+            Chosen rest days inside the current run. 0 when the phone has not uploaded its rest
+            days — `missing_inputs` then still lists `chosen_rest_days`, and a client must not read
+            the 0 as "you took none". Absent from servers older than this field.
+        rest_days:
+          type: array
+          items: { type: string, format: date }
+          description: >
+            The chosen rest days inside the current run, newest first — what the phone lists so an
+            unbroken streak can be seen to be unbroken for a stated reason.
         longest: { type: integer, description: "the longest run inside the window examined" }
         broken_by: { $ref: '#/components/schemas/ChallengeStreakBreak' }
         window_from: { type: string, format: date }
@@ -1694,9 +1819,9 @@ components:
           items: { type: string }
           description: >
             The inputs the phone has and the server does not: `illness_days` (derived from the
-            daily journal, which never leaves the device) and `chosen_rest_days` (a local setting).
-            Both make a day neutral on the phone. Here they are missing, so this streak is a lower
-            bound on the phone's.
+            daily journal, which never leaves the device) always, and `chosen_rest_days` until the
+            phone has uploaded its settings. Both make a day neutral on the phone. Whatever is
+            listed here is missing, so this streak is a lower bound on the phone's.
 
     ChallengeStreakBreak:
       type: object
@@ -1704,12 +1829,14 @@ components:
       properties:
         reason:
           type: string
-          enum: [missed, no_data, start_of_history]
+          enum: [missed, no_data, rest_over_budget, start_of_history]
           description: >
             Why the run does not reach further back. `missed` and `no_data` are deliberately not the
             same answer: one is a day under the goal, the other a day we know nothing about, and
             reporting the second as the first is the same lie as treating a missing measurement as a
-            zero. `start_of_history` means the window simply ends there.
+            zero. `rest_over_budget` is a day marked as a rest day after the weekly allowance (two in
+            any seven days) was spent — the mark did not work, and saying so beats letting it look as
+            if it had. `start_of_history` means the window simply ends there.
         day: { type: string, format: date, description: "absent for `start_of_history`" }
     CoverageResponse:
       type: object

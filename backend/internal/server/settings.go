@@ -16,10 +16,14 @@ import (
 
 // --- GET/PUT /v1/settings ---
 //
-// All four settings sit on the users row. time_zone is not cosmetic: the daily
-// bucketing of summary/activity/sleep cuts days in this zone (read.go:
-// resolveLoc), so a wrong tz shifts every daily aggregate — which is why we
-// validate it before writing.
+// The server's own four settings sit on the users row. time_zone is not
+// cosmetic: the daily bucketing of summary/activity/sleep cuts days in this zone
+// (read.go: resolveLoc), so a wrong tz shifts every daily aggregate — which is
+// why we validate it before writing.
+//
+// The phone's three blocks (challenge, hydration, journey) live in their own
+// table and follow their own rules — replaced as a whole, absent until the phone
+// first sends them. See phonesettings.go.
 
 func (s *Server) GetSettings(w http.ResponseWriter, r *http.Request) {
 	uid, ok := auth.UserID(r.Context())
@@ -32,12 +36,24 @@ func (s *Server) GetSettings(w http.ResponseWriter, r *http.Request) {
 		problem(w, http.StatusNotFound, "No such user", "")
 		return
 	}
-	writeJSON(w, http.StatusOK, settingsDTO(row.TimeZone, row.Locale, row.UnitSystem, row.NotifPrefs))
+	phone, err := phoneBlocks(r.Context(), s.q, pgconv.UUID(uid))
+	if err != nil {
+		problem(w, http.StatusInternalServerError, "Reading settings failed", err.Error())
+		return
+	}
+	out := settingsDTO(row.TimeZone, row.Locale, row.UnitSystem, row.NotifPrefs)
+	phone.apply(&out)
+	writeJSON(w, http.StatusOK, out)
 }
 
 // PutSettings is a PARTIAL update: only the fields that were sent change (the
 // SQL COALESCEs), and notif_prefs is merged field by field — so flipping a
-// single switch does not zero out the rest.
+// single switch does not zero out the rest. The phone's blocks are the
+// exception: a sent block replaces the stored one whole (phonesettings.go).
+//
+// Everything is validated before anything is written, and the writes share one
+// transaction: a request with one bad field changes nothing, rather than the
+// half of it that happened to come first.
 func (s *Server) PutSettings(w http.ResponseWriter, r *http.Request) {
 	uid, ok := auth.UserID(r.Context())
 	if !ok {
@@ -88,7 +104,23 @@ func (s *Server) PutSettings(w http.ResponseWriter, r *http.Request) {
 		params.NotifPrefs = merged
 	}
 
-	row, err := s.q.UpdateSettings(r.Context(), params)
+	phoneWrite, err := cleanPhoneSettings(&body)
+	var bad *settingsError
+	if errors.As(err, &bad) {
+		problem(w, http.StatusBadRequest, bad.title, bad.detail)
+		return
+	}
+
+	ctx := r.Context()
+	tx, err := s.store.DB.Begin(ctx)
+	if err != nil {
+		problem(w, http.StatusInternalServerError, "Saving settings failed", err.Error())
+		return
+	}
+	defer func() { _ = tx.Rollback(ctx) }() // a no-op after Commit
+	q := s.q.WithTx(tx)
+
+	row, err := q.UpdateSettings(ctx, params)
 	if errors.Is(err, pgx.ErrNoRows) {
 		problem(w, http.StatusNotFound, "No such user", "")
 		return
@@ -97,7 +129,24 @@ func (s *Server) PutSettings(w http.ResponseWriter, r *http.Request) {
 		problem(w, http.StatusInternalServerError, "Saving settings failed", err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, settingsDTO(row.TimeZone, row.Locale, row.UnitSystem, row.NotifPrefs))
+	if !phoneWrite.empty() {
+		if err := phoneWrite.store(ctx, q, pgconv.UUID(uid)); err != nil {
+			problem(w, http.StatusInternalServerError, "Saving settings failed", err.Error())
+			return
+		}
+	}
+	phone, err := phoneBlocks(ctx, q, pgconv.UUID(uid))
+	if err != nil {
+		problem(w, http.StatusInternalServerError, "Saving settings failed", err.Error())
+		return
+	}
+	if err := tx.Commit(ctx); err != nil {
+		problem(w, http.StatusInternalServerError, "Saving settings failed", err.Error())
+		return
+	}
+	out := settingsDTO(row.TimeZone, row.Locale, row.UnitSystem, row.NotifPrefs)
+	phone.apply(&out)
+	writeJSON(w, http.StatusOK, out)
 }
 
 // --- helpers ---

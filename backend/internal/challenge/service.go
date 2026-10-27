@@ -44,7 +44,11 @@ func (s *Service) Get(ctx context.Context, userID uuid.UUID, q Query) (api.Chall
 	if now.IsZero() {
 		now = time.Now()
 	}
-	thresholds, source, err := s.resolveThresholds(ctx, userID, q.Thresholds)
+	synced, err := s.phoneSettings(ctx, userID)
+	if err != nil {
+		return api.ChallengeResponse{}, err
+	}
+	thresholds, source, err := s.resolveThresholds(ctx, userID, q.Thresholds, synced)
 	if err != nil {
 		return api.ChallengeResponse{}, err
 	}
@@ -59,9 +63,63 @@ func (s *Service) Get(ctx context.Context, userID uuid.UUID, q Query) (api.Chall
 		Thresholds: thresholds,
 		Source:     source,
 		Daily:      daily,
+		RestDays:   synced.restDays,
 		Now:        now,
 		Loc:        q.Loc,
 	}), nil
+}
+
+// syncedChallenge is what the phone has uploaded to /v1/settings (`challenge`).
+type syncedChallenge struct {
+	// present: the phone has sent the block at least once. False on a server
+	// whose phone predates the upload — then nothing below means anything.
+	present bool
+	// thresholds: nil = the phone is on its factory row; empty = the user deleted
+	// every milestone. The same distinction the column keeps.
+	thresholds []int
+	// restDays: the chosen rest-day keys, or nil when the phone has not sent the
+	// block. A non-nil empty set is a real "I marked none", and it changes what
+	// the response may claim (`missing_inputs`).
+	restDays map[string]bool
+}
+
+// settingsQuery: the phone's challenge block (migration 00010). Raw SQL rather
+// than the sqlc query because this package reads the pool directly, like the
+// badge snapshot below.
+const settingsQuery = `
+SELECT challenge_thresholds, challenge_rest_days, challenge_at IS NOT NULL
+FROM phone_settings WHERE user_id = $1`
+
+func (s *Service) phoneSettings(ctx context.Context, userID uuid.UUID) (syncedChallenge, error) {
+	var thresholds []int32
+	var days []pgtype.Date
+	var present bool
+	err := s.pool.QueryRow(ctx, settingsQuery, pgconv.UUID(userID)).Scan(&thresholds, &days, &present)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		return syncedChallenge{}, nil
+	case err != nil:
+		return syncedChallenge{}, fmt.Errorf("challenge settings: %w", err)
+	case !present:
+		// A row written for another block (water, journey) — the challenge one has
+		// not arrived yet.
+		return syncedChallenge{}, nil
+	}
+	out := syncedChallenge{present: true, restDays: make(map[string]bool, len(days))}
+	if thresholds != nil {
+		out.thresholds = make([]int, 0, len(thresholds))
+		for _, v := range thresholds {
+			out.thresholds = append(out.thresholds, int(v))
+		}
+	}
+	for _, d := range days {
+		if d.Valid {
+			// The stored value is a calendar date, so its key is read in UTC: there is
+			// no instant here to shift into the user's zone.
+			out.restDays[d.Time.Format("2006-01-02")] = true
+		}
+	}
+	return out, nil
 }
 
 // window is the span the day series has to cover: the month asked for, and the
@@ -119,13 +177,13 @@ func (s *Service) dailySteps(ctx context.Context, userID uuid.UUID, loc *time.Lo
 
 // thresholdQuery: the newest threshold snapshot the phone has recorded.
 //
-// The milestones are the user's, they are editable, and they live on the phone —
-// nothing syncs them. But every monthly badge carries the row that was IN FORCE
-// when it was earned (`achievements.thresholds`, and the upsert refreshes that
-// snapshot), so the most recently written badge is the most recent thing the
-// phone has said about them. It is not a settings feed and it is not pretending
-// to be one: the response says the milestones came from a badge, so a page can
-// tell the reader as much.
+// The fallback for a phone that predates the settings upload (settingsQuery is
+// asked first). Such a phone never says what the milestones are — but every
+// monthly badge carries the row that was IN FORCE when it was earned
+// (`achievements.thresholds`, and the upsert refreshes that snapshot), so the
+// most recently written badge is the most recent thing it has said about them.
+// It is not a settings feed and it is not pretending to be one: the response
+// says the milestones came from a badge, so a page can tell the reader as much.
 //
 // `updated_at` and not `earned_at`: we want the freshest STATEMENT, not the
 // oldest month. A badge for 2025-10 written today knows today's milestones.
@@ -137,12 +195,29 @@ ORDER BY updated_at DESC, id
 LIMIT 1`
 
 // resolveThresholds picks the milestone row: what the caller sent, else what the
-// phone last recorded, else the factory row.
-func (s *Service) resolveThresholds(ctx context.Context, userID uuid.UUID, given *Thresholds) (
-	Thresholds, api.ChallengeResponseThresholdsSource, error) {
+// phone uploaded as its settings, else what the phone last recorded on a badge,
+// else the factory row.
+//
+// The uploaded settings come before the badge because they are the phone's
+// answer to the very question asked, at its last sync; the badge snapshot is the
+// row that was in force when some month was earned — a good guess, and only a
+// guess, which is why it now comes second.
+func (s *Service) resolveThresholds(ctx context.Context, userID uuid.UUID, given *Thresholds,
+	synced syncedChallenge) (Thresholds, api.ChallengeResponseThresholdsSource, error) {
 
 	if given != nil {
 		return *given, api.ChallengeResponseThresholdsSourceRequest, nil
+	}
+	if synced.present {
+		// ⚠️ nil and empty are different answers. nil: the phone is on its factory
+		// row, so the factory row IS the user's row and is reported as `settings`,
+		// not as `default` — the server is no longer guessing. Empty: the user
+		// deleted every milestone, and that is respected rather than papered over
+		// with the default (the phone does the same).
+		if synced.thresholds == nil {
+			return NewThresholds(DefaultThresholds), api.ChallengeResponseThresholdsSourceSettings, nil
+		}
+		return NewThresholds(synced.thresholds), api.ChallengeResponseThresholdsSourceSettings, nil
 	}
 	var stored []int32
 	err := s.pool.QueryRow(ctx, thresholdQuery, pgconv.UUID(userID)).Scan(&stored)

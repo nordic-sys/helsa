@@ -18,19 +18,20 @@
 //
 // # Where the formula cannot be matched, it says so
 //
-// Two of the streak's inputs exist only on the phone, and no amount of care here
-// will conjure them:
+// Two of the streak's inputs start on the phone:
 //
 //   - the illness days, derived from the daily journal — which never leaves the
 //     device (ADR-0007, and App Store rule 5.1.3(ii): health information may not
-//     be stored in iCloud);
-//   - the rest days the user chose — a local setting in the App Group defaults,
-//     with no HealthKit type that could carry it and no `/settings` field for it.
+//     be stored in iCloud), so no amount of care here will conjure them;
+//   - the rest days the user chose — a setting with no HealthKit type that could
+//     carry it. From build 1.0 (7) the phone uploads it to /v1/settings
+//     (`challenge.rest_days`, with the milestones beside it), and the streak
+//     then applies it exactly as the phone does: neutral, two in any seven days.
 //
 // Both make a day NEUTRAL on the phone: it neither extends the streak nor breaks
-// it. Here such a day is a plain missed day, so the server's streak can be
-// shorter than the phone's and never longer. That is stated in the response
-// (`missing_inputs`) rather than papered over — see streak.go.
+// it. Whatever has not arrived is a plain missed day here, so the server's streak
+// can be shorter than the phone's and never longer. That is stated in the
+// response (`missing_inputs`) rather than papered over — see streak.go.
 package challenge
 
 import (
@@ -44,7 +45,7 @@ import (
 
 // DefaultThresholds is the factory milestone row (`ChallengeThresholds.defaultValues`).
 // It is only a starting point: the user rewrites it in Settings at any time, and
-// the rewritten row lives on the phone.
+// the rewritten row reaches the server only through the phone's settings upload.
 var DefaultThresholds = []int{20_000, 35_000, 70_000, 100_000, 150_000, 200_000}
 
 // Thresholds are the milestones of the challenge: increasing, unique, positive

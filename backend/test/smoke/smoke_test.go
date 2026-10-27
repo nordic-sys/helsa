@@ -103,6 +103,69 @@ func TestSmoke(t *testing.T) {
 	}
 	t.Logf("✓ settings: PUT+GET OK (tz=%s, locale=hu), invalid tz gives 400", tz)
 
+	// --- 3b) The phone's blocks in /v1/settings (docs/35) ---
+	// Before the phone sends them they are ABSENT, not empty: an older phone
+	// produces exactly the response above forever.
+	if setGet.Challenge != nil || setGet.Hydration != nil || setGet.Journey != nil {
+		t.Fatalf("phone blocks present before any upload: %+v", setGet)
+	}
+	goal := 2500
+	var phonePut api.Settings
+	if st := c.do(t, http.MethodPut, "/v1/settings", token, map[string]any{
+		"challenge": map[string]any{"thresholds": []int{35000, 20000}, "rest_days": []string{"2026-08-05"}},
+		"hydration": map[string]any{"goal_ml": goal},
+		"journey":   map[string]any{"route_id": "rpddk", "started_on": "2026-08-01"},
+	}, &phonePut); st != http.StatusOK {
+		t.Fatalf("PUT phone blocks status=%d", st)
+	}
+	if phonePut.Challenge == nil || phonePut.Challenge.Thresholds == nil ||
+		len(*phonePut.Challenge.Thresholds) != 2 || (*phonePut.Challenge.Thresholds)[0] != 20000 {
+		t.Fatalf("challenge block = %+v", phonePut.Challenge)
+	}
+	if phonePut.Hydration == nil || phonePut.Hydration.GoalMl == nil || *phonePut.Hydration.GoalMl != goal {
+		t.Fatalf("hydration block = %+v", phonePut.Hydration)
+	}
+	// The server's own fields were not sent this time and stay as they were.
+	if phonePut.Locale == nil || *phonePut.Locale != "hu" {
+		t.Fatalf("a phone-only PUT changed the locale: %+v", phonePut.Locale)
+	}
+	// A block is REPLACED: an empty hydration block clears the goal, and a PUT
+	// that does not mention the journey leaves it alone.
+	var cleared api.Settings
+	if st := c.do(t, http.MethodPut, "/v1/settings", token, map[string]any{
+		"hydration": map[string]any{},
+	}, &cleared); st != http.StatusOK {
+		t.Fatalf("PUT cleared goal status=%d", st)
+	}
+	if cleared.Hydration == nil || cleared.Hydration.GoalMl != nil {
+		t.Fatalf("an empty hydration block did not clear the goal: %+v", cleared.Hydration)
+	}
+	if cleared.Journey == nil || cleared.Journey.RouteId == nil || *cleared.Journey.RouteId != "rpddk" {
+		t.Fatalf("an untouched journey changed: %+v", cleared.Journey)
+	}
+	// One bad block refuses the request, and the good block beside it is not
+	// written either.
+	if st := c.do(t, http.MethodPut, "/v1/settings", token, map[string]any{
+		"hydration": map[string]any{"goal_ml": 3000},
+		"journey":   map[string]any{"route_id": "rpddk"},
+	}, nil); st != http.StatusBadRequest {
+		t.Fatalf("half a journey status=%d (expected 400)", st)
+	}
+	var afterBad api.Settings
+	_ = c.do(t, http.MethodGet, "/v1/settings", token, nil, &afterBad)
+	if afterBad.Hydration == nil || afterBad.Hydration.GoalMl != nil {
+		t.Fatalf("a refused request wrote its good half: %+v", afterBad.Hydration)
+	}
+	// GET /v1/me carries the same blocks.
+	var me api.User
+	if st := c.do(t, http.MethodGet, "/v1/me", token, nil, &me); st != http.StatusOK {
+		t.Fatalf("GET me status=%d", st)
+	}
+	if me.Settings == nil || me.Settings.Journey == nil || me.Settings.Challenge == nil {
+		t.Fatalf("/v1/me lost the phone blocks: %+v", me.Settings)
+	}
+	t.Logf("✓ settings: the phone's blocks round-trip, replace whole, and refuse atomically")
+
 	// --- 4) Ingest (a batch onto the queue) ---
 	now := time.Now().UTC()
 	steps := []float32{100, 200, 700} // sum = 1000

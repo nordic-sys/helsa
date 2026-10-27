@@ -21,8 +21,13 @@ type Input struct {
 	// Daily holds the days that carried a measurement, over the month AND over the
 	// streak's lookback window. Days with no measurement are absent, never zero.
 	Daily []DayTotal
-	Now   time.Time
-	Loc   *time.Location
+	// RestDays are the chosen rest days the phone uploaded (`/settings` →
+	// `challenge.rest_days`), as day keys. nil means the phone has not sent them,
+	// and the streak then reports them as a missing input; an empty non-nil set is
+	// "none marked", and it does not.
+	RestDays map[string]bool
+	Now      time.Time
+	Loc      *time.Location
 }
 
 // Compute assembles the response.
@@ -122,7 +127,7 @@ func Compute(in Input) api.ChallengeResponse {
 	if !hasDailyGoal {
 		goalPerDay = 0
 	}
-	out.Streak = evaluateStreak(byDay, goalPerDay, today.AddDate(0, 0, -(LookbackDays-1)), today, in.Loc)
+	out.Streak = evaluateStreak(byDay, in.RestDays, goalPerDay, today.AddDate(0, 0, -(LookbackDays-1)), today, in.Loc)
 	return out
 }
 

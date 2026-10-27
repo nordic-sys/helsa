@@ -26,6 +26,38 @@ UPDATE users SET
 WHERE id = @id
 RETURNING time_zone, locale, unit_system, notif_prefs;
 
+-- name: GetPhoneSettings :one
+-- The phone's blocks (00010). No row = the phone has never sent any of them.
+SELECT challenge_thresholds, challenge_rest_days, challenge_at,
+       hydration_goal_ml, hydration_at,
+       journey_route_id, journey_started_on, journey_at
+FROM phone_settings WHERE user_id = @user_id;
+
+-- name: PutChallengeSettings :exec
+-- The block is REPLACED, not merged (see the PUT /v1/settings description): a
+-- NULL here is the phone saying "never set", and it must overwrite.
+INSERT INTO phone_settings (user_id, challenge_thresholds, challenge_rest_days, challenge_at)
+VALUES (@user_id, sqlc.narg('thresholds')::integer[], sqlc.narg('rest_days')::date[], now())
+ON CONFLICT (user_id) DO UPDATE SET
+    challenge_thresholds = EXCLUDED.challenge_thresholds,
+    challenge_rest_days  = EXCLUDED.challenge_rest_days,
+    challenge_at         = EXCLUDED.challenge_at;
+
+-- name: PutHydrationSettings :exec
+INSERT INTO phone_settings (user_id, hydration_goal_ml, hydration_at)
+VALUES (@user_id, sqlc.narg('goal_ml')::integer, now())
+ON CONFLICT (user_id) DO UPDATE SET
+    hydration_goal_ml = EXCLUDED.hydration_goal_ml,
+    hydration_at      = EXCLUDED.hydration_at;
+
+-- name: PutJourneySettings :exec
+INSERT INTO phone_settings (user_id, journey_route_id, journey_started_on, journey_at)
+VALUES (@user_id, sqlc.narg('route_id')::text, sqlc.narg('started_on')::date, now())
+ON CONFLICT (user_id) DO UPDATE SET
+    journey_route_id   = EXCLUDED.journey_route_id,
+    journey_started_on = EXCLUDED.journey_started_on,
+    journey_at         = EXCLUDED.journey_at;
+
 -- name: ListDevices :many
 -- The most recently seen device first — the sync-freshness alert looks at this
 -- first element (docs/16 §2).

@@ -66,6 +66,41 @@ func (q *Queries) DeleteWorkoutsByUUID(ctx context.Context, arg DeleteWorkoutsBy
 	return err
 }
 
+const getPhoneSettings = `-- name: GetPhoneSettings :one
+SELECT challenge_thresholds, challenge_rest_days, challenge_at,
+       hydration_goal_ml, hydration_at,
+       journey_route_id, journey_started_on, journey_at
+FROM phone_settings WHERE user_id = $1
+`
+
+type GetPhoneSettingsRow struct {
+	ChallengeThresholds []int32            `json:"challenge_thresholds"`
+	ChallengeRestDays   []pgtype.Date      `json:"challenge_rest_days"`
+	ChallengeAt         pgtype.Timestamptz `json:"challenge_at"`
+	HydrationGoalMl     *int32             `json:"hydration_goal_ml"`
+	HydrationAt         pgtype.Timestamptz `json:"hydration_at"`
+	JourneyRouteID      *string            `json:"journey_route_id"`
+	JourneyStartedOn    pgtype.Date        `json:"journey_started_on"`
+	JourneyAt           pgtype.Timestamptz `json:"journey_at"`
+}
+
+// The phone's blocks (00010). No row = the phone has never sent any of them.
+func (q *Queries) GetPhoneSettings(ctx context.Context, userID pgtype.UUID) (GetPhoneSettingsRow, error) {
+	row := q.db.QueryRow(ctx, getPhoneSettings, userID)
+	var i GetPhoneSettingsRow
+	err := row.Scan(
+		&i.ChallengeThresholds,
+		&i.ChallengeRestDays,
+		&i.ChallengeAt,
+		&i.HydrationGoalMl,
+		&i.HydrationAt,
+		&i.JourneyRouteID,
+		&i.JourneyStartedOn,
+		&i.JourneyAt,
+	)
+	return i, err
+}
+
 const getSettings = `-- name: GetSettings :one
 SELECT time_zone, locale, unit_system, notif_prefs FROM users WHERE id = $1
 `
@@ -393,6 +428,66 @@ func (q *Queries) ListSleepSegments(ctx context.Context, arg ListSleepSegmentsPa
 		return nil, err
 	}
 	return items, nil
+}
+
+const putChallengeSettings = `-- name: PutChallengeSettings :exec
+INSERT INTO phone_settings (user_id, challenge_thresholds, challenge_rest_days, challenge_at)
+VALUES ($1, $2::integer[], $3::date[], now())
+ON CONFLICT (user_id) DO UPDATE SET
+    challenge_thresholds = EXCLUDED.challenge_thresholds,
+    challenge_rest_days  = EXCLUDED.challenge_rest_days,
+    challenge_at         = EXCLUDED.challenge_at
+`
+
+type PutChallengeSettingsParams struct {
+	UserID     pgtype.UUID   `json:"user_id"`
+	Thresholds []int32       `json:"thresholds"`
+	RestDays   []pgtype.Date `json:"rest_days"`
+}
+
+// The block is REPLACED, not merged (see the PUT /v1/settings description): a
+// NULL here is the phone saying "never set", and it must overwrite.
+func (q *Queries) PutChallengeSettings(ctx context.Context, arg PutChallengeSettingsParams) error {
+	_, err := q.db.Exec(ctx, putChallengeSettings, arg.UserID, arg.Thresholds, arg.RestDays)
+	return err
+}
+
+const putHydrationSettings = `-- name: PutHydrationSettings :exec
+INSERT INTO phone_settings (user_id, hydration_goal_ml, hydration_at)
+VALUES ($1, $2::integer, now())
+ON CONFLICT (user_id) DO UPDATE SET
+    hydration_goal_ml = EXCLUDED.hydration_goal_ml,
+    hydration_at      = EXCLUDED.hydration_at
+`
+
+type PutHydrationSettingsParams struct {
+	UserID pgtype.UUID `json:"user_id"`
+	GoalMl *int32      `json:"goal_ml"`
+}
+
+func (q *Queries) PutHydrationSettings(ctx context.Context, arg PutHydrationSettingsParams) error {
+	_, err := q.db.Exec(ctx, putHydrationSettings, arg.UserID, arg.GoalMl)
+	return err
+}
+
+const putJourneySettings = `-- name: PutJourneySettings :exec
+INSERT INTO phone_settings (user_id, journey_route_id, journey_started_on, journey_at)
+VALUES ($1, $2::text, $3::date, now())
+ON CONFLICT (user_id) DO UPDATE SET
+    journey_route_id   = EXCLUDED.journey_route_id,
+    journey_started_on = EXCLUDED.journey_started_on,
+    journey_at         = EXCLUDED.journey_at
+`
+
+type PutJourneySettingsParams struct {
+	UserID    pgtype.UUID `json:"user_id"`
+	RouteID   *string     `json:"route_id"`
+	StartedOn pgtype.Date `json:"started_on"`
+}
+
+func (q *Queries) PutJourneySettings(ctx context.Context, arg PutJourneySettingsParams) error {
+	_, err := q.db.Exec(ctx, putJourneySettings, arg.UserID, arg.RouteID, arg.StartedOn)
+	return err
 }
 
 const touchDevice = `-- name: TouchDevice :exec

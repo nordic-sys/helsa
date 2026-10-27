@@ -59,7 +59,11 @@ migrate: ## Apply the goose migrations (idempotent against an already bootstrapp
 # internal/latest holds the database test of GET /v1/latest: the newest sample per
 # type is a LATERAL index walk, and a summed type's day total must come out
 # source-merged, which only the real query can show.
-SMOKE_PKGS := ./test/smoke ./internal/insights ./internal/coverage ./internal/sourcemerge ./internal/ingeststat ./internal/queue ./internal/workouts ./internal/latest
+# internal/challenge holds the database test of the phone's uploaded settings
+# (migration 00010): "never touched" (NULL) and "deleted every milestone" ('{}')
+# have to survive pgx as two different values, and only a real round trip shows
+# that they do.
+SMOKE_PKGS := ./test/smoke ./internal/insights ./internal/coverage ./internal/sourcemerge ./internal/ingeststat ./internal/queue ./internal/workouts ./internal/latest ./internal/challenge
 
 smoke: $(ENV_FILE) ## E2E smoke: auth -> ingest -> summary (against the running infrastructure)
 	HELSA_AUTH_DEV_MODE=true go test -tags smoke -count=1 -v $(SMOKE_PKGS)

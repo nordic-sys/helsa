@@ -22,7 +22,7 @@ func streakOf(goal int, values ...float64) api.ChallengeStreak {
 		}
 		byDay[DayKey(from.AddDate(0, 0, i), loc)] = v
 	}
-	return evaluateStreak(byDay, goal, from, today, loc)
+	return evaluateStreak(byDay, nil, goal, from, today, loc)
 }
 
 const noMeasurement = -1
@@ -101,10 +101,10 @@ func TestStreakVectors(t *testing.T) {
 			if got.Longest != c.longest {
 				t.Errorf("longest = %d, want %d", got.Longest, c.longest)
 			}
-			// Every day of a run is a walked day here: the days that could differ are
-			// exactly the neutral ones, and those need an input the server does not have.
+			// Without the phone's rest days every day of a run is a walked day: the days
+			// that could differ are exactly the neutral ones.
 			if got.ActiveDays != got.Length {
-				t.Errorf("active days = %d, length = %d — they cannot differ on the server",
+				t.Errorf("active days = %d, length = %d — they cannot differ without rest days",
 					got.ActiveDays, got.Length)
 			}
 			if c.length == 0 {

@@ -55,6 +55,18 @@ type Goal struct {
 	UpdatedAt   pgtype.Timestamptz `json:"updated_at"`
 }
 
+type PhoneSetting struct {
+	UserID              pgtype.UUID        `json:"user_id"`
+	ChallengeThresholds []int32            `json:"challenge_thresholds"`
+	ChallengeRestDays   []pgtype.Date      `json:"challenge_rest_days"`
+	ChallengeAt         pgtype.Timestamptz `json:"challenge_at"`
+	HydrationGoalMl     *int32             `json:"hydration_goal_ml"`
+	HydrationAt         pgtype.Timestamptz `json:"hydration_at"`
+	JourneyRouteID      *string            `json:"journey_route_id"`
+	JourneyStartedOn    pgtype.Date        `json:"journey_started_on"`
+	JourneyAt           pgtype.Timestamptz `json:"journey_at"`
+}
+
 type PushToken struct {
 	ID          pgtype.UUID        `json:"id"`
 	UserID      pgtype.UUID        `json:"user_id"`

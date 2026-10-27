@@ -78,6 +78,7 @@ const (
 	ChallengeResponseThresholdsSourceAchievement ChallengeResponseThresholdsSource = "achievement"
 	ChallengeResponseThresholdsSourceDefault     ChallengeResponseThresholdsSource = "default"
 	ChallengeResponseThresholdsSourceRequest     ChallengeResponseThresholdsSource = "request"
+	ChallengeResponseThresholdsSourceSettings    ChallengeResponseThresholdsSource = "settings"
 )
 
 // Valid indicates whether the value is a known member of the ChallengeResponseThresholdsSource enum.
@@ -89,6 +90,8 @@ func (e ChallengeResponseThresholdsSource) Valid() bool {
 		return true
 	case ChallengeResponseThresholdsSourceRequest:
 		return true
+	case ChallengeResponseThresholdsSourceSettings:
+		return true
 	default:
 		return false
 	}
@@ -98,6 +101,7 @@ func (e ChallengeResponseThresholdsSource) Valid() bool {
 const (
 	Missed         ChallengeStreakBreakReason = "missed"
 	NoData         ChallengeStreakBreakReason = "no_data"
+	RestOverBudget ChallengeStreakBreakReason = "rest_over_budget"
 	StartOfHistory ChallengeStreakBreakReason = "start_of_history"
 )
 
@@ -107,6 +111,8 @@ func (e ChallengeStreakBreakReason) Valid() bool {
 	case Missed:
 		return true
 	case NoData:
+		return true
+	case RestOverBudget:
 		return true
 	case StartOfHistory:
 		return true
@@ -778,32 +784,50 @@ type ChallengeResponse struct {
 	Streak               ChallengeStreak      `json:"streak"`
 	Thresholds           []ChallengeMilestone `json:"thresholds"`
 
-	// ThresholdsSource Where the milestones came from: the `thresholds` parameter, the newest threshold snapshot on a recorded badge, or the factory row. `default` means the phone has never told this server what the user's milestones are.
+	// ThresholdsSource Where the milestones came from: the `thresholds` parameter, the phone's uploaded settings (`/settings` → `challenge`), the newest threshold snapshot on a recorded badge, or the factory row. `settings` is the user's own row as of the phone's last upload — including the factory row when the phone itself is still on it. `default` means the phone has never told this server what the user's milestones are.
 	ThresholdsSource ChallengeResponseThresholdsSource `json:"thresholds_source"`
 	Tz               string                            `json:"tz"`
 }
 
-// ChallengeResponseThresholdsSource Where the milestones came from: the `thresholds` parameter, the newest threshold snapshot on a recorded badge, or the factory row. `default` means the phone has never told this server what the user's milestones are.
+// ChallengeResponseThresholdsSource Where the milestones came from: the `thresholds` parameter, the phone's uploaded settings (`/settings` → `challenge`), the newest threshold snapshot on a recorded badge, or the factory row. `settings` is the user's own row as of the phone's last upload — including the factory row when the phone itself is still on it. `default` means the phone has never told this server what the user's milestones are.
 type ChallengeResponseThresholdsSource string
+
+// ChallengeSettings The monthly challenge as the phone has it set: the milestones from "Monthly challenge" and the days the user marked as rest days. `GET /v1/challenge` reads both — the milestones as `thresholds_source: settings`, the rest days as neutral days in the streak, under the phone's own weekly allowance.
+type ChallengeSettings struct {
+	// RestDays The chosen rest days, as the day keys the phone stores (`YYYY-MM-DD`, the user's own calendar day — not an instant). The whole list, every time: the phone never prunes it, and neither does the server. Absent or empty = none.
+	RestDays *[]openapi_types.Date `json:"rest_days,omitempty"`
+
+	// Thresholds The step milestones. ABSENT means the user never touched them, so the phone uses its factory row (and so does the server). An EMPTY array is a different statement — the user deleted every milestone — and it is kept: there is then no goal and no streak, exactly as on the phone. Stored cleaned up the way the phone cleans the same input: non-positive entries dropped, duplicates removed, sorted; no milestone may exceed 10 000 000.
+	Thresholds *[]int `json:"thresholds,omitempty"`
+
+	// UpdatedAt set by the server: when the phone last sent this block
+	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+}
 
 // ChallengeStreak defines model for ChallengeStreak.
 type ChallengeStreak struct {
-	// ActiveDays Of those, the days that reached the daily goal. On the server the two numbers are always equal, because the days that could differ (illness, chosen rest) are exactly the ones that do not reach it — see `missing_inputs`. The field stays so that a client reads the same shape from both sides.
+	// ActiveDays Of those, the days that reached the daily goal. It differs from `length` only by the chosen rest days (`chosen_rest_days`); the illness days the phone also counts never reach the server — see `missing_inputs`.
 	ActiveDays int                   `json:"active_days"`
 	BrokenBy   *ChallengeStreakBreak `json:"broken_by,omitempty"`
+
+	// ChosenRestDays Chosen rest days inside the current run. 0 when the phone has not uploaded its rest days — `missing_inputs` then still lists `chosen_rest_days`, and a client must not read the 0 as "you took none". Absent from servers older than this field.
+	ChosenRestDays int `json:"chosen_rest_days"`
 
 	// DailyGoal The goal over the days of the month, rounded, at least 1 — derived, deliberately not a second setting the user could put in conflict with the monthly one. Absent when there is no goal, and then no streak is claimed at all.
 	DailyGoal *int `json:"daily_goal,omitempty"`
 
-	// Length the current run in calendar days. 0 = no live streak.
+	// Length The current run in calendar days, chosen rest days included. 0 = no live streak — and a run made only of rest days is not a streak, exactly as on the phone: a rest day can only protect a streak that already exists.
 	Length int `json:"length"`
 
 	// Longest the longest run inside the window examined
 	Longest int `json:"longest"`
 
-	// MissingInputs The inputs the phone has and the server does not: `illness_days` (derived from the daily journal, which never leaves the device) and `chosen_rest_days` (a local setting). Both make a day neutral on the phone. Here they are missing, so this streak is a lower bound on the phone's.
-	MissingInputs []string           `json:"missing_inputs"`
-	WindowFrom    openapi_types.Date `json:"window_from"`
+	// MissingInputs The inputs the phone has and the server does not: `illness_days` (derived from the daily journal, which never leaves the device) always, and `chosen_rest_days` until the phone has uploaded its settings. Both make a day neutral on the phone. Whatever is listed here is missing, so this streak is a lower bound on the phone's.
+	MissingInputs []string `json:"missing_inputs"`
+
+	// RestDays The chosen rest days inside the current run, newest first — what the phone lists so an unbroken streak can be seen to be unbroken for a stated reason.
+	RestDays   []openapi_types.Date `json:"rest_days"`
+	WindowFrom openapi_types.Date   `json:"window_from"`
 
 	// WindowTo today — the streak is a statement about today, whichever month was asked for
 	WindowTo openapi_types.Date `json:"window_to"`
@@ -814,11 +838,11 @@ type ChallengeStreakBreak struct {
 	// Day absent for `start_of_history`
 	Day *openapi_types.Date `json:"day,omitempty"`
 
-	// Reason Why the run does not reach further back. `missed` and `no_data` are deliberately not the same answer: one is a day under the goal, the other a day we know nothing about, and reporting the second as the first is the same lie as treating a missing measurement as a zero. `start_of_history` means the window simply ends there.
+	// Reason Why the run does not reach further back. `missed` and `no_data` are deliberately not the same answer: one is a day under the goal, the other a day we know nothing about, and reporting the second as the first is the same lie as treating a missing measurement as a zero. `rest_over_budget` is a day marked as a rest day after the weekly allowance (two in any seven days) was spent — the mark did not work, and saying so beats letting it look as if it had. `start_of_history` means the window simply ends there.
 	Reason ChallengeStreakBreakReason `json:"reason"`
 }
 
-// ChallengeStreakBreakReason Why the run does not reach further back. `missed` and `no_data` are deliberately not the same answer: one is a day under the goal, the other a day we know nothing about, and reporting the second as the first is the same lie as treating a missing measurement as a zero. `start_of_history` means the window simply ends there.
+// ChallengeStreakBreakReason Why the run does not reach further back. `missed` and `no_data` are deliberately not the same answer: one is a day under the goal, the other a day we know nothing about, and reporting the second as the first is the same lie as treating a missing measurement as a zero. `rest_over_budget` is a day marked as a rest day after the weekly allowance (two in any seven days) was spent — the mark did not work, and saying so beats letting it look as if it had. `start_of_history` means the window simply ends there.
 type ChallengeStreakBreakReason string
 
 // CoverageGap The metric had settled into a rhythm and that rhythm has broken. **An observation, not a problem** — a flat battery, a holiday, a broken sensor and a deliberate break all look the same from here, and the server does not guess which.
@@ -988,6 +1012,15 @@ type HeartRateMaximum struct {
 
 	// Zone3ThresholdBpm bpm × zone3_fraction
 	Zone3ThresholdBpm float32 `json:"zone3_threshold_bpm"`
+}
+
+// HydrationSettings The water goal. **Only a goal the user chose travels**: a phone with no goal of its own offers a suggestion derived from body mass, and that suggestion is deliberately not stored on the phone either (`HydrationGoalRules.resolve`), so there is nothing to upload. A client may compute the same suggestion from the latest body mass, but must label it a suggestion.
+type HydrationSettings struct {
+	// GoalMl Millilitres per day, in the phone's own 500–6000 bracket. ABSENT inside a sent block means the user has no goal of their own.
+	GoalMl *int `json:"goal_ml,omitempty"`
+
+	// UpdatedAt set by the server: when the phone last sent this block
+	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
 
 // IngestAccepted The body of the 202 response. `received` gives the item counts the server TOOK IN (not processed) — the actual write happens in the worker. This is how the client can check that the chunk arrived complete, and `batch_id` correlates it with the server log when debugging a long backlog drain.
@@ -1191,6 +1224,18 @@ type InsightKind string
 // InsightSeverity defines model for Insight.Severity.
 type InsightSeverity string
 
+// JourneySettings The virtual journey the phone is walking. The route catalogue itself is not here — it is part of the app (and of the web's bundle), so only its id and the start day travel; the distance is the walked or cycled distance in `/summary` from `started_on` until today. `route_id` and `started_on` come together or not at all; neither means no journey is running.
+type JourneySettings struct {
+	// RouteId The route's id in the app's catalogue (`balatoni-bringakorut`). Checked for shape, NOT against a list: the catalogue ships with the app, and a phone a version ahead of this server must not have its journey refused. A client that does not know the id says so.
+	RouteId *string `json:"route_id,omitempty"`
+
+	// StartedOn the first day of the journey, inclusive, in the user's calendar
+	StartedOn *openapi_types.Date `json:"started_on,omitempty"`
+
+	// UpdatedAt set by the server: when the phone last sent this block
+	UpdatedAt *time.Time `json:"updated_at,omitempty"`
+}
+
 // LatestResponse defines model for LatestResponse.
 type LatestResponse struct {
 	// Metrics Keyed by the requested name. A type with no sample at all is LEFT OUT.
@@ -1371,8 +1416,16 @@ type Session struct {
 
 // Settings defines model for Settings.
 type Settings struct {
-	Locale     *SettingsLocale `json:"locale,omitempty"`
-	NotifPrefs *NotifPrefs     `json:"notif_prefs,omitempty"`
+	// Challenge The monthly challenge as the phone has it set: the milestones from "Monthly challenge" and the days the user marked as rest days. `GET /v1/challenge` reads both — the milestones as `thresholds_source: settings`, the rest days as neutral days in the streak, under the phone's own weekly allowance.
+	Challenge *ChallengeSettings `json:"challenge,omitempty"`
+
+	// Hydration The water goal. **Only a goal the user chose travels**: a phone with no goal of its own offers a suggestion derived from body mass, and that suggestion is deliberately not stored on the phone either (`HydrationGoalRules.resolve`), so there is nothing to upload. A client may compute the same suggestion from the latest body mass, but must label it a suggestion.
+	Hydration *HydrationSettings `json:"hydration,omitempty"`
+
+	// Journey The virtual journey the phone is walking. The route catalogue itself is not here — it is part of the app (and of the web's bundle), so only its id and the start day travel; the distance is the walked or cycled distance in `/summary` from `started_on` until today. `route_id` and `started_on` come together or not at all; neither means no journey is running.
+	Journey    *JourneySettings `json:"journey,omitempty"`
+	Locale     *SettingsLocale  `json:"locale,omitempty"`
+	NotifPrefs *NotifPrefs      `json:"notif_prefs,omitempty"`
 
 	// TimeZone IANA tz, e.g. Europe/Budapest
 	TimeZone   *string             `json:"time_zone,omitempty"`
@@ -1699,7 +1752,7 @@ type ServerInterface interface {
 	// Raw samples (paginated, for debugging/export)
 	// (GET /samples)
 	GetSamples(w http.ResponseWriter, r *http.Request, params GetSamplesParams)
-	// Settings (units, language, time zone, notifications)
+	// Settings (units, language, time zone, notifications, and what the phone decided)
 	// (GET /settings)
 	GetSettings(w http.ResponseWriter, r *http.Request)
 	// Change settings
@@ -1879,7 +1932,7 @@ func (_ Unimplemented) GetSamples(w http.ResponseWriter, r *http.Request, params
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Settings (units, language, time zone, notifications)
+// Settings (units, language, time zone, notifications, and what the phone decided)
 // (GET /settings)
 func (_ Unimplemented) GetSettings(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
