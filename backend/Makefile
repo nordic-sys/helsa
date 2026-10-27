@@ -47,8 +47,9 @@ migrate: ## Apply the goose migrations (idempotent against an already bootstrapp
 # The smoke suite is not only test/smoke: internal/insights carries the
 # database-level tests of the sleep series, and internal/coverage the ones that
 # check the day grid is cut in the user's timezone — both need the same live
-# Timescale and would be meaningless without it.
-SMOKE_PKGS := ./test/smoke ./internal/insights ./internal/coverage
+# Timescale and would be meaningless without it. internal/sourcemerge holds the
+# database tests of the source merge (docs/25 F9) for the same reason.
+SMOKE_PKGS := ./test/smoke ./internal/insights ./internal/coverage ./internal/sourcemerge
 
 smoke: $(ENV_FILE) ## E2E smoke: auth -> ingest -> summary (against the running infrastructure)
 	HELSA_AUTH_DEV_MODE=true go test -tags smoke -count=1 -v $(SMOKE_PKGS)

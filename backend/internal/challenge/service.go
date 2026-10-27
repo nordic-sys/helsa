@@ -14,6 +14,7 @@ import (
 	"github.com/nordic-sys/helsa/backend/internal/api"
 	"github.com/nordic-sys/helsa/backend/internal/metrics"
 	"github.com/nordic-sys/helsa/backend/internal/pgconv"
+	"github.com/nordic-sys/helsa/backend/internal/sourcemerge"
 )
 
 // stepMetric is the only measurement the challenge is made of. The phone's
@@ -81,23 +82,16 @@ func window(m Month, loc *time.Location, now time.Time) (start, end time.Time) {
 	return start, end
 }
 
-// dailyQuery: one bucket per day, cut in the USER'S timezone with Timescale's
-// three-argument time_bucket — the same way /summary and the insight rules cut
-// theirs, so the challenge cannot disagree with the dashboard about which steps
-// belong to which day.
-const dailyQuery = `
-SELECT time_bucket('1 day'::interval, ts, $2::text) AS day,
-       sum(value) AS steps
-FROM samples
-WHERE user_id = $1 AND data_type = '` + stepMetric + `' AND ts >= $3 AND ts < $4
-GROUP BY day
-ORDER BY day`
-
+// dailySteps reads one bucket per day, cut in the USER'S timezone, through the
+// same source-merged aggregation /summary and the insight rules use
+// (sourcemerge, docs/25 F9) — so the challenge cannot disagree with the
+// dashboard about which steps belong to which day, nor count a walk once per app
+// that recorded it.
 func (s *Service) dailySteps(ctx context.Context, userID uuid.UUID, loc *time.Location,
 	start, end time.Time) ([]DayTotal, error) {
 
-	rows, err := s.pool.Query(ctx, dailyQuery, pgconv.UUID(userID), loc.String(),
-		pgconv.Timestamptz(start), pgconv.Timestamptz(end))
+	rows, err := s.pool.Query(ctx, sourcemerge.BucketQuery, pgconv.UUID(userID), []string{stepMetric},
+		"1 day", loc.String(), pgconv.Timestamptz(start), pgconv.Timestamptz(end))
 	if err != nil {
 		return nil, fmt.Errorf("challenge daily steps: %w", err)
 	}
@@ -105,9 +99,10 @@ func (s *Service) dailySteps(ctx context.Context, userID uuid.UUID, loc *time.Lo
 
 	out := []DayTotal{}
 	for rows.Next() {
+		var dataType string
 		var day pgtype.Timestamptz
-		var steps *float64
-		if err := rows.Scan(&day, &steps); err != nil {
+		var steps, avg, mn, mx *float64
+		if err := rows.Scan(&dataType, &day, &steps, &avg, &mn, &mx); err != nil {
 			return nil, fmt.Errorf("scan daily row: %w", err)
 		}
 		if steps == nil {

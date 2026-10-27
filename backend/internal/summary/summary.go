@@ -25,6 +25,7 @@ import (
 	"github.com/nordic-sys/helsa/backend/internal/api"
 	"github.com/nordic-sys/helsa/backend/internal/metrics"
 	"github.com/nordic-sys/helsa/backend/internal/pgconv"
+	"github.com/nordic-sys/helsa/backend/internal/sourcemerge"
 )
 
 const cacheTTL = 60 * time.Second
@@ -270,16 +271,7 @@ func f64to32(v *float64) *float32 {
 	return &f
 }
 
-const aggQuery = `
-SELECT data_type,
-       time_bucket($3::interval, ts, $4::text) AS bucket,
-       sum(value)  AS sum_value,
-       avg(value)  AS avg_value,
-       min(value)  AS min_value,
-       max(value)  AS max_value
-FROM samples
-WHERE user_id = $1
-  AND data_type = ANY($2::text[])
-  AND ts >= $5 AND ts < $6
-GROUP BY data_type, bucket
-ORDER BY data_type, bucket`
+// aggQuery is the shared, source-merged aggregation — the reason it lives in
+// another package is that three more readers (insights, challenge, hass) must cut
+// the same buckets the same way. See sourcemerge for the rule and why (docs/25 F9).
+const aggQuery = sourcemerge.BucketQuery

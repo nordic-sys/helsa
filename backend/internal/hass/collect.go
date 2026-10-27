@@ -14,6 +14,7 @@ import (
 	"github.com/nordic-sys/helsa/backend/internal/metrics"
 	"github.com/nordic-sys/helsa/backend/internal/pgconv"
 	"github.com/nordic-sys/helsa/backend/internal/sleep"
+	"github.com/nordic-sys/helsa/backend/internal/sourcemerge"
 )
 
 // errNoTarget: there is nobody to publish for. Not a failure — a brand-new
@@ -121,7 +122,7 @@ func collectDaily(ctx context.Context, pool *pgxpool.Pool, t target, now time.Ti
 	dayEnd := dayStart.AddDate(0, 0, 1)
 
 	var snap Snapshot
-	sums, err := dailyMetrics(ctx, pool, t.userID, dayStart, dayEnd)
+	sums, err := dailyMetrics(ctx, pool, t.userID, t.loc, dayStart, dayEnd)
 	if err != nil {
 		return Snapshot{}, err
 	}
@@ -147,18 +148,16 @@ func collectDaily(ctx context.Context, pool *pgxpool.Pool, t target, now time.Ti
 // scaling, so that a value published to Home Assistant cannot disagree with the
 // same value on the dashboard. That divergence is exactly the bug the metrics
 // package exists to prevent.
-func dailyMetrics(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID, from, to time.Time) (map[string]*float64, error) {
-	const q = `
-SELECT data_type, sum(value) AS sum_value, avg(value) AS avg_value
-FROM samples
-WHERE user_id = $1
-  AND data_type = ANY($2::text[])
-  AND ts >= $3 AND ts < $4
-GROUP BY data_type`
-
+//
+// The SQL is the shared sourcemerge.BucketQuery itself, not a copy: before
+// docs/25 F9 this was a second `sum(value)` that summed the phone's, the Watch's
+// and any third-party app's steps on top of each other — and a copy is exactly
+// how one reader would stay inflated after the others were fixed. [from, to) is
+// one local day, so a single '1 day' bucket comes back per type.
+func dailyMetrics(ctx context.Context, pool *pgxpool.Pool, userID uuid.UUID, loc *time.Location, from, to time.Time) (map[string]*float64, error) {
 	wanted := []string{"stepCount", "activeEnergy", "restingHeartRate"}
-	rows, err := pool.Query(ctx, q, pgconv.UUID(userID), wanted,
-		pgconv.Timestamptz(from), pgconv.Timestamptz(to))
+	rows, err := pool.Query(ctx, sourcemerge.BucketQuery, pgconv.UUID(userID), wanted,
+		"1 day", loc.String(), pgconv.Timestamptz(from), pgconv.Timestamptz(to))
 	if err != nil {
 		return nil, fmt.Errorf("daily aggregation: %w", err)
 	}
@@ -167,8 +166,9 @@ GROUP BY data_type`
 	out := map[string]*float64{}
 	for rows.Next() {
 		var dataType string
-		var sum, avg *float64
-		if err := rows.Scan(&dataType, &sum, &avg); err != nil {
+		var bucket time.Time
+		var sum, avg, mn, mx *float64
+		if err := rows.Scan(&dataType, &bucket, &sum, &avg, &mn, &mx); err != nil {
 			return nil, fmt.Errorf("scan aggregate: %w", err)
 		}
 		chosen := avg

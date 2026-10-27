@@ -15,6 +15,7 @@ import (
 	"github.com/nordic-sys/helsa/backend/internal/metrics"
 	"github.com/nordic-sys/helsa/backend/internal/pgconv"
 	"github.com/nordic-sys/helsa/backend/internal/sleep"
+	"github.com/nordic-sys/helsa/backend/internal/sourcemerge"
 )
 
 // LookbackDays: how many days back we read. It is the longest requirement among
@@ -90,22 +91,14 @@ func (s *Service) Compute(ctx context.Context, userID uuid.UUID, loc *time.Locat
 	return Evaluate(in, now), nil
 }
 
-// dailyQuery: a daily bucket in the user's timezone (using Timescale's
-// three-argument time_bucket), with sum AND avg — the caller picks according to
-// the metric's aggregation.
-const dailyQuery = `
-SELECT time_bucket('1 day'::interval, ts, $3::text) AS day,
-       sum(value) AS sum_value,
-       avg(value) AS avg_value
-FROM samples
-WHERE user_id = $1 AND data_type = $2 AND ts >= $4 AND ts < $5
-GROUP BY day
-ORDER BY day`
-
+// dailySeries reads one metric's day buckets through the shared, source-merged
+// aggregation (sourcemerge, docs/25 F9): a summed metric written by the phone,
+// the Watch and a third-party app counts once, not three times — otherwise a
+// "your steps are up" observation could be nothing more than a new app syncing.
 func (s *Service) dailySeries(ctx context.Context, userID uuid.UUID, dataType string,
 	loc *time.Location, start, end time.Time) (Series, error) {
-	rows, err := s.pool.Query(ctx, dailyQuery, pgconv.UUID(userID), dataType, loc.String(),
-		pgconv.Timestamptz(start), pgconv.Timestamptz(end))
+	rows, err := s.pool.Query(ctx, sourcemerge.BucketQuery, pgconv.UUID(userID), []string{dataType},
+		"1 day", loc.String(), pgconv.Timestamptz(start), pgconv.Timestamptz(end))
 	if err != nil {
 		return nil, fmt.Errorf("insights daily series (%s): %w", dataType, err)
 	}
@@ -114,9 +107,10 @@ func (s *Service) dailySeries(ctx context.Context, userID uuid.UUID, dataType st
 	useSum := metrics.Meta(dataType).Agg == metrics.Sum
 	out := Series{}
 	for rows.Next() {
+		var gotType string
 		var day pgtype.Timestamptz
-		var sum, avg *float64
-		if err := rows.Scan(&day, &sum, &avg); err != nil {
+		var sum, avg, mn, mx *float64
+		if err := rows.Scan(&gotType, &day, &sum, &avg, &mn, &mx); err != nil {
 			return nil, fmt.Errorf("scan daily row: %w", err)
 		}
 		v := avg
