@@ -9,3 +9,6 @@
 # make from any directory and impossible to undo from a public history.
 *.pmtiles
 *.osm.pbf
+
+# Agent worktrees and local Claude state
+.claude/
