@@ -5,33 +5,119 @@
  * of negative space, quiet chrome, loud data.
  *
  * Light is defined on the bare :root and dark only overrides the tokens — so there
- * is not a single colour whose only definition sits inside a media query. */
+ * is not a single colour whose only definition sits inside a media query.
+ *
+ * # The 2026-10 redesign
+ *
+ * The web now speaks the phone's language: a grey ground, white cards with large
+ * radii and no outline, dim card titles in normal case, big rounded numbers. What
+ * that needed beyond the old file:
+ *
+ *  - **Text-safe metric colours.** The brand colours are chart fills; on white,
+ *    `--helsa-move` reaches 2.6:1 and is not a colour for a number. Every
+ *    `--*-text` below is the same hue darkened to ≥ 5:1 on a card (light) and the
+ *    bright hue itself on the dark card. Measured, not guessed — the pairs and
+ *    their ratios are in the redesign commit message.
+ *  - **Semantic alert colours** — `ok`, `info`, `warn`, `error` — each a
+ *    background, a border, a strong foreground (title) and a body foreground.
+ *  - **A type scale and a spacing scale**, so a page stops choosing its own 13.5s.
+ *
+ * ⚠️ No web font. The mockups were drawn in Inter, but fetching a font from a
+ * third party on a page of health data is exactly the request this project does
+ * not make; the system stack below renders SF Pro on Apple hardware, which is
+ * what Inter imitates. */
 
 :root {
-  /* Brand + metric colours (light) */
+  /* Brand + metric colours (light) — chart fills, dots, rings */
   --helsa-fjord: #0e7e8c;
   --helsa-move: #2fb46b;
   --helsa-ember: #f2802e;
   --helsa-pulse: #e23b53;
   --helsa-nordlys: #5b5bd6;
 
+  /* The same hues as TEXT (≥ 5:1 on --surface) */
+  --fjord-text: #0b6e7a;
+  --move-text: #1f7a46;
+  --ember-text: #a8520f;
+  --pulse-text: #b8263c;
+  --nordlys-text: #4b4bc4;
+
   /* Surface (light) */
-  --bg: #f7f8f9;
-  --surface: #ffffff;
-  --surface-2: #f0f2f4;
-  --border: #dfe3e8;
-  --text: #14181c;
-  --text-dim: #5b6672;
-  --shadow: 0 1px 2px rgb(20 24 28 / 6%), 0 4px 16px rgb(20 24 28 / 4%);
+  --bg: #f2f3f5; /* the ground */
+  --surface: #ffffff; /* a card */
+  --surface-2: #f2f3f5; /* a well inside a card: a code block, a track */
+  --surface-3: #e4e5e8; /* the track of a segmented control */
+  --border: #e4e5e8;
+  --card-border: transparent; /* on the light ground a card needs no outline */
+  --border-strong: #d4d5da; /* inputs */
+  --line: #edeef0; /* hairlines between rows inside a card */
+  --text: #1c1c1e;
+  --text-2: #3a3a3f; /* secondary body copy */
+  --text-dim: #5c5c62; /* labels, hints */
+  --text-faint: #6b6b70; /* axis ticks, captions — still ≥ 4.5:1 on the ground */
+  --shadow: none;
+  --shadow-pop: 0 1px 2px rgb(20 24 28 / 8%), 0 8px 24px rgb(20 24 28 / 8%);
+
+  /* The selected/active tint: the sidebar's current page, a picked row */
+  --accent: var(--helsa-fjord);
+  --accent-text: var(--fjord-text);
+  --accent-tint: #e0f2f4;
+  --focus: #0b6e7a;
+
+  /* Semantic alerts */
+  --ok-bg: #e6f5ec;
+  --ok-border: #a9dcbd;
+  --ok-fg: #1a6b3d;
+  --info-bg: #e0f2f4;
+  --info-border: #a6d6dc;
+  --info-fg: #0b6e7a;
+  --warn-bg: #fff4e8;
+  --warn-border: #f6c99a;
+  --warn-fg: #7a3a0b;
+  --warn-body: #5c2d09;
+  --warn-icon: #9a4a0f;
+  --error-bg: #fdecee;
+  --error-border: #f3b5bf;
+  --error-fg: #8e1b2e;
+  --error-body: #5a1420;
+  --error-icon: #b4233a;
 
   /* Typography — the system font stack, with Inter as a fallback (docs/14 §3) */
   --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', Inter, system-ui,
     'Segoe UI', Roboto, sans-serif;
   --font-num: ui-rounded, 'SF Pro Rounded', var(--font);
 
-  --radius: 14px;
-  --radius-sm: 9px;
+  --fs-display: 56px; /* the one number a page is about */
+  --fs-h1: 34px;
+  --fs-h2: 20px; /* a band heading */
+  --fs-stat: 34px; /* a stat tile */
+  --fs-figure: 28px; /* a card's headline figure */
+  --fs-figure-sm: 24px; /* a tile inside a page section */
+  --fs-lead: 17px;
+  --fs-body: 15px;
+  --fs-small: 14px;
+  --fs-caption: 13px;
+  --fs-micro: 12px;
+
+  /* Spacing */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+  --sp-8: 40px;
+
+  /* Radii */
+  --radius-card: 20px;
+  --radius: 16px; /* a small tile */
+  --radius-sm: 10px; /* a button, an input, a row */
+  --radius-pill: 999px;
   --gap: 16px;
+
+  /* The minimum hit area (WCAG 2.5.5 / Apple HIG) */
+  --touch: 44px;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -42,13 +128,46 @@
     --helsa-pulse: #ff5c72;
     --helsa-nordlys: #8a86f0;
 
+    --fjord-text: #5cc8d5;
+    --move-text: #46d585;
+    --ember-text: #ff9f4d;
+    --pulse-text: #ff7a8c;
+    --nordlys-text: #a19ef5;
+
     --bg: #0e1215;
     --surface: #161b20;
     --surface-2: #1e252b;
+    --surface-3: #252d34;
     --border: #2a333b;
+    --card-border: #20282f; /* the dark ground is too close to the card to carry it alone */
+    --border-strong: #3a454f;
+    --line: #232b32;
     --text: #eef2f5;
-    --text-dim: #93a1ad;
-    --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 4px 20px rgb(0 0 0 / 25%);
+    --text-2: #cfd7de;
+    --text-dim: #9aa7b2;
+    --text-faint: #8b98a3;
+    --shadow: none;
+    --shadow-pop: 0 1px 2px rgb(0 0 0 / 40%), 0 8px 28px rgb(0 0 0 / 35%);
+
+    --accent-tint: #183339;
+    --focus: #5cc8d5;
+
+    --ok-bg: #16291f;
+    --ok-border: #2b5a3e;
+    --ok-fg: #7fe0a6;
+    --info-bg: #183339;
+    --info-border: #2b5d66;
+    --info-fg: #5cc8d5;
+    --warn-bg: #2e2216;
+    --warn-border: #6b4a26;
+    --warn-fg: #ffc58f;
+    --warn-body: #f2d9c2;
+    --warn-icon: #ffb066;
+    --error-bg: #33181d;
+    --error-border: #6e2f3a;
+    --error-fg: #ff9aa8;
+    --error-body: #f5d0d6;
+    --error-icon: #ff7a8c;
   }
 }
 
@@ -59,11 +178,44 @@
   --helsa-pulse: #ff5c72;
   --helsa-nordlys: #8a86f0;
 
+  --fjord-text: #5cc8d5;
+  --move-text: #46d585;
+  --ember-text: #ff9f4d;
+  --pulse-text: #ff7a8c;
+  --nordlys-text: #a19ef5;
+
   --bg: #0e1215;
   --surface: #161b20;
   --surface-2: #1e252b;
+  --surface-3: #252d34;
   --border: #2a333b;
+  --card-border: #20282f;
+  --border-strong: #3a454f;
+  --line: #232b32;
   --text: #eef2f5;
-  --text-dim: #93a1ad;
-  --shadow: 0 1px 2px rgb(0 0 0 / 40%), 0 4px 20px rgb(0 0 0 / 25%);
+  --text-2: #cfd7de;
+  --text-dim: #9aa7b2;
+  --text-faint: #8b98a3;
+  --shadow: none;
+  --shadow-pop: 0 1px 2px rgb(0 0 0 / 40%), 0 8px 28px rgb(0 0 0 / 35%);
+
+  --accent-tint: #183339;
+  --focus: #5cc8d5;
+
+  --ok-bg: #16291f;
+  --ok-border: #2b5a3e;
+  --ok-fg: #7fe0a6;
+  --info-bg: #183339;
+  --info-border: #2b5d66;
+  --info-fg: #5cc8d5;
+  --warn-bg: #2e2216;
+  --warn-border: #6b4a26;
+  --warn-fg: #ffc58f;
+  --warn-body: #f2d9c2;
+  --warn-icon: #ffb066;
+  --error-bg: #33181d;
+  --error-border: #6e2f3a;
+  --error-fg: #ff9aa8;
+  --error-body: #f5d0d6;
+  --error-icon: #ff7a8c;
 }

@@ -12,7 +12,7 @@ export function LanguageSwitcher() {
   const { lang, setLang, t } = useI18n()
 
   return (
-    <div className="lang-switch" role="group" aria-label={t('lang.aria')}>
+    <div className="lang-switch segmented" role="group" aria-label={t('lang.aria')}>
       {LANGS.map((l) => (
         <button
           key={l}

@@ -15,40 +15,49 @@ body {
   background: var(--bg);
   color: var(--text);
   font-family: var(--font);
-  font-size: 15px;
+  font-size: var(--fs-body);
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
 }
 
 a {
-  color: var(--helsa-fjord);
+  color: var(--accent-text);
   text-decoration: none;
 }
 a:hover {
   text-decoration: underline;
 }
 
+/* One focus ring for everything a keyboard can reach. `:focus-visible`, so a
+ * mouse click does not leave a ring behind, and an outline rather than a box
+ * shadow, so Windows High Contrast keeps it. */
+:where(a, button, input, select, textarea, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+code {
+  font-size: 0.92em;
+}
+
 /* --- Layout ---
  *
  * # One rule, at both ends
  *
- * The page was built for one width — a 232px rail and a 1180px column — and a
- * layout pinned to one width is wrong at every other one: cramped below it and
- * wasteful above it. At 1920 it left five hundred pixels of empty ground on the
- * right while the cards stayed 230px wide; at 390 the navigation was a
- * horizontal scroller showing two links out of ten. Those are the same mistake.
- *
- * So the two numbers below are the only fixed ones, and both are ranges: the
- * rail grows a little with the window, and the content column stops widening at
- * a point where a card is still a card rather than a stripe.
+ * A layout pinned to one width is wrong at every other one: cramped below it and
+ * wasteful above it. So the two numbers below are the only fixed ones, and both
+ * are ranges: the rail grows a little with the window, and the content column
+ * stops widening at a point where a card is still a card rather than a stripe.
  *
  * ⚠️ `--content-max` is a cap, not a target. Past it the column centres and the
  * remaining width becomes margin — a table 1700px wide is not denser, it is
- * further apart.
+ * further apart. 1180 is the mockups' column; at 1920 that leaves even margins
+ * either side, which is what "deliberate" looks like at that width.
  */
 :root {
-  --sidebar-w: clamp(200px, 15vw, 264px);
-  --content-max: 1440px;
+  --sidebar-w: clamp(216px, 15vw, 256px);
+  --content-max: 1180px;
 }
 
 .app {
@@ -60,18 +69,31 @@ a:hover {
 .sidebar {
   background: var(--surface);
   border-right: 1px solid var(--border);
-  padding: 20px 14px;
+  padding: 28px 16px 20px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--sp-5);
+  min-width: 0;
+  /* The rail stays put while the page scrolls: the footer (language, host, zone)
+     is otherwise a screen and a half away on a long page. */
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
 }
 
 .brand {
-  font-weight: 650;
-  font-size: 19px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px;
+  font-weight: 700;
+  font-size: 20px;
   letter-spacing: -0.01em;
-  color: var(--helsa-fjord);
-  padding: 4px 10px 16px;
+  color: var(--text);
+}
+.brand svg {
+  flex: none;
 }
 
 /* The disclosure that only exists in the bar. At rail width every link is
@@ -81,20 +103,18 @@ a:hover {
   display: none;
   align-items: center;
   gap: 7px;
-  padding: 7px 13px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
+  min-height: var(--touch);
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-strong);
   background: var(--surface);
-  color: var(--text-dim);
+  color: var(--text);
   font: inherit;
-  font-size: 13.5px;
+  font-size: var(--fs-small);
+  font-weight: 500;
   cursor: pointer;
 }
-.nav-toggle:hover {
-  color: var(--text);
-}
 .nav-toggle[aria-expanded='true'] {
-  color: var(--text);
   background: var(--surface-2);
 }
 
@@ -103,12 +123,11 @@ a:hover {
  * On a wide screen the whole structure is visible at once — that is the reason
  * the web does not copy the app's five tabs, so the headings must never be a
  * disclosure to open. In the bar the same list is a panel behind one button, and
- * the groups keep their headings inside it: the trade is one press, not a lost
- * heading. */
+ * the groups keep their headings inside it. */
 .nav-groups {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--sp-5);
   min-width: 0;
 }
 
@@ -120,20 +139,25 @@ a:hover {
 }
 
 .nav-group-title {
-  font-size: 11px;
+  font-size: var(--fs-micro);
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.07em;
-  color: var(--text-dim);
-  padding: 0 12px 4px;
+  letter-spacing: 0.06em;
+  color: var(--text-faint);
+  padding: 0 10px 6px;
   white-space: nowrap;
 }
 
 .nav-item {
-  display: block;
-  padding: 9px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  min-height: var(--touch);
+  padding: 0 10px;
   border-radius: var(--radius-sm);
-  color: var(--text-dim);
+  color: var(--text-2);
+  font-size: var(--fs-body);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -143,59 +167,86 @@ a:hover {
   color: var(--text);
 }
 .nav-item.active {
-  background: color-mix(in srgb, var(--helsa-fjord) 12%, transparent);
-  color: var(--helsa-fjord);
+  background: var(--accent-tint);
+  color: var(--accent-text);
+  font-weight: 600;
 }
 
-/* The language switcher sits at the far end of the sidebar — below the nav in
-   the rail, beside the menu button in the bar. */
-.lang-switch {
-  display: flex;
-  gap: 6px;
+/* The queue badge. Its colour is the queue's severity, and the number is always
+ * there beside it — the colour repeats the words, it never carries them alone. */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  min-width: 22px;
+  padding: 2px 8px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  line-height: 1.4;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.badge--busy {
+  background: var(--info-bg);
+  color: var(--info-fg);
+}
+.badge--stalled {
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+}
+.badge--error {
+  background: var(--error-bg);
+  color: var(--error-fg);
+}
+
+/* The footer of the rail: the language, and which server and zone this is. */
+.sidebar-foot {
   margin-top: auto;
-  padding-top: 16px;
+  padding: var(--sp-3) 10px 0;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: var(--fs-caption);
+  color: var(--text-dim);
+}
+.sidebar-host {
+  overflow-wrap: anywhere;
 }
 
 .main {
-  padding: 26px clamp(16px, 3vw, 34px) 60px;
-  max-width: var(--content-max);
+  padding: var(--sp-8) clamp(16px, 3.4vw, 48px) var(--sp-7);
+  max-width: calc(var(--content-max) + 2 * clamp(16px, 3.4vw, 48px));
   width: 100%;
-  /* Past the cap the column centres rather than staying pinned to the rail: a
-     hundred pixels of margin on one side only reads as a mistake. */
   margin-inline: auto;
   /* A grid item defaults to `min-width: auto`, so it stretches its track out to
-     its own min-content size — a wide table would therefore make the entire page
-     scroll horizontally on mobile. Content should scroll inside its own
-     .table-wrap instead. */
+     its own min-content size — a wide table would make the entire page scroll
+     sideways on a phone. Content scrolls inside its own .table-wrap instead. */
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
-.sidebar {
-  min-width: 0;
+.main > .app-footer {
+  margin-top: auto;
 }
 
 /* --- The rail becomes a bar ---
  *
- * ⚠️ **A column is the one thing it cannot stay.** Everything else was a choice
- * between two ways of losing something: a horizontal scroller (which is what
- * this was, and it hid seven links out of ten behind a gesture with no
- * affordance) or a disclosure (which hides all ten behind a button that says so).
- * The second is the honest one — nothing is unreachable without being announced —
- * and it is the only one that keeps the three headings, which are the whole
- * point of the grouping.
+ * ⚠️ **A column is the one thing it cannot stay.** A horizontal scroller hides
+ * seven links behind a gesture with no affordance; a disclosure hides all of them
+ * behind a button that says so. The second is the honest one, and the only one
+ * that keeps the three headings.
  *
  * The line is at 900 because that is where the rail costs a quarter of the
- * window. An iPad in portrait (768 or 834) is on the bar side of it deliberately:
- * that is the machine this is actually read on, and there the 232px it gives
- * back is the difference between a month of workouts fitting and scrolling.
+ * window. An iPad in portrait is on the bar side of it deliberately.
  */
 @media (max-width: 899px) {
   .app {
     grid-template-columns: 1fr;
-    /* ⚠️ `auto 1fr`, and without it the bar floats. The grid is `min-height:
-       100%`, both rows were `auto`, and a grid distributes leftover height over
-       auto rows — so on any page shorter than the window the BAR grew by half
-       the slack and its contents centred inside eighty pixels of nothing. The
-       page has to be the row that absorbs the spare height. */
+    /* ⚠️ `auto 1fr`, and without it the bar floats: a grid distributes leftover
+       height over auto rows, so on a short page the BAR grew. */
     grid-template-rows: auto 1fr;
   }
 
@@ -203,18 +254,19 @@ a:hover {
     position: sticky;
     top: 0;
     z-index: 10;
+    height: auto;
+    overflow: visible;
     border-right: 0;
     border-bottom: 1px solid var(--border);
     flex-direction: row;
     flex-wrap: wrap;
     align-items: center;
     gap: 10px;
-    padding: 10px clamp(14px, 4vw, 24px);
+    padding: 8px 16px;
   }
 
   .brand {
     padding: 0;
-    /* Everything after it is pushed to the far end of the bar. */
     margin-right: auto;
   }
 
@@ -223,21 +275,27 @@ a:hover {
     order: 3;
   }
 
-  .lang-switch {
+  .sidebar-foot {
     order: 2;
     margin: 0;
     padding: 0;
+    border: 0;
+    flex-direction: row;
+    align-items: center;
+  }
+  /* The host and zone line does not fit in a bar, and Settings repeats it. */
+  .sidebar-host {
+    display: none;
   }
 
-  /* The panel: its own row under the bar, and scrollable rather than taller than
-     the screen — a menu you cannot see the bottom of is a menu with a hidden
-     last item, which is the failure this replaced. */
+  /* The panel: its own row under the bar, scrollable rather than taller than the
+     screen — a menu you cannot see the bottom of has a hidden last item. */
   .nav-groups {
     order: 4;
     flex: 1 0 100%;
-    gap: 12px;
+    gap: var(--sp-3);
     padding: 6px 0 4px;
-    max-height: min(72vh, 520px);
+    max-height: min(72vh, 560px);
     overflow-y: auto;
   }
   .nav-groups[data-open='false'] {
@@ -245,78 +303,82 @@ a:hover {
   }
 
   .main {
-    padding: 20px clamp(14px, 4vw, 24px) 48px;
+    padding: var(--sp-6) 16px var(--sp-7);
   }
 }
 
+/* --- Type --- */
 h1 {
-  font-size: 24px;
+  font-size: clamp(28px, 2.4vw + 12px, var(--fs-h1));
+  font-weight: 700;
   letter-spacing: -0.02em;
-  margin: 0 0 4px;
+  line-height: 1.15;
+  margin: 0 0 var(--sp-1);
 }
 .subtle {
   color: var(--text-dim);
-  font-size: 13.5px;
-  margin: 0 0 22px;
+  font-size: var(--fs-caption);
+  margin: 0 0 var(--sp-6);
+}
+/* The line under a page title: a little larger than a caption. */
+.main > .subtle,
+.page-head .subtle {
+  font-size: var(--fs-body);
 }
 
 /* The measure of the running text, capped independently of the column it sits
- * in. Cards get wider with the window; a sentence does not get easier to read
- * for being 1400px long — it gets harder, because the eye loses its way back to
- * the start of the next line.
- *
- * The selector is a DIRECT child on purpose: these are the page's own
- * paragraphs, the ones that stand between the heading and the cards. A `.subtle`
- * inside a card is already as narrow as the card, and capping it there would
- * fight the layout it lives in. */
+ * in: a sentence does not get easier to read for being 1100px long. Direct
+ * children only — a `.subtle` inside a card is already as narrow as the card. */
 .main > .subtle,
 .band-hint,
 .note {
   max-width: 78ch;
 }
 
-/* --- The page's sections ---
- *
- * A page is a run of sections with air between them. This replaces the
- * `marginBottom` each page used to hang off its own wrappers, which is also how
- * two pages ended up with none: the Completeness groups and the workout detail's
- * cards sat flush against each other, sharing a border by accident.
- */
+/* A page's header: the title and its line on the left, a control or a status
+ * pill on the right, wrapping under one another when there is no room. */
+.page-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-4);
+  margin-bottom: var(--sp-7);
+}
+.page-head > div {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-1);
+  min-width: 0;
+}
+.page-head h1 {
+  margin: 0;
+}
+.page-head .subtle {
+  margin: 0;
+  max-width: 78ch;
+}
+
+/* --- The page's sections --- */
 .sections {
   display: flex;
   flex-direction: column;
   gap: var(--gap);
 }
 
-/* Sections that are only as wide as what is in them — a settings card, a family
- * of medals, a nutrient table. They share a row the moment two fit, which is
- * what stops a wide screen from being one narrow column down the middle.
- *
- * ⚠️ `align-items: start` because these have nothing to do with each other:
- * stretching a three-row table to the height of a nine-row one next to it draws
- * a box that is mostly nothing.
- */
+/* Sections only as wide as what is in them. They share a row the moment two fit.
+ * ⚠️ `align-items: start`: stretching a three-row table to a nine-row neighbour
+ * draws a box that is mostly nothing. */
 .flow {
   display: grid;
   gap: var(--gap);
   align-items: start;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr));
 }
-/* …and the same for sections carrying a table with four or more columns, which
-   need more than 380px before they start scrolling inside themselves. */
 .flow-wide {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 470px), 1fr));
 }
-
-/* ⚠️ A flowed card has a card's width, not the page's, and a heading or a label
- * that refuses to wrap is what tips such a table into scrolling: "Thresholds in
- * force then" is one unbreakable 190px word to the layout, and it pushed the
- * last column off the edge, where a clipped heading reads as broken text rather
- * than as more to scroll to.
- *
- * `normal` permits a wrap, it does not force one — so a column with room is
- * unaffected, and the exception is the figures: a number broken over two lines
- * is worse than a scrollbar, so `.num` keeps `nowrap`. */
+/* ⚠️ A flowed card has a card's width: let headings wrap, keep figures whole. */
 .flow th,
 .flow td:not(.num) {
   white-space: normal;
@@ -324,118 +386,180 @@ h1 {
 
 /* --- Bands (the Today page) ---
  *
- * A band is a heading plus the claim it makes, and then the cards it claims
- * about. Three levels of type, so the reader can tell them apart at a glance:
- * the page title is large, the band heading is normal case and full strength,
- * and a card heading is the small dimmed capitals it has always been. */
+ * A band is a heading plus the claim it makes, then the cards it claims about.
+ * Three levels of type: a large page title, a band heading at full strength, and
+ * a card title in the dim normal-case the phone uses. */
 .band {
-  margin-bottom: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: var(--sp-7);
 }
-.band > .grid + .grid {
-  margin-top: var(--gap);
-}
-
-/* The heading and the claim it makes are one block, and the rule goes under both
-   — a rule between them would read as a caption for the cards instead. */
 .band-header {
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 8px;
-  margin-bottom: 14px;
+  margin: 0;
 }
 .band-title {
-  font-size: 15px;
-  font-weight: 650;
+  font-size: var(--fs-h2);
+  font-weight: 600;
   letter-spacing: -0.01em;
   color: var(--text);
   margin: 0;
-  text-transform: none;
 }
 .band-hint {
   color: var(--text-dim);
-  font-size: 13px;
-  margin: 3px 0 0;
+  font-size: var(--fs-small);
+  margin: 2px 0 0;
 }
 
-/* --- Card + stat ---
+/* --- Grids ---
  *
- * ⚠️ **`auto-fit`, not `auto-fill`, and that one word was the empty right-hand
- * margin.** `auto-fill` lays out as many tracks as fit and leaves the unused ones
- * standing: four cards in a six-track row stayed 230px wide with five hundred
- * pixels of ground beside them. `auto-fit` collapses the empty tracks and the
- * cards take the width back.
- *
- * `min(100%, …)` on the minimum is what keeps a 230px card out of a 200px
- * container — without it the track floors at 230 and the page itself scrolls
- * sideways.
+ * ⚠️ **`auto-fit`, not `auto-fill`**: auto-fill leaves the unused tracks standing
+ * and the cards stay narrow beside an empty margin. `min(100%, …)` keeps a track
+ * minimum from exceeding a phone's width.
  */
 .grid {
   display: grid;
   gap: var(--gap);
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
 }
-
-/* A card with a heading and a handful of figures under it needs more room than
-   a single number does. */
 .grid-wide {
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
 }
+/* Two to four single figures. ⚠️ The 150 is measured: two tiles have to fit
+ * across a 390px phone, and inside a card on that phone too. */
+.grid-stats {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+}
+/* Exactly four across where the mockups draw four, two on a tablet, and one
+ * column only below 360. */
+.grid-4 {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+.grid-3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.grid-2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media (max-width: 1099px) {
+  .grid-4,
+  .grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (max-width: 640px) {
+  .grid-3,
+  .grid-2 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (max-width: 359px) {
+  .grid-4 {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
 
+/* --- Card --- */
 .card {
   background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px;
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-card);
+  padding: var(--sp-6);
   box-shadow: var(--shadow);
+  min-width: 0;
 }
-.card h2 {
-  font-size: 13px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+/* A card's title is the phone's: dim, normal case, a size below body. */
+.card h2,
+.card-title {
+  font-size: var(--fs-body);
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--text-dim);
-  margin: 0 0 10px;
+  margin: 0 0 var(--sp-3);
+}
+.card-sm {
+  padding: var(--sp-5);
+  border-radius: var(--radius-card);
+}
+.card-xs {
+  padding: var(--sp-4);
+  border-radius: var(--radius);
 }
 
-/* A summary card's heading is the way to the page it summarises: the link is the
-   heading itself rather than a "more" line under it, so there is one thing to
-   click and it is named after where it goes. */
+/* A whole card that is a link: the Today page's tiles. One thing to click, named
+ * after where it goes; the hover lifts the card rather than underlining every
+ * word in it. */
+a.card,
+.card-link-whole {
+  display: flex;
+  flex-direction: column;
+  color: inherit;
+  text-decoration: none;
+  transition: box-shadow 120ms ease, border-color 120ms ease;
+}
+a.card:hover {
+  text-decoration: none;
+  box-shadow: var(--shadow-pop);
+}
+a.card:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+  border-radius: var(--radius-card);
+}
+@media (prefers-reduced-motion: reduce) {
+  a.card {
+    transition: none;
+  }
+}
+
+/* A summary card's heading that is the way to the page (kept for the pages that
+   carry a heading link rather than a whole-card link). */
 .card-link {
   color: inherit;
   display: inline-flex;
   gap: 4px;
 }
 .card-link:hover {
-  color: var(--helsa-fjord);
+  color: var(--accent-text);
   text-decoration: none;
 }
-.card-link:focus-visible {
-  outline: 2px solid var(--helsa-fjord);
-  outline-offset: 3px;
-  border-radius: 3px;
-}
 
-/* The one figure a summary card leads with. Smaller than `.stat`, because a
-   summary card carries a heading, a figure and a short table, and a 30px number
-   in that stack reads as the card's subject rather than its headline. */
+/* The one figure a card leads with. */
 .card-headline {
   font-family: var(--font-num);
   font-variant-numeric: tabular-nums;
-  font-size: 22px;
-  font-weight: 600;
+  font-size: var(--fs-figure);
+  font-weight: 700;
   letter-spacing: -0.01em;
-  line-height: 1.2;
-  margin: 0 0 2px;
+  line-height: 1.15;
+  margin: 0 0 var(--sp-1);
+}
+.card-headline small,
+.figure small {
+  font-family: var(--font);
+  font-size: var(--fs-body);
+  font-weight: 500;
+  color: var(--text-dim);
+  margin-left: 4px;
+  letter-spacing: 0;
+}
+/* A sentence that leads a card instead of a number. */
+.card-lead {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  line-height: 1.35;
 }
 
-/* Label on the left, figure on the right — the shape most summary cards want.
-   `auto` on the second track lets a long label wrap instead of squeezing the
-   number, which is the failure mode in the language with the longer words. */
+/* Label on the left, figure on the right. `auto` on the second track lets a long
+   label wrap instead of squeezing the number. */
 .kv {
   display: grid;
   grid-template-columns: 1fr auto;
-  gap: 5px 14px;
+  gap: 6px 14px;
   margin: 0;
-  font-size: 13.5px;
+  font-size: var(--fs-small);
 }
 .kv dt {
   color: var(--text-dim);
@@ -451,47 +575,77 @@ h1 {
 .card-list {
   margin: 0;
   padding-left: 18px;
-  font-size: 13.5px;
+  font-size: var(--fs-small);
 }
 .card-list li {
   margin-bottom: 5px;
 }
 
-/* The three rings, side by side and centred, at the size a third of a row can
-   hold. */
+/* The three rings, side by side, a third of the card each. */
 .rings {
-  display: flex;
-  gap: 14px;
-  flex-wrap: wrap;
-  justify-content: center;
-  padding: 4px 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-2);
+  text-align: center;
 }
 
-/* A stat headline wraps to two lines in one language and fits on one in another
-   — that is a fact of translation, not a design choice. Pinning the number to
-   the bottom of the card keeps a row of stats aligned either way (grid items
-   already stretch to equal height). */
+/* --- Stat tile --- */
 .stat-card {
   display: flex;
   flex-direction: column;
+  gap: 6px;
+  padding: var(--sp-5);
 }
+.stat-card h2 {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+}
+/* A headline wraps in one language and not the other: pinning the number to the
+   bottom keeps a row of tiles aligned either way. */
 .stat-card .stat {
   margin-top: auto;
 }
-
 .stat {
   font-family: var(--font-num);
   font-variant-numeric: tabular-nums;
-  font-size: 30px;
-  font-weight: 600;
+  font-size: var(--fs-figure);
+  font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.1;
+  overflow-wrap: anywhere;
 }
 .stat small {
-  font-size: 14px;
+  font-family: var(--font);
+  font-size: var(--fs-small);
   font-weight: 500;
   color: var(--text-dim);
   margin-left: 4px;
+  letter-spacing: 0;
+}
+.stat-big .stat {
+  font-size: var(--fs-stat);
+}
+.stat-note {
+  font-size: var(--fs-caption);
+  color: var(--text-dim);
+  margin: 0;
+}
+/* A measurement that did not arrive: the dash is dim, so it does not read as a
+   number standing in the same place a number would. */
+.stat.is-missing {
+  color: var(--text-faint);
+}
+
+/* The coloured dot beside a metric's name: the colour is the metric's identity,
+   and the number beside it stays in text colour so it can be read. */
+.dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
 }
 
 /* --- States --- */
@@ -499,8 +653,8 @@ h1 {
   padding: 34px 18px;
   text-align: center;
   color: var(--text-dim);
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-card);
   background: var(--surface);
 }
 .state strong {
@@ -508,10 +662,13 @@ h1 {
   color: var(--text);
   margin-bottom: 4px;
 }
-
 .error {
-  border-color: color-mix(in srgb, var(--helsa-pulse) 40%, var(--border));
-  background: color-mix(in srgb, var(--helsa-pulse) 7%, var(--surface));
+  border-color: var(--error-border);
+  background: var(--error-bg);
+  color: var(--error-body);
+}
+.error strong {
+  color: var(--error-fg);
 }
 
 .skeleton {
@@ -537,288 +694,507 @@ h1 {
   }
 }
 
-/* --- Charts ---
+/* --- Alerts ---
  *
- * A chart is wide by nature: it never flows into a column beside something else,
- * and its height follows the width it was given rather than a number typed once
- * for a laptop. `ResponsiveContainer` needs a definite height from its parent,
- * and a `clamp` is definite — so this is the whole mechanism.
- *
- * Tied to the VIEWPORT width and not the container's: `cqw` would be the honest
- * unit, but the containers here are not query containers and making them so
- * would change what `%` means inside every card. The two agree closely enough,
- * because a chart always has the page's full column.
- */
-.chart {
-  width: 100%;
-  height: clamp(240px, 18vw, 360px);
+ * The page-level warnings: an icon, a title in the strong foreground, a body in
+ * the softer one. The tone is the severity — `error` is data that will not reach
+ * the database without action, `warn` is a stall, `info` is a fact worth
+ * knowing — and the words always say it too. */
+.alert {
+  display: flex;
+  gap: var(--sp-4);
+  align-items: flex-start;
+  padding: var(--sp-5) var(--sp-6);
+  border-radius: var(--radius-card);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  text-align: left;
 }
-/* The shorter ones — a stacked night, a month of days, one session's pulse. */
-.chart-sm {
-  width: 100%;
-  height: clamp(200px, 14vw, 290px);
+.alert > svg {
+  flex: none;
+  margin-top: 1px;
+}
+.alert-body {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.alert h2,
+.alert-title {
+  margin: 0;
+  font-size: var(--fs-lead);
+  font-weight: 600;
+  color: var(--text);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.alert p {
+  margin: 0;
+  font-size: var(--fs-small);
+}
+.alert .alert-tech {
+  font-size: var(--fs-caption);
+}
+.alert pre,
+.alert code.block {
+  display: block;
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-caption);
+  overflow-x: auto;
+  white-space: pre;
+}
+.alert--error {
+  background: var(--error-bg);
+  border-color: var(--error-border);
+  color: var(--error-body);
+}
+.alert--error .alert-title {
+  color: var(--error-fg);
+}
+.alert--error > svg {
+  color: var(--error-icon);
+}
+.alert--warn {
+  background: var(--warn-bg);
+  border-color: var(--warn-border);
+  color: var(--warn-body);
+}
+.alert--warn .alert-title {
+  color: var(--warn-fg);
+}
+.alert--warn > svg {
+  color: var(--warn-icon);
+}
+.alert--info {
+  background: var(--info-bg);
+  border-color: var(--info-border);
+  color: var(--text-2);
+}
+.alert--info .alert-title {
+  color: var(--info-fg);
+}
+.alert--info > svg {
+  color: var(--info-fg);
+}
+/* "No numbers, not zero": dashed, uncoloured — absence is not an alarm colour. */
+.alert--unknown {
+  border-style: dashed;
+  border-color: var(--border-strong);
+  color: var(--text-dim);
 }
 
-/* --- Table (workouts, sleep) --- */
+/* --- Charts ---
+ *
+ * A chart's height follows the width it was given. `ResponsiveContainer` needs a
+ * definite height from its parent, and a `clamp` is definite. */
+.chart {
+  width: 100%;
+  height: clamp(240px, 20vw, 320px);
+}
+.chart-sm {
+  width: 100%;
+  height: clamp(160px, 12vw, 220px);
+}
+
+/* --- Table --- */
 .table-wrap {
   overflow-x: auto;
 }
 table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 14px;
+  font-size: var(--fs-small);
 }
 th,
 td {
   text-align: left;
-  padding: 10px 12px;
-  border-bottom: 1px solid var(--border);
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--line);
   white-space: nowrap;
 }
 th {
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: var(--fs-caption);
   color: var(--text-dim);
-  font-weight: 600;
+  font-weight: 500;
 }
 td.num {
   font-variant-numeric: tabular-nums;
 }
 
-/* --- Controls --- */
+/* --- Controls ---
+ *
+ * Two kinds of toggle. A **segmented control** (`.segmented`) is one choice out
+ * of a few — a period, a place — drawn as the phone draws it: a grey track with
+ * a white thumb on the chosen one. A **pill** (`button.seg` on its own) is an
+ * independent on/off — a filter chip — tinted when on. Both carry the state in
+ * `aria-pressed`, so the CSS styles what a screen reader already announces. */
 .controls {
   display: flex;
-  gap: 8px;
+  gap: var(--sp-2);
   flex-wrap: wrap;
-  margin-bottom: 18px;
+  margin-bottom: var(--sp-4);
 }
 button.seg {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
   background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text-dim);
-  padding: 7px 13px;
-  border-radius: 999px;
+  border: 1px solid var(--border-strong);
+  color: var(--text-2);
+  padding: 0 14px;
+  border-radius: var(--radius-pill);
   font: inherit;
-  font-size: 13.5px;
+  font-size: var(--fs-small);
+  font-weight: 500;
   cursor: pointer;
+  position: relative;
+}
+/* 36px drawn, 44px hit: the extra is an invisible margin of the button itself. */
+button.seg::after {
+  content: '';
+  position: absolute;
+  inset: -4px 0;
 }
 button.seg:hover {
   color: var(--text);
+  background: var(--surface-2);
 }
 button.seg[aria-pressed='true'] {
-  background: var(--helsa-fjord);
-  border-color: var(--helsa-fjord);
-  color: #fff;
+  background: var(--accent-tint);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--accent-text);
+  font-weight: 600;
 }
 
-/* --- The period stepper (Trends) ---
- *
- * Arrows at the edges, the window between them: its name, and under it the days
- * it actually covers. The middle column takes all the free width so the name
- * stays put as you step — a label that shifts sideways every tap is harder to
- * read than one that changes in place.
- */
+.segmented {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: var(--surface-3);
+  margin: 0;
+}
+.segmented button.seg {
+  min-width: 64px;
+  min-height: 36px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-2);
+}
+.segmented button.seg:hover {
+  background: color-mix(in srgb, var(--surface) 50%, transparent);
+}
+.segmented button.seg[aria-pressed='true'] {
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 1px 2px rgb(0 0 0 / 12%);
+  font-weight: 600;
+}
+@media (max-width: 480px) {
+  .segmented button.seg {
+    min-width: 0;
+    padding: 0 10px;
+  }
+}
+
+/* A plain button: the actions a page offers (retry, clear, confirm). */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  min-height: var(--touch);
+  padding: 0 18px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+.btn:disabled {
+  opacity: 0.55;
+  cursor: progress;
+}
+.btn-primary {
+  background: var(--fjord-text);
+  border-color: var(--fjord-text);
+  color: var(--surface);
+}
+.btn-primary:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--fjord-text) 85%, var(--text));
+}
+.btn-danger {
+  background: var(--error-icon);
+  border-color: var(--error-icon);
+  color: var(--surface);
+}
+.btn-danger:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--error-icon) 85%, var(--text));
+}
+.btn-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+}
+
+/* A square icon button — the period arrows. */
+button.step,
+.icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--touch);
+  height: var(--touch);
+  flex: none;
+  background: var(--surface-2);
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--accent-text);
+  cursor: pointer;
+}
+button.step:hover:not(:disabled) {
+  background: var(--surface-3);
+}
+/* ⚠️ Visibly dead, not hidden: the edge of the data is something to feel. */
+button.step:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+/* --- The period stepper (Trends) --- */
 .stepper {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin: -6px 0 16px;
-  /* Capped and centred rather than stretched across the content column: on a
-   * wide screen the two arrows would end up a thousand pixels apart, which is a
-   * pair of controls only in the markup. */
-  max-width: 460px;
+  gap: var(--sp-2);
+  min-width: 0;
 }
 .stepper-label {
   flex: 1 1 auto;
   min-width: 0;
   display: flex;
   flex-direction: column;
-  align-items: center;
   gap: 1px;
-  text-align: center;
-  /* Digits of the same width, so the dates do not jitter between two windows. */
   font-variant-numeric: tabular-nums;
 }
 .stepper-label strong {
-  font-size: 14px;
+  font-size: var(--fs-lead);
   font-weight: 600;
 }
 .stepper-label .subtle {
   margin: 0;
-  font-size: 12.5px;
-}
-button.step {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 34px;
-  height: 34px;
-  flex: none;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  color: var(--text-dim);
-  cursor: pointer;
-}
-button.step:hover:not(:disabled) {
-  color: var(--text);
-}
-/* ⚠️ Visibly dead, not hidden: the edge of the data is something to feel, not
- * something to discover by a tap that does nothing. */
-button.step:disabled {
-  opacity: 0.35;
-  cursor: default;
+  font-size: var(--fs-caption);
 }
 
-/* A button that reads as a link — for "Back to now", which is an action but not
- * a control the eye should have to step over on its way to the chart. */
-button.linkish {
+/* A button that reads as a link — "Back to now", "Clear the filter". */
+button.linkish,
+a.linkish {
   background: none;
   border: 0;
-  padding: 2px 0 0;
+  padding: 2px 0;
   font: inherit;
-  font-size: 12.5px;
-  color: var(--helsa-fjord);
+  font-size: var(--fs-caption);
+  font-weight: 500;
+  color: var(--accent-text);
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 2px;
+  min-height: 24px;
 }
 
 .field {
   flex: 1 1 220px;
   min-width: 0;
-  padding: 7px 12px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
+  min-height: 40px;
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-strong);
   background: var(--surface);
   color: var(--text);
   font: inherit;
-  font-size: 13.5px;
+  font-size: var(--fs-small);
 }
-.field:focus-visible {
-  outline: 2px solid var(--helsa-fjord);
-  outline-offset: 1px;
-}
-
-/* --- Metric picker (~100 types) --- */
-.picker-toolbar {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  align-items: center;
-  margin-bottom: 10px;
+select.field {
+  padding-right: 8px;
 }
 
-/* A hundred types in a scroller: it grows with the window, because the reason to
-   keep it short is the screen behind it, not the list. */
-.picker-list {
-  max-height: clamp(240px, 34vh, 460px);
-  overflow-y: auto;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  background: var(--surface-2);
-  padding-bottom: 4px;
+/* --- The metric picker, as a side panel (Trends) --- */
+.trends-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 280px) minmax(0, 1fr);
+  gap: var(--sp-6);
+  align-items: start;
 }
-
-/* Groups side by side once there is room for them. A picker row is a dot, a
-   name, a glyph and a unit; in a 1300px column the unit ends up half a screen
-   from the name it belongs to. Two columns of groups halve that distance and
-   halve the scrolling.
-
-   ⚠️ Grid over `columns: 2`: multi-column inside an `overflow-y` scroller lays
-   its columns out sideways, so the list would have scrolled in the wrong
-   direction. The children are one element per group, which is exactly what a
-   grid cell wants. */
-@media (min-width: 1180px) {
-  .picker-list {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    align-items: start;
-    align-content: start;
+@media (max-width: 1099px) {
+  .trends-layout {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
+.picker-panel {
+  padding: var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  position: sticky;
+  top: var(--sp-4);
+}
+@media (max-width: 1099px) {
+  .picker-panel {
+    position: static;
+  }
+}
+.picker-search {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 8px 4px;
+  font-size: var(--fs-caption);
+  color: var(--text-dim);
+}
+.picker-search .field {
+  flex: none;
+  width: 100%;
+}
+.picker-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--touch);
+  padding: 0 8px;
+  font-size: var(--fs-small);
+  color: var(--text-2);
+  cursor: pointer;
+}
+.picker-check input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  margin: 0;
+}
+.picker-groups {
+  padding: 0 8px 8px;
+}
+.picker-groups select {
+  width: 100%;
+  flex: none;
+}
 
+/* The list itself: tall enough to browse, short enough that the chart beside it
+   stays in view. */
+.picker-list {
+  max-height: min(62vh, 640px);
+  overflow-y: auto;
+  padding-bottom: 4px;
+}
+@media (max-width: 1099px) {
+  .picker-list {
+    max-height: clamp(220px, 40vh, 420px);
+  }
+}
 .picker-group {
   position: sticky;
   top: 0;
-  background: var(--surface-2);
-  padding: 9px 12px 4px;
-  font-size: 11.5px;
+  z-index: 1;
+  background: var(--surface);
+  padding: 10px 10px 4px;
+  font-size: var(--fs-micro);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: var(--text-dim);
+  color: var(--text-faint);
 }
-
 .picker-item {
   display: flex;
   align-items: center;
-  gap: 9px;
+  gap: 10px;
   width: 100%;
+  min-height: var(--touch);
   text-align: left;
   background: none;
   border: 0;
-  border-radius: 7px;
-  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  padding: 0 10px;
   font: inherit;
-  font-size: 14px;
+  font-size: var(--fs-body);
   color: var(--text);
   cursor: pointer;
 }
 .picker-item:hover {
-  background: color-mix(in srgb, var(--helsa-fjord) 12%, transparent);
+  background: var(--surface-2);
 }
 .picker-item[aria-pressed='true'] {
-  background: var(--helsa-fjord);
-  color: #fff;
-}
-.picker-item[aria-pressed='true'] .picker-unit,
-.picker-item[aria-pressed='true'] .picker-agg {
-  color: rgb(255 255 255 / 78%);
+  background: var(--accent-tint);
+  color: var(--accent-text);
+  font-weight: 600;
 }
 .picker-item.dim {
-  opacity: 0.45;
+  color: var(--text-faint);
 }
-
+.picker-item > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
 .picker-dot {
   display: inline-block;
-  width: 9px;
-  height: 9px;
-  border-radius: 3px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
   flex: none;
 }
 .picker-agg {
-  margin-left: auto;
   color: var(--text-dim);
-  font-size: 12px;
+  font-size: var(--fs-micro);
 }
 .picker-unit {
-  width: 76px;
+  min-width: 44px;
   text-align: right;
   color: var(--text-dim);
-  font-size: 12.5px;
+  font-size: var(--fs-caption);
   font-variant-numeric: tabular-nums;
+  font-weight: 400;
+}
+.picker-foot {
+  margin: 6px 8px 4px;
 }
 
 /* --- Legend + proportion bar --- */
 .legend {
   display: flex;
-  gap: 16px;
+  gap: 8px 18px;
   flex-wrap: wrap;
-  margin-top: 12px;
+  margin-top: var(--sp-3);
 }
 .legend-item {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--fs-caption);
   color: var(--text-dim);
 }
 .swatch {
   width: 10px;
   height: 10px;
   border-radius: 3px;
+  flex: none;
+}
+.swatch-line {
+  width: 16px;
+  border-top: 2px dashed currentColor;
   flex: none;
 }
 
@@ -831,55 +1207,51 @@ button.linkish {
   background: var(--surface-2);
 }
 
+/* A progress bar — only where the denominator is a real number the API sent. */
+.bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--surface-2);
+  overflow: hidden;
+}
+.bar > span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+}
+
 /* --- Note box (not an error, but it needs a caveat) --- */
 .note {
-  border: 1px solid color-mix(in srgb, var(--helsa-ember) 45%, var(--border));
-  background: color-mix(in srgb, var(--helsa-ember) 8%, var(--surface));
+  border: 1px solid var(--warn-border);
+  background: var(--warn-bg);
   border-radius: var(--radius);
-  padding: 12px 15px;
-  font-size: 13.5px;
-  color: var(--text-dim);
-  margin-bottom: 16px;
+  padding: 12px 16px;
+  font-size: var(--fs-small);
+  color: var(--warn-body);
+  margin-bottom: var(--sp-4);
 }
 .note strong {
   display: block;
-  color: var(--text);
+  color: var(--warn-fg);
   margin-bottom: 3px;
 }
 
 /* --- Data completeness --- */
-
-/* The metric cell is a ROW header (`<th scope="row">`), which is what lets a
-   screen reader announce "Steps · There is data" instead of reading six loose
-   cells. But the table's `th` rule is written for COLUMN headers — small caps,
-   letter-spaced, dimmed — and it turned all 120 metric names into shouting. */
+/* The metric cell is a ROW header, which a screen reader needs; the column-header
+   look would turn 120 metric names into shouting. */
 .cov-metric {
   text-transform: none;
   letter-spacing: normal;
-  font-size: 14px;
+  font-size: var(--fs-small);
   font-weight: 500;
   color: var(--text);
 }
-
 .cov-headline {
-  font-size: 15px;
-  margin: 0 0 16px;
+  font-size: var(--fs-body);
+  margin: 0 0 var(--sp-4);
   max-width: 78ch;
 }
-
-/* --- Ingest queue ---
- * The alert reuses `.state.error` (the same red the error state has) but reads
- * as a paragraph rather than an empty-state placeholder: left-aligned and tight. */
-.ingest-alert {
-  text-align: left;
-  padding: 14px 16px;
-  margin-bottom: 16px;
-  max-width: 78ch;
-}
-
-/* The state dot. `never_arrived` is grey and not red on purpose: most of the
-   catalogue is empty for any given person, and sixty-eight red rows would drown
-   the two that are actually worth looking at. */
+/* The state dot. `never_arrived` is grey, not red, on purpose. */
 .cov-dot {
   display: inline-block;
   width: 8px;
@@ -888,21 +1260,16 @@ button.linkish {
   margin-right: 7px;
   vertical-align: 1px;
 }
-
-/* A type that arrived without being in the catalogue — from a newer iOS release,
-   most likely. Listed rather than dropped, and marked so that it does not read
-   as one of ours. */
 .cov-flag {
   margin-left: 7px;
   padding: 1px 6px;
   border-radius: 5px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
   color: var(--text-dim);
   font-size: 11px;
   font-weight: 500;
   white-space: nowrap;
 }
-
 .cov-source {
   display: inline-flex;
   align-items: baseline;
@@ -910,39 +1277,175 @@ button.linkish {
   margin-right: 10px;
 }
 .cov-source code {
-  font-size: 12px;
+  font-size: var(--fs-micro);
   color: var(--text);
 }
 .cov-source em {
   font-style: normal;
-  font-size: 11.5px;
+  font-size: var(--fs-micro);
   color: var(--text-dim);
 }
-
 .cov-gaps {
   margin: 0;
   padding-left: 18px;
-  font-size: 14px;
+  font-size: var(--fs-small);
 }
 .cov-gaps li {
   margin-bottom: 5px;
 }
 
-/* --- The workout filter ---
- *
- * A row of dropdowns that wraps, rather than a sheet behind a button: the
- * browser has the width the phone did not, so every restriction can be visible
- * at once instead of hiding behind a badge.
- */
+/* --- The Today page's header pill: the queue, in one sentence --- */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: var(--touch);
+  padding: 0 16px;
+  border-radius: var(--radius-pill);
+  font-size: var(--fs-small);
+  font-weight: 500;
+  text-decoration: none;
+  border: 1px solid transparent;
+}
+.pill:hover {
+  text-decoration: none;
+  filter: brightness(0.97);
+}
+.pill .dot {
+  width: 8px;
+  height: 8px;
+}
+.pill--ok {
+  background: var(--ok-bg);
+  color: var(--ok-fg);
+}
+.pill--ok .dot {
+  background: var(--helsa-move);
+}
+.pill--busy {
+  background: var(--info-bg);
+  color: var(--info-fg);
+}
+.pill--busy .dot {
+  background: var(--helsa-fjord);
+}
+.pill--stalled {
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+}
+.pill--stalled .dot {
+  background: var(--helsa-ember);
+}
+.pill--error {
+  background: var(--error-bg);
+  color: var(--error-fg);
+}
+.pill--error .dot {
+  background: var(--helsa-pulse);
+}
+.tone-busy {
+  color: var(--info-fg);
+}
+.tone-stalled {
+  color: var(--warn-fg);
+}
+.tone-error {
+  color: var(--error-fg);
+}
+
+/* --- The workout filter --- */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+.filter-inline {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  font-size: var(--fs-small);
+  color: var(--text-dim);
+}
+.filter-inline .field {
+  flex: none;
+  width: auto;
+}
+.filter-count {
+  margin-left: auto;
+  font-size: var(--fs-small);
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+}
+/* The type picker: looks like a select, opens a list of checkboxes, because the
+   type filter takes several at once and a <select multiple> is unusable. */
+.multi {
+  position: relative;
+}
+.multi-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 40px;
+  max-width: 280px;
+  padding: 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-small);
+  cursor: pointer;
+}
+.multi-btn span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.multi-panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 6px);
+  left: 0;
+  min-width: 240px;
+  max-height: 360px;
+  overflow-y: auto;
+  padding: 8px;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+}
+.multi-panel label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--touch);
+  padding: 0 8px;
+  border-radius: var(--radius-sm);
+  font-size: var(--fs-small);
+  cursor: pointer;
+}
+.multi-panel label:hover {
+  background: var(--surface-2);
+}
+.multi-panel input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--accent);
+  margin: 0;
+}
+.more-filters {
+  margin-top: var(--sp-3);
+}
 .filter-row {
   display: flex;
   flex-wrap: wrap;
   gap: 10px 14px;
-  margin-top: 10px;
 }
-/* The six of them share whatever the row has: they used to be six 150px
-   dropdowns huddled on the left of a 1100px card. `1 1 170px` lets them grow
-   into the width and drop to two or three across when there is none. */
 .filter-field {
   display: flex;
   flex-direction: column;
@@ -952,41 +1455,52 @@ button.linkish {
 }
 .filter-field .subtle {
   margin: 0;
-  font-size: 12px;
+  font-size: var(--fs-micro);
 }
 .filter-field .field {
   flex: 0 0 auto;
-  min-width: 0;
   width: 100%;
 }
-.filter-summary {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  margin-top: 12px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
+
+/* --- Workouts: master and detail ---
+ *
+ * List left, the opened session right — on a screen wide enough to hold both
+ * without either turning into a stripe. Below that the list is the page and a
+ * row opens the session's own route, as it always has. */
+.master-detail {
+  display: grid;
+  grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
+  gap: var(--sp-6);
+  align-items: start;
 }
-.filter-summary .subtle {
-  margin: 0;
-  font-variant-numeric: tabular-nums;
+.master-detail > .wo-list {
+  position: sticky;
+  top: var(--sp-4);
+  max-height: calc(100vh - 2 * var(--sp-4));
+  overflow-y: auto;
+  /* The sticky list scrolls on its own; keep its focus rings inside. */
+  padding: 3px;
+  margin: -3px;
+}
+.wo-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  min-width: 0;
 }
 
-/* --- A month of workouts ---
- *
- * The header is the whole clickable area, and it carries the count and the
- * total: a closed month has to say something, or opening every one of them is
- * the only way to find anything.
- */
+/* --- A month of workouts --- */
 .card.month {
   padding: 0;
+  overflow: hidden;
 }
 .month-head {
   display: flex;
   align-items: center;
   gap: 9px;
   width: 100%;
-  padding: 13px 16px;
+  min-height: 52px;
+  padding: 0 20px;
   background: none;
   border: 0;
   color: var(--text);
@@ -998,52 +1512,116 @@ button.linkish {
   background: var(--surface-2);
 }
 .month-head:focus-visible {
-  outline: 2px solid var(--helsa-fjord);
-  outline-offset: -2px;
+  outline-offset: -3px;
 }
 .month-head strong {
-  font-size: 15px;
+  font-size: var(--fs-lead);
   font-weight: 600;
 }
 .month-summary {
   margin: 0 0 0 auto;
-  font-size: 13px;
+  font-size: var(--fs-small);
   font-variant-numeric: tabular-nums;
+  text-align: right;
 }
-/* On a phone the count and the total do not fit beside the month's name, and
-   squeezing them there is what turns "12 sessions · 9 h 40 min" into a column of
-   single words. They drop to a second line, indented past the chevron so they
-   still read as belonging to the name above. */
 @media (max-width: 560px) {
   .month-head {
     flex-wrap: wrap;
+    padding: 10px 16px;
   }
   .month-summary {
     flex: 1 0 100%;
     margin: 2px 0 0 23px;
+    text-align: left;
   }
 }
-.card.month .table-wrap {
-  margin-top: 0 !important;
-  border-top: 1px solid var(--border);
+.wo-rows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
 }
-/* The folded-row caption belongs to the row above it, so the line between the
- * two is dropped and the caption sits under the first column. */
-.fold-caption td {
-  padding: 0 12px 9px;
-  border-bottom: 1px solid var(--border);
-  font-size: 12.5px;
-  white-space: normal;
+.wo-rows > li {
+  border-top: 1px solid var(--line);
 }
-tbody tr:has(+ .fold-caption) td {
-  border-bottom: 0;
+.wo-row {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  width: 100%;
+  min-height: 64px;
+  padding: 12px 20px;
+  border: 0;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+}
+.wo-row:hover {
+  background: var(--surface-2);
+  text-decoration: none;
+}
+.wo-row:focus-visible {
+  outline-offset: -3px;
+}
+.wo-row[aria-pressed='true'],
+.wo-row[aria-current='true'] {
+  background: var(--accent-tint);
+}
+.wo-icon {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  border-radius: 12px;
+  background: var(--accent-tint);
+  color: var(--helsa-fjord);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.wo-icon-lg {
+  width: 44px;
+  height: 44px;
+  flex-basis: 44px;
+}
+.wo-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.wo-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 16px;
+  font-weight: 600;
+}
+.wo-name svg {
+  color: var(--text-faint);
+  flex: none;
+}
+.wo-line {
+  font-size: var(--fs-small);
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.wo-date {
+  font-size: var(--fs-caption);
+  color: var(--text-faint);
+}
+.dup-chip {
+  flex: none;
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  color: var(--accent-text);
+  background: var(--accent-tint);
+  padding: 3px 8px;
+  border-radius: var(--radius-pill);
 }
 
-/* --- The nights list (Sleep) ---
- *
- * One row a night, and the row is a button: it changes what the card above
- * shows, which makes it a control however plain it looks.
- */
+/* --- The nights list (Sleep) --- */
 .night-list {
   display: flex;
   flex-direction: column;
@@ -1053,14 +1631,15 @@ tbody tr:has(+ .fold-caption) td {
   align-items: center;
   gap: 12px;
   width: 100%;
-  padding: 7px 8px;
+  min-height: var(--touch);
+  padding: 7px 10px;
   background: none;
   border: 0;
-  border-bottom: 1px solid var(--border);
-  border-radius: 8px;
+  border-bottom: 1px solid var(--line);
+  border-radius: var(--radius-sm);
   color: var(--text);
   font: inherit;
-  font-size: 13.5px;
+  font-size: var(--fs-small);
   text-align: left;
   cursor: pointer;
 }
@@ -1071,11 +1650,10 @@ tbody tr:has(+ .fold-caption) td {
   background: var(--surface-2);
 }
 .night-row:focus-visible {
-  outline: 2px solid var(--helsa-fjord);
   outline-offset: -2px;
 }
 .night-row[aria-pressed='true'] {
-  background: color-mix(in srgb, var(--helsa-fjord) 16%, transparent);
+  background: var(--accent-tint);
 }
 .night-date {
   flex: 0 0 auto;
@@ -1098,14 +1676,8 @@ tbody tr:has(+ .fold-caption) td {
   flex: 1 1 auto;
   min-width: 60px;
 }
-
-/* ⚠️ The five fixed minimums add up to 384px before the padding, so on a 390px
- * phone this row was what made the whole PAGE scroll sideways — the one place
- * where `.table-wrap` could not catch it, because it is not a table. Below that
- * the row folds: the night and its length on the first line, the efficiency and
- * the awakenings at the end of it, and the stage bar across the second. Nothing
- * is dropped; a row that hid two of its five figures on a phone would be a
- * different row, not a narrower one. */
+/* ⚠️ The five fixed minimums add up to 384px — on a 390 phone this row made the
+ * whole PAGE scroll. Below 560 it folds onto two lines; nothing is dropped. */
 @media (max-width: 560px) {
   .night-row {
     flex-wrap: wrap;
@@ -1127,86 +1699,89 @@ tbody tr:has(+ .fold-caption) td {
   }
 }
 
-/* The proportional stage bar. Shared by the night card and the rows, so that a
- * strip in a row means exactly what the strip in the card above it means. */
+/* The proportional stage bar, shared by the night card, the rows and Today. */
 .hypnogram {
   display: flex;
+  gap: 2px;
   border-radius: 5px;
   overflow: hidden;
   background: var(--surface-2);
 }
+.stage-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--fs-caption);
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+.stage-list li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
 
-/* --- One workout, opened ---
- *
- * The row that opens it. It is the activity cell rather than the whole row: a
- * `<tr>` is not a link, and the usual fakes (an overlay, a click handler on the
- * row) cost the keyboard its focus order.
- */
+/* --- One workout, opened --- */
 .row-link {
   color: var(--text);
   text-decoration: none;
-  border-bottom: 1px solid color-mix(in srgb, var(--helsa-fjord) 45%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
 }
 .row-link:hover {
-  color: var(--helsa-fjord);
-  border-bottom-color: var(--helsa-fjord);
-}
-.row-link:focus-visible {
-  outline: 2px solid var(--helsa-fjord);
-  outline-offset: 2px;
-  border-radius: 3px;
+  color: var(--accent-text);
+  border-bottom-color: var(--accent);
+  text-decoration: none;
 }
 
-/* A row of single figures — the session's numbers, the day's four, the night's
- * four. Narrower tracks than `.grid`, because a label and a number need less
- * room than a card with a table in it; the phone's own grid adapts from 108pt
- * for the same reason.
- *
- * ⚠️ The 150 is measured, not chosen. Two constraints meet at it: two tiles have
- * to fit across a 390px phone (at `.grid`'s 230 a phone got ONE tile a row, a
- * short label and a big number with half the screen empty beside it), and they
- * have to fit inside a CARD on that phone too — the streak's three figures sit
- * within another card, which costs a further 32px of padding. */
-.grid-stats {
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+.wo-header {
+  display: flex;
+  gap: var(--sp-4);
+  align-items: center;
+}
+.wo-header h1,
+.wo-header h2 {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  color: var(--text);
+  letter-spacing: -0.01em;
+}
+.wo-header p {
+  margin: 2px 0 0;
+  font-size: var(--fs-small);
+  color: var(--text-dim);
 }
 
-/* The route, drawn by us. ⛔ Whatever is under it comes from OUR server: the
- * tiles are built on Bob's machine and served by the same Caddy that serves this
- * page, because asking a tile host for the streets somebody ran on tells the tile
- * host where they were. Where no region is installed, this is the whole drawing —
- * and that is a supported state, not a degraded one. */
+/* The route, drawn by us. ⛔ Whatever is under it comes from OUR server; where no
+ * map is switched on, this drawing is the whole thing — a supported state. */
 .route {
   display: block;
   width: 100%;
   height: auto;
   background: var(--surface-2);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
 }
-/* The frame stacks the two. ⚠️ The SVG keeps `position: static` and therefore
- * keeps setting the height — the viewBox is the only thing that knows the aspect
- * ratio, and an absolutely positioned drawing would collapse the frame to zero
- * and take the map with it. The map is the one that goes absolute. */
+/* ⚠️ The SVG keeps `position: static` and therefore keeps setting the height —
+ * the viewBox is the only thing that knows the aspect ratio. The map goes
+ * absolute. */
 .route-frame {
   position: relative;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
   overflow: hidden;
-  /* The stacking context that keeps the map from painting over the card. */
   isolation: isolate;
 }
 .route-frame .route {
   position: relative;
   z-index: 1;
 }
-/* With a map underneath, the drawing's own backdrop has to get out of the way —
- * it is opaque, and it would hide exactly what it was added to reveal. */
 .route-frame--mapped .route {
   background: transparent;
   border-radius: 0;
 }
-/* The three map-source options. A radio list rather than a dropdown on purpose:
- * the consequence of each choice has to be readable WITHOUT picking it, and a
- * <select> hides two thirds of the text behind an interaction. */
 .map-choices {
   display: flex;
   flex-direction: column;
@@ -1217,18 +1792,19 @@ tbody tr:has(+ .fold-caption) td {
   display: flex;
   gap: 10px;
   align-items: flex-start;
-  padding: 10px 12px;
-  border: 1px solid var(--border);
+  padding: 12px 14px;
+  border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   cursor: pointer;
 }
 .map-choice.is-chosen {
-  border-color: var(--helsa-fjord);
-  background: var(--surface-2);
+  border-color: var(--accent);
+  background: var(--accent-tint);
 }
 .map-choice input {
   margin-top: 3px;
   flex: none;
+  accent-color: var(--accent);
 }
 .map-choice > span {
   display: flex;
@@ -1236,20 +1812,12 @@ tbody tr:has(+ .fold-caption) td {
   gap: 3px;
 }
 .map-choice .subtle {
-  font-size: 12.5px;
+  font-size: var(--fs-caption);
   line-height: 1.45;
 }
-
-/* ⚠️ TWO class names, and the second one is not decoration. MapLibre's own
- * stylesheet arrives in the LAZY chunk, so it is parsed AFTER this file, and its
- * `.maplibregl-map { position: relative }` has exactly the same specificity as a
- * bare `.route-map` — later wins, the map goes back to `position: relative`,
- * collapses to `height: 0`, and renders a canvas that asks for no tiles at all.
- *
- * That failure is silent in every way that matters: no console error, no failed
- * request, a canvas element present in the DOM, and a screenshot that looks like
- * an ordinary tile-less route. The only symptom was one range request for the
- * PMTiles header and then nothing. `.route-frame > .route-map` outranks it. */
+/* ⚠️ TWO class names: MapLibre's stylesheet arrives in the lazy chunk, after this
+ * one, and a bare `.route-map` loses to its `.maplibregl-map { position:
+ * relative }` — the map collapses to height 0, silently. */
 .route-frame > .route-map {
   position: absolute;
   inset: 0;
@@ -1257,9 +1825,7 @@ tbody tr:has(+ .fold-caption) td {
   width: auto;
   height: auto;
 }
-/* Required by the OpenStreetMap and OpenMapTiles licences, so it is small but
- * never invisible: it sits on a scrim rather than on the map, because a credit
- * that disappears over dark water is not a visible credit. */
+/* Required by the OSM and OpenMapTiles licences: small, on a scrim, never gone. */
 .route-attrib {
   position: absolute;
   right: 0;
@@ -1268,58 +1834,194 @@ tbody tr:has(+ .fold-caption) td {
   margin: 0;
   padding: 2px 6px;
   border-top-left-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--surface) 72%, transparent);
+  background: color-mix(in srgb, var(--surface) 78%, transparent);
   color: var(--text-dim);
-  font-size: 10.5px;
+  font-size: 11px;
   line-height: 1.5;
 }
-/* The scale bar is what gives the shape a size back — the map underneath is
- * muted on purpose and carries no numbers of its own. */
 .route-scale {
-  color: var(--text-dim);
-  fill: var(--text-dim);
+  color: var(--text-2);
+  fill: var(--text-2);
   font-variant-numeric: tabular-nums;
 }
 
-/* The other recordings of one session. A list rather than a table: there are two
- * of them, and a two-row table is a table's worth of ceremony for one fact. */
+/* The other recordings of one session: each a row that opens it. */
 .dup-list {
   display: flex;
   flex-direction: column;
-  gap: 2px;
+  gap: var(--sp-2);
   margin: 10px 0;
 }
 .dup-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 4px 10px;
-  padding: 7px 0;
-  border-bottom: 1px solid var(--border);
-  font-size: 13.5px;
+  gap: 4px 12px;
+  min-height: 48px;
+  padding: 8px 14px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  color: var(--text);
+  font-size: var(--fs-small);
   font-variant-numeric: tabular-nums;
+  text-decoration: none;
 }
-.dup-row:last-child {
-  border-bottom: 0;
+a.dup-row:hover {
+  background: var(--surface-3);
+  text-decoration: none;
+}
+.dup-row > svg {
+  margin-left: auto;
+  color: var(--accent-text);
+  flex: none;
 }
 .dup-badge {
-  margin-left: auto;
   padding: 1px 8px;
-  border-radius: 999px;
-  background: var(--surface-2);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
   color: var(--text-dim);
-  font-size: 12px;
+  font-size: var(--fs-micro);
   white-space: nowrap;
 }
 
-/* The line that says what the numbers above it are not. Quiet — it is a standing
-   condition, not a warning that fires — but on every page, because a reader who only
-   ever opens this dashboard would otherwise never meet it. */
-.app-footer {
-  margin: 3rem 0 0;
-  padding: 1rem 0 0;
-  border-top: 1px solid var(--line);
+/* --- The sync queue --- */
+.queue-hero {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 28px;
+}
+.queue-hero-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: var(--sp-4);
+}
+.queue-hero-row > div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.queue-label {
+  font-size: var(--fs-body);
+  font-weight: 500;
   color: var(--text-dim);
-  font-size: 0.8125rem;
+}
+.queue-big {
+  font-family: var(--font-num);
+  font-size: clamp(40px, 4vw + 16px, var(--fs-display));
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+}
+.queue-big small {
+  font-family: var(--font);
+  font-size: var(--fs-h2);
+  font-weight: 500;
+  color: var(--text-dim);
+  margin-left: 6px;
+  letter-spacing: 0;
+}
+.queue-eta {
+  align-items: flex-end;
+  text-align: right;
+}
+@media (max-width: 560px) {
+  .queue-hero {
+    padding: var(--sp-5);
+  }
+  .queue-eta {
+    align-items: flex-start;
+    text-align: left;
+  }
+}
+.figure {
+  font-family: var(--font-num);
+  font-size: var(--fs-figure);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.15;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.figure-sm {
+  font-size: 22px;
+}
+.failure-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.failure-list li {
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+  font-size: var(--fs-small);
+}
+.failure-list .subtle {
+  margin: 2px 0 0;
+}
+.failure-list details {
+  margin-top: 4px;
+}
+.failure-list summary {
+  cursor: pointer;
+  font-size: var(--fs-caption);
+  color: var(--accent-text);
+  min-height: 24px;
+}
+.failure-list pre {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--surface-2);
+  font-size: var(--fs-micro);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.confirm {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  color: var(--text);
+}
+
+/* The line that says what the numbers above it are not. Quiet, on every page. */
+.app-footer {
+  margin: var(--sp-8) 0 0;
+  padding: var(--sp-4) 0 0;
+  border-top: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: var(--fs-caption);
   line-height: 1.5;
+}
+
+/* Visually hidden, still read. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* The language switcher is a two-option segmented control. */
+.lang-switch button.seg {
+  min-width: 44px;
 }
