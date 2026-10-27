@@ -1343,7 +1343,7 @@ export const hu = {
     'journal.days.365': '1 év',
     'journal.never.title': 'A telefon még nem küldte el a naplóját erre a szerverre',
     'journal.never.body':
-      'A napló és az események csak akkor hagyják el a telefont, ha bekapcsolod: az iPhone-appban Beállítások ▸ Exportálás ▸ Saját szerver ▸ Napló és események (1.0 (7)-es verziótól). Alapból ki van kapcsolva, mert ez az adataid legszemélyesebb része. Addig ezen a lapon nincs mit mutatni — és ez semmit nem mond arról, mit jegyeztél fel.',
+      'A napló és az események csak akkor hagyják el a telefont, ha bekapcsolod: az iPhone-appban Beállítások ▸ Export ▸ Saját szerver ▸ Napló és események (1.0 (7)-es verziótól). Alapból ki van kapcsolva, mert ez az adataid legszemélyesebb része. Addig ezen a lapon nincs mit mutatni — és ez semmit nem mond arról, mit jegyeztél fel.',
     'journal.lastReceived': 'Utoljára érkezett a telefonról: {when}',
     'journal.coverage':
       'Feljegyzés: {of} napból {n} napon — a többi napon nincs bejegyzés, ami nem ugyanaz, mint hogy nem volt mit feljegyezni.',
