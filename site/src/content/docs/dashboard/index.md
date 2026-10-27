@@ -48,7 +48,7 @@ paste a device token once, and it is stored in that browser only.
 
 ## How it is organised
 
-Thirteen pages in three groups, plus the landing page. The grouping is not decoration:
+Fourteen pages in three groups, plus the landing page. The grouping is not decoration:
 the router is generated from the same list the sidebar is, so a page cannot reach
 the web without being handed a group.
 
@@ -56,7 +56,7 @@ the web without being handed a group.
 |---|---|---|
 | — | **Today** | the landing page: where you are right now |
 | **The long view** | Trends · Year in numbers · Year by year · Observations · Medals · Monthly challenge | something to look at, over weeks, months and years |
-| **Areas** | Workouts · Training progress · Sleep · Nutrition | one domain each, read entry by entry |
+| **Areas** | Workouts · Training progress · Sleep · Nutrition · Measurements | one domain each, read entry by entry |
 | **Status** | Completeness · Sync queue · Settings | whether the thing that moves your data is working |
 
 Two of those group names are taken word for word from the phone's own bands
