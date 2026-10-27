@@ -28,7 +28,7 @@ import type { Achievement, SleepSegment, SummaryResponse, Workout } from '../api
 import { coverageVerdict } from './compare'
 import type { Formatters } from './format'
 import { pickSeries, readSeries, type MetricDef, type ReadSeries } from './metrics'
-import { groupByNight } from './sleep'
+import { groupByNight, isOvernight } from './sleep'
 import { bucketKey, isoDay, type TrendWindow } from './window'
 import { durationMin, groupSessions, startMs } from './workouts'
 
@@ -411,7 +411,12 @@ export type PeriodSleep = {
  * period: a night not recorded is not a zero-hour night.
  */
 export function sleepSummary(segments: SleepSegment[], win: PeriodWindow): PeriodSleep {
-  const nights = groupByNight(segments).filter((n) => n.key >= win.from && n.key <= win.to)
+  // ⚠️ Overnight sessions only (`isOvernight`, the Sleep page's rule): a nap is
+  // its own session, and counting it as a night halved that day's average and
+  // could count one day twice against the elapsed days.
+  const nights = groupByNight(segments)
+    .filter(isOvernight)
+    .filter((n) => n.key >= win.from && n.key <= win.to)
   // `asleepMin` is `null` for an in-bed-only night — never measured, so not counted.
   const measured = nights.filter((n) => n.asleepMin != null && n.asleepMin > 0)
   const total = measured.reduce((s, n) => s + (n.asleepMin ?? 0), 0)

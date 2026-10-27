@@ -110,7 +110,7 @@ describe('a nap after last night', () => {
     sleep.mockResolvedValue(napAfter(true))
     show()
     expect(await screen.findByText(/^last night/i)).toBeInTheDocument()
-    expect(screen.getByText(/50 min/)).toBeInTheDocument() // the nap's row in the list
+    expect(screen.getAllByText(/50 min/).length).toBeGreaterThan(0) // the nap's row in the list
   })
 
   it('titles the nap "latest sleep" when it is chosen, never "last night"', async () => {
@@ -121,6 +121,16 @@ describe('a nap after last night', () => {
     await userEvent.click(rows[0])
     expect(screen.getByText(/^latest sleep/i)).toBeInTheDocument()
     expect(screen.queryByText(/^last night/i)).not.toBeInTheDocument()
+  })
+
+  it('keeps the nap out of the nightly figures and names it separately', async () => {
+    sleep.mockResolvedValue(napAfter(true))
+    show()
+    // Two nights of 7 h 40 min asleep; the 50-minute nap is not a third night.
+    expect(await screen.findByText(/average sleep — 2 nights/i)).toBeInTheDocument()
+    expect(screen.getByText(/plus 1 nap, 50 min asleep/i)).toBeInTheDocument()
+    expect(screen.getByText(/the 2 nights in this period · 1 nap/i)).toBeInTheDocument()
+    expect(screen.getByText(/^nap$/i)).toBeInTheDocument() // the tag on its row
   })
 
   it('calls a lone nap the latest sleep', async () => {

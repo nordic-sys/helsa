@@ -406,6 +406,12 @@ export const en: Dict = {
     'sleep.night.newest.notRecorded': 'Latest sleep · {date} — sleep duration not recorded',
     'sleep.nights.title.one': 'The night in this period',
     'sleep.nights.title.other': 'The {n} nights in this period',
+    'sleep.nap': 'Nap',
+    'sleep.naps.count.one': '{n} nap',
+    'sleep.naps.count.other': '{n} naps',
+    'sleep.naps.note.one': 'Plus {n} nap, {duration} asleep — not counted in the nightly figures above.',
+    'sleep.naps.note.other':
+      'Plus {n} naps, {duration} asleep in all — not counted in the nightly figures above.',
     'sleep.nights.hint':
       'Pick a night to open it above. The bar is that night’s stages in proportion; the last two columns are efficiency and the number of awakenings.',
     'sleep.stagesChart.hint': 'Click a bar to open that night above.',

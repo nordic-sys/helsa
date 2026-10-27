@@ -44,6 +44,7 @@ import { metricDef, pickSeries, readSeries } from '../lib/metrics'
 import {
   averages,
   groupByNight,
+  isOvernight,
   lastNight,
   nightTitle,
   segmentMinutes,
@@ -112,7 +113,13 @@ export default function Sleep() {
   if (q.isLoading) return <Loading rows={2} />
   if (q.isError) return <ErrorState error={q.error} />
 
-  const avg = averages(nights)
+  // ⚠️ The nightly figures are over NIGHTS only. A 50-minute nap averaged in
+  // as a "night" dragged the average sleep down by an hour and inflated the
+  // night count; naps get their own line under the figures instead.
+  const overnight = nights.filter(isOvernight)
+  const naps = nights.filter((n) => !isOvernight(n))
+  const napMin = naps.reduce((sum, n) => sum + (n.asleepMin ?? 0), 0)
+  const avg = averages(overnight)
   // ⚠️ Resolved here rather than stored, so a stale key simply falls back to the
   // newest night. Storing the resolution would mean a window step could leave
   // the card pointing at a night that is no longer in the list.
@@ -124,7 +131,7 @@ export default function Sleep() {
 
   // Only the stages that actually occur make it onto the chart.
   const presentStages = STAGE_ORDER.filter((s) => nights.some((n) => (n.stages[s] ?? 0) > 0))
-  const chart = [...nights].reverse().map((n) => ({
+  const chart = [...overnight].reverse().map((n) => ({
     startedAt: n.startedAt,
     key: n.key,
     ...Object.fromEntries(presentStages.map((s) => [s, n.stages[s] ?? 0])),
@@ -197,6 +204,11 @@ export default function Sleep() {
               color="var(--helsa-nordlys)"
             />
           </div>
+          {naps.length > 0 && (
+            <p className="subtle" style={{ marginTop: -8, marginBottom: 18 }}>
+              {tp('sleep.naps.note', naps.length, { duration: f.duration(napMin) })}
+            </p>
+          )}
 
           {selected && (
             <NightCard
@@ -210,7 +222,15 @@ export default function Sleep() {
               shows is a control, whatever it looks like. */}
           {nights.length > 1 && (
             <div style={{ marginBottom: 16 }}>
-              <Card title={tp('sleep.nights.title', nights.length)}>
+              <Card
+                title={
+                  naps.length === 0
+                    ? tp('sleep.nights.title', overnight.length)
+                    : overnight.length === 0
+                      ? tp('sleep.naps.count', naps.length)
+                      : `${tp('sleep.nights.title', overnight.length)} · ${tp('sleep.naps.count', naps.length)}`
+                }
+              >
                 <div className="night-list">
                   {nights.map((n) => (
                     <NightRow
@@ -323,8 +343,8 @@ export default function Sleep() {
               </Card>
             </div>
           )}
-          {nights.length < nightCount && (
-            <p className="subtle">{tp('sleep.gap', nightCount, { nights: nights.length })}</p>
+          {overnight.length < nightCount && (
+            <p className="subtle">{tp('sleep.gap', nightCount, { nights: overnight.length })}</p>
           )}
         </>
       )}
@@ -388,7 +408,10 @@ function NightRow({
   const { t } = useI18n()
   return (
     <button type="button" className="night-row" aria-pressed={selected} onClick={onSelect}>
-      <span className="night-date">{f.date(night.key)}</span>
+      <span className="night-date">
+        {f.date(night.key)}
+        {!isOvernight(night) && <span className="night-tag">{t('sleep.nap')}</span>}
+      </span>
       <span className="night-length num">{f.duration(night.asleepMin)}</span>
       <Hypnogram night={night} height={14} />
       <span className="night-eff num subtle">{f.percent(night.efficiency, 0)}</span>
@@ -442,7 +465,7 @@ function NightCard({ night, title }: { night: Night; title: NightTitle }) {
             bar squeezed to half a card stops being readable. */}
         <div className="flow" style={{ marginTop: 12, marginBottom: 12 }}>
         <div className="table-wrap">
-          <table>
+          <table className="figure-pairs">
             <tbody>
               <tr>
                 <td>{t('sleep.inBed')}</td>

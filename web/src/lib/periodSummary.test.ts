@@ -273,6 +273,19 @@ describe('sleep', () => {
     expect(s.longest).toBeNull()
   })
 
+  it('a nap is not a night: it neither counts nor pulls the average down', () => {
+    const s = sleepSummary(
+      [
+        seg('asleepCore', new Date(2026, 7, 2, 23), new Date(2026, 7, 3, 7)), // 8 h
+        seg('asleepCore', new Date(2026, 7, 3, 14), new Date(2026, 7, 3, 15)), // a 1 h nap
+      ],
+      win,
+    )
+    expect(s.nights).toBe(1)
+    expect(s.averageMin).toBe(480)
+    expect(s.coverage.measured).toBe(1)
+  })
+
   it('an in-bed-only night never measured sleep, so it is not a night here', () => {
     const s = sleepSummary([seg('inBed', new Date(2026, 7, 2, 23), new Date(2026, 7, 3, 6))], win)
     expect(s.nights).toBe(0)
