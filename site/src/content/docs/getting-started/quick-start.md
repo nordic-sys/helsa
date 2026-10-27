@@ -62,13 +62,37 @@ placeholder values so that a copy-paste mistake is visible rather than silent.
 Replace all of them before the stack ever leaves your machine.
 :::
 
+**a) The three passwords** are already in `.env`, with placeholder values. Replace each value
+with the output of its own `openssl rand -hex 32`:
+
 ```bash
-# Run these and paste the output into .env.
-openssl rand -hex 32      # POSTGRES_PASSWORD
-openssl rand -hex 32      # REDIS_PASSWORD
-openssl rand -hex 32      # RABBITMQ_PASSWORD
-openssl rand -base64 48   # HELSA_JWT_SECRET
+openssl rand -hex 32      # → POSTGRES_PASSWORD=…
+openssl rand -hex 32      # → REDIS_PASSWORD=…
+openssl rand -hex 32      # → RABBITMQ_PASSWORD=…
 ```
+
+**b) Three more lines are NOT in `.env` — add them at the end.** `HELSA_JWT_SECRET`,
+`LAN_SUBNET` and `WG_SUBNET` are not in `.env.example` (only commented reminders at its end), so
+there is nothing to edit; you append them:
+
+```bash
+cd ~/helsa/deploy                      # wherever your clone lives
+echo "" >> .env
+echo "HELSA_JWT_SECRET=$(openssl rand -base64 48)" >> .env
+echo "LAN_SUBNET=192.168.1.0/24" >> .env   # your home network
+echo "WG_SUBNET=10.100.0.0/24" >> .env     # your WireGuard range (the addresses the VPN hands out)
+chmod 600 .env
+grep -cE "^(HELSA_JWT_SECRET|LAN_SUBNET|WG_SUBNET)=" .env   # must print 3
+```
+
+`LAN_SUBNET` and `WG_SUBNET` are the two ranges the dashboard on `:8443` answers; everything else
+gets a `403` ([Reverse proxy](/deployment/reverse-proxy/)). Put your own ranges in — the values
+above are examples. No VPN? Give `WG_SUBNET` your LAN range a second time.
+
+⚠️ **These two do not stop the stack when missing — they fall back silently** to
+`192.168.1.0/24` and `10.100.0.0/24`. If your home network is something else, the symptom is a
+dashboard that answers `403` from your own sofa, and nothing says why; if one of those example
+ranges happens to be somebody else's network you can route to, it is let in. Set both.
 
 ⚠️ **Hex for the three passwords, on purpose.** They end up inside connection strings. The
 backend repairs a base64 password (`/`, `+`, `=`) in its own URLs, but hex has nothing to repair,
@@ -79,11 +103,9 @@ PostgreSQL and RabbitMQ store the password they were first started with; a new v
 alone locks the stack out of its own database. On an empty install, `docker compose down -v` and
 start again; on one with data, change it inside PostgreSQL / RabbitMQ first.
 
-⚠️ **`HELSA_JWT_SECRET` is not in `.env.example`, and neither are `LAN_SUBNET` or
-`WG_SUBNET`** — you add those lines yourself. They are not forgotten: the compose
-files read them as `$${VAR:?…}`, so a missing one stops the stack with a message
-naming it rather than starting with a default somebody might never notice. Adding
-them to the example would be adding a value to copy.
+⚠️ **Why those three are not in the example with a value:** a value in the example would be a
+value to copy — a JWT secret that every install shares. A missing `HELSA_JWT_SECRET` stops the stack
+with a message naming it (the compose files read it as `$${HELSA_JWT_SECRET:?…}`).
 
 | Variable | What it is | If you get it wrong |
 |---|---|---|
