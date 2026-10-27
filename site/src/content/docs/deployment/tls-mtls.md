@@ -4,6 +4,16 @@ description: "Create a private CA, issue server and client certificates, install
 sidebar:
   order: 1
 ---
+:::danger[⛔ Not on the server — on your own computer]
+**Everything under [Issuing](#issuing--on-your-own-computer) runs on your laptop or desktop, not on
+the Helsa server.** It creates the root key of your CA, and whoever holds that key can mint a client
+certificate for your API. If you followed the Quick start, your clone is on the server: **clone the
+repository a second time on your own computer** for this page. Only three files ever go to the
+server — `ca.crt`, `server.crt`, `server.key` — and `ca.key` never does.
+
+`make ca` refuses to run where it sees a configured `../.env` or running Helsa containers.
+:::
+
 ## Why mutual TLS, and not a login page
 
 The API is reachable from the internet. Anything reachable from the internet is
@@ -53,7 +63,7 @@ Helsa Root CA                          10 years, key kept OFFLINE
 | Server | 398 days | Apple platforms cap how long they will trust a server certificate. 398 days is the value at which the question never comes up. Renew yearly. |
 | Client | 730 days | **Deliberately long.** If the phone is offline longer than its certificate lives, it cannot renew — renewal needs a connection, and the connection needs the certificate. Short-lived client certificates create a deadlock. |
 
-## Issuing
+## Issuing — on your own computer
 
 :::danger
 **Do this on your own computer, not on the server.** The root key must never be on the server

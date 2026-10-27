@@ -43,8 +43,20 @@ $(CADIR):
 # The ca.key LEAVES this machine: copy it into a password manager, and keep this
 # copy only for as long as you are issuing certificates. If it is lost, EVERY
 # certificate has to be reissued.
+#
+# ⚠️ It REFUSES to run on what looks like the server — a checkout with a configured `../.env`, or
+# a host running the Helsa containers. The docs said "do this on your own computer" in a callout,
+# and the first person to follow them on a real VM did it on the server anyway (helsa docs/34): a
+# sentence is easy to scroll past, a refusal is not. `ON_SERVER=yes-i-know` overrides it, for a
+# throwaway test box.
 ca: | $(CADIR)
 	@if [ -f $(CADIR)/ca.key ]; then echo "The CA already exists ($(CADIR)/ca.key) — not overwriting it."; exit 0; fi
+	@if [ "$(ON_SERVER)" != "yes-i-know" ] && { [ -f ../.env ] || docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^helsa-'; }; then \
+		echo "⛔ This looks like the SERVER (a configured ../.env, or Helsa containers running here)."; \
+		echo "   The root key must never be on the server: whoever has it can mint a client certificate"; \
+		echo "   for your API. Clone the repository on your own computer and run 'make ca' there."; \
+		echo "   (A throwaway test box: ON_SERVER=yes-i-know make ca)"; \
+		exit 1; fi
 	openssl ecparam -name prime256v1 -genkey -noout -out $(CADIR)/ca.key
 	chmod 600 $(CADIR)/ca.key
 	openssl req -x509 -new -key $(CADIR)/ca.key -sha256 -days $(CA_DAYS) \

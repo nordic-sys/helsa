@@ -142,4 +142,6 @@ invalidates everything at once.
 
 ## Next
 
-[Point the app at the server and run a first sync](first-sync/).
+[Point the app at the server and run a first sync](first-sync/) — which needs the certificates from
+[TLS and mutual TLS](/deployment/tls-mtls/) first. ⛔ **Those are made on your own computer, not on
+this server**: clone the repository there a second time.

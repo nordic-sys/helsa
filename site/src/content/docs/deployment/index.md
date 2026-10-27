@@ -81,7 +81,7 @@ rule, so that neither alone is a single point of failure.
 ## The order to do things in
 
 1. **[TLS and mutual TLS](tls-mtls/)** — create the private CA, issue server
-   and client certificates, install them. Slowest step; do it first.
+   and client certificates, install them. Slowest step; do it first. ⛔ **On your own computer, not on the server** — the CA's root key must never be there.
 2. **[Reverse proxy](reverse-proxy/)** — Caddy configuration for the two
    interfaces, and how to validate it before it goes live.
 3. **[Backups and restore](backups/)** — set up dumps and **perform one
