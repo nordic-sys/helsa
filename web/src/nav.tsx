@@ -31,8 +31,10 @@
 //     generic card grid could stand in for"). Each is one domain, read entry by
 //     entry: sessions, nights, nutrients.
 //   * **Status** — the phone's `status` band, "whether the thing that moves your
-//     data is working". Completeness is exactly that question; Settings is the
-//     rest of the same machinery — the token, the devices, the goals.
+//     data is working". Completeness is exactly that question, and so is the
+//     ingest queue (is what the phone sent still on its way to the database?);
+//     Settings is the rest of the same machinery — the token, the devices, the
+//     goals.
 //
 // Today stays outside the groups because it is the landing page, not a peer of
 // the pages listed under a heading.
@@ -55,6 +57,7 @@ import Sleep from './pages/Sleep'
 import Nutrition from './pages/Nutrition'
 import Challenge from './pages/Challenge'
 import Coverage from './pages/Coverage'
+import Ingest from './pages/Ingest'
 import SettingsPage from './pages/Settings'
 import WorkoutDetail from './pages/WorkoutDetail'
 
@@ -90,6 +93,7 @@ export const NAV: NavEntry[] = [
   { path: '/nutrition', label: 'nav.nutrition', element: <Nutrition />, group: 'areas' },
 
   { path: '/coverage', label: 'nav.coverage', element: <Coverage />, group: 'status' },
+  { path: '/ingest', label: 'nav.ingest', element: <Ingest />, group: 'status' },
   { path: '/settings', label: 'nav.settings', element: <SettingsPage />, group: 'status' },
 ]
 

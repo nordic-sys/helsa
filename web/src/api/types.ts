@@ -373,3 +373,51 @@ export type Challenge = {
   days: ChallengeDay[]
   streak: ChallengeStreak
 }
+
+// --- Ingest queue (GET /v1/ingest/status) ---------------------------------
+//
+// Every block is present only when it was measured: `queue`/`dead_letter` are
+// absent when the API could not reach RabbitMQ, `worker`/`throughput` when the
+// worker's counters (Redis) could not be read. Never fill them in with zeros.
+
+export type IngestQueueDepth = {
+  name: string
+  /** Waiting to be handed to a worker — exact. */
+  ready: number
+  consumers: number
+  /** Upper bound of batches a worker holds unacknowledged (prefetch × consumers). */
+  in_flight_max?: number
+}
+
+export type IngestDeadLetter = { name: string; ready: number }
+
+export type IngestWorkerStats = {
+  started_at?: string
+  last_batch_at?: string
+  prefetch?: number
+  batches_since_start?: number
+  items_since_start?: number
+  failed_since_start?: number
+}
+
+export type IngestThroughput = {
+  window_seconds: number
+  batches: number
+  items: number
+  failed: number
+  batches_per_minute?: number
+  items_per_minute?: number
+}
+
+export type IngestStatus = {
+  checked_at: string
+  broker_reachable: boolean
+  broker_error?: string
+  queue?: IngestQueueDepth
+  dead_letter?: IngestDeadLetter
+  stats_reachable: boolean
+  worker?: IngestWorkerStats
+  throughput?: IngestThroughput
+  /** An ESTIMATE; absent when there is nothing to estimate from. */
+  eta_seconds?: number
+}

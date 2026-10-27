@@ -7,6 +7,7 @@ import type {
   CoverageResponse,
   Device,
   Goal,
+  IngestStatus,
   Insight,
   Range,
   Settings,
@@ -151,6 +152,9 @@ export const api = {
 
   coverage: (from?: string, to?: string, tz?: string) =>
     req<CoverageResponse>(`/coverage${qs({ from, to, tz })}`),
+
+  /** The ingest queue: backlog, dead letters, drain rate. The page polls it. */
+  ingestStatus: () => req<IngestStatus>('/ingest/status'),
 
   goals: () => req<Goal[]>('/goals'),
 

@@ -867,6 +867,16 @@ button.linkish {
   max-width: 78ch;
 }
 
+/* --- Ingest queue ---
+ * The alert reuses `.state.error` (the same red the error state has) but reads
+ * as a paragraph rather than an empty-state placeholder: left-aligned and tight. */
+.ingest-alert {
+  text-align: left;
+  padding: 14px 16px;
+  margin-bottom: 16px;
+  max-width: 78ch;
+}
+
 /* The state dot. `never_arrived` is grey and not red on purpose: most of the
    catalogue is empty for any given person, and sixty-eight red rows would drown
    the two that are actually worth looking at. */

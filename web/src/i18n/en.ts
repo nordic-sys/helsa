@@ -18,6 +18,7 @@ export const en: Dict = {
     'nav.nutrition': 'Nutrition',
     'nav.challenge': 'Monthly challenge',
     'nav.coverage': 'Completeness',
+    'nav.ingest': 'Ingest queue',
     'nav.settings': 'Settings',
     'lang.aria': 'Choose language',
     'lang.hu': 'Hungarian',
@@ -655,6 +656,56 @@ export const en: Dict = {
     'coverage.empty.title': 'Nothing has arrived yet',
     'coverage.empty.hint':
       'Not one of the catalogue’s types has reached this server. If the phone is uploading, the first sync may still be running.',
+
+    // --- Ingest queue ------------------------------------------------------
+    'ingest.title': 'Ingest queue',
+    'ingest.subtitle':
+      'The phone uploads faster than the server writes to the database. This is how much is still waiting, and how fast it is going down.',
+    'ingest.checkedAt': 'Updated {time} · refreshes itself every 5 seconds',
+    'ingest.stale.title': 'Could not refresh',
+    'ingest.stale.body': 'What is shown below is the last successful reading (updated {time}).',
+    'ingest.unreachable.title': 'RabbitMQ cannot be reached',
+    'ingest.unreachable.body':
+      'The API could not ask the queue, so the number of waiting batches is unknown — not zero. While this lasts, the server refuses uploads too.',
+    'ingest.unreachable.detail': 'The error: {error}',
+    'ingest.dlq.title.one': '{n} batch was not written to the database',
+    'ingest.dlq.title.other': '{n} batches were not written to the database',
+    'ingest.dlq.body':
+      'The worker gave up on these and they went to the dead-letter queue ({name}). Nothing retries them on its own: until someone acts, this data is missing from the server. The documentation says what can be done.',
+    'ingest.noConsumer.title': 'Nobody is consuming the queue',
+    'ingest.noConsumer.body':
+      'Batches are waiting and no worker is connected. This is not slowness: until a worker runs, the queue does not go down. Check the worker container.',
+    'ingest.noWorkerIdle.title': 'No worker connected',
+    'ingest.noWorkerIdle.body':
+      'The queue is empty right now, but nothing will process the next upload until the worker runs.',
+    'ingest.eta': 'About {duration} left.',
+    'ingest.eta.note':
+      'This is an estimate: the waiting batches divided by the rate of the last few minutes. Batches are not the same size, so it will move.',
+    'ingest.stalled.one':
+      'Batches are waiting, but none finished in the last {n} minute — there is no rate to estimate from.',
+    'ingest.stalled.other':
+      'Batches are waiting, but none finished in the last {n} minutes — there is no rate to estimate from.',
+    'ingest.idle': 'Nothing is waiting: everything that arrived is with the worker or already written.',
+    'ingest.stat.waiting': 'Waiting',
+    'ingest.stat.inFlight': '+ up to {n} in progress',
+    'ingest.stat.deadLetter': 'Dead-letter queue',
+    'ingest.stat.consumers': 'Workers connected',
+    'ingest.stat.batchesPerMin': 'Batches / min',
+    'ingest.stat.itemsPerMin': 'Items / min',
+    'ingest.window.one': 'Rates over the last {n} minute.',
+    'ingest.window.other': 'Rates over the last {n} minutes.',
+    'ingest.worker.title': 'Worker',
+    'ingest.worker.started': 'Started',
+    'ingest.worker.lastBatch': 'Last batch processed',
+    'ingest.worker.batches': 'Batches since start',
+    'ingest.worker.items': 'Items since start',
+    'ingest.worker.failed': 'Batches given up since start',
+    'ingest.worker.itemsNote':
+      'An item is a sample, workout, sleep segment, activity summary or deletion. Received, not necessarily new: the writes are idempotent.',
+    'ingest.worker.none': 'No worker of this version has reported yet.',
+    'ingest.stats.unreachable.title': 'The worker’s counters cannot be read',
+    'ingest.stats.unreachable.body':
+      'The rate, the estimate and the time of the last batch are unknown because Redis did not answer. The queue depth is still exact.',
 
     // --- Navigation groups -------------------------------------------------
     // The headings make a claim about what belongs together, which is why two of

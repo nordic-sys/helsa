@@ -25,6 +25,7 @@ export const hu = {
     'nav.nutrition': 'Táplálkozás',
     'nav.challenge': 'Havi kihívás',
     'nav.coverage': 'Adat-teljesség',
+    'nav.ingest': 'Feltöltési sor',
     'nav.settings': 'Beállítások',
     'lang.aria': 'Nyelv megválasztása',
     'lang.hu': 'Magyar',
@@ -646,6 +647,58 @@ export const hu = {
     'coverage.empty.title': 'Még semmi nem érkezett',
     'coverage.empty.hint':
       'A katalógus egyetlen típusa sem jutott el erre a szerverre. Ha a telefon tölt fel, lehet, hogy az első szinkron még fut.',
+
+    // --- Feltöltési sor ---------------------------------------------------
+    // ⚠️ A számok mögé sehol nem kerül toldalék (lásd `coverage.headline`):
+    // a mondatok úgy vannak fogalmazva, hogy a szám a végén vagy zárójelben álljon.
+    'ingest.title': 'Feltöltési sor',
+    'ingest.subtitle':
+      'A telefon gyorsabban tölt fel, mint ahogy a szerver beírja az adatbázisba. Itt látszik, mennyi vár még, és milyen ütemben fogy.',
+    'ingest.checkedAt': 'Frissítve: {time} · ötmásodpercenként frissül magától',
+    'ingest.stale.title': 'Nem sikerült frissíteni',
+    'ingest.stale.body': 'Ami lent látszik, az az utolsó sikeres lekérdezés (frissítve: {time}).',
+    'ingest.unreachable.title': 'A RabbitMQ nem érhető el',
+    'ingest.unreachable.body':
+      'Az API nem tudta megkérdezni a sort, ezért a várakozó kötegek száma ismeretlen — nem nulla. Amíg így marad, a szerver a feltöltéseket is visszautasítja.',
+    'ingest.unreachable.detail': 'A hiba: {error}',
+    'ingest.dlq.title.one': '{n} köteg nem került be az adatbázisba',
+    'ingest.dlq.title.other': '{n} köteg nem került be az adatbázisba',
+    'ingest.dlq.body':
+      'Ezeket a worker feladta, és a holtlevél-sorba ({name}) kerültek. Magától semmi nem próbálja újra őket: amíg valaki nem foglalkozik velük, ez az adat hiányzik a szerverről. A dokumentáció leírja, mit lehet tenni.',
+    'ingest.noConsumer.title': 'Senki nem dolgozza fel a sort',
+    'ingest.noConsumer.body':
+      'Kötegek várnak, de egyetlen worker sem kapcsolódik. Ez nem lassúság: amíg nem fut worker, a sor nem fogy. Nézd meg a worker konténert.',
+    'ingest.noWorkerIdle.title': 'Nincs kapcsolódó worker',
+    'ingest.noWorkerIdle.body':
+      'A sor most üres, de a következő feltöltést senki nem fogja feldolgozni, amíg a worker nem fut.',
+    'ingest.eta': 'Nagyjából {duration} van hátra.',
+    'ingest.eta.note':
+      'Ez becslés: a várakozó kötegek osztva az elmúlt percek ütemével. A kötegek nem egyforma méretűek, ezért a szám mozogni fog.',
+    'ingest.stalled.one':
+      'Kötegek várnak, de az elmúlt {n} percben egy sem készült el — nincs ütem, amiből becsülni lehetne.',
+    'ingest.stalled.other':
+      'Kötegek várnak, de az elmúlt {n} percben egy sem készült el — nincs ütem, amiből becsülni lehetne.',
+    'ingest.idle': 'Nincs várakozó köteg: minden, ami megérkezett, már a workernél van vagy be is került.',
+    'ingest.stat.waiting': 'Várakozik',
+    'ingest.stat.inFlight': '+ legfeljebb {n} feldolgozás alatt',
+    'ingest.stat.deadLetter': 'Holtlevél-sor',
+    'ingest.stat.consumers': 'Kapcsolódó worker',
+    'ingest.stat.batchesPerMin': 'Köteg / perc',
+    'ingest.stat.itemsPerMin': 'Elem / perc',
+    'ingest.window.one': 'Az ütem az elmúlt {n} perc alapján.',
+    'ingest.window.other': 'Az ütem az elmúlt {n} perc alapján.',
+    'ingest.worker.title': 'Worker',
+    'ingest.worker.started': 'Elindult',
+    'ingest.worker.lastBatch': 'Utolsó feldolgozott köteg',
+    'ingest.worker.batches': 'Kötegek az indulás óta',
+    'ingest.worker.items': 'Elemek az indulás óta',
+    'ingest.worker.failed': 'Feladott kötegek az indulás óta',
+    'ingest.worker.itemsNote':
+      'Egy elem egy minta, edzés, alvás-szakasz, aktivitás-összesítő vagy törlés. Ami megérkezett, nem feltétlenül új: az írás idempotens.',
+    'ingest.worker.none': 'Ezzel a verzióval még egy worker sem jelentkezett.',
+    'ingest.stats.unreachable.title': 'A worker számlálói nem olvashatók',
+    'ingest.stats.unreachable.body':
+      'Az ütem, a becslés és az utolsó köteg ideje ismeretlen, mert a Redis nem válaszolt. A sor mélysége ettől még pontos.',
 
     // --- A menü csoportjai ------------------------------------------------
     // A címek egy állítást fogalmaznak meg arról, mi tartozik össze — ezért
