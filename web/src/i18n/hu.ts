@@ -657,6 +657,35 @@ export const hu = {
     'achievements.thresholds.missed': 'nem elért',
     'achievements.thresholds.note':
       'A küszöbök pillanatfelvételek arról, mi volt érvényben az érem megszerzésekor — ezért nem veszíthet az értékéből egy érem, ha a célokat később átírják.',
+
+    // --- Érmek · egy hónap kinyitva -------------------------------------------
+    // A telefon `MonthMedalDetailView` / `MonthStepsCard` szövegei.
+    'achievements.month.open': '{period} megnyitása',
+    'achievements.month.back': '← Az összes érem',
+    'achievements.month.notFound.title': 'Ehhez a hónaphoz nincs havi érem: {period}',
+    'achievements.month.notFound.hint':
+      'Az érmeket a telefon számolja ki és tölti fel; az általa küldött listában erre a hónapra nincs.',
+    'achievements.month.total': 'Lépés, a megszerzéskor',
+    'achievements.month.perDay': 'Naponta, a teljes hónapra',
+    'achievements.month.milestonesReached': 'Elért mérföldkövek',
+    'achievements.month.milestones.title': 'Mérföldkövek',
+    'achievements.month.steps': '{steps} lépés',
+    'achievements.month.days.title': 'Napról napra',
+    'achievements.month.days.perDay': 'Átlagosan napi {steps} lépés a teljes hónapban.',
+    'achievements.month.days.measured.one': 'Csak a mért {n} napot számolva napi {steps}.',
+    'achievements.month.days.measured.other': 'Csak a mért {n} napot számolva napi {steps}.',
+    'achievements.month.days.best': 'A legerősebb nap: {day} — {steps} lépés.',
+    'achievements.month.days.goal': 'A telt oszlop olyan nap, ami elérte a napi {steps} lépéses célt.',
+    'achievements.month.days.loading': 'Napok betöltése…',
+    'achievements.month.days.error': 'A napi bontás nem töltődött be: {error}',
+    'achievements.month.days.empty': 'Ennek a hónapnak egyik napján sem volt lépésmérés.',
+    'achievements.month.textOnly.title': 'A hónap',
+    'achievements.month.textOnly.body':
+      'Ez az érem nem őrizte meg a mérföldköveket, amikkel megszerezted, ezért nem tudjuk megmutatni őket.',
+    'achievements.month.foot.locked':
+      'A számok azok maradnak, amikkel az érmet megszerezted — ha ma átírsz egy mérföldkövet, ezeket az nem írja át.',
+    'achievements.month.foot.fresh':
+      'A napi bontást minden alkalommal frissen olvassuk be: ez az egyetlen dolog, amit az érem nem tárol el.',
     // --- Adat-teljesség ----------------------------------------------------
     'coverage.title': 'Adat-teljesség',
     'coverage.subtitle': 'Melyik mérésed érkezik ide, és ki írja őket.',

@@ -113,8 +113,17 @@ Milestones already earned, grouped into families that collapse. Each one is a
 kept as it stood then. A milestone you later changed does not rewrite a badge you
 already have.
 
-Opening a month gives its detail sheet, a daily grid, and the daily average on the
-caption.
+A monthly medal's period is a link. Opening it (`/achievements/2026-08`) shows the
+month as the medal recorded it — the steps it was earned with, that total spread
+over **the whole month** as a daily average, and the milestones that were in force,
+marked by the medal's own value — and under it a **day-by-day grid** of the month.
+The grid is the only part read fresh (from the [monthly challenge](#monthly-challenge)
+endpoint), because it is the one thing a medal does not store; if it cannot be
+read, the rest of the page stands. When some days were not measured, a second
+average over the measured days alone is printed beside the first, labelled, because
+the difference between the two is exactly how much of the month is missing. A
+solid column is a day that met the daily target — the month's goal over its days.
+A medal that kept no milestone snapshot says so instead of guessing them.
 
 ## Monthly challenge
 

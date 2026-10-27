@@ -658,6 +658,35 @@ export const en: Dict = {
     'achievements.thresholds.missed': 'not reached',
     'achievements.thresholds.note':
       'The thresholds are a snapshot of what was in force at the moment the medal was earned, which is why a medal cannot lose its value when the targets are later rewritten.',
+
+    // --- Medals · one month, opened -------------------------------------------
+    // The phone's `MonthMedalDetailView` / `MonthStepsCard` words.
+    'achievements.month.open': 'Open {period}',
+    'achievements.month.back': '← All medals',
+    'achievements.month.notFound.title': 'No monthly medal for {period}',
+    'achievements.month.notFound.hint':
+      'The phone works the medals out and uploads them; the list it sent has none for this month.',
+    'achievements.month.total': 'Steps, as earned',
+    'achievements.month.perDay': 'A day, over the whole month',
+    'achievements.month.milestonesReached': 'Milestones reached',
+    'achievements.month.milestones.title': 'Milestones',
+    'achievements.month.steps': '{steps} steps',
+    'achievements.month.days.title': 'Day by day',
+    'achievements.month.days.perDay': '{steps} steps a day on average over the whole month.',
+    'achievements.month.days.measured.one': '{steps} a day counting only the {n} day that was measured.',
+    'achievements.month.days.measured.other': '{steps} a day counting only the {n} days that were measured.',
+    'achievements.month.days.best': 'The strongest day: {day} — {steps} steps.',
+    'achievements.month.days.goal': 'A solid column is a day that reached the daily target of {steps} steps.',
+    'achievements.month.days.loading': 'Loading the days…',
+    'achievements.month.days.error': 'The daily breakdown did not load: {error}',
+    'achievements.month.days.empty': 'No day of this month brought a step measurement.',
+    'achievements.month.textOnly.title': 'The month',
+    'achievements.month.textOnly.body':
+      'This medal did not keep the milestones it was earned with, so they cannot be shown for it.',
+    'achievements.month.foot.locked':
+      'The numbers are the ones the medal was earned with — changing a milestone today does not rewrite them.',
+    'achievements.month.foot.fresh':
+      'The day-by-day breakdown is read fresh each time: it is the one thing a medal does not store.',
     // --- Data completeness -------------------------------------------------
     'coverage.title': 'Data completeness',
     'coverage.subtitle': 'Which of your measurements are arriving here, and who writes them.',

@@ -60,6 +60,7 @@ import Coverage from './pages/Coverage'
 import Ingest from './pages/Ingest'
 import SettingsPage from './pages/Settings'
 import WorkoutDetail from './pages/WorkoutDetail'
+import MonthMedal from './pages/MonthMedal'
 
 export type NavGroupKey = 'longView' | 'areas' | 'status'
 
@@ -120,6 +121,7 @@ export type DetailEntry = {
 
 export const DETAILS: DetailEntry[] = [
   { path: '/workouts/:id', parent: '/workouts', element: <WorkoutDetail /> },
+  { path: '/achievements/:month', parent: '/achievements', element: <MonthMedal /> },
 ]
 
 /** The landing page — the one entry that stands outside the groups. */
