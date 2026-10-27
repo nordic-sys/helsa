@@ -52,8 +52,11 @@ migrate: ## Apply the goose migrations (idempotent against an already bootstrapp
 # internal/ingeststat needs only Redis and RabbitMQ: the worker's tally round trip
 # and the passive-declare queue depth behind GET /v1/ingest/status. internal/queue
 # needs only RabbitMQ: the dead-letter redrive (confirm before ack, unroutable
-# publish put back) cannot be shown without a broker.
-SMOKE_PKGS := ./test/smoke ./internal/insights ./internal/coverage ./internal/sourcemerge ./internal/ingeststat ./internal/queue
+# publish put back) cannot be shown without a broker. internal/workouts holds the
+# database test of GET /v1/workout-intensity: the heart rate is matched to a
+# workout by its time window in SQL, and only a live Timescale can show that the
+# edges are where the phone puts them.
+SMOKE_PKGS := ./test/smoke ./internal/insights ./internal/coverage ./internal/sourcemerge ./internal/ingeststat ./internal/queue ./internal/workouts
 
 smoke: $(ENV_FILE) ## E2E smoke: auth -> ingest -> summary (against the running infrastructure)
 	HELSA_AUTH_DEV_MODE=true go test -tags smoke -count=1 -v $(SMOKE_PKGS)

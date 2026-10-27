@@ -960,6 +960,18 @@ type GoalUpdateMetric string
 // GoalUpdateSource defines model for GoalUpdate.Source.
 type GoalUpdateSource string
 
+// HeartRateMaximum defines model for HeartRateMaximum.
+type HeartRateMaximum struct {
+	// Bpm the second-highest per-session maximum in the look-back
+	Bpm float32 `json:"bpm"`
+
+	// Workouts how many sessions with a usable maximum it was taken from
+	Workouts int `json:"workouts"`
+
+	// Zone3ThresholdBpm bpm × zone3_fraction
+	Zone3ThresholdBpm float32 `json:"zone3_threshold_bpm"`
+}
+
 // IngestAccepted The body of the 202 response. `received` gives the item counts the server TOOK IN (not processed) — the actual write happens in the worker. This is how the client can check that the chunk arrived complete, and `batch_id` correlates it with the server log when debugging a long backlog drain.
 type IngestAccepted struct {
 	// BatchId for log correlation
@@ -1385,6 +1397,33 @@ type WorkoutIn struct {
 	TotalEnergyKcal *float32      `json:"total_energy_kcal,omitempty"`
 }
 
+// WorkoutIntensity defines model for WorkoutIntensity.
+type WorkoutIntensity struct {
+	// LookbackDays how far back the maximum is looked for (365)
+	LookbackDays int `json:"lookback_days"`
+
+	// MaxGapSeconds a gap between samples longer than this is not filled (60)
+	MaxGapSeconds float32           `json:"max_gap_seconds"`
+	Maximum       *HeartRateMaximum `json:"maximum,omitempty"`
+
+	// MinimumWorkouts below this many usable sessions there is no maximum (5)
+	MinimumWorkouts int `json:"minimum_workouts"`
+
+	// Workouts Every workout that started in [from, to); empty when there is no maximum.
+	Workouts []WorkoutIntensityItem `json:"workouts"`
+
+	// Zone3Fraction zone 3 starts at this fraction of the maximum (0.7)
+	Zone3Fraction float32 `json:"zone3_fraction"`
+}
+
+// WorkoutIntensityItem defines model for WorkoutIntensityItem.
+type WorkoutIntensityItem struct {
+	Id openapi_types.UUID `json:"id"`
+
+	// Seconds at or above zone 3; null = fewer than two heart-rate samples in the window
+	Seconds *float32 `json:"seconds"`
+}
+
 // WorkoutPage defines model for WorkoutPage.
 type WorkoutPage struct {
 	Items      *[]Workout `json:"items,omitempty"`
@@ -1483,6 +1522,12 @@ type GetSummaryParams struct {
 
 // GetSummaryParamsRange defines parameters for GetSummary.
 type GetSummaryParamsRange string
+
+// GetWorkoutIntensityParams defines parameters for GetWorkoutIntensity.
+type GetWorkoutIntensityParams struct {
+	From time.Time `form:"from" json:"from"`
+	To   time.Time `form:"to" json:"to"`
+}
 
 // GetWorkoutsParams defines parameters for GetWorkouts.
 type GetWorkoutsParams struct {
@@ -1603,6 +1648,9 @@ type ServerInterface interface {
 	// Aggregated dashboard data (timezone-aware)
 	// (GET /summary)
 	GetSummary(w http.ResponseWriter, r *http.Request, params GetSummaryParams)
+	// Minutes at or above heart-rate zone 3, per workout (training progress)
+	// (GET /workout-intensity)
+	GetWorkoutIntensity(w http.ResponseWriter, r *http.Request, params GetWorkoutIntensityParams)
 	// Workout list (paginated)
 	// (GET /workouts)
 	GetWorkouts(w http.ResponseWriter, r *http.Request, params GetWorkoutsParams)
@@ -1783,6 +1831,12 @@ func (_ Unimplemented) GetSleep(w http.ResponseWriter, r *http.Request, params G
 // Aggregated dashboard data (timezone-aware)
 // (GET /summary)
 func (_ Unimplemented) GetSummary(w http.ResponseWriter, r *http.Request, params GetSummaryParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Minutes at or above heart-rate zone 3, per workout (training progress)
+// (GET /workout-intensity)
+func (_ Unimplemented) GetWorkoutIntensity(w http.ResponseWriter, r *http.Request, params GetWorkoutIntensityParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2760,6 +2814,58 @@ func (siw *ServerInterfaceWrapper) GetSummary(w http.ResponseWriter, r *http.Req
 	handler.ServeHTTP(w, r)
 }
 
+// GetWorkoutIntensity operation middleware
+func (siw *ServerInterfaceWrapper) GetWorkoutIntensity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetWorkoutIntensityParams
+
+	// ------------- Required query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Required query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date-time"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetWorkoutIntensity(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetWorkouts operation middleware
 func (siw *ServerInterfaceWrapper) GetWorkouts(w http.ResponseWriter, r *http.Request) {
 
@@ -3072,6 +3178,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/summary", wrapper.GetSummary)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/workout-intensity", wrapper.GetWorkoutIntensity)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/workouts", wrapper.GetWorkouts)
