@@ -1,18 +1,27 @@
 /* ---------------------------------------------------------------------------
-   Helsa design tokens.
+   Helsa design tokens — the server web's, carried over.
 
    One source of truth for both shells: the Starlight documentation pages and
-   the hand-built marketing pages in src/pages/. Everything visual on this site
-   resolves to a variable defined here.
+   the hand-built pages in src/pages/. Everything visual on this site resolves
+   to a variable defined here.
 
-   Theme mechanics follow Starlight so that a single toggle drives both shells:
-   `:root` is the DARK theme, `:root[data-theme='light']` overrides it, and the
-   applied value lives in `document.documentElement.dataset.theme`, persisted in
-   localStorage under `starlight-theme`.
+   # Where the values come from
 
-   Palette source: docs/14-arculat-design.md — Nordic, calm, data-first. The
-   brand colour is `fjord` teal; the four accents are the metric colours the app
-   itself uses, so a chart on the web reads the same way as one on the phone.
+   `web/src/styles/tokens.css`, the self-hosted dashboard's tokens, role for
+   role: a grey ground, white cards with large radii and no outline, dim card
+   titles, rounded figures, and the four semantic alert colours. The site used
+   to keep a palette of its own (dark-first, an aurora wash); the 2026-10 site
+   redesign retired it so that the public site, the docs and the dashboard read
+   as one product. A colour that changes there should change here.
+
+   # Theme mechanics
+
+   Light is defined on the bare `:root`, dark only overrides it — the server's
+   rule, so no colour exists only inside a media query. The applied theme lives
+   in `document.documentElement.dataset.theme` and the choice in localStorage
+   under `starlight-theme`: the same key and attribute Starlight uses, so one
+   preference drives both shells. Both shells set `data-theme` before first
+   paint; the media query below is only for a visitor with JavaScript off.
 
    No web fonts are loaded. On Apple hardware the system stack *is* SF Pro,
    which is the brand typeface — and a privacy policy that phones a font CDN to
@@ -20,113 +29,225 @@
 --------------------------------------------------------------------------- */
 
 :root {
-  /* -- Brand ------------------------------------------------------------- */
-  /* `fjord` #0E7E8C is the light-theme brand value. On dark backgrounds it
-     falls below 4.5:1 against the page, so dark uses a lifted variant rather
-     than the same hex at lower opacity. */
-  --helsa-brand: #3FB6C4;
-  --helsa-brand-strong: #6ACFDA;
-  --helsa-brand-quiet: #0F2E33;
-  --helsa-brand-contrast: #05171B;
+  /* -- Brand and metric colours: chart fills, dots, rings ---------------- */
+  --helsa-fjord: #0e7e8c;
+  --helsa-move: #2fb46b;
+  --helsa-ember: #f2802e;
+  --helsa-pulse: #e23b53;
+  --helsa-nordlys: #5b5bd6;
 
-  /* -- Metric accents ---------------------------------------------------- */
-  --helsa-move: #4FC585;    /* steps, distance, exercise */
-  --helsa-ember: #E8A055;   /* active energy */
-  --helsa-pulse: #E8776D;   /* heart rate */
-  --helsa-nordlys: #8593E8; /* sleep */
+  /* The same hues as TEXT, ≥ 5:1 on a card. A fill colour is never a text
+     colour: `--helsa-move` on white is 2.6:1. */
+  --helsa-fjord-text: #0b6e7a;
+  --helsa-move-text: #1f7a46;
+  --helsa-ember-text: #a8520f;
+  --helsa-pulse-text: #b8263c;
+  --helsa-nordlys-text: #4b4bc4;
 
-  /* -- Surfaces and ink -------------------------------------------------- */
-  --helsa-bg: #0A1215;
-  --helsa-bg-sunken: #060D0F;
-  --helsa-surface: #101C20;
-  --helsa-surface-raised: #16262B;
-  --helsa-border: #1E3238;
-  --helsa-border-strong: #2C464E;
-  --helsa-ink: #E7EFF1;
-  --helsa-ink-muted: #93A6AC;
-  --helsa-ink-faint: #6B7F86;
+  /* -- Surface ----------------------------------------------------------- */
+  --helsa-bg: #f2f3f5;          /* the ground */
+  --helsa-surface: #ffffff;     /* a card */
+  --helsa-surface-2: #f2f3f5;   /* a well inside a card */
+  --helsa-surface-3: #e4e5e8;   /* the track of a segmented control */
+  --helsa-border: #e4e5e8;
+  --helsa-card-border: transparent; /* on the light ground a card needs no outline */
+  --helsa-border-strong: #d4d5da;   /* decorative outlines: chips, quiet buttons */
+  --helsa-field-border: #86878e;    /* a boundary that identifies a control: ≥ 3:1 */
+  --helsa-line: #edeef0;            /* hairlines between rows inside a card */
+  --helsa-header-bg: rgb(242 243 245 / 86%);
 
-  /* -- The aurora ------------------------------------------------------ */
-  /* Used for the logo stroke, the hero wash and section rules. Teal into
-     indigo into green is the actual colour order of an aurora arc, which is
-     where the mark comes from. */
-  --helsa-aurora: linear-gradient(
-    100deg,
-    #3FB6C4 0%,
-    #5FA8D8 32%,
-    #8593E8 62%,
-    #4FC585 100%
-  );
-  --helsa-aurora-wash: radial-gradient(
-    120% 90% at 50% -20%,
-    rgba(63, 182, 196, 0.20) 0%,
-    rgba(133, 147, 232, 0.13) 38%,
-    rgba(79, 197, 133, 0.05) 62%,
-    transparent 78%
-  );
+  /* -- Ink --------------------------------------------------------------- */
+  --helsa-text: #1c1c1e;
+  --helsa-text-2: #3a3a3f;      /* secondary body copy */
+  --helsa-text-dim: #5c5c62;    /* labels, hints: 5.98:1 on the ground */
+  --helsa-text-faint: #6b6b70;  /* captions: still ≥ 4.5:1 on the ground */
+
+  /* -- Accent: the selected/active tint, links, primary buttons ---------- */
+  --helsa-accent: var(--helsa-fjord);
+  --helsa-accent-text: var(--helsa-fjord-text);
+  --helsa-accent-hover: #08545d;
+  --helsa-accent-tint: #e0f2f4;
+  /* What sits ON a filled accent (a primary button, a step number). Theme-
+     specific on purpose: white on the dark theme's teal is 2.41:1. */
+  --helsa-on-accent: #ffffff;
+  --helsa-focus: #0b6e7a;
+
+  /* -- Semantic alerts: background, border, title, body, icon ----------- */
+  --helsa-ok-bg: #e6f5ec;
+  --helsa-ok-border: #a9dcbd;
+  --helsa-ok-fg: #1a6b3d;
+  --helsa-ok-body: #1c1c1e;
+  --helsa-info-bg: #e0f2f4;
+  --helsa-info-border: #a6d6dc;
+  --helsa-info-fg: #0b6e7a;
+  --helsa-info-body: #1c1c1e;
+  --helsa-warn-bg: #fff4e8;
+  --helsa-warn-border: #f6c99a;
+  --helsa-warn-fg: #7a3a0b;
+  --helsa-warn-body: #5c2d09;
+  --helsa-warn-icon: #9a4a0f;
+  --helsa-error-bg: #fdecee;
+  --helsa-error-border: #f3b5bf;
+  --helsa-error-fg: #8e1b2e;
+  --helsa-error-body: #5a1420;
+  --helsa-error-icon: #b4233a;
+
+  /* -- Code: an intentionally dark well in both themes -------------------- */
+  --helsa-code-bg: #1c1c1e;
+  --helsa-code-bar: #2a2a2e;
+  --helsa-code-bar-fg: #cfd7de;
+  --helsa-code-border: transparent;
+  --helsa-inline-code-bg: #e4e5e8;
+
+  /* -- Depth ------------------------------------------------------------- */
+  --helsa-shadow-pop: 0 1px 2px rgb(20 24 28 / 8%), 0 8px 24px rgb(20 24 28 / 8%);
+  --helsa-shadow-device: 0 2px 4px rgb(20 24 28 / 12%), 0 24px 48px rgb(20 24 28 / 18%);
 
   /* -- Type -------------------------------------------------------------- */
-  --helsa-font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI',
-    Roboto, 'Helvetica Neue', Arial, system-ui, sans-serif;
-  --helsa-font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display',
-    'Segoe UI', Roboto, 'Helvetica Neue', Arial, system-ui, sans-serif;
+  --helsa-font-sans: -apple-system, BlinkMacSystemFont, 'SF Pro Text', system-ui,
+    'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --helsa-font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', system-ui,
+    'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  /* Figures: the rounded face the app and the dashboard draw numbers in. */
+  --helsa-font-num: ui-rounded, 'SF Pro Rounded', var(--helsa-font-sans);
   --helsa-font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas,
     'Liberation Mono', monospace;
 
-  /* -- Shape and depth --------------------------------------------------- */
-  --helsa-radius-sm: 8px;
-  --helsa-radius: 14px;
-  --helsa-radius-lg: 22px;
-  --helsa-shadow: 0 1px 2px rgba(0, 0, 0, 0.28), 0 8px 24px rgba(0, 0, 0, 0.24);
-  --helsa-shadow-lift: 0 2px 4px rgba(0, 0, 0, 0.3), 0 18px 44px rgba(0, 0, 0, 0.34);
+  /* -- Shape ------------------------------------------------------------- */
+  --helsa-radius-card: 20px;
+  --helsa-radius: 16px;      /* a small tile */
+  --helsa-radius-md: 12px;   /* the track of a segmented control */
+  --helsa-radius-sm: 10px;   /* a button, an input, a nav row */
+  --helsa-radius-segment: 9px;
+  --helsa-radius-xs: 8px;
+  --helsa-radius-pill: 999px;
+
+  /* The minimum hit area (WCAG 2.5.5 / Apple HIG), as on the dashboard. */
+  --helsa-touch: 44px;
 
   /* -- Measure ----------------------------------------------------------- */
   --helsa-measure: 68ch;
-  --helsa-page: 1140px;
+  --helsa-page: 1180px;      /* the dashboard's content column */
+  --helsa-gutter: clamp(16px, 3vw, 24px);
 }
 
-:root[data-theme='light'] {
-  --helsa-brand: #0E7E8C;
-  --helsa-brand-strong: #0A626D;
-  --helsa-brand-quiet: #E2F0F2;
-  --helsa-brand-contrast: #FFFFFF;
-
-  --helsa-move: #2E9A5F;
-  --helsa-ember: #B96A25;
-  --helsa-pulse: #C4483F;
-  --helsa-nordlys: #4C5FC0;
-
-  --helsa-bg: #F5F8F9;
-  --helsa-bg-sunken: #EAF0F2;
-  --helsa-surface: #FFFFFF;
-  --helsa-surface-raised: #FFFFFF;
-  --helsa-border: #DBE4E7;
-  --helsa-border-strong: #C2D0D5;
-  --helsa-ink: #0D1C21;
-  --helsa-ink-muted: #4E6167;
-  --helsa-ink-faint: #6F8188;
-
-  --helsa-aurora: linear-gradient(
-    100deg,
-    #0E7E8C 0%,
-    #2F7FB8 32%,
-    #4C5FC0 62%,
-    #2E9A5F 100%
-  );
-  --helsa-aurora-wash: radial-gradient(
-    120% 90% at 50% -20%,
-    rgba(14, 126, 140, 0.14) 0%,
-    rgba(76, 95, 192, 0.09) 38%,
-    rgba(46, 154, 95, 0.05) 62%,
-    transparent 78%
-  );
-
-  --helsa-shadow: 0 1px 2px rgba(13, 28, 33, 0.06), 0 8px 24px rgba(13, 28, 33, 0.07);
-  --helsa-shadow-lift: 0 2px 4px rgba(13, 28, 33, 0.08), 0 18px 44px rgba(13, 28, 33, 0.1);
+/* Dark, twice: for a visitor with JavaScript off (no `data-theme` set, system
+   asks for dark), and for the explicit choice. Same values both times. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --helsa-fjord: #3fb6c4;
+    --helsa-move: #46d585;
+    --helsa-ember: #ff9f4d;
+    --helsa-pulse: #ff5c72;
+    --helsa-nordlys: #8a86f0;
+    --helsa-fjord-text: #5cc8d5;
+    --helsa-move-text: #46d585;
+    --helsa-ember-text: #ff9f4d;
+    --helsa-pulse-text: #ff7a8c;
+    --helsa-nordlys-text: #a19ef5;
+    --helsa-bg: #0e1215;
+    --helsa-surface: #161b20;
+    --helsa-surface-2: #1e252b;
+    --helsa-surface-3: #252d34;
+    --helsa-border: #2a333b;
+    --helsa-card-border: #20282f;
+    --helsa-border-strong: #3a454f;
+    --helsa-field-border: #66737f;
+    --helsa-line: #232b32;
+    --helsa-header-bg: rgb(14 18 21 / 86%);
+    --helsa-text: #eef2f5;
+    --helsa-text-2: #cfd7de;
+    --helsa-text-dim: #9aa7b2;
+    --helsa-text-faint: #8b98a3;
+    --helsa-accent-hover: #8adbe4;
+    --helsa-accent-tint: #183339;
+    --helsa-on-accent: #0e1215;
+    --helsa-focus: #5cc8d5;
+    --helsa-ok-bg: #16291f;
+    --helsa-ok-border: #2b5a3e;
+    --helsa-ok-fg: #7fe0a6;
+    --helsa-ok-body: #d8eee0;
+    --helsa-info-bg: #183339;
+    --helsa-info-border: #2b5d66;
+    --helsa-info-fg: #5cc8d5;
+    --helsa-info-body: #cfd7de;
+    --helsa-warn-bg: #2e2216;
+    --helsa-warn-border: #6b4a26;
+    --helsa-warn-fg: #ffc58f;
+    --helsa-warn-body: #f2d9c2;
+    --helsa-warn-icon: #ffb066;
+    --helsa-error-bg: #33181d;
+    --helsa-error-border: #6e2f3a;
+    --helsa-error-fg: #ff9aa8;
+    --helsa-error-body: #f5d0d6;
+    --helsa-error-icon: #ff7a8c;
+    --helsa-code-bg: #1e252b;
+    --helsa-code-bar: #252d34;
+    --helsa-code-bar-fg: #cfd7de;
+    --helsa-code-border: #2a333b;
+    --helsa-inline-code-bg: #252d34;
+    --helsa-shadow-pop: 0 1px 2px rgb(0 0 0 / 40%), 0 8px 28px rgb(0 0 0 / 35%);
+    --helsa-shadow-device: 0 2px 4px rgb(0 0 0 / 40%), 0 24px 48px rgb(0 0 0 / 45%);
+  }
 }
 
-/* Figures are the point of several pages, so numerals line up in tables and
-   stat blocks rather than wandering. */
+:root[data-theme='dark'] {
+  --helsa-fjord: #3fb6c4;
+  --helsa-move: #46d585;
+  --helsa-ember: #ff9f4d;
+  --helsa-pulse: #ff5c72;
+  --helsa-nordlys: #8a86f0;
+  --helsa-fjord-text: #5cc8d5;
+  --helsa-move-text: #46d585;
+  --helsa-ember-text: #ff9f4d;
+  --helsa-pulse-text: #ff7a8c;
+  --helsa-nordlys-text: #a19ef5;
+  --helsa-bg: #0e1215;
+  --helsa-surface: #161b20;
+  --helsa-surface-2: #1e252b;
+  --helsa-surface-3: #252d34;
+  --helsa-border: #2a333b;
+  --helsa-card-border: #20282f;
+  --helsa-border-strong: #3a454f;
+  --helsa-field-border: #66737f;
+  --helsa-line: #232b32;
+  --helsa-header-bg: rgb(14 18 21 / 86%);
+  --helsa-text: #eef2f5;
+  --helsa-text-2: #cfd7de;
+  --helsa-text-dim: #9aa7b2;
+  --helsa-text-faint: #8b98a3;
+  --helsa-accent-hover: #8adbe4;
+  --helsa-accent-tint: #183339;
+  --helsa-on-accent: #0e1215;
+  --helsa-focus: #5cc8d5;
+  --helsa-ok-bg: #16291f;
+  --helsa-ok-border: #2b5a3e;
+  --helsa-ok-fg: #7fe0a6;
+  --helsa-ok-body: #d8eee0;
+  --helsa-info-bg: #183339;
+  --helsa-info-border: #2b5d66;
+  --helsa-info-fg: #5cc8d5;
+  --helsa-info-body: #cfd7de;
+  --helsa-warn-bg: #2e2216;
+  --helsa-warn-border: #6b4a26;
+  --helsa-warn-fg: #ffc58f;
+  --helsa-warn-body: #f2d9c2;
+  --helsa-warn-icon: #ffb066;
+  --helsa-error-bg: #33181d;
+  --helsa-error-border: #6e2f3a;
+  --helsa-error-fg: #ff9aa8;
+  --helsa-error-body: #f5d0d6;
+  --helsa-error-icon: #ff7a8c;
+  --helsa-code-bg: #1e252b;
+  --helsa-code-bar: #252d34;
+  --helsa-code-bar-fg: #cfd7de;
+  --helsa-code-border: #2a333b;
+  --helsa-inline-code-bg: #252d34;
+  --helsa-shadow-pop: 0 1px 2px rgb(0 0 0 / 40%), 0 8px 28px rgb(0 0 0 / 35%);
+  --helsa-shadow-device: 0 2px 4px rgb(0 0 0 / 40%), 0 24px 48px rgb(0 0 0 / 45%);
+}
+
+/* Figures line up in tables and stat blocks rather than wandering. */
 :root {
   font-variant-numeric: tabular-nums;
 }

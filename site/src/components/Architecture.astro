@@ -2,44 +2,50 @@
 /**
  * The two-layer picture that the whole project rests on.
  *
- * The Jekyll site drew this as ASCII art inside a <pre>. That reads well in a
- * terminal and badly on a phone, where it either wraps into nonsense or forces
- * a horizontal scroll. This is the same diagram in flowing markup: it reflows,
- * it can be read aloud in order, and it takes the page's own colours.
+ * Two cards and the link between them, in flowing markup: it reflows on a
+ * phone (the arrow turns downwards), it can be read aloud in order, and it
+ * takes the page's own colours. The Jekyll site drew this as ASCII art in a
+ * <pre>, which wrapped into nonsense on a phone.
  */
 ---
 
 <div class="arch">
-  <section class="arch-node" aria-labelledby="arch-phone">
-    <p class="arch-kicker">Always</p>
-    <h3 id="arch-phone">iPhone — the Helsa app</h3>
-    <p class="arch-flow"><span>HealthKit</span><span>analysis</span><span>what you see</span></p>
-    <p class="arch-note">
-      HealthKit is the store and the analysis runs on the device. This works
-      fully offline, with no server at all.
-    </p>
-  </section>
+  <div class="arch-row">
+    <section class="arch-node card" aria-labelledby="arch-phone">
+      <p class="arch-kicker arch-kicker--always"><span class="dot" style="--accent: var(--helsa-move)"></span>Always · on the iPhone</p>
+      <h3 id="arch-phone">The app</h3>
+      <p class="arch-flow"><span>HealthKit</span><span>analysis</span><span>what you see</span></p>
+      <p class="arch-note">
+        HealthKit is the store and the analysis runs on the device. It writes water
+        and the journal back to Apple Health. This works fully offline, with no
+        server at all.
+      </p>
+    </section>
 
-  <div class="arch-link" role="presentation">
-    <span class="arch-line"></span>
-    <p>
-      <strong>Optional, opt-in, and you type the URL.</strong>{' '}
-      Mutual TLS plus a device token.
-    </p>
-    <span class="arch-line"></span>
+    <div class="arch-link">
+      <svg class="arch-arrow" width="40" height="20" viewBox="0 0 40 20" fill="none" stroke="currentColor"
+           stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M2 10h34M28 3l8 7-8 7" />
+      </svg>
+      <p>
+        <strong>Optional, opt-in, and you type the URL.</strong>
+        Mutual TLS plus a device token.
+      </p>
+    </div>
+
+    <section class="arch-node card" aria-labelledby="arch-server">
+      <p class="arch-kicker arch-kicker--optional"><span class="dot" style="--accent: var(--helsa-fjord)"></span>Optional · on your machine</p>
+      <h3 id="arch-server">The server — this repository</h3>
+      <p class="arch-flow">
+        <span>Caddy</span><span>API</span><span>RabbitMQ</span><span>worker</span><span>TimescaleDB</span>
+      </p>
+      <p class="arch-note">
+        Long-term history as a second, queryable copy you control, a web dashboard on
+        your LAN or VPN that runs the app's rules, exports, and daily summaries for
+        Home Assistant.
+      </p>
+    </section>
   </div>
-
-  <section class="arch-node arch-node--server" aria-labelledby="arch-server">
-    <p class="arch-kicker">Only if you want it</p>
-    <h3 id="arch-server">Your server — this repository</h3>
-    <p class="arch-flow">
-      <span>Caddy</span><span>API</span><span>RabbitMQ</span><span>worker</span><span>TimescaleDB</span>
-    </p>
-    <p class="arch-note">
-      Long-term history, a web dashboard on your LAN or VPN, exports, and daily
-      summaries for Home Assistant.
-    </p>
-  </section>
 
   <p class="arch-caption">
     The phone is the <strong>only writer</strong>. Every other surface — the web
@@ -50,106 +56,82 @@
 </div>
 
 <style>
-  .arch {
-    margin-top: 2.4rem;
-    max-width: 46rem;
+  .arch-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 16px;
   }
-
   .arch-node {
-    border: 1px solid var(--helsa-border);
-    border-radius: var(--helsa-radius);
-    background: var(--helsa-surface);
-    padding: 1.4rem 1.5rem;
-    position: relative;
-    overflow: hidden;
+    flex: 1 1 300px;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
-  /* An aurora edge marks the layer that is always present; the server layer
-     gets a plain edge, because it is the optional one. */
-  .arch-node::before {
-    content: '';
-    position: absolute;
-    inset-block: 0;
-    inset-inline-start: 0;
-    width: 3px;
-    background: var(--helsa-aurora);
-  }
-  .arch-node--server::before { background: var(--helsa-border-strong); }
-
+  .arch-node h3 { font-size: 22px; font-weight: 700; margin: 0; }
   .arch-kicker {
-    font-size: 0.72rem;
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
-    color: var(--helsa-ink-faint);
-    margin-bottom: 0.35rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
   }
-  .arch-node h3 { font-size: 1.1rem; }
+  .arch-kicker--always { color: var(--helsa-move-text); }
+  .arch-kicker--optional { color: var(--helsa-accent-text); }
 
   .arch-flow {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 0.4rem 0.55rem;
-    margin: 0.9rem 0 0.85rem;
+    gap: 6px 8px;
+    margin: 0;
     font-family: var(--helsa-font-mono);
-    font-size: 0.83rem;
+    font-size: 13px;
   }
   .arch-flow span {
-    border: 1px solid var(--helsa-border);
-    background: var(--helsa-bg-sunken);
-    border-radius: 999px;
-    padding: 0.2rem 0.7rem;
-    color: var(--helsa-ink);
+    background: var(--helsa-surface-2);
+    border-radius: var(--helsa-radius-pill);
+    padding: 3px 10px;
+    color: var(--helsa-text);
     white-space: nowrap;
   }
   /* The arrows are decoration between the stages, so they are generated rather
      than written into the markup where a screen reader would announce them. */
   .arch-flow span + span::before {
     content: '→';
-    color: var(--helsa-ink-faint);
-    margin-inline-end: 0.55rem;
-    margin-inline-start: -0.15rem;
+    color: var(--helsa-text-faint);
+    margin-inline: -2px 6px;
   }
-
-  .arch-note {
-    color: var(--helsa-ink-muted);
-    font-size: 0.94rem;
-    margin: 0;
-  }
+  .arch-note { margin: 0; color: var(--helsa-text-2); font-size: 15px; }
 
   .arch-link {
+    flex: 0 1 170px;
     display: flex;
+    flex-direction: column;
+    justify-content: center;
     align-items: center;
-    gap: 0.9rem;
-    padding-block: 0.9rem;
-  }
-  .arch-link p {
-    margin: 0;
-    font-size: 0.87rem;
-    color: var(--helsa-ink-muted);
+    gap: 6px;
+    padding: 0 4px;
+    color: var(--helsa-text-dim);
     text-align: center;
-    flex: none;
-    max-width: 26rem;
   }
-  .arch-link strong { color: var(--helsa-ink); font-weight: 600; }
-  .arch-line {
-    flex: 1;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, var(--helsa-border-strong));
-  }
-  .arch-link .arch-line:last-child {
-    background: linear-gradient(90deg, var(--helsa-border-strong), transparent);
-  }
+  .arch-link p { margin: 0; font-size: 13px; }
+  .arch-link strong { color: var(--helsa-text); font-weight: 600; display: block; }
+  .arch-arrow { color: var(--helsa-text-faint); }
 
   .arch-caption {
-    margin-top: 1.6rem;
-    color: var(--helsa-ink-muted);
-    font-size: 0.95rem;
+    margin: 20px 0 0;
+    color: var(--helsa-text-2);
+    font-size: 15px;
+    max-width: var(--helsa-measure);
   }
-  .arch-caption strong { color: var(--helsa-ink); }
+  .arch-caption strong { color: var(--helsa-text); }
 
-  @media (max-width: 34rem) {
-    .arch-link { flex-direction: column; gap: 0.5rem; }
-    .arch-line { width: 1px; height: 1.1rem; flex: none; background: var(--helsa-border-strong); }
-    .arch-link .arch-line:last-child { background: var(--helsa-border-strong); }
+  /* Stacked: the link sits between the cards and points down. */
+  @media (max-width: 52rem) {
+    .arch-link { flex-basis: 100%; flex-direction: row; justify-content: flex-start; text-align: start; padding: 0 8px; }
+    .arch-arrow { transform: rotate(90deg); flex: none; }
   }
 </style>

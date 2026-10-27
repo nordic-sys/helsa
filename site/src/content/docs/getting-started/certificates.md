@@ -73,7 +73,7 @@ start](/getting-started/quick-start/), your clone is on the server — clone the
 second time on your workstation for this step. All you need there is `git`, `make` and `openssl`.
 :::
 
-```bash
+```bash title="On your computer"
 git clone https://github.com/nordic-sys/helsa.git
 cd helsa/deploy/pki
 
@@ -90,7 +90,7 @@ file ships with example names. Open it and replace them — `CN`, every `DNS.n` 
 `[ alt ]` — with **the name the phone will use** (the public name too, if it will connect from
 outside) and the server's LAN address:
 
-```ini
+```ini title="On your computer"
 [ dn ]
 CN = helsa.yourname.example        # the main name
 
@@ -127,7 +127,7 @@ regenerating the CA silently invalidates every certificate you have issued.
 From your workstation, in `helsa/deploy/pki` — replace `server` with your server's SSH name and
 `~/helsa/deploy` with wherever the Quick start clone lives:
 
-```bash
+```bash title="On your computer"
 scp out/ca/ca.crt out/server/server.crt out/server/server.key server:/tmp/
 ssh server '
   sudo install -d -m 0755 /opt/helsa/pki &&
@@ -208,7 +208,7 @@ Three scenarios, in increasing order of danger.
 Nobody can be locked out: the phone trusts the **CA**, not the individual server
 certificate.
 
-```bash
+```bash title="On your computer"
 make server
 # copy to the server, restart the proxy
 make expiry
@@ -219,7 +219,7 @@ back is a file copy and a restart.
 
 ### Client certificate — every two years, or on device replacement
 
-```bash
+```bash title="On your computer"
 make client NAME=iphone
 ```
 
@@ -284,7 +284,7 @@ off when you *cannot* reach every certificate holder in person.
 
 ## Expiry is a silent failure
 
-```bash
+```bash title="On your computer"
 make expiry
 ```
 

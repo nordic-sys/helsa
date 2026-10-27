@@ -1,0 +1,19 @@
+---
+/**
+ * Starlight `Header` override: the site's own header, with Starlight's search.
+ *
+ * Composes the shared SiteHeader (brand, the same links as the hand-built
+ * pages, the theme toggle) around Starlight's Pagefind `Search` — the real
+ * trigger and dialog, keyboard shortcut and all, only restyled
+ * (styles/sl-palette.css). There is no LanguageSelect: the site is English.
+ *
+ * Starlight's ThemeSelect is not in the bar; it stays in the mobile menu
+ * footer, and the toggle here keeps it in step (see ThemeToggle.astro).
+ */
+import Search from 'virtual:starlight/components/Search';
+import SiteHeader from '../SiteHeader.astro';
+---
+
+<SiteHeader variant="docs" current="docs">
+  <Search slot="search" />
+</SiteHeader>

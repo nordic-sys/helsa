@@ -23,17 +23,27 @@ screens holding five months of data — and that went onto the public site befor
 An empty screen next to a full one does not read as "no data", it reads as a broken feature.
 See `DevTools/MockPlanContextStores.swift`.
 
-**The web images** come from a browser pointed at the development server, with a device token
-injected into `localStorage`. ⛔ Never photograph a screen that displays the token, and never
-photograph the live server — that one holds real measurements.
+**The web images** (`web/{en,hu}-*.png`, since the 2026-10 site redesign) come from the
+dashboard run with Vite against **`scripts/web-fixture-api.mjs`** — a fixture API with an invented
+person, so no backend and no real data is involved — captured headless at **1440 × 900, light
+theme**, with `helsa.device_token` set in `localStorage` and `helsa.lang` choosing English or
+Hungarian. The script's header has the commands and its knobs (`/__lang`, `/__notoday`,
+`/__mode`). ⛔ Never photograph a screen that displays the token, and never photograph the live
+server — that one holds real measurements.
 
 ## Where the files go
 
 ```
 site/src/assets/screenshots/
-├── web-dashboard.png
+├── app/                      the 32 app screenshots
+├── web/                      the server web, en + hu
+│   ├── {en,hu}-today.png     Today
+│   ├── {en,hu}-trends.png    Trends (en: also on dashboard/index.md)
+│   ├── {en,hu}-workouts.png  Workouts
+│   ├── {en,hu}-journal.png   Journal and events, 30 days
+│   ├── {en,hu}-ingest.png    Sync queue
+│   └── en-today-first-sync.png  Today with nothing for today yet (first-sync.md)
 ├── ios-sync-settings.png
-├── web-first-data.png
 ├── ios-certificate-trust.png
 └── home-assistant-card.png
 ```
@@ -61,7 +71,7 @@ Enable Do Not Disturb before capturing on the phone.
 
 ---
 
-## 1. `web-dashboard.png`
+## 1. `web-dashboard.png` — retired 2026-10, replaced by `web/en-trends.png`
 
 **Used on:** `site/src/pages/index.astro` was where this lived on the Jekyll site. The
 rebuilt landing page uses the app screenshots instead, so this image is now
@@ -102,7 +112,7 @@ that value before capturing, or blur the field.
 
 ---
 
-## 3. `web-first-data.png`
+## 3. `web-first-data.png` — retired 2026-10, replaced by `web/en-today-first-sync.png`
 
 **Used on:** `site/src/content/docs/getting-started/first-sync.md` — under "Verify it landed".
 
@@ -161,8 +171,7 @@ dashboard. Under 250 KB. PNG.
 | File | How it was taken |
 |---|---|
 | `app/*` (32) | simulator, mock plan, both languages, iPhone + iPad |
-| `web-dashboard.png` | the Trends page on the development server |
-| `web-first-data.png` | Today after a sync, cropped above the observations card |
+| `web/*` (11) | the dashboard against `scripts/web-fixture-api.mjs`, 1440 × 900, light — replaced the dark `web-dashboard.png` and `web-first-data.png` in the 2026-10 redesign |
 | `ios-sync-settings.png` | "Your own server", reached by `-HelsaScreen server` |
 | `ios-certificate-trust.png` | iOS Settings, driven by synthesised taps — see below |
 | `home-assistant-card.png` | a throwaway Home Assistant, fed by the real publisher |

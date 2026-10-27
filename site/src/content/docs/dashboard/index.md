@@ -44,7 +44,7 @@ paste a device token once, and it is stored in that browser only.
 3. **Paste the token** on the dashboard's **Settings** page. Until then it says it has no valid
    device token — being on your network is not being signed in.
 
-![The dashboard's Trends page: a metric picker, a week of steps, and the usual-range band](../../../assets/screenshots/web-dashboard.png)
+![The dashboard's Trends page: a metric picker, a week of steps, and the usual-range band](../../../assets/screenshots/web/en-trends.png)
 
 ## How it is organised
 

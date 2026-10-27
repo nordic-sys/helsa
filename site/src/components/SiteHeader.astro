@@ -1,30 +1,57 @@
 ---
-import { Image } from 'astro:assets';
-import logo from '../assets/logo.svg';
+import Logo from './Logo.astro';
 import ThemeToggle from './ThemeToggle.astro';
 import { url } from '../lib/url';
 
+/**
+ * The one header, on both shells.
+ *
+ * The hand-built pages render it from BaseLayout; the documentation renders it
+ * from the Starlight `Header` override (components/starlight/Header.astro),
+ * which passes Starlight's own Pagefind search trigger into the `search` slot.
+ * So a visitor crossing from the landing page into the docs sees the same bar:
+ * the same mark, the same links, the same theme switch.
+ *
+ * Two shells, two layout constraints:
+ *  - `page`: a sticky bar that may grow to two rows on a phone (the links
+ *    wrap under the brand). Nothing else depends on its height.
+ *  - `docs`: inside Starlight's FIXED header, whose height is
+ *    `--sl-nav-height` and which every offset in the docs is computed from.
+ *    It must never wrap, so the links drop out below 64rem — the sidebar
+ *    carries the same destinations — and Starlight's menu button sits at the
+ *    right edge on a phone.
+ *
+ * ⚠️ There is no site-language switch. The site is English; the app's two
+ * languages are a property of the screenshots, switched on the tour page.
+ */
 interface Props {
   /** Which top-level section is being viewed, so the nav can mark it. */
-  current?: 'home' | 'the-app' | 'docs' | 'support';
+  current?: 'home' | 'the-app' | 'docs' | 'support' | 'privacy';
+  variant?: 'page' | 'docs';
 }
-const { current } = Astro.props;
+const { current, variant = 'page' } = Astro.props;
 
 const links = [
   { label: 'The app', href: url('/the-app/'), key: 'the-app' },
   { label: 'Documentation', href: url('/getting-started/'), key: 'docs' },
+  { label: 'Privacy', href: url('/privacy/'), key: 'privacy' },
   { label: 'Support', href: url('/support/'), key: 'support' },
 ] as const;
 ---
 
-<header class="site-header">
-  <div class="shell">
+<div class:list={['site-header', `site-header--${variant}`]}>
+  <div class="bar">
     <a class="brand" href={url('/')}>
-      <Image src={logo} alt="" width={30} height={30} />
+      <Logo size={30} id={`helsa-mark-${variant}`} />
       <span>Helsa</span>
+      {variant === 'docs' && <span class="brand-sub">Docs</span>}
     </a>
 
-    <nav aria-label="Main">
+    <div class="search">
+      <slot name="search" />
+    </div>
+
+    <nav class="links" aria-label="Main">
       <ul>
         {links.map((link) => (
           <li>
@@ -37,13 +64,174 @@ const links = [
     </nav>
 
     <div class="actions">
-      <a class="ghost" href="https://github.com/nordic-sys/helsa" rel="noopener">
+      <a class="github" href="https://github.com/nordic-sys/helsa" rel="noopener">
         <svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" fill="currentColor">
           <path d="M8 0C3.58 0 0 3.58 0 8a8 8 0 0 0 5.47 7.59c.4.07.55-.17.55-.38l-.01-1.49c-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.4 7.4 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48l-.01 2.2c0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8Z" />
         </svg>
-        <span class="sr-only">Source on GitHub</span>
+        <span class="github-label">GitHub</span>
       </a>
       <ThemeToggle />
     </div>
   </div>
-</header>
+</div>
+
+<style>
+  .site-header {
+    font-family: var(--helsa-font-sans);
+    color: var(--helsa-text);
+  }
+
+  .bar {
+    display: flex;
+    align-items: center;
+    gap: 8px 20px;
+    min-height: 64px;
+  }
+
+  .site-header--page .bar {
+    flex-wrap: wrap;
+    max-width: calc(var(--helsa-page) + 2 * var(--helsa-gutter));
+    margin-inline: auto;
+    padding: 0 var(--helsa-gutter);
+  }
+
+  /* Inside Starlight's header, which already pads itself and is exactly
+     --sl-nav-height tall. */
+  .site-header--docs,
+  .site-header--docs .bar {
+    height: 100%;
+    min-height: 0;
+  }
+
+  .brand {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-height: var(--helsa-touch);
+    color: var(--helsa-text);
+    text-decoration: none;
+    font-family: var(--helsa-font-display);
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    flex: none;
+  }
+  .brand:hover { color: var(--helsa-text); }
+  .brand-sub {
+    font-weight: 500;
+    color: var(--helsa-text-dim);
+  }
+
+  .search {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+  }
+  .search:empty { display: none; }
+  .site-header--docs .search {
+    flex: 1 1 280px;
+    max-width: 460px;
+  }
+
+  .links ul {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .links a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--helsa-touch);
+    padding: 0 14px;
+    border-radius: var(--helsa-radius-sm);
+    color: var(--helsa-text-2);
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .links a:hover {
+    background: var(--helsa-surface-3);
+    color: var(--helsa-text);
+  }
+  .links a[aria-current='page'] {
+    background: var(--helsa-accent-tint);
+    color: var(--helsa-accent-text);
+    font-weight: 600;
+  }
+
+  .site-header--page .links { flex: 1 1 auto; }
+  .site-header--docs .links { margin-inline-start: auto; }
+
+  .actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: none;
+  }
+  .site-header--page .actions { margin-inline-start: auto; }
+
+  .github {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: var(--helsa-touch);
+    padding: 0 16px;
+    border-radius: var(--helsa-radius-pill);
+    background: var(--helsa-surface);
+    border: 1px solid var(--helsa-border-strong);
+    color: var(--helsa-text);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 600;
+  }
+  .github:hover { background: var(--helsa-surface-2); color: var(--helsa-text); }
+
+  :where(a):focus-visible {
+    outline: 2px solid var(--helsa-focus);
+    outline-offset: 2px;
+  }
+
+  /* -- The hand-built pages on a phone: the links take a row of their own,
+        under the brand, rather than squeezing. */
+  @media (max-width: 52rem) {
+    .site-header--page .bar { padding-block: 6px; gap: 0 8px; }
+    .site-header--page .search { margin-inline-start: auto; }
+    .site-header--page .actions { margin-inline-start: 0; }
+    .site-header--page .links {
+      order: 3;
+      flex-basis: 100%;
+      margin-inline: -10px;
+    }
+    .site-header--page .links a { padding: 0 10px; font-size: 15px; }
+    .site-header--page .github { width: var(--helsa-touch); padding: 0; justify-content: center; }
+    .site-header--page .github-label {
+      position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+    }
+  }
+
+  /* -- The docs header never wraps (its height is a contract with Starlight). */
+  @media (max-width: 64rem) {
+    .site-header--docs .links { display: none; }
+    .site-header--docs .search { margin-inline-start: auto; }
+  }
+  @media (max-width: 80rem) {
+    .site-header--docs .github { width: var(--helsa-touch); padding: 0; justify-content: center; }
+    .site-header--docs .github-label {
+      position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap;
+    }
+  }
+  /* Below Starlight's 50rem breakpoint the menu button takes the right edge
+     and the mobile menu carries GitHub and the theme picker; the bar keeps the
+     brand, search and the theme toggle. */
+  @media (max-width: 49.99rem) {
+    .site-header--docs .bar { gap: 8px; }
+    .site-header--docs .github { display: none; }
+    .site-header--docs .brand { font-size: 18px; gap: 8px; }
+    .site-header--docs .search { flex: 0 0 auto; }
+  }
+</style>

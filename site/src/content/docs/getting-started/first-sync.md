@@ -81,7 +81,7 @@ Details: [API — Ingest](/api/ingest/).
 
 **Did a device register?**
 
-```bash
+```bash title="On your computer"
 # Through the proxy, which is the only thing that publishes a port. `--cert`/`--key`
 # are your client certificate — the API is behind mutual TLS.
 curl -s --cert client.crt --key client.key --cacert ca.crt \
@@ -95,7 +95,7 @@ watches.
 
 **Did samples arrive?**
 
-```bash
+```bash title="On your computer"
 curl -s --cert client.crt --key client.key --cacert ca.crt \
   -H "Authorization: Bearer $TOKEN" \
   'https://helsa.example.net/v1/summary?range=week&metrics=stepCount,heartRate&tz=Europe/Budapest' | jq
@@ -103,14 +103,14 @@ curl -s --cert client.crt --key client.key --cacert ca.crt \
 
 **What does the database say?**
 
-```bash
+```bash title="On the server"
 docker compose exec timescaledb psql -U helsa -d helsa -c \
   "SELECT data_type, count(*), min(ts), max(ts) FROM samples GROUP BY 1 ORDER BY 2 DESC;"
 ```
 
 **Is the worker keeping up?**
 
-```bash
+```bash title="On the server"
 docker compose logs -f worker
 ```
 
@@ -120,12 +120,14 @@ not rows changed: the writes are upserts, so a chunk replayed after a failed
 acknowledgement reports the same numbers and stores nothing new. A growing queue with an idle worker means the worker cannot reach the
 database or the broker — check `/readyz`.
 
-![The dashboard's Today page after a first sync](../../../assets/screenshots/web-first-data.png)
+![The dashboard's Today page after a first sync: yesterday's rings, workout and night have arrived, and today's four figures are dashes](../../../assets/screenshots/web/en-today-first-sync.png)
 
 ⚠️ Note what this picture actually shows: yesterday arrived — rings, a workout, a
 night's sleep — and **today has not**, so today's figures are dashes rather than
 zeros. That is the normal state between syncs, and it is the distinction the whole
-app is built on: a missing measurement is never drawn as a measured nought.
+app is built on: a missing measurement is never drawn as a measured nought. (The
+*No data yet* box above them is about today too: it appears while nothing for the
+current day has reached the server.)
 
 ## When it does not work
 

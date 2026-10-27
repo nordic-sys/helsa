@@ -1,4 +1,5 @@
 ---
+import Logo from './Logo.astro';
 import { url } from '../lib/url';
 
 const year = new Date().getFullYear();
@@ -8,7 +9,7 @@ const year = new Date().getFullYear();
   <div class="shell">
     <div class="footer-grid">
       <div class="footer-about">
-        <p class="footer-mark">Helsa</p>
+        <p class="footer-mark"><Logo size={24} id="helsa-mark-footer" />Helsa</p>
         <p>
           Your Apple Health data, read and analysed on your own iPhone. The server
           in this repository is optional, and it is yours.
@@ -22,6 +23,7 @@ const year = new Date().getFullYear();
           <li><a href={url('/deployment/')}>Deployment</a></li>
           <li><a href={url('/api/')}>API</a></li>
           <li><a href={url('/integrations/')}>Integrations</a></li>
+          <li><a href={url('/troubleshooting/')}>When it does not work</a></li>
         </ul>
       </nav>
 
@@ -43,7 +45,7 @@ const year = new Date().getFullYear();
       <a href={url('/disclaimer/')}>Read the full disclaimer</a>.
     </p>
     <p class="footer-meta">
-      MIT licensed · {year} Nordic-Sys · No analytics, no cookies, no third-party scripts.
+      Helsa · a Nordic-Sys project · server MIT licensed · {year} · No analytics, no cookies, no third-party scripts.
     </p>
   </div>
 </footer>

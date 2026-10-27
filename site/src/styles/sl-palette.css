@@ -1,0 +1,115 @@
+/* ---------------------------------------------------------------------------
+   Starlight's colour variables, re-pointed at the Helsa tokens BY ROLE.
+
+   Loaded on both shells: by Starlight (customCss) for the docs, and by
+   BaseLayout for the hand-built pages, where the Pagefind search trigger in
+   the shared header needs the same variables to draw itself.
+
+   # Why by role, and why once
+
+   Starlight's grey scale is not a scale of shades, it is a list of jobs, and
+   the jobs swap ends between the themes: in dark mode `white` is the
+   brightest ink and `black` the page, in light mode the reverse. The old
+   adapter mapped by position and got the jobs wrong — light `gray-2`, which
+   Starlight uses for ordinary sidebar links and the search text, was a border
+   colour (#DBE4E7 on white, 1.29:1). What each variable is used for, read off
+   the installed Starlight 0.41.9:
+
+     white   headings, strong text, the current TOC entry
+     gray-1  search-dialog text, a select's options
+     gray-2  body-adjacent text: sidebar links, the search trigger, pagination
+     gray-3  muted text: edit link, last-updated, TOC links
+     gray-4  faint text and quiet borders
+     gray-5  borders: tables, pagination cards, the search trigger
+     gray-6  subtle fills: kbd, the search dialog
+     gray-7  the lightest fill (light mode only)
+     black   the card/sheet surface: mobile sidebar, search dialog
+
+   The Helsa tokens already flip with the theme, so each role is assigned
+   ONCE here and is right in both themes. These rules are outside `@layer`,
+   so they beat Starlight's layered defaults without !important.
+--------------------------------------------------------------------------- */
+
+:root {
+  --sl-font: var(--helsa-font-sans);
+  --sl-font-mono: var(--helsa-font-mono);
+
+  --sl-color-white: var(--helsa-text);
+  --sl-color-gray-1: var(--helsa-text);
+  --sl-color-gray-2: var(--helsa-text-2);
+  --sl-color-gray-3: var(--helsa-text-dim);
+  --sl-color-gray-4: var(--helsa-text-faint);
+  --sl-color-gray-5: var(--helsa-border-strong);
+  --sl-color-gray-6: var(--helsa-surface-3);
+  --sl-color-gray-7: var(--helsa-surface-2);
+  --sl-color-black: var(--helsa-surface);
+
+  /* accent = the fill, accent-high = the text-safe teal, accent-low = the tint */
+  --sl-color-accent-low: var(--helsa-accent-tint);
+  --sl-color-accent: var(--helsa-accent);
+  --sl-color-accent-high: var(--helsa-accent-text);
+
+  --sl-color-text: var(--helsa-text-2);
+  /* ⚠️ Starlight's light theme uses `accent` for link text; #0E7E8C on the
+     #F2F3F5 ground is 4.35:1. The text-safe teal is 5.4:1 there. */
+  --sl-color-text-accent: var(--helsa-accent-text);
+  --sl-color-text-invert: var(--helsa-on-accent);
+  --sl-color-bg: var(--helsa-bg);
+  --sl-color-bg-nav: var(--helsa-header-bg);
+  --sl-color-bg-sidebar: var(--helsa-surface);
+  --sl-color-bg-inline-code: var(--helsa-inline-code-bg);
+  --sl-color-bg-accent: var(--helsa-accent-text);
+
+  --sl-color-hairline-light: var(--helsa-border-strong);
+  --sl-color-hairline: var(--helsa-line);
+  --sl-color-hairline-shade: var(--helsa-border);
+  --sl-color-backdrop-overlay: rgb(20 24 28 / 45%);
+}
+
+/* -- The search trigger: Starlight's Pagefind button, drawn as the docs
+      mockup's search field. It stays a button that opens Starlight's dialog
+      (keyboard shortcut, modal, results); only its look changes. ---------- */
+
+site-search button[data-open-modal] {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: var(--helsa-touch);
+  min-width: var(--helsa-touch);
+  border: 1px solid var(--helsa-field-border);
+  border-radius: var(--helsa-radius-sm);
+  background: var(--helsa-surface);
+  color: var(--helsa-text-dim);
+  font-family: var(--helsa-font-sans);
+  font-size: 15px;
+  cursor: pointer;
+}
+site-search button[data-open-modal]:hover {
+  border-color: var(--helsa-text-dim);
+  color: var(--helsa-text);
+}
+site-search button[data-open-modal]:focus-visible {
+  outline: 2px solid var(--helsa-focus);
+  outline-offset: 2px;
+}
+site-search button[data-open-modal] svg { flex: none; }
+site-search button[data-open-modal] > kbd {
+  background: var(--helsa-surface-3);
+  color: var(--helsa-text-dim);
+  border-radius: 6px;
+}
+
+@media (min-width: 50rem) {
+  site-search button[data-open-modal] {
+    width: 100%;
+    max-width: 460px;
+    padding: 0 10px 0 14px;
+  }
+}
+@media (max-width: 49.99rem) {
+  site-search button[data-open-modal] {
+    justify-content: center;
+    width: var(--helsa-touch);
+    padding: 0;
+  }
+}

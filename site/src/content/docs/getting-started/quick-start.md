@@ -32,7 +32,7 @@ The images are the application, but the *shape* of a safe deployment — the Com
 files, the Caddy configuration, the PKI recipe — lives in the repository. So you
 still start with a clone; you just do not compile anything.
 
-```bash
+```bash title="On the server"
 git clone https://github.com/nordic-sys/helsa.git
 cd helsa/deploy
 cp .env.example .env
@@ -65,7 +65,7 @@ Replace all of them before the stack ever leaves your machine.
 **a) The three passwords** are already in `.env`, with placeholder values. Replace each value
 with the output of its own `openssl rand -hex 32`:
 
-```bash
+```bash title="On the server"
 openssl rand -hex 32      # → POSTGRES_PASSWORD=…
 openssl rand -hex 32      # → REDIS_PASSWORD=…
 openssl rand -hex 32      # → RABBITMQ_PASSWORD=…
@@ -75,7 +75,7 @@ openssl rand -hex 32      # → RABBITMQ_PASSWORD=…
 `LAN_SUBNET` and `WG_SUBNET` are not in `.env.example` (only commented reminders at its end), so
 there is nothing to edit; you append them:
 
-```bash
+```bash title="On the server"
 cd ~/helsa/deploy                      # wherever your clone lives
 echo "" >> .env
 echo "HELSA_JWT_SECRET=$(openssl rand -base64 48)" >> .env
@@ -121,7 +121,7 @@ invalidates every token.
 
 ## 3. Start the data services
 
-```bash
+```bash title="On the server"
 docker compose up -d
 docker compose ps
 ```
@@ -134,7 +134,7 @@ and that is the intended state.
 
 ## 4. Run migrations — deliberately
 
-```bash
+```bash title="On the server"
 make prod-migrate
 ```
 
@@ -147,7 +147,7 @@ the moment, and you can take a backup first.
 
 Verify:
 
-```bash
+```bash title="On the server"
 docker compose exec timescaledb \
   psql -U helsa -d helsa -c '\dt'
 ```
@@ -163,7 +163,7 @@ the published-image path.
 
 ## 5. Pull and start the application
 
-```bash
+```bash title="On the server"
 make prod-pull      # docker compose -f docker-compose.yml -f docker-compose.prod.yml pull
 make prod-up        # ... up -d
 ```
@@ -171,7 +171,7 @@ make prod-up        # ... up -d
 That brings up the API, the worker, the web dashboard and the Caddy proxy. To check
 what you are actually running:
 
-```bash
+```bash title="On the server"
 docker compose -f docker-compose.yml -f docker-compose.prod.yml images
 ```
 
@@ -189,7 +189,7 @@ If you want the data services in Docker and the Go code on your machine (an edit
 and `make run-api` cycle), skip the images entirely and use the dev overlay, which
 publishes the data ports to `127.0.0.1`:
 
-```bash
+```bash title="On your computer"
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 cd ../backend && make migrate && make run-api      # and make run-worker in a second shell
 ```
@@ -205,7 +205,7 @@ TLS and without the mutual-TLS gate. Stop, fix the port binding, and start again
 ⚠️ **On the production path the API publishes no port at all** — only the proxy does,
 on 443 and 8443. So ask the container, not the host:
 
-```bash
+```bash title="On the server"
 make prod-exec-api CMD="wget -qO- http://127.0.0.1:8080/healthz"
 # {"status":"ok"}
 
@@ -221,7 +221,7 @@ and plain `curl http://127.0.0.1:8080/readyz` works.
 
 Anything else needs a token:
 
-```bash
+```bash title="On the server"
 make prod-exec-api CMD="wget -qO- -S 'http://127.0.0.1:8080/v1/summary?range=day&metrics=stepCount'"
 # 401 Unauthorized
 ```
@@ -236,7 +236,7 @@ Nothing about Helsa requires the published images. Building needs no registry
 login, is the only way to run a change you have made, and is what you should do if
 you would rather not trust a binary you did not compile.
 
-```bash
+```bash title="On the server"
 make prod-build      # HELSA_PULL_POLICY=build docker compose ... build
 make prod-up-source  # ... up -d, from what you just built
 ```
@@ -256,7 +256,7 @@ minutes of compilation on first build.
 
 ## 7. Stopping and starting
 
-```bash
+```bash title="On the server"
 make prod-down                                          # stop, keep data
 docker compose -f docker-compose.yml -f docker-compose.dev.yml down
 docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
@@ -264,7 +264,7 @@ docker compose -f docker-compose.yml -f docker-compose.dev.yml up -d
 
 To wipe everything, including the database volume:
 
-```bash
+```bash title="On the server"
 docker compose down -v
 ```
 
@@ -276,7 +276,7 @@ no undo. On a machine that holds real data, take a dump first — see
 
 ## Keeping it up to date
 
-```bash
+```bash title="On the server"
 git pull            # the Compose files and the migrations
 make prod-pull      # the images
 make prod-migrate   # only if the pull brought new migrations — read them first

@@ -1,0 +1,32 @@
+/* ---------------------------------------------------------------------------
+   What Starlight's Search component needs on a page Starlight does not render.
+
+   The shared header puts the real Pagefind trigger on the hand-built pages
+   too, so search works from the landing page and not only inside the docs.
+   On a docs page Starlight's own stylesheet supplies the variables and the
+   utility classes the component uses; here nothing does. This file supplies
+   exactly those — the subset read off Search.astro in Starlight 0.41.9 — and
+   nothing that would restyle the rest of the page.
+
+   Imported by BaseLayout only. The colours come from sl-palette.css.
+--------------------------------------------------------------------------- */
+
+:root {
+  --__sl-font: var(--helsa-font-sans);
+  --sl-text-2xs: 0.75rem;
+  --sl-text-sm: 0.875rem;
+  --sl-text-xl: 1.25rem;
+  --sl-shadow-lg: 0 25px 7px rgb(0 0 0 / 3%), 0 16px 6px rgb(0 0 0 / 10%),
+    0 9px 5px rgb(20 24 28 / 20%), 0 4px 4px rgb(0 0 0 / 25%);
+}
+
+@layer starlight.utils {
+  .sl-hidden { display: none; }
+  .sl-flex { display: flex; }
+  .sl-block { display: block; }
+  @media (min-width: 50rem) {
+    .md\:sl-hidden { display: none; }
+    .md\:sl-flex { display: flex; }
+    .md\:sl-block { display: block; }
+  }
+}

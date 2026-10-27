@@ -1,6 +1,9 @@
 ---
 import '../styles/tokens.css';
+import '../styles/sl-palette.css';
+import '../styles/search-bridge.css';
 import '../styles/site.css';
+import Search from 'virtual:starlight/components/Search';
 import SiteHeader from '../components/SiteHeader.astro';
 import SiteFooter from '../components/SiteFooter.astro';
 import { url } from '../lib/url';
@@ -8,12 +11,14 @@ import { url } from '../lib/url';
 interface Props {
   title: string;
   description: string;
-  current?: 'home' | 'the-app' | 'docs' | 'support';
+  current?: 'home' | 'the-app' | 'docs' | 'support' | 'privacy';
   /** Set on pages that draw their own full-bleed hero. */
   wide?: boolean;
+  /** Keep the page out of the search index and search engines (the 404). */
+  noindex?: boolean;
 }
 
-const { title, description, current, wide = false } = Astro.props;
+const { title, description, current, wide = false, noindex = false } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 ---
 
@@ -33,6 +38,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta name="twitter:card" content="summary" />
+    {noindex && <meta name="robots" content="noindex" />}
 
     {/*
       Applied before first paint so the page never flashes the wrong theme.
@@ -48,12 +54,15 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
             return null;
           }
         })();
+        // No stored choice: follow the system — light unless it asks for dark.
+        // (Starlight resolves "no preference" to dark instead; every current
+        // browser reports one or the other, so the two shells agree.)
         const theme =
           stored === 'light' || stored === 'dark'
             ? stored
-            : window.matchMedia('(prefers-color-scheme: light)').matches
-              ? 'light'
-              : 'dark';
+            : window.matchMedia('(prefers-color-scheme: dark)').matches
+              ? 'dark'
+              : 'light';
         document.documentElement.dataset.theme = theme;
       })();
     </script>
@@ -61,7 +70,11 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
 
   <body class={wide ? 'is-wide' : ''}>
     <a class="skip-link" href="#main">Skip to content</a>
-    <SiteHeader current={current} />
+    <header class="page-header">
+      <SiteHeader current={current}>
+        <Search slot="search" />
+      </SiteHeader>
+    </header>
     <!--
       ⚠️ `data-pagefind-body` is what puts these pages in the search index.
 
@@ -71,7 +84,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
       Store listing looks for, and searching the site for "privacy" returned the map
       page instead.
     -->
-    <main id="main" data-pagefind-body>
+    <main id="main" data-pagefind-body={noindex ? undefined : ''}>
       <slot />
     </main>
     <SiteFooter />
