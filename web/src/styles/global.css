@@ -2115,3 +2115,128 @@ a.dup-row:hover {
 .chart-table th[scope='row'] {
   font-weight: 400;
 }
+
+/* --- Training progress (pages/Training.tsx) ---
+ *
+ * The weekly grid is the phone's `WeekGrid`: a square per week, the fill one hue
+ * (fjord) at the phone's five strengths, a dashed outline for a rest week and a
+ * solid one for the week still running. The strength rides on a custom property
+ * so the same rule draws the grid and its legend. */
+.training .card-headline {
+  margin-bottom: var(--sp-2);
+}
+.training-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+.training-line {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-small);
+  color: var(--text-2);
+}
+.training-fact {
+  font-variant-numeric: tabular-nums;
+}
+.week-grid-wrap {
+  min-width: 0;
+}
+.week-grid,
+.week-grid-axis {
+  display: grid;
+  gap: 3px;
+}
+.week-grid--folded {
+  grid-auto-flow: column;
+  grid-template-rows: repeat(4, auto);
+}
+.week-cell {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--helsa-fjord) calc(var(--shade, 0) * 100%), transparent);
+}
+.week-cell.is-rest {
+  background: transparent;
+  border: 1px dashed color-mix(in srgb, var(--text-faint) 70%, transparent);
+}
+.week-cell.is-partial {
+  outline: 1.5px solid var(--helsa-fjord);
+  outline-offset: -1.5px;
+}
+.week-grid-axis {
+  margin-top: 6px;
+  font-size: var(--fs-micro);
+  color: var(--text-faint);
+  white-space: nowrap;
+}
+.week-grid-axis > span {
+  overflow: hidden;
+}
+.week-grid-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: var(--sp-3);
+  font-size: var(--fs-caption);
+  color: var(--text-dim);
+}
+.legend-cell {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex: none;
+}
+.training-types {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.training-type-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--sp-2);
+  font-size: var(--fs-small);
+}
+.training-type-row span {
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.training-type-bar {
+  height: 6px;
+  margin-top: 4px;
+  border-radius: var(--radius-pill);
+}
+.training-vital-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--sp-2);
+  font-size: var(--fs-small);
+  color: var(--text-dim);
+}
+.training-vital-head strong {
+  font-family: var(--font-num);
+  font-size: var(--fs-figure-sm);
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.training-vital-head small {
+  font-family: var(--font);
+  font-size: var(--fs-caption);
+  color: var(--text-dim);
+  font-weight: 500;
+}
+.training-vital-chart {
+  width: 100%;
+  height: 120px;
+  margin-top: var(--sp-2);
+}

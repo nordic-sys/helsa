@@ -18,6 +18,7 @@ import type {
   Workout,
   WorkoutPage,
   WorkoutRoute,
+  WorkoutIntensity,
 } from './types'
 
 // Access is layered (docs/08-auth-hozzaferes.md):
@@ -193,6 +194,18 @@ export const api = {
   /** The monthly step challenge. `month` is `YYYY-MM`; without it, the month the
    * time zone is in right now. */
   challenge: (month?: string, tz?: string) => req<Challenge>(`/challenge${qs({ month, tz })}`),
+
+  /**
+   * Seconds at or above heart-rate zone 3 for every workout that started in
+   * `[from, to)` (instants), and the measured maximum they rest on. The server
+   * runs the phone's `WorkoutIntensity` rules so the page does not walk
+   * `/samples` once per workout.
+   *
+   * ⚠️ A 404 is version skew — an older server without the route — and the page
+   * has to say so rather than show an error (`isApiTooOld`).
+   */
+  workoutIntensity: (from: string, to: string) =>
+    req<WorkoutIntensity>(`/workout-intensity${qs({ from, to })}`),
 }
 
 /** The browser's time zone — for the timezone-aware aggregation (docs/03 §6.1). */
