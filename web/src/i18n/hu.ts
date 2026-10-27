@@ -965,6 +965,127 @@ export const hu = {
     'ingest.reason.raw': 'A worker üzenete',
     'ingest.reason.batch': 'Köteg: {id}',
     'ingest.reason.lastRedrive': 'Legutóbbi újrapróbálás vége: {when}, visszakerült: {moved}.',
+
+    // --- Év a számokban + évről évre (pages/PeriodSummary, pages/YearByYear) ---
+    'nav.period': 'Év a számokban',
+    'nav.years': 'Évről évre',
+    'period.title.year': '{year} számokban',
+    'period.title.month': '{month} számokban',
+    'period.subtitle':
+      'Egy naptári időszak egyben: az összesítések, az éjszakák, az edzések és az érmek — azzal együtt, hogy mennyiről van adat, és meddig jutott az időszak.',
+    'period.unitAria': 'Év vagy hónap',
+    'period.unit.year': 'Év',
+    'period.unit.month': 'Hónap',
+    'period.extent.running.year':
+      '{period} még tart: az összegzés a meglévő adatból készült (eddig: {through}), nem a teljes évből.',
+    'period.extent.running.month':
+      '{period} még tart: az összegzés a meglévő adatból készült (eddig: {through}), nem a teljes hónapból.',
+    'period.empty.title': 'Egyetlen mérés sem érkezett',
+    'period.empty.hint':
+      'Ez nem hiba és nem nulla: erről az időszakról nem tudunk semmit. Ha az adat később ér fel a szerverre, itt magától megjelenik.',
+    'period.coverage.nothingElapsed': 'Ebből az időszakból még semmi nem telt el.',
+    'period.coverage.none.month': 'Az eddig eltelt {elapsed} hónap egyikéről sincs adat.',
+    'period.coverage.none.day': 'Az eddig eltelt {elapsed} nap egyikéről sincs adat.',
+    'period.coverage.all.month': 'Az eddig eltelt {elapsed} hónap mindegyikéről van adat.',
+    'period.coverage.all.day': 'Az eddig eltelt {elapsed} nap mindegyikéről van adat.',
+    'period.coverage.some.month': 'Az eddig eltelt {elapsed} hónap közül {measured} esetében van adat.',
+    'period.coverage.some.day': 'Az eddig eltelt {elapsed} nap közül {measured} esetében van adat.',
+    'period.compare.previous': '{period}: {value}',
+    'period.compare.none':
+      '{period} idejéről nincs mért adat, amihez mérni lehetne — ez hiány, nem visszaesés nullára.',
+    'period.compare.withheld':
+      'Nincs összevetés ezzel: {period} ({value}). A kettőben nagyon eltérő arányban volt mérés, és kevesebb mért időszak összege már ettől is kisebb.',
+    'period.compare.caveat.month': 'Nem azonos a lefedettség: most {now}, akkor {then} hónapról van adat.',
+    'period.compare.caveat.day': 'Nem azonos a lefedettség: most {now}, akkor {then} napról van adat.',
+    'period.compare.matched':
+      'Az összehasonlítás {period} azonos szakaszára szól ({from} – {to}), hogy a két időszak ugyanolyan hosszú legyen.',
+    'period.compare.emptyPeriod':
+      '{period} azonos szakaszában nincs adat, ezért nincs mihez mérni ezt az időszakot.',
+    'period.compare.notLoaded': 'Az előző időszak nem tölthető be, ezért nincs összehasonlítás.',
+    'period.noDataFor': 'Nem érkezett adat: {list}.',
+    'period.peaks.title': 'Csúcsok',
+    'period.peaks.best.year': 'Legjobb hónap — {metric}',
+    'period.peaks.best.month': 'Legjobb nap — {metric}',
+    'period.peaks.sleep': 'Leghosszabb alvás',
+    'period.peaks.workout': 'Leghosszabb edzés',
+    'period.peaks.distance': 'Leghosszabb táv',
+    'period.sleep.title': 'Alvás',
+    'period.sleep.average': 'Átlagos éjszaka',
+    'period.sleep.nights': 'Mért éjszakák',
+    'period.sleep.total': 'Összes alvás',
+    'period.sleep.overMeasured': 'Az átlag a mért éjszakákra vonatkozik.',
+    'period.sleep.none': 'Ebben az időszakban egyetlen alvás-szakasz sem érkezett.',
+    'period.sleep.notLoaded':
+      'Az alvásadat nem tölthető be — ez nem azt jelenti, hogy nem aludtál, hanem hogy nem tudjuk megnézni.',
+    'period.sleep.open': 'Minden éjszaka — Alvás',
+    'period.workouts.title': 'Edzések',
+    'period.workouts.count': 'Edzések',
+    'period.workouts.time': 'Összes idő',
+    'period.workouts.distance': 'Összes táv',
+    'period.workouts.none':
+      'Ebben az időszakban nincs edzés. Ez nem hiba — a séta és a lépésszám nem edzés.',
+    'period.workouts.notLoaded': 'Az edzéslista nem tölthető be.',
+    'period.workouts.noEnd.one': '{n} edzésnek nincs záró időpontja — az nem számít bele az összes időbe.',
+    'period.workouts.noEnd.other': '{n} edzésnek nincs záró időpontja — azok nem számítanak bele az összes időbe.',
+    'period.workouts.folded.one':
+      'További {n} felvétel egy már megszámolt edzésről (két eszköz, egy edzés) — egyszer számít, ahogy az Edzések oldalon is.',
+    'period.workouts.folded.other':
+      'További {n} felvétel már megszámolt edzésekről (két eszköz, egy edzés) — egyszer számítanak, ahogy az Edzések oldalon is.',
+    'period.workouts.loading':
+      'A régebbi edzések olvasása még tart — amíg be nem fejeződik, a szám csak alsó határ.',
+    'period.workouts.capped':
+      'Az edzésszám csak alsó határ: az előzmény hosszabb annál, amit az oldal egy menetben beolvas.',
+    'period.workouts.open': 'Minden edzés — Edzések',
+    'period.medals.title': 'Érmek',
+    'period.medals.none': 'Egyetlen érem sem szól erre az időszakra.',
+    'period.medals.notLoaded': 'Az érmek nem tölthetők be.',
+    'period.medals.onlyPeriod':
+      'Csak azok az érmek, amelyek erre az időszakra szólnak. Egy mérföldkőnek nincs saját időszaka, ezért az nincs itt.',
+    'period.toYears': 'Ugyanezek az évek egymás mellett:',
+    'years.title': 'Évről évre',
+    'years.subtitle':
+      'A kiválasztott mérések, minden naptári év a többi mellett — legfeljebb öt évre visszamenőleg, ameddig van adat.',
+    'years.span': 'Mért adat ezekre az évekre van: {span}',
+    'years.partial':
+      'Az idei év még tart — minden évet átlagos hónapként hasonlítunk össze, nem összegként, így egy töredék év is odaállhat egy teljes mellé.',
+    'years.none.title': 'Nincs semmi kiválasztva',
+    'years.none.hint': 'Válassz legalább egy mérést, vagy nyomd meg az Ajánlottak gombot.',
+    'years.empty.title': 'Egyik évben sincs még elég adat',
+    'years.empty.hint':
+      'Egy évhez legalább {min} mért hónap kell, mielőtt egy másik mellé állítjuk. Válassz más méréseket, vagy ellenőrizd, hogy a szinkron lefutott-e.',
+    'years.table.aria': 'A kiválasztott mérések évről évre',
+    'years.table.metric': 'Mérés',
+    'years.table.soFar': 'eddig',
+    'years.table.change': 'Elsőtől az utolsóig',
+    'years.table.legend':
+      'Az összeadódó mérés átlagos hónapként szerepel, az átlagolt az átlagával — mindkettő csak azokból a hónapokból, amelyekről van adat. Ha egy évben {min} hónapnál kevesebb a mért, az év nem kap számot. A sáv egy mérés éveit veti össze egymással, sosem két mérést.',
+    'years.kind.sum': 'átlagos hónap',
+    'years.kind.avg': 'átlag',
+    'years.cell.none': 'nincs mérés',
+    'years.cell.tooFew.one': '{n} hónap · túl kevés',
+    'years.cell.tooFew.other': '{n} hónap · túl kevés',
+    'years.cell.months.one': '{n} hónap',
+    'years.cell.months.other': '{n} hónap',
+    'years.cell.ofElapsed': '/ {n}',
+    'years.change.title': '{from} és {to} között',
+    'years.change.uneven': 'nagyon eltérő lefedettség — lazán érdemes olvasni',
+    'years.noDataFor': 'Egyik évben sincs adat: {list}.',
+    'years.degraded':
+      'Legalább egy összeadódó mérés csak mintánkénti átlagként érkezett, ezért az átlagos hónapja itt nem rakható össze.',
+    'years.why.title': 'Miért kell a telefonon gombot nyomni, itt pedig nem',
+    'years.why.body':
+      'A telefonon a hosszú visszatekintés évről évre végigolvassa az Egészség-előzményeidet, és közben fogyasztja az akkut — ezért megvárja, hogy kérd. Itt a számok már a szerveren vannak, és az egész egyetlen kérdés hozzá.',
+    'years.toPeriod': 'Egy év részletesen — Év a számokban',
+    'years.picker.title': 'Mire terjed ki',
+    'years.picker.count': '({n} kiválasztva)',
+    'years.picker.recommended': 'Ajánlottak',
+    'years.picker.all': 'Mindet',
+    'years.picker.clear': 'Egyiket sem',
+    'years.picker.note':
+      'Az ajánlás az a néhány mérés, amelyik évek távlatában is mond valamit. ⚠️ Az alvás nincs köztük: nem ugyanonnan jön, mint a többi, ezért üresen jelenne meg.',
+    'years.picker.groupTake': 'Az egész csoport kijelölése: {group}',
+    'years.picker.groupClear': 'Az egész csoport törlése: {group}',
+    'years.picker.stored': 'A választás csak ebben a böngészőben marad meg. A telefon a sajátját őrzi.',
   },
 
   // --- Metric group names ---------------------------------------------------

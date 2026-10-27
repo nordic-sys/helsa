@@ -968,6 +968,127 @@ export const en: Dict = {
     'ingest.reason.raw': 'The worker’s message',
     'ingest.reason.batch': 'Batch {id}',
     'ingest.reason.lastRedrive': 'Last retry finished {when}: {moved} moved back.',
+
+    // --- The year in numbers + year by year (pages/PeriodSummary, pages/YearByYear) ---
+    // The phone's period summary and long view. Wording follows the phone's own
+    // catalogue where it has the sentence (`HelsaKit/Resources/Localizable.xcstrings`).
+    'nav.period': 'Year in numbers',
+    'nav.years': 'Year by year',
+    'period.title.year': '{year} in numbers',
+    'period.title.month': '{month} in numbers',
+    'period.subtitle':
+      'One calendar period at once: the totals, the nights, the workouts and the medals — with how much of it carried data, and how far it has got.',
+    'period.unitAria': 'Year or month',
+    'period.unit.year': 'Year',
+    'period.unit.month': 'Month',
+    'period.extent.running.year':
+      '{period} is still running: this summary is made from the data up to {through}, not from the whole year.',
+    'period.extent.running.month':
+      '{period} is still running: this summary is made from the data up to {through}, not from the whole month.',
+    'period.empty.title': 'Not one measurement arrived',
+    'period.empty.hint':
+      'This is not a fault and it is not a zero: about this period we know nothing. If the data reaches the server later, it appears here by itself.',
+    'period.coverage.nothingElapsed': 'None of this period has passed yet.',
+    'period.coverage.none.month': 'Not one of the {elapsed} elapsed months has data.',
+    'period.coverage.none.day': 'Not one of the {elapsed} elapsed days has data.',
+    'period.coverage.all.month': 'All {elapsed} elapsed months have data.',
+    'period.coverage.all.day': 'All {elapsed} elapsed days have data.',
+    'period.coverage.some.month': '{measured} of the {elapsed} elapsed months have data.',
+    'period.coverage.some.day': '{measured} of the {elapsed} elapsed days have data.',
+    'period.compare.previous': '{period}: {value}',
+    'period.compare.none': 'Nothing measured in {period} to compare with — a gap, not a fall to zero.',
+    'period.compare.withheld':
+      'Not compared with {period} ({value}): the two were measured on very different shares of their time, and a total over fewer measured buckets is smaller for that reason alone.',
+    'period.compare.caveat.month': 'The coverage is not the same: now {now}, then {then} months have data.',
+    'period.compare.caveat.day': 'The coverage is not the same: now {now}, then {then} days have data.',
+    'period.compare.matched':
+      'The comparison covers the same stretch of {period} ({from} – {to}), so that the two periods are the same length.',
+    'period.compare.emptyPeriod':
+      'There is no data in the same stretch of {period}, so there is nothing to measure this period against.',
+    'period.compare.notLoaded': 'The previous period cannot be loaded, so there is no comparison.',
+    'period.noDataFor': 'No data arrived for: {list}.',
+    'period.peaks.title': 'Peaks',
+    'period.peaks.best.year': 'Best month — {metric}',
+    'period.peaks.best.month': 'Best day — {metric}',
+    'period.peaks.sleep': 'Longest sleep',
+    'period.peaks.workout': 'Longest workout',
+    'period.peaks.distance': 'Longest distance',
+    'period.sleep.title': 'Sleep',
+    'period.sleep.average': 'Average night',
+    'period.sleep.nights': 'Measured nights',
+    'period.sleep.total': 'Total sleep',
+    'period.sleep.overMeasured': 'The average is over the measured nights.',
+    'period.sleep.none': 'Not one sleep segment arrived in this period.',
+    'period.sleep.notLoaded':
+      'The sleep data cannot be loaded — that does not mean you did not sleep, only that we cannot look.',
+    'period.sleep.open': 'Every night — Sleep',
+    'period.workouts.title': 'Workouts',
+    'period.workouts.count': 'Workouts',
+    'period.workouts.time': 'Total time',
+    'period.workouts.distance': 'Total distance',
+    'period.workouts.none':
+      'No workout in this period. This is not a fault — walking and a step count are not a workout.',
+    'period.workouts.notLoaded': 'The workout list cannot be loaded.',
+    'period.workouts.noEnd.one': '{n} workout has no end time — it does not count towards the total time.',
+    'period.workouts.noEnd.other': '{n} workouts have no end time — those do not count towards the total time.',
+    'period.workouts.folded.one':
+      '{n} more recording of a session that was already counted (two devices, one workout) is counted once, as on the Workouts page.',
+    'period.workouts.folded.other':
+      '{n} more recordings of sessions that were already counted (two devices, one workout) are counted once, as on the Workouts page.',
+    'period.workouts.loading': 'Still reading older workouts — until it finishes, the count is a lower bound.',
+    'period.workouts.capped':
+      'The workout count is a lower bound: the history is longer than the page reads in one go.',
+    'period.workouts.open': 'Every workout — Workouts',
+    'period.medals.title': 'Medals',
+    'period.medals.none': 'No medal names this period.',
+    'period.medals.notLoaded': 'The medals cannot be loaded.',
+    'period.medals.onlyPeriod':
+      'Only the medals that belong to this period. A milestone carries no period of its own, so it is not here.',
+    'period.toYears': 'The same years side by side:',
+    'years.title': 'Year by year',
+    'years.subtitle':
+      'The measurements you choose, each calendar year beside the others — up to five years back, as far as there is data.',
+    'years.span': 'Measured data found for: {span}',
+    'years.partial':
+      'The current year is still running — every year is compared as an average month, not as a total, so a part-year can stand beside a whole one.',
+    'years.none.title': 'Nothing is chosen',
+    'years.none.hint': 'Choose at least one measurement, or press Recommended.',
+    'years.empty.title': 'Not one year has enough data yet',
+    'years.empty.hint':
+      'A year needs at least {min} measured months before it is put beside another one. Choose other measurements, or check whether the sync has run.',
+    'years.table.aria': 'The chosen measurements, year by year',
+    'years.table.metric': 'Measurement',
+    'years.table.soFar': 'so far',
+    'years.table.change': 'First → last',
+    'years.table.legend':
+      'A summed measurement is shown as its average month, an averaged one as its average — both over the months that carried data only. A year with fewer than {min} measured months gets no figure. The bar compares one measurement’s years with each other, never one measurement with another.',
+    'years.kind.sum': 'an average month',
+    'years.kind.avg': 'average',
+    'years.cell.none': 'not measured',
+    'years.cell.tooFew.one': '{n} month · too few',
+    'years.cell.tooFew.other': '{n} months · too few',
+    'years.cell.months.one': '{n} month',
+    'years.cell.months.other': '{n} months',
+    'years.cell.ofElapsed': 'of {n}',
+    'years.change.title': 'From {from} to {to}',
+    'years.change.uneven': 'very different coverage — read loosely',
+    'years.noDataFor': 'No data at all, in any year: {list}.',
+    'years.degraded':
+      'At least one summed measurement arrived only as per-sample averages, so its average month cannot be rebuilt here.',
+    'years.why.title': 'Why the phone makes you press a button and this page does not',
+    'years.why.body':
+      'On the phone the long view reads your Health history year by year, and it costs battery while it runs — so it waits for you. Here the numbers are already on the server, and the whole thing is one question to it.',
+    'years.toPeriod': 'One year in detail — Year in numbers',
+    'years.picker.title': 'What it covers',
+    'years.picker.count': '({n} selected)',
+    'years.picker.recommended': 'Recommended',
+    'years.picker.all': 'Select all',
+    'years.picker.clear': 'Clear all',
+    'years.picker.note':
+      'The recommendation is the handful of measurements that mean something across years. ⚠️ Sleep is not among them: it does not come from the same place as the rest, so it would show up empty.',
+    'years.picker.groupTake': 'Take the whole group: {group}',
+    'years.picker.groupClear': 'Clear the whole group: {group}',
+    'years.picker.stored': 'The choice is kept in this browser only. The phone keeps its own.',
   },
 
   // --- Metric group names ---------------------------------------------------
