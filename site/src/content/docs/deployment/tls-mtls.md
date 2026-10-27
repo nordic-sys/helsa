@@ -55,7 +55,15 @@ Helsa Root CA                          10 years, key kept OFFLINE
 
 ## Issuing
 
+:::danger
+**Do this on your own computer, not on the server.** The root key must never be on the server
+(see below), and the commands here create it wherever you run them. If you followed the [Quick
+start](/getting-started/quick-start/), your clone is on the server — clone the repository a
+second time on your workstation for this step. All you need there is `git`, `make` and `openssl`.
+:::
+
 ```bash
+git clone https://github.com/nordic-sys/helsa.git
 cd helsa/deploy/pki
 
 make ca                       # once, ever
@@ -88,16 +96,25 @@ regenerating the CA silently invalidates every certificate you have issued.
 └── server.key    0600   readable only by the proxy
 ```
 
+From your workstation, in `helsa/deploy/pki` — replace `server` with your server's SSH name and
+`~/helsa/deploy` with wherever the Quick start clone lives:
+
 ```bash
-scp pki/out/ca/ca.crt pki/out/server/server.crt pki/out/server/server.key server:/tmp/
+scp out/ca/ca.crt out/server/server.crt out/server/server.key server:/tmp/
 ssh server '
+  sudo install -d -m 0755 /opt/helsa/pki &&
   sudo install -m 0644 /tmp/ca.crt /tmp/server.crt /opt/helsa/pki/ &&
   sudo install -m 0600 /tmp/server.key /opt/helsa/pki/ &&
   rm -f /tmp/ca.crt /tmp/server.crt /tmp/server.key &&
-  cd /opt/helsa/deploy && docker compose restart proxy'
+  cd ~/helsa/deploy && make prod-caddy-check &&
+  docker compose -f docker-compose.yml -f docker-compose.prod.yml restart proxy'
 ```
 
-Note the `rm` — do not leave a private key in `/tmp`.
+Note the `rm` — do not leave a private key in `/tmp`. ⚠️ The restart needs **both** Compose files:
+the proxy exists only in the production overlay, so a plain `docker compose restart proxy`
+answers `no such service: proxy` and restarts nothing. `make prod-caddy-check` validates the
+configuration against the certificates first, so a mistake fails here rather than taking the
+proxy down.
 
 ## Installing on the phone
 Two separate things must go onto the device, and **both are required**:
@@ -124,8 +141,13 @@ error, and nothing anywhere says the certificate is the reason.
 
 **2. `<name>.p12` — so the phone can identify itself.**
 
-Import it the same way. It asks for the password that `make client` generated into
-`out/clients/<name>/p12-password.txt`.
+⚠️ **This one does not go in the way the CA did.** A `.p12` installed as a profile in the iPhone's
+Settings lands in the system keychain, which the app cannot read — the connection then fails as if
+there were no certificate at all. Import it **inside the app**: put the file on the phone (AirDrop
+to Files, or the Files app over the network), then in Helsa open **Settings ▸ Export ▸ Your own
+server ▸ Client certificate ▸ Choose a file…**, pick the `.p12` and type the password that
+`make client` generated into `out/clients/<name>/p12-password.txt`. The screen then says
+*"A certificate is installed."*
 
 :::danger
 **Move that password into your password manager and delete the file.** It
@@ -136,8 +158,10 @@ If iOS refuses the `.p12`, the encryption may be too new for the device; the PKI
 README documents a `-legacy` variant. Use it only if you must — it falls back to
 older, weaker ciphers.
 
-The app also **pins your CA** rather than trusting the system trust store, so a
-certificate issued by any public CA is rejected out of hand.
+⚠️ **The app does not pin your CA.** It trusts the server through the system trust store, which
+is why step 1 — installing and trusting `ca.crt` — is required at all. What keeps a stranger's
+server out is the client certificate: a server that does not have your CA cannot complete the
+handshake with it.
 
 ## Rotating
 Three scenarios, in increasing order of danger.
@@ -249,4 +273,5 @@ Two mitigations, and you want both:
 | Works by IP address, fails by hostname | The hostname is missing from the server certificate's SAN list | Add it to `server.cnf`, `make server`, redeploy |
 | Works by hostname, fails by IP | Expected. Caddy enforces strict SNI/Host matching once client authentication is configured. | Use the hostname. |
 | `.p12` rejected by iOS | Encryption algorithm | See the `-legacy` note above |
+| The app behaves as if there were no client certificate, although you installed the `.p12` | It was installed as a profile in the iPhone's Settings — the app cannot see that keychain | Import it in the app: Settings ▸ Export ▸ Your own server ▸ Client certificate |
 | Lost `ca.key` | It was not in the password manager | Full CA rotation. There is no other way. |

@@ -36,24 +36,33 @@ make prod-token SUBJECT=iphone
 Output:
 
 ```
-subject:       iphone
+device:        iphone
+user:          6d08a14d-… (apple_sub owner)
 access_token:  eyJhbGciOiJIUzI1NiIs...
 refresh_token: ...
+expires:       2027-10-27T12:17:18Z (8760h0m0s from now)
 ```
 
 The `access_token` is what you paste into the app or the dashboard.
 
-Issue **one token per device**, with a name you will recognise later:
+Issue **one token per device**, with a name you will recognise later. `SUBJECT` is required and
+names the **device**, not a person: every token opens the same — the only — user's data, so the
+dashboard's own token shows exactly what the phone uploaded.
 
 ```bash
 make prod-token SUBJECT=iphone
 make prod-token SUBJECT=browser
 ```
 
+On an empty database the first token creates the user. ⚠️ If the database holds **more than one**
+user — an install that issued tokens with the tool before 2026-10-27 made one per subject — the
+tool refuses and lists them; pick one with `TOKEN_USER=<id or apple_sub>`. The old per-subject
+users are not merged: revoke their tokens and issue new ones for the user that holds your data.
+
 ## Lifetime
 
-The token TTL comes from `HELSA_ACCESS_TTL`. The `token` tool is configured with a
-long default (a year) rather than the API's normal 15 minutes.
+The lifetime of a device token comes from `HELSA_DEVICE_TOKEN_TTL` in `deploy/.env`, default
+`8760h` — a year, rather than the API's normal 15 minutes. The tool prints the exact expiry.
 
 That is a considered trade-off, not laziness:
 
@@ -69,7 +78,7 @@ as well.
 Set your own value when issuing:
 
 ```bash
-HELSA_DEVICE_TOKEN_TTL=8760h make prod-token SUBJECT=iphone
+HELSA_DEVICE_TOKEN_TTL=17520h make prod-token SUBJECT=iphone
 ```
 
 ## Treat it as a credential
@@ -100,10 +109,12 @@ A device token can be taken back on its own, from the server:
 
 ```bash
 make prod-token-revoke TOKEN="<the access token>"
+# revoked the token of device "browser". ...
 ```
 
 The device using it is refused from its next request onwards; every other device
-carries on. The deny-list entry is kept only until the token would have expired
+carries on. (Put a space before the command, or clear it from your shell history afterwards — the
+token is on the command line.) The deny-list entry is kept only until the token would have expired
 anyway — after that the token is refused on expiry, and a list that only grows is
 its own kind of problem.
 

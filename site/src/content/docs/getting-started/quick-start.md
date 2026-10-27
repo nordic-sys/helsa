@@ -64,11 +64,20 @@ Replace all of them before the stack ever leaves your machine.
 
 ```bash
 # Run these and paste the output into .env.
-openssl rand -base64 36   # POSTGRES_PASSWORD
-openssl rand -base64 36   # REDIS_PASSWORD
-openssl rand -base64 36   # RABBITMQ_PASSWORD
+openssl rand -hex 32      # POSTGRES_PASSWORD
+openssl rand -hex 32      # REDIS_PASSWORD
+openssl rand -hex 32      # RABBITMQ_PASSWORD
 openssl rand -base64 48   # HELSA_JWT_SECRET
 ```
+
+⚠️ **Hex for the three passwords, on purpose.** They end up inside connection strings. The
+backend repairs a base64 password (`/`, `+`, `=`) in its own URLs, but hex has nothing to repair,
+and a password containing `'` or `\` breaks the migration tool's connection string either way.
+
+⚠️ **Set them before the first `docker compose up`, and do not change them afterwards casually.**
+PostgreSQL and RabbitMQ store the password they were first started with; a new value in `.env`
+alone locks the stack out of its own database. On an empty install, `docker compose down -v` and
+start again; on one with data, change it inside PostgreSQL / RabbitMQ first.
 
 ⚠️ **`HELSA_JWT_SECRET` is not in `.env.example`, and neither are `LAN_SUBNET` or
 `WG_SUBNET`** — you add those lines yourself. They are not forgotten: the compose
@@ -123,7 +132,12 @@ docker compose exec timescaledb \
 
 You should see `users`, `devices`, `workouts`, `workout_route_points`,
 `sleep_segments`, `activity_summary`, `goals`, `sync_state`, `achievements`,
-`push_tokens`, and the `samples` hypertable — eleven in all.
+`push_tokens`, and the `samples` hypertable — eleven tables of Helsa's, plus `goose_db_version`,
+the migration tool's own bookkeeping: twelve rows.
+
+`make prod-migrate` builds one small image locally (`helsa-migrate:local`, a few seconds) — the
+migrations are not part of the published images, so this is the one thing that is built even on
+the published-image path.
 
 ## 5. Pull and start the application
 
@@ -186,11 +200,13 @@ and plain `curl http://127.0.0.1:8080/readyz` works.
 Anything else needs a token:
 
 ```bash
-make prod-exec-api CMD="wget -qO- -S http://127.0.0.1:8080/v1/summary?range=day&metrics=stepCount"
+make prod-exec-api CMD="wget -qO- -S 'http://127.0.0.1:8080/v1/summary?range=day&metrics=stepCount'"
 # 401 Unauthorized
 ```
 
-A `401` here is a **pass**, not a failure. Next step: [issue a device
+A `401` here is a **pass**, not a failure. ⚠️ Keep the inner quotes around the URL: without them
+the shell cuts it at the `&`, the request goes out without `metrics`, and the answer is a `400`
+that looks like something broke. Next step: [issue a device
 token](device-token/).
 
 ## Building from source instead

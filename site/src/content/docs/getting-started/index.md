@@ -25,6 +25,7 @@ separate, deliberate step described in [Deployment](/deployment/).
 |---|---|
 | **A Linux host** | A small VM or box that stays on. 2 vCPU / 4 GB RAM / 20 GB disk is comfortable. Running it on a laptop is fine for trying it out. |
 | **Docker and Compose v2** | Everything runs in containers. `docker compose version` should print v2.x. |
+| **`git`, `make`, `openssl`, `jq`** | Every step below is a `make` target, and the checks use `jq`. A fresh Debian or Ubuntu cloud image has neither: `sudo apt install make jq`. |
 | **An iPhone with the Helsa app** | The app is the only thing that can upload HealthKit data. Without it, the server has an empty database and a working API. |
 | **About 30 minutes** | Longer if you go on to real deployment — certificates are the slow part. |
 

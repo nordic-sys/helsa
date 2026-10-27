@@ -9,19 +9,26 @@ sidebar:
 You need a running server ([Quick start](quick-start/)) and a device token
 ([Device token](device-token/)).
 
-If the phone will reach the server **from outside your home network**, you also
-need the certificate work in [TLS and mutual TLS](/deployment/tls-mtls/)
-first — the public interface rejects connections without a client certificate at
-the TLS handshake, before any token is examined. If the phone is on the same LAN
-or on your VPN, you can do a first sync against the LAN interface and add
-certificates afterwards.
+You also need the server half of [TLS and mutual TLS](/deployment/tls-mtls/) —
+the CA, the server certificate installed on the server, and `ca.crt` installed **and trusted** on
+the phone. ⚠️ There is no way round this one: the proxy is the only thing that publishes a port,
+and it does not start without its certificate.
+
+What you can postpone is the **client** certificate, if the phone is on the same LAN or on your
+VPN: the LAN interface (`:8443`) does not ask for one, so a first sync against
+`https://<your-host>:8443/v1` works without it. From outside your network the public interface
+(`:443`) rejects a connection without a client certificate at the TLS handshake, before any token
+is examined — import the `.p12` first ([Installing on the
+phone](/deployment/tls-mtls/#installing-on-the-phone)).
 
 ## Turn on sending
 
 Sending is off until you switch it on. Nothing has been uploaded so far, and if
 you never switch it on, nothing ever will be.
 
-In the app's settings, in the section for sending data to your own server:
+In the app: **Settings ▸ Export**, scroll to the bottom, **Your own server ▸ Sending**. ⚠️ The
+server is not a row of its own in Settings — it sits under Export, because sending is one more way
+of data leaving the phone.
 
 1. enable sending;
 2. enter the **base URL** of your server, including the `/v1` prefix — for example
@@ -134,7 +141,11 @@ app is built on: a missing measurement is never drawn as a measured nought.
 
 ## Then what
 
-- The phone keeps syncing in the background. It does not need you.
+- The phone keeps syncing in the background. ⚠️ **Since iOS 27 only if Background App Refresh is
+  on for Helsa** (iPhone Settings ▸ General ▸ Background App Refresh). Without it the system lets
+  Helsa read Health data only while the app is open — the permission sheet says so — and the
+  upload happens whenever you next open it. Nothing is lost either way: the anchor only moves after
+  a `202`.
 - Work through [Deployment](/deployment/) — the dashboard is served by the proxy, and the proxy does not start until the certificates exist.
 - Then point a browser at [the dashboard](/dashboard/) from your LAN or VPN.
 - Set up the [staleness alert](/integrations/home-assistant/) — this system's

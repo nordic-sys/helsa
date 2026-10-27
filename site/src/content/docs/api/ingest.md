@@ -83,6 +83,10 @@ loses everything since the last save.
 
 Every array is optional. A chunk carrying only `deletions` is valid.
 
+⚠️ **`device_id` is a UUID — the `id` the server returned from `POST /v1/devices`** (an upsert on
+`platform` + `model`; see the OpenAPI document). The example above is shortened. Anything that is
+not a UUID is refused with `400 Invalid batch` (*"invalid UUID length"*).
+
 ### `data_type` is an open string, not an enum
 
 HealthKit defines well over a hundred quantity types and adds more with each iOS
@@ -196,7 +200,7 @@ the log says what arrived, and the database decides what that means.
 | Response | Meaning | Client should |
 |---|---|---|
 | `202` | Accepted | Advance the anchor. Send the next chunk. |
-| `400` | Malformed body | Not retryable as-is. Log it; something is wrong with the client. |
+| `400` | `Malformed JSON` (the body is not JSON) or `Invalid batch` (it is JSON, but a value does not fit — a non-UUID `device_id`, a wrong type, an empty batch) | Not retryable as-is. Log it; something is wrong with the client. |
 | `401` | Token problem | Stop, surface it to the user. Retrying will not help. |
 | `413` | Chunk too large | Halve it and retry. Do not advance the anchor. |
 | TLS handshake failure | Certificate problem | Stop and surface it. Buffer locally. |

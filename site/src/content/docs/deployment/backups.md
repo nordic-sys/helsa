@@ -26,9 +26,22 @@ that sentence. The logical dump is what makes the guarantee. Run both.
 directory you choose. Schedule it daily with a systemd timer or cron, and write to
 storage that is **not the same disk** — ideally not the same machine.
 
+The directory is `HELSA_BACKUP_DIR`; without it the script writes to `/opt/helsa/backups`, which an
+ordinary user cannot create — the first run then stops with `Permission denied`. Run it from the
+`deploy` directory (it reads the Compose files from there):
+
+```bash
+cd ~/helsa/deploy
+HELSA_BACKUP_DIR=/mnt/nas/helsa-backups bash scripts/pg-backup.sh
+# ... backup complete: /mnt/nas/helsa-backups/helsa-20261027-122614.dump (48K)
+```
+
+`pg_dump` prints a warning about *circular foreign-key constraints* on `continuous_agg`. That is
+TimescaleDB's own catalog, it is expected, and the restore below handles it — the dump is fine.
+
 ```bash
 # Example: daily at 03:30, keeping dumps on a NAS mount.
-30 3 * * *  /opt/helsa/deploy/scripts/pg-backup.sh >> /var/log/helsa-backup.log 2>&1
+30 3 * * *  cd /home/you/helsa/deploy && HELSA_BACKUP_DIR=/mnt/nas/helsa-backups bash scripts/pg-backup.sh >> /var/log/helsa-backup.log 2>&1
 ```
 
 Check afterwards that the file exists and has a plausible size. A backup job that
@@ -57,7 +70,7 @@ across versions. Rehearse on an empty database first.
 ## Restoring
 
 ```bash
-cd /opt/helsa/deploy
+cd ~/helsa/deploy          # wherever your clone lives
 set -a && . ./.env && set +a
 C="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
 

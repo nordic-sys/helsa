@@ -113,8 +113,8 @@ RFC 9457 problem documents:
 
 | Status | Meaning |
 |---|---|
-| `401` | No token, malformed token, wrong signing secret, or revoked. A revoked token says so in the body, rather than "invalid token" — somebody whose phone was stolen should not be sent to check their typing. |
-| `404` | Unknown route, or a resource that does not exist. |
+| `401` | No token, malformed token, wrong signing secret, or revoked. A revoked token says so in the body, rather than "invalid token" — somebody whose phone was stolen should not be sent to check their typing. ⚠️ This one is **plain text**, not a problem document: `missing bearer token`, `invalid token` or `this token has been revoked`. And it comes **first** — before any parameter check, and for unknown `/v1/…` paths too, so a caller without a token learns nothing about the API's shape. |
+| `404` | Unknown route, or a resource that does not exist — with a valid token. |
 | `413` | Ingest chunk too large. Split it and retry. |
 | `501` | In the contract but not implemented — currently only PDF export. |
 | `503` | `/readyz` when a dependency is unreachable — and any `/v1` request when the revocation deny-list cannot be read. Nothing is wrong with the token; retry. |
