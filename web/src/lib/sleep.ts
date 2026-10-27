@@ -108,11 +108,17 @@ export type Night = {
   /** How much the raw segments covered each other — the difference between the
    * naive sum and the truth. */
   overlapMin: number
-  /** Minutes spent asleep: the UNION of the sleep slices, so an overlap counts once. */
-  asleepMin: number
+  /**
+   * Minutes spent asleep: the UNION of the sleep slices, so an overlap counts once.
+   *
+   * ⚠️ `null` — NOT 0 — when the session holds no sleep slice at all: an
+   * `inBed`-only night (an older phone, a bed sensor) never measured sleep, and
+   * "0 min asleep" would be a claim about a night nobody measured.
+   */
+  asleepMin: number | null
   /** The time-in-bed window: from the start of the first segment to the end of the last. */
   inBedMin: number
-  /** time asleep / time in bed — 0..1, or null when it makes no sense. */
+  /** time asleep / time in bed — 0..1, or null when it makes no sense (or sleep was not recorded). */
   efficiency: number | null
   /** Awakenings: `awake` slices BETWEEN falling asleep and the final wake-up. */
   awakenings: number
@@ -176,6 +182,38 @@ export function flatten(segments: SleepSegment[]): { slices: Slice[]; overlapMin
   return { slices, overlapMin: Math.max(0, raw - union) / 60000 }
 }
 
+/** Before this local hour, a session that starts counts as the night's sleep. */
+const NIGHT_START_BEFORE_HOUR = 5
+
+/**
+ * Whether a session is overnight sleep rather than a nap: it runs across a
+ * local midnight, or it begins in the small hours (a 1 a.m. bedtime). A 14:00
+ * nap is neither; neither is a shift worker's 08:00–15:00 sleep — for those the
+ * caller falls back to "latest sleep", it does not call them "last night".
+ */
+export function isOvernight(n: Night): boolean {
+  const start = new Date(n.startedAt)
+  if (Number.isNaN(start.getTime())) return false
+  if (start.getHours() < NIGHT_START_BEFORE_HOUR) return true
+  const ends = n.segments.map((s) => s.ended_at).filter((x): x is string => !!x)
+  const end = ends.length ? new Date(ends.sort().at(-1)!) : start
+  return localDate(end.toISOString()) !== localDate(start.toISOString())
+}
+
+/**
+ * The session the Today card shows: the newest OVERNIGHT one, with
+ * `overnight: true` — or, when the window holds none, the newest session of any
+ * kind with `overnight: false`, so the card can call it "latest sleep" instead of
+ * "last night". ⚠️ Not simply the newest: `groupByNight` makes a daytime nap its
+ * own session on purpose, and today's nap is not last night.
+ */
+export function lastNight(nights: Night[]): { night: Night; overnight: boolean } | null {
+  // `groupByNight` returns newest first.
+  const overnight = nights.find(isOvernight)
+  if (overnight) return { night: overnight, overnight: true }
+  return nights[0] ? { night: nights[0], overnight: false } : null
+}
+
 /**
  * Threads the segments into sleep sessions (nights): a continuous run of segments
  * is one night, and a gap longer than `SESSION_GAP_MIN` closes it. A daytime nap
@@ -221,12 +259,14 @@ function analyseNight(input: SleepSegment[]): Night {
   const { slices, overlapMin } = flatten(segments)
 
   const stages: Record<string, number> = {}
-  let asleepMin = 0
+  let asleepSum = 0
   for (const s of slices) {
     const m = sliceMinutes(s)
     stages[s.stage] = (stages[s.stage] ?? 0) + m
-    if (ASLEEP[s.stage]) asleepMin += m
+    if (ASLEEP[s.stage]) asleepSum += m
   }
+  const recorded = slices.some((s) => ASLEEP[s.stage])
+  const asleepMin = recorded ? asleepSum : null
 
   // Time in bed is the whole spanning interval, not the sum of the segments: the
   // gap between two segments is time in bed too, and that is precisely what drags
@@ -264,7 +304,7 @@ function analyseNight(input: SleepSegment[]): Night {
     overlapMin,
     asleepMin,
     inBedMin,
-    efficiency: inBedMin > 0 ? Math.min(asleepMin / inBedMin, 1) : null,
+    efficiency: asleepMin != null && inBedMin > 0 ? Math.min(asleepMin / inBedMin, 1) : null,
     awakenings,
     stages,
     onset,
@@ -286,15 +326,18 @@ export function averages(nights: Night[]): SleepAverages {
     return { nights: 0, asleepMin: null, efficiency: null, awakenings: null, deepRemShare: null }
   }
   const mean = (xs: number[]) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null)
-  const totalAsleep = nights.reduce((s, n) => s + n.asleepMin, 0)
-  const deepRem = nights.reduce((s, n) => s + (n.stages.deep ?? 0) + (n.stages.rem ?? 0), 0)
+  // A night that never recorded sleep is left out of the sleep figures rather
+  // than averaged in as zero.
+  const recorded = nights.filter((n) => n.asleepMin != null)
+  const totalAsleep = recorded.reduce((s, n) => s + (n.asleepMin ?? 0), 0)
+  const deepRem = recorded.reduce((s, n) => s + (n.stages.deep ?? 0) + (n.stages.rem ?? 0), 0)
   return {
     nights: nights.length,
-    asleepMin: mean(nights.map((n) => n.asleepMin)),
+    asleepMin: mean(recorded.map((n) => n.asleepMin ?? 0)),
     efficiency: mean(
       nights.map((n) => n.efficiency).filter((x): x is number => x != null),
     ),
-    awakenings: mean(nights.map((n) => n.awakenings)),
+    awakenings: mean(recorded.map((n) => n.awakenings)),
     deepRemShare: totalAsleep > 0 ? deepRem / totalAsleep : null,
   }
 }

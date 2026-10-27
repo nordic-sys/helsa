@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { flatten, groupByNight, normalizeStage } from './sleep'
+import { averages, flatten, groupByNight, lastNight, normalizeStage } from './sleep'
 import type { SleepSegment } from '../api/types'
 
 const seg = (stage: string, from: string, to: string): SleepSegment =>
@@ -90,5 +90,52 @@ describe('a night is a session, not a calendar day', () => {
       seg('asleepCore', at(14), at(15)),   // an afternoon nap, nine hours later
     ])
     expect(nights.length).toBeGreaterThan(1)
+  })
+})
+
+/** ⛔ A night with no sleep segment never measured sleep — that is not zero. */
+describe('a night without a sleep segment', () => {
+  const inBedOnly = () =>
+    groupByNight([
+      seg('inBed', new Date(2026, 7, 23, 23, 0).toISOString(), new Date(2026, 7, 24, 7, 0).toISOString()),
+    ])[0]
+
+  it('has no asleep duration and no efficiency, rather than zeros', () => {
+    const n = inBedOnly()
+    expect(n.asleepMin).toBeNull()
+    expect(n.efficiency).toBeNull()
+    expect(n.inBedMin).toBe(480)
+  })
+
+  it('is left out of the averages instead of pulling them down', () => {
+    const measured = groupByNight([seg('asleepCore', at(0), at(6))])[0]
+    const avg = averages([measured, inBedOnly()])
+    expect(avg.asleepMin).toBe(360)
+    expect(avg.nights).toBe(2)
+  })
+})
+
+describe('"last night" on the Today card', () => {
+  const night = () => [
+    seg('asleepCore', new Date(2026, 7, 23, 23, 0).toISOString(), new Date(2026, 7, 24, 6, 0).toISOString()),
+  ]
+  const nap = () => [seg('asleepCore', at(14), at(15))]
+
+  it('is the overnight session even when a nap came after it', () => {
+    const picked = lastNight(groupByNight([...night(), ...nap()]))
+    expect(picked?.overnight).toBe(true)
+    expect(picked?.night.asleepMin).toBe(420)
+  })
+
+  it('counts a small-hours bedtime as the night', () => {
+    const picked = lastNight(groupByNight([seg('asleepCore', at(1), at(8)), ...nap()]))
+    expect(picked?.overnight).toBe(true)
+    expect(picked?.night.asleepMin).toBe(420)
+  })
+
+  it('falls back to the latest session, flagged as not overnight, when there is no night', () => {
+    const picked = lastNight(groupByNight(nap()))
+    expect(picked?.overnight).toBe(false)
+    expect(picked?.night.asleepMin).toBe(60)
   })
 })

@@ -62,7 +62,7 @@ import {
 } from '../lib/achievements'
 import { groupInsights } from '../lib/insights'
 import { gaps, tally } from '../lib/coverage'
-import { groupByNight } from '../lib/sleep'
+import { groupByNight, lastNight } from '../lib/sleep'
 import { etaMinutes, syncState, toneOf, isApiTooOld, type SyncState } from '../lib/ingest'
 import { useIngestStatus } from '../lib/useIngestStatus'
 import { useToday } from '../lib/useToday'
@@ -486,8 +486,10 @@ function LastNightCard({ tz, today }: { tz: string; today: string }) {
     queryKey: ['sleep', 'lastNight', tz, today],
     queryFn: () => api.sleep(isoDaysAgo(2), isoDaysAgo(0), tz),
   })
-  // `groupByNight` returns the sessions newest first.
-  const night = groupByNight(q.data ?? [])[0]
+  // The newest OVERNIGHT session — not simply the newest, which can be today's
+  // nap. With none in the window the card is honest about what it shows instead.
+  const picked = lastNight(groupByNight(q.data ?? []))
+  const night = picked?.night
   // Only the stages the night actually carries: an "Asleep (unspecified)" night
   // from an older watch has no deep/core/REM, and four zero-width segments with
   // "0 min" under them would be four claims nobody measured.
@@ -497,14 +499,21 @@ function LastNightCard({ tz, today }: { tz: string; today: string }) {
   const unstaged = night ? (night.stages.asleep ?? 0) : 0
 
   return (
-    <LinkCard to="/sleep" title={t('today.sleep.title')}>
+    <LinkCard to="/sleep" title={picked && !picked.overnight ? t('today.sleep.titleLatest') : t('today.sleep.title')}>
       <CardState query={q} isEmpty={!night} empty={<Nothing>{t('today.sleep.empty')}</Nothing>}>
         {night && (
           <>
-            <p className="card-headline">
-              {f.duration(night.asleepMin)}
-              <small>{t('today.sleep.asleep')}</small>
-            </p>
+            {/* ⚠️ No sleep segment is "not recorded", never "0 min asleep". */}
+            {night.asleepMin != null ? (
+              <p className="card-headline">
+                {f.duration(night.asleepMin)}
+                <small>{t('today.sleep.asleep')}</small>
+              </p>
+            ) : (
+              <p className="card-lead" data-testid="sleep-not-recorded">
+                {t('today.sleep.notRecorded')}
+              </p>
+            )}
             <p className="subtle" style={{ margin: '0 0 10px' }}>
               {f.date(night.key)}
             </p>
@@ -524,6 +533,11 @@ function LastNightCard({ tz, today }: { tz: string; today: string }) {
                   ))}
                 </ul>
               </>
+            )}
+            {night.asleepMin == null && night.inBedMin > 0 && (
+              <p className="subtle" style={{ margin: 0 }}>
+                {t('today.sleep.inBedOnly', { duration: f.duration(night.inBedMin) })}
+              </p>
             )}
             {stages.length === 0 && unstaged > 0 && (
               <p className="subtle" style={{ margin: 0 }}>

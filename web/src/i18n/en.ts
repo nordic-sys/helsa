@@ -346,6 +346,8 @@ export const en: Dict = {
       'These are averages over the whole period, not the sleep window alone — filtering samples to the sleep window is waiting on the backend’s {insights} layer (docs/23 §5).',
     'sleep.night.title': '{date} — {duration} asleep',
     'sleep.night.latest': 'Last night · {date} — {duration} asleep',
+    'sleep.night.title.notRecorded': '{date} — sleep duration not recorded',
+    'sleep.night.latest.notRecorded': 'Last night · {date} — sleep duration not recorded',
     'sleep.nights.title.one': 'The night in this period',
     'sleep.nights.title.other': 'The {n} nights in this period',
     'sleep.nights.hint':
@@ -738,6 +740,7 @@ export const en: Dict = {
     'today.workout.title': 'Latest workout',
     'today.workout.empty': 'No workout has arrived yet.',
     'today.sleep.title': 'Last night',
+    'today.sleep.titleLatest': 'Latest sleep',
     'today.sleep.empty': 'No sleep segment has arrived for the last two days.',
     'today.sync.title': 'Sync',
     'today.insights.serverLanguage':
@@ -768,6 +771,9 @@ export const en: Dict = {
     'today.sleep.asleep': 'asleep',
     'today.sleep.noStages':
       'This night has no sleep stages — the device recorded only asleep or awake.',
+    'today.sleep.notRecorded': 'Sleep duration not recorded',
+    'today.sleep.inBedOnly':
+      'Only time in bed arrived ({duration}), with no asleep segment — so how long you slept is not known, not zero.',
     'today.challenge.steps': 'steps',
     'today.challenge.allMilestones': 'all {n} milestones reached',
     'today.medals.earned.one': 'earned',

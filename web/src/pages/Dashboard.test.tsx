@@ -289,6 +289,34 @@ describe('the sync card', () => {
   })
 })
 
+describe('the sleep card', () => {
+  const card = async () =>
+    (await screen.findByRole('link', { name: new RegExp(`^(${dict.ui['today.sleep.title']}|${dict.ui['today.sleep.titleLatest']})`) })) as HTMLElement
+
+  it('says sleep duration was not recorded for an in-bed-only night — never 0 min asleep', async () => {
+    allEmpty()
+    mock.sleep.mockResolvedValue([
+      { stage: 'inBed', started_at: new Date(2026, 8, 9, 23).toISOString(), ended_at: new Date(2026, 8, 10, 7).toISOString() },
+    ])
+    show(<Dashboard />)
+    expect(await screen.findByTestId('sleep-not-recorded')).toHaveTextContent(dict.ui['today.sleep.notRecorded'])
+    const c = await card()
+    expect(c.textContent).not.toMatch(/\b0 (min|p)\b/)
+  })
+
+  it('shows the overnight session, not a nap that came after it', async () => {
+    allEmpty()
+    mock.sleep.mockResolvedValue([
+      { stage: 'asleepCore', started_at: new Date(2026, 8, 9, 23).toISOString(), ended_at: new Date(2026, 8, 10, 6).toISOString() },
+      { stage: 'asleepCore', started_at: new Date(2026, 8, 10, 14).toISOString(), ended_at: new Date(2026, 8, 10, 14, 30).toISOString() },
+    ])
+    show(<Dashboard />)
+    const c = await card()
+    await within(c).findByText(/^7 (h|ó)/)
+    expect(within(c).getByRole('heading')).toHaveTextContent(dict.ui['today.sleep.title'])
+  })
+})
+
 describe('the tiles', () => {
   it('draws a dimmed dash, not a zero, for a metric with no measurement today', async () => {
     allEmpty()

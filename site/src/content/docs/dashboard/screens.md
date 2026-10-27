@@ -13,6 +13,10 @@ fourth, "what today asks of you", is all writes into Health, which only the phon
 can make. **Today, about you**: steps, active energy, resting heart rate and HRV
 (each opens Trends on that metric; a metric not measured yet today is a dash, not
 a zero), the three rings, the most recent workout and last night with its stages.
+*Last night* is the newest **overnight** session — one that crosses midnight or
+starts in the small hours — so a nap after it does not take its place; when the two
+days hold none, the card says *latest sleep* instead. A session with time in bed but
+no asleep segment says *sleep duration not recorded*, never "0 min".
 **The long view**: the monthly challenge, the observations and the medals.
 **Status**: sync and completeness.
 
@@ -125,7 +129,8 @@ Night by night, broken into stages. **The quality figures are derived** —
 efficiency, awakenings, stage shares — because HealthKit has no "sleep quality"
 field, and a number presented as measured when it was computed is the kind of
 claim this project does not make. A night is a run of segments, not a calendar
-day.
+day. A night that recorded only time in bed has no sleep duration — it is shown as
+*not recorded* and left out of the averages, never counted as a night of zero sleep.
 
 ## Nutrition
 

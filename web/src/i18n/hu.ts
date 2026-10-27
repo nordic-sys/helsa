@@ -346,6 +346,8 @@ export const hu = {
       'Ezek az egész időszak átlagai, nem kizárólag az alvás-ablakból — a minták alvás-ablakra szűrése a backend {insights} rétegére vár (docs/23 §5).',
     'sleep.night.title': '{date} — alvás {duration}',
     'sleep.night.latest': 'Múlt éjjel · {date} — alvás {duration}',
+    'sleep.night.title.notRecorded': '{date} — az alvás hossza nincs rögzítve',
+    'sleep.night.latest.notRecorded': 'Múlt éjjel · {date} — az alvás hossza nincs rögzítve',
     'sleep.nights.title.one': 'Az időszak éjszakája',
     'sleep.nights.title.other': 'Az időszak {n} éjszakája',
     'sleep.nights.hint':
@@ -731,6 +733,7 @@ export const hu = {
     'today.workout.title': 'Legutóbbi edzés',
     'today.workout.empty': 'Még nem érkezett edzés.',
     'today.sleep.title': 'A múlt éjszaka',
+    'today.sleep.titleLatest': 'Legutóbbi alvás',
     'today.sleep.empty': 'Az elmúlt két napra nem érkezett alvás-szakasz.',
     'today.sync.title': 'Szinkron',
     'today.insights.serverLanguage':
@@ -762,6 +765,9 @@ export const hu = {
     'today.sleep.asleep': 'alvás',
     'today.sleep.noStages':
       'Ehhez az éjszakához nincsenek alvásfázisok — az eszköz csak az alvást és az ébrenlétet rögzítette.',
+    'today.sleep.notRecorded': 'Az alvás hossza nincs rögzítve',
+    'today.sleep.inBedOnly':
+      'Csak az ágyban töltött idő érkezett meg ({duration}), alvás-szakasz nélkül — így nem tudni, mennyit aludtál, és ez nem nulla.',
     'today.challenge.steps': 'lépés',
     'today.challenge.allMilestones': 'mind a(z) {n} mérföldkő megvan',
     'today.medals.earned.one': 'megszerzett érem',

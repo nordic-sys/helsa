@@ -373,7 +373,7 @@ function NightRow({
       <Hypnogram night={night} height={14} />
       <span className="night-eff num subtle">{f.percent(night.efficiency, 0)}</span>
       <span className="night-wakes num subtle" title={t('sleep.awakenings')}>
-        {f.num(night.awakenings)}×
+        {night.asleepMin == null ? '–' : `${f.num(night.awakenings)}×`}
       </span>
     </button>
   )
@@ -389,9 +389,15 @@ function NightCard({ night, isLatest }: { night: Night; isLatest: boolean }) {
     <div style={{ marginBottom: 16 }}>
       <Card
         title={
-          isLatest
-            ? t('sleep.night.latest', { date: day, duration: f.duration(night.asleepMin) })
-            : t('sleep.night.title', { date: day, duration: f.duration(night.asleepMin) })
+          // ⚠️ A night with no sleep segment never measured sleep: it says so
+          // rather than "– asleep".
+          night.asleepMin == null
+            ? isLatest
+              ? t('sleep.night.latest.notRecorded', { date: day })
+              : t('sleep.night.title.notRecorded', { date: day })
+            : isLatest
+              ? t('sleep.night.latest', { date: day, duration: f.duration(night.asleepMin) })
+              : t('sleep.night.title', { date: day, duration: f.duration(night.asleepMin) })
         }
       >
         <Hypnogram night={night} />
@@ -432,7 +438,7 @@ function NightCard({ night, isLatest }: { night: Night; isLatest: boolean }) {
                 <td>{t('sleep.deepRem')}</td>
                 <td className="num">
                   {f.percent(
-                    night.asleepMin > 0
+                    night.asleepMin != null && night.asleepMin > 0
                       ? ((night.stages.deep ?? 0) + (night.stages.rem ?? 0)) / night.asleepMin
                       : null,
                     0,
@@ -467,7 +473,9 @@ function NightCard({ night, isLatest }: { night: Night; isLatest: boolean }) {
                     {s === 'awake' || s === 'inBed'
                       ? '–'
                       : f.percent(
-                          night.asleepMin > 0 ? night.stages[s]! / night.asleepMin : null,
+                          night.asleepMin != null && night.asleepMin > 0
+                            ? night.stages[s]! / night.asleepMin
+                            : null,
                           0,
                         )}
                   </td>
