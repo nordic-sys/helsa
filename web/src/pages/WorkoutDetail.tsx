@@ -659,16 +659,14 @@ function HeartRateSection({ workout }: { workout: Workout }) {
         </ResponsiveContainer>
       </div>
 
-      {/* ⚠️ Said where it matters: the curve is read out of the session's TIME
-          WINDOW, not out of the workout row. When the recording carries no
-          heart-rate summary of its own, the numbers under the chart come from
-          samples something else wrote — true, and misleading if left unsaid,
-          because they sit under this session's heading. */}
-      {workout.avg_heart_rate == null && (
-        <p className="subtle" style={{ marginTop: 6 }}>
-          {t('workout.hr.fromWindow')}
-        </p>
-      )}
+      {/* ⚠️ ALWAYS said: the curve and the three figures above it are read out
+          of the session's TIME WINDOW, not out of the recording. A sample
+          carries no link to a workout, so another device's readings in the
+          same half hour are in it — whether or not this recording has a
+          heart-rate summary of its own. */}
+      <p className="subtle" style={{ marginTop: 6 }}>
+        {t('workout.hr.fromWindow')}
+      </p>
       {q.data?.more && (
         <p className="subtle" style={{ marginTop: 6 }}>
           {t('workout.hr.truncated')}

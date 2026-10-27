@@ -71,13 +71,17 @@ export type WorkoutGroup = {
   id: string
   /** How many recordings there are of this one session. */
   count: number
-  /** Whether the others say the **same numbers** as the primary.
+  /** Whether the others' duration, distance and energy agree with the
+   * primary's within `NUMBER_TOLERANCE` (a value missing on one side does not
+   * agree).
    *
-   * The distinction is worth drawing on screen: two devices measuring one
-   * session usually disagree a little, and that disagreement is worth knowing
-   * about. Two rows that agree to the digit are a different thing — one session
-   * that reached HealthKit by two routes, where there is nothing to compare. */
-  identical: boolean
+   * ⚠️ Deliberately NOT called "identical": only those three fields are
+   * compared — heart rate, route and metadata are not — and the comparison
+   * allows a 0.5% difference. And the grouping itself is an inference (same
+   * activity type, overlapping time): HealthKit carries no link between two
+   * recordings of one session, and the API no recording-device field. So the
+   * copy says "possible matching recordings" and names what was compared. */
+  numbersAgree: boolean
 }
 
 /** Whether two recordings are of the same session. */
@@ -186,7 +190,7 @@ export function groupSessions(workouts: Workout[]): WorkoutGroup[] {
       others,
       id: primary.id ?? primary.source_uuid ?? String(startMs(primary)),
       count: members.length,
-      identical: others.every((o) => sameNumbers(o, primary)),
+      numbersAgree: others.every((o) => sameNumbers(o, primary)),
     }
   })
 }

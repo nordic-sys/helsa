@@ -181,12 +181,16 @@ export const en: Dict = {
     'workouts.month.count.other': '{n} sessions',
     'workouts.month.open.one': '{n} with no end time, outside the total',
     'workouts.month.open.other': '{n} with no end time, outside the total',
-    'workouts.fold.identical.one': '{n} recording of this session — the numbers are identical.',
-    'workouts.fold.identical.other': '{n} recordings of this session — the numbers are identical.',
-    'workouts.fold.differ.one': '{n} recording of this session — the numbers differ.',
-    'workouts.fold.differ.other': '{n} recordings of this session — the numbers differ.',
+    'workouts.fold.identical.one':
+      '{n} possible matching recording of this session — duration, distance and energy agree within 0.5%.',
+    'workouts.fold.identical.other':
+      '{n} possible matching recordings of this session — duration, distance and energy agree within 0.5%.',
+    'workouts.fold.differ.one':
+      '{n} possible matching recording of this session — its duration, distance or energy differ.',
+    'workouts.fold.differ.other':
+      '{n} possible matching recordings of this session — their duration, distance or energy differ.',
     'workouts.dupNote':
-      '{sessions} sessions arrived in Health more than once — from a watch and an app, or from two apps. The list shows one row for each, so the monthly totals are not counted twice; {extra} further recordings sit behind those rows.',
+      '{sessions} sessions look as if they arrived in Health more than once: the same activity type at overlapping times (at least 70% of their combined span, or starts within 5 minutes). Health keeps no link between such recordings, so this is an inference. The list shows one row for each, so the monthly totals are not counted twice; {extra} further recordings sit behind those rows.',
     'workouts.loading.title': 'Still loading the history',
     'workouts.loading.body.one':
       '{n} recording so far. The older months are still arriving, so their totals are not final yet.',
@@ -256,7 +260,7 @@ export const en: Dict = {
     'workout.hr.peak': 'Peak',
     'workout.hr.lowest': 'Lowest',
     'workout.hr.fromWindow':
-      'This recording carries no heart-rate summary of its own. The curve is every heart-rate sample that falls inside the session\u2019s window, whoever recorded it.',
+      'The curve and the three figures above it are every heart-rate sample recorded inside this session’s time window, by any device or app. A sample is not tied to a recording, so another device’s readings from the same minutes are included.',
     'workout.hr.truncated':
       'The curve stops short: this session holds more samples than the read follows.',
 
@@ -270,13 +274,12 @@ export const en: Dict = {
     'workout.weather.temperature': 'Temperature',
     'workout.weather.humidity': 'Humidity',
 
-    'workout.dup.title': 'The same session, recorded elsewhere',
-    'workout.dup.body.one':
-      'This session is in Health {n} time.',
+    'workout.dup.title': 'Possibly the same session, recorded elsewhere',
+    'workout.dup.body.one': 'This session looks as if it is in Health {n} time.',
     'workout.dup.body.other':
-      'This session is in Health {n} times — from a watch and an app, or from two apps. The list shows one row for it; here are the others, exactly as they were recorded.',
+      'This session looks as if it is in Health {n} times: recordings of the same activity at overlapping times — from a watch and an app, or from two apps. Health keeps no link between them, so this is an inference. The list shows one row for it; here are the others, exactly as they were recorded.',
     'workout.dup.thisOnly':
-      'Everything above is this one recording’s. Nothing on this page mixes the two: two devices measuring the same half hour disagree, and which to believe is not ours to decide.',
+      'The summary figures above are this one recording’s, and nothing here averages the recordings together: two devices measuring the same half hour disagree, and which to believe is not ours to decide. The heart-rate curve is the exception — it holds every sample from the session’s time window, whichever device recorded it.',
     'workout.dup.secondary':
       'The list shows the other recording of this session, not this one.',
     'workout.dup.listed': 'shown in the list',
@@ -832,7 +835,7 @@ export const en: Dict = {
     'workouts.filter.atLeast': 'At least',
     'workouts.filter.anyLength': 'any length',
     'workouts.filter.more': 'More filters',
-    'workouts.row.dup.aria': 'Recorded {n} times in Health',
+    'workouts.row.dup.aria': 'Possibly recorded {n} times in Health',
     'workouts.row.open': 'Open',
     'workouts.select.hint': 'Choose a workout from the list.',
     'workouts.row.max': 'max',

@@ -183,12 +183,16 @@ export const hu = {
     'workouts.month.count.other': '{n} edzés',
     'workouts.month.open.one': '{n} lezáratlan, az összegen kívül',
     'workouts.month.open.other': '{n} lezáratlan, az összegen kívül',
-    'workouts.fold.identical.one': '{n} felvétel erről az edzésről — a számok azonosak.',
-    'workouts.fold.identical.other': '{n} felvétel erről az edzésről — a számok azonosak.',
-    'workouts.fold.differ.one': '{n} felvétel erről az edzésről — a számok eltérnek.',
-    'workouts.fold.differ.other': '{n} felvétel erről az edzésről — a számok eltérnek.',
+    'workouts.fold.identical.one':
+      '{n} lehetséges egyező felvétel erről az edzésről — az időtartam, a táv és az energia 0,5%-on belül egyezik.',
+    'workouts.fold.identical.other':
+      '{n} lehetséges egyező felvétel erről az edzésről — az időtartam, a táv és az energia 0,5%-on belül egyezik.',
+    'workouts.fold.differ.one':
+      '{n} lehetséges egyező felvétel erről az edzésről — az időtartam, a táv vagy az energia eltér.',
+    'workouts.fold.differ.other':
+      '{n} lehetséges egyező felvétel erről az edzésről — az időtartam, a táv vagy az energia eltér.',
     'workouts.dupNote':
-      '{sessions} edzés egynél többször érkezett meg a Healthbe — óráról és appból, vagy két appból. A lista mindegyikről egyetlen sort mutat, így a havi összegek nem duplázódnak; további {extra} felvétel áll ezek mögött.',
+      '{sessions} edzés úgy fest, mintha egynél többször érkezett volna meg a Healthbe: azonos tevékenység, átfedő időben (a közös időtartamuk legalább 70%-a, vagy legfeljebb 5 perc eltérés a kezdésben). A Health nem köti össze az ilyen felvételeket, így ez következtetés. A lista mindegyikről egyetlen sort mutat, így a havi összegek nem duplázódnak; további {extra} felvétel áll ezek mögött.',
     'workouts.loading.title': 'A történet még töltődik',
     'workouts.loading.body.one':
       'Eddig {n} felvétel. A régebbi hónapok még érkeznek, az összegük tehát még nem végleges.',
@@ -258,7 +262,7 @@ export const hu = {
     'workout.hr.peak': 'Csúcs',
     'workout.hr.lowest': 'Legalacsonyabb',
     'workout.hr.fromWindow':
-      'Ennek a felv\u00e9telnek nincs saj\u00e1t pulzus-\u00f6sszes\u00edt\u00e9se. A g\u00f6rbe minden olyan pulzusm\u00e9r\u00e9s, ami az alkalom id\u0151ablak\u00e1ba esik, b\u00e1rki r\u00f6gz\u00edtette is.',
+      'A görbe és a fölötte álló három szám minden olyan pulzusmérés, amit az alkalom időablakában bármelyik készülék vagy app rögzített. Egy mérés nincs felvételhez kötve, így egy másik készülék ugyanazon percekből származó mérései is benne vannak.',
     'workout.hr.truncated':
       'A görbe félbemarad: ebben az alkalomban több mérés van, mint amennyit a beolvasás követ.',
 
@@ -272,12 +276,13 @@ export const hu = {
     'workout.weather.temperature': 'Hőmérséklet',
     'workout.weather.humidity': 'Páratartalom',
 
-    'workout.dup.title': 'Ugyanez az alkalom, máshol is rögzítve',
-    'workout.dup.body.one': 'Ez az alkalom {n} alkalommal szerepel az Egészségben.',
+    'workout.dup.title': 'Valószínűleg ugyanez az alkalom, máshol is rögzítve',
+    'workout.dup.body.one':
+      'Ez az alkalom úgy fest, mintha {n} alkalommal szerepelne az Egészségben.',
     'workout.dup.body.other':
-      'Ez az alkalom {n} alkalommal szerepel az Egészségben — órától és apptól, vagy két apptól. A lista egy sort mutat belőle; itt vannak a többiek, pontosan úgy, ahogy rögzítették őket.',
+      'Ez az alkalom úgy fest, mintha {n} alkalommal szerepelne az Egészségben: azonos tevékenység felvételei átfedő időben — órától és apptól, vagy két apptól. A Health nem köti össze őket, így ez következtetés. A lista egy sort mutat belőle; itt vannak a többiek, pontosan úgy, ahogy rögzítették őket.',
     'workout.dup.thisOnly':
-      'Fentebb minden ennek az egy felvételnek a száma. Ez az oldal nem keveri össze a kettőt: két készülék ugyanarra a fél órára mást mér, és nem a mi dolgunk eldönteni, melyiknek higgy.',
+      'A fenti összesítő számok ennek az egy felvételnek a számai, és ez az oldal nem átlagolja össze a felvételeket: két készülék ugyanarra a fél órára mást mér, és nem a mi dolgunk eldönteni, melyiknek higgy. A pulzusgörbe a kivétel — abban az alkalom időablakának minden mérése benne van, bármelyik készülék rögzítette.',
     'workout.dup.secondary': 'A listában ennek az alkalomnak a másik felvétele látszik, nem ez.',
     'workout.dup.listed': 'ez látszik a listában',
     'workout.dup.noMeasurement': 'Ezen a felvételen nincs mérés.',
@@ -825,7 +830,7 @@ export const hu = {
     'workouts.filter.atLeast': 'Legalább',
     'workouts.filter.anyLength': 'bármilyen hosszú',
     'workouts.filter.more': 'További szűrők',
-    'workouts.row.dup.aria': '{n} felvétel az Egészségben',
+    'workouts.row.dup.aria': 'Valószínűleg {n} felvétel az Egészségben',
     'workouts.row.open': 'Megnyitás',
     'workouts.select.hint': 'Válassz egy edzést a listából.',
     'workouts.row.max': 'max',

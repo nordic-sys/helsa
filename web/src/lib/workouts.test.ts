@@ -113,10 +113,10 @@ describe('groupSessions', () => {
     })
     const without = w({ started_at: at(2026, 8, 3, 18, 1), ended_at: at(2026, 8, 3, 18, 31) })
     const [group] = groupSessions([withDistance, without])
-    expect(group.identical).toBe(false)
+    expect(group.numbersAgree).toBe(false)
   })
 
-  it('calls two identical recordings identical', () => {
+  it('says two recordings agree when duration, distance and energy match', () => {
     const one = w({
       started_at: at(2026, 8, 3, 18, 0),
       ended_at: at(2026, 8, 3, 18, 30),
@@ -131,7 +131,7 @@ describe('groupSessions', () => {
     })
     const [group] = groupSessions([one, two])
     expect(group.count).toBe(2)
-    expect(group.identical).toBe(true)
+    expect(group.numbersAgree).toBe(true)
   })
 
   it('counts a doubled hour once', () => {

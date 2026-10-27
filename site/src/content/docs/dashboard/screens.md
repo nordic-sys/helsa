@@ -102,9 +102,13 @@ Three rules worth knowing, all of them visible on the page:
 ## Workouts
 
 Sessions grouped by the month you trained in, newest first. A closed month is one
-line until you open it, and **a session two devices recorded is one row** (marked
-×2) — a watch and a phone recording the same run must not make the month's total
-count it twice.
+line until you open it, and **a session that looks as if two devices recorded it is
+one row** (marked ×2) — a watch and a phone recording the same run must not make the
+month's total count it twice. "Looks as if" is the honest word: Health keeps no link
+between two recordings, so the page infers it from the same activity type at
+overlapping times (at least 70% of their combined span, or starts within five
+minutes), calls them *possible matching recordings*, and says whether their
+duration, distance and energy agree within 0.5% — the only fields it compares.
 
 On a wide screen the list and the opened session sit side by side: a row selects
 the session into the right-hand half, and the choice is kept in the address
@@ -117,6 +121,11 @@ row; distance, energy and heart-rate limits are under *More filters*.
 
 One recording, opened from the listing: the summary figures, the splits, the
 heart-rate trace, the weather at the time, and the route.
+
+The summary figures are this recording's own; the **heart-rate trace is not**. A
+heart-rate sample carries no link to a workout, so the trace — and the lowest,
+average and highest above it — is every sample recorded in the session's time
+window, by any device, and the page says so under it every time.
 
 The route is **drawn**, not screenshotted — the line, the start and finish
 markers, and a scale bar. Whether a map goes behind it is

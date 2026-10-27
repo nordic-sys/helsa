@@ -140,7 +140,7 @@ describe('one session, one row', () => {
   it('folds two recordings of one session and says what it did', async () => {
     workouts.mockResolvedValue({ items: twice })
     show()
-    expect(await screen.findByText(/2 recordings of this session/i)).toBeInTheDocument()
+    expect(await screen.findByText(/2 possible matching recordings of this session/i)).toBeInTheDocument()
     // One row for the session, with the ×2 mark on it.
     const list = screen.getByRole('region', { name: /workout list/i })
     expect(within(list).getAllByRole('listitem')).toHaveLength(1)
@@ -166,7 +166,7 @@ describe('one session, one row', () => {
     expect(header.textContent).toMatch(/1 h/i)
   })
 
-  it('distinguishes identical numbers from differing ones', async () => {
+  it('says which fields agree, and within what — never "identical"', async () => {
     workouts.mockResolvedValue({
       items: [
         w({
@@ -182,7 +182,14 @@ describe('one session, one row', () => {
       ],
     })
     show()
-    expect(await screen.findByText(/the numbers are identical/i)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/duration, distance and energy agree within 0\.5%/i),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/identical/i)).not.toBeInTheDocument()
+    // The duplicate grouping itself is named as an inference, with its rule.
+    expect(screen.getByText(/look as if they arrived in Health more than once/)).toHaveTextContent(
+      /at least 70% of their combined span/,
+    )
   })
 })
 

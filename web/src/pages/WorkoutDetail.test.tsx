@@ -128,6 +128,12 @@ describe('an outdoor run', () => {
     }
   })
 
+  it('labels the heart-rate curve as every sample in the window — even when the recording has its own average', async () => {
+    // RUN carries avg_heart_rate: the caveat used to appear only without one.
+    open()
+    expect(await screen.findByText(s('workout.hr.fromWindow'))).toBeInTheDocument()
+  })
+
   it('draws no map at all until somebody chooses one, and says so', async () => {
     // ⚠️ This is the DEFAULT state — nothing in localStorage — and it is where
     // anyone who never opens the setting stays. jsdom also has no WebGL, so the

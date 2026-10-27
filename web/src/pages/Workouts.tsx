@@ -585,11 +585,11 @@ function SessionRow({
   // The maximum stays in the detail: the row is one line of what a session
   // was, and the peak is a property of how it went.
 
-  // The fold, said rather than hidden — and which of the two things happened,
-  // because "the numbers differ" and "they are identical" are different facts.
+  // The fold, said rather than hidden — as the inference it is ("possible
+  // matching recordings"), and naming the three fields that were compared.
   const foldText =
     group.count > 1
-      ? tp(group.identical ? 'workouts.fold.identical' : 'workouts.fold.differ', group.count)
+      ? tp(group.numbersAgree ? 'workouts.fold.identical' : 'workouts.fold.differ', group.count)
       : null
 
   const inner = (
