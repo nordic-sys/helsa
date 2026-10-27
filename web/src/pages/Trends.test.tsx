@@ -6,7 +6,7 @@
 // three have to agree, and they are the part a reader would notice going wrong.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BaselineResponse, SummaryResponse } from '../api/types'
@@ -23,6 +23,9 @@ let dayValue: (from?: string) => number = () => 10_000
 
 /** Which days of a window carry a measurement — a test can leave gaps. */
 let measuredDay: (from: string | undefined, index: number) => boolean = () => true
+
+/** Ranges whose chart request never answers — to hold a placeholder on screen. */
+let holdRange: (range: string) => boolean = () => false
 
 /** What the usual-range endpoint answers. */
 let baselineAnswer: BaselineResponse = { min_days: 14, metrics: {} }
@@ -51,6 +54,7 @@ vi.mock('../api/client', () => ({
   api: {
     summary: (...args: SummaryArgs) => {
       calls.push(args)
+      if (holdRange(args[0])) return new Promise(() => {})
       return Promise.resolve(fakeSummary(args[3], args[4]))
     },
     baseline: (): Promise<BaselineResponse> => Promise.resolve(baselineAnswer),
@@ -83,6 +87,7 @@ beforeEach(() => {
   calls.length = 0
   dayValue = () => 10_000
   measuredDay = () => true
+  holdRange = () => false
   baselineAnswer = { min_days: 14, metrics: {} }
   vi.useFakeTimers({ shouldAdvanceTime: true })
   // A Thursday, so the rolling week and the calendar week are visibly different.
@@ -183,8 +188,8 @@ describe('the redesigned chart card', () => {
     show()
     // Seven days at 10,000 each.
     expect(await screen.findByText('70,000')).toBeInTheDocument()
-    expect(screen.getByText('A day · over 7 measured days')).toBeInTheDocument()
-    expect(screen.getByText('10,000')).toBeInTheDocument()
+    const perDay = screen.getByText('A day · over 7 measured days')
+    expect(perDay.parentElement).toHaveTextContent('10,000')
   })
 
   it('headlines the change as a signed absolute delta, with the previous window under it', async () => {
@@ -249,5 +254,58 @@ describe('no usual range', () => {
     const note = await screen.findByTestId('usual-none')
     expect(note).toHaveTextContent(/all 60 measured days of the reference carried the same value \(5,000\)/)
     expect(note).not.toHaveTextContent(/Not enough/)
+  })
+})
+
+/**
+ * The chart's numbers, reachable without a mouse: a table of every bucket, and
+ * where the chart drills, each period a button.
+ */
+describe('the chart without a mouse', () => {
+  it('lists every bucket — a day nobody measured as "not measured", not 0', async () => {
+    measuredDay = (from, i) => from !== '2026-09-04' || i !== 2
+    show()
+    const table = await screen.findByRole('table')
+    const rows = within(table).getAllByRole('row')
+    expect(rows).toHaveLength(8) // header + 7 days
+    expect(within(table).getByText('not measured')).toBeInTheDocument()
+  })
+
+  it('opens a period from the keyboard, as a tap on the chart would', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    show()
+    await screen.findByText('The last 7 days')
+    await user.click(screen.getByText('The numbers behind the chart'))
+    const open = await screen.findByRole('button', { name: /^Open Sep 8, 2026/ })
+    open.focus()
+    await user.keyboard('{Enter}')
+    // The week drills to that day, hour by hour.
+    await waitFor(() => expect(chartWindows('day')).toContain('2026-09-08..2026-09-08'))
+  })
+
+  it('does not drill from a chart that is about to be replaced (the displayed range rules)', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    show()
+    await screen.findByText('The last 7 days')
+    await screen.findByRole('button', { name: /^Open Sep 8, 2026/ })
+    // Year is chosen; its data never arrives, so the week stays on screen…
+    holdRange = (r) => r === 'year'
+    await user.click(screen.getByRole('button', { name: 'Year' }))
+    // …and its days are no longer drill targets: a tap would have drilled from
+    // Year (to a month), not from the week that is visible.
+    await waitFor(() => expect(screen.queryByRole('button', { name: /^Open Sep 8, 2026/ })).not.toBeInTheDocument())
+    expect(within(screen.getByRole('table')).getByText('Sep 8, 2026')).toBeInTheDocument()
+  })
+
+  it('says a new period is loading without fading the chart', async () => {
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+    show()
+    await screen.findByRole('table')
+    holdRange = (r) => r === 'year'
+    await user.click(screen.getByRole('button', { name: 'Year' }))
+    expect(await screen.findByRole('status')).toHaveTextContent('Loading the new period…')
+    const chart = document.querySelector('.chart') as HTMLElement
+    expect(chart.style.opacity).toBe('')
+    expect(chart).toHaveAttribute('aria-busy', 'true')
   })
 })

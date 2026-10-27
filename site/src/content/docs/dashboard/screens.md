@@ -44,7 +44,11 @@ Longer-term movement for one metric, bucketed **in your own time zone**.
 Two things it does that a plain chart does not:
 
 - **It steps and drills.** Year → month → week → day, and back. Stepping stops at
-  the present rather than walking into empty future buckets.
+  the present rather than walking into empty future buckets. Drilling works without
+  a mouse too: *The numbers behind the chart*, under it, lists every bucket (an
+  unmeasured one as *not measured*) and each period opens like a tap on the chart.
+  While a new period loads, the old chart stays, a line above it says so, and it
+  cannot be drilled into.
 - **Two kinds of window, deliberately.** The window is *rolling* when you open the
   page — the last 30 days, ending today — and *calendar* once you drill into one,
   because "August" means August. A chart that silently changed which kind it was

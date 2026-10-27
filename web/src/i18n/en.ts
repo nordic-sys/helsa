@@ -107,6 +107,15 @@ export const en: Dict = {
     'trends.drill.toWeek':
       'Tap the chart to open the week around that point — the bars are days, but the week is usually the level people mean.',
     'trends.drill.toDay': 'Tap the chart to open that day, hour by hour.',
+    'trends.table.hint': 'With a keyboard, the table under the chart opens the same periods.',
+    'trends.table.summary': 'The numbers behind the chart',
+    'trends.table.period': 'Period',
+    'trends.table.value': 'Value',
+    'trends.table.notMeasured': 'not measured',
+    'trends.table.open': 'Open {period}',
+    'trends.loading': 'Loading the new period…',
+    'trends.chartDesc':
+      'One bar or point per bucket, {period}. Empty buckets were not measured. The table below the chart lists the same numbers.',
 
     // --- Trends · against the previous period --------------------------------
     // ⚠️ No colour and no verdict. A rise is sometimes a joy (steps) and

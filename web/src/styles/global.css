@@ -2067,3 +2067,28 @@ a.dup-row:hover {
 .main > .stepper {
   margin-bottom: var(--sp-4);
 }
+
+/* --- Trends: the loading line and the chart's table ---
+ *
+ * The loading line keeps its height when empty, so the chart does not jump when
+ * a load starts. The table is the keyboard's way into the chart (Trends.tsx). */
+.chart-status {
+  min-height: 1.4em;
+  margin: 0 0 var(--sp-1);
+  font-size: var(--fs-caption);
+  color: var(--text-dim);
+}
+.chart-table {
+  margin-top: var(--sp-3);
+}
+.chart-table > summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch);
+  cursor: pointer;
+  font-size: var(--fs-small);
+  color: var(--accent-text);
+}
+.chart-table th[scope='row'] {
+  font-weight: 400;
+}

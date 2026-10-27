@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
@@ -28,6 +28,7 @@ import { useFormat, type Formatters } from '../lib/format'
 import { METRIC_LIST, metricDef, pickSeries, readSeries } from '../lib/metrics'
 import { useAvailability } from '../lib/useAvailability'
 import { useToday } from '../lib/useToday'
+import { labelPx, useElementWidth } from '../lib/useElementWidth'
 import {
   bucketKey,
   bucketStarts,
@@ -312,8 +313,19 @@ export default function Trends() {
     return Math.max(58, 22 + 7.6 * f.fmt(widest, drawnDef.digits).length)
   }, [data, band, drawnDef.digits, f])
 
+  // The chart's real width, for the label decisions below. `0` = not measured.
+  const chartRef = useRef<HTMLDivElement>(null)
+  const chartWidth = useElementWidth(chartRef)
+  /** The plot area: the chart minus the y axis and the margins. `null` = unknown. */
+  const plotWidth = chartWidth > 0 ? Math.max(0, chartWidth - yAxisWidth - 4) : null
+
   /**
-   * At most a handful of x labels, chosen from the buckets themselves.
+   * At most as many x labels as FIT, chosen from the buckets themselves.
+   *
+   * ⚠️ From the measured plot width and the longest label, not from the point
+   * count: seven weekly labels at 390 px left ~34 px each for "Sep 10" — and the
+   * Hungarian "szept. 10." is longer still. Without a measurement (jsdom) the
+   * old ceiling of seven stands.
    *
    * ⚠️ **Counted from the END.** Recharts' own thinning keeps the first tick and
    * every nth after it, which on a 30-day month drops the last one — and "how far
@@ -325,13 +337,15 @@ export default function Trends() {
    * `undefined` when they all fit: then every bucket gets its own label.
    */
   const xTicks = useMemo(() => {
-    const max = 7
+    const widest = Math.max(1, ...data.map((d) => tickLabel(d.t, drawnRange, f).length))
+    const max =
+      plotWidth == null ? 7 : Math.max(2, Math.min(7, Math.floor(plotWidth / (labelPx(widest) + 12))))
     if (data.length <= max) return undefined
     const step = Math.ceil(data.length / max)
     const chosen: string[] = []
     for (let i = data.length - 1; i >= 0; i -= step) chosen.push(data[i].t)
     return chosen.reverse()
-  }, [data])
+  }, [data, drawnRange, f, plotWidth])
 
   // Off while the chart on screen is a placeholder for a window still loading.
   const replacing = q.isPlaceholderData
@@ -372,8 +386,13 @@ export default function Trends() {
       ? r.total / measured
       : null
 
-  // Values printed on the bars only when there is room for them to be read.
-  const labelBars = r.effectiveAgg === 'sum' && data.length <= 14
+  // Values printed on the bars only when there is room for them to be read: the
+  // widest value has to fit in one bucket's width (measured), or — unmeasured —
+  // the old rule of at most 14 bars.
+  const widestValue = Math.max(1, ...data.map((d) => (d.value == null ? 0 : f.fmt(d.value, drawnDef.digits).length)))
+  const labelBars =
+    r.effectiveAgg === 'sum' &&
+    (plotWidth == null ? data.length <= 14 : plotWidth / Math.max(1, data.length) >= labelPx(widestValue) + 2)
 
   return (
     <>
@@ -482,18 +501,26 @@ export default function Trends() {
                 </h2>
                 {/* Wide by nature, and tall in proportion: `.chart`'s height
                     follows the window. */}
+                {/* A load is in flight and the chart is still the previous
+                    window's. ⚠️ Said by a separate indicator, NOT by fading
+                    the chart: at 0.55 opacity its axis labels fell to ~2.2:1. */}
+                <p className="chart-status" role="status">
+                  {q.isFetching ? t('trends.loading') : ''}
+                </p>
                 <div
                   className="chart"
-                  style={{
-                    cursor: canDrill ? 'pointer' : 'default',
-                    // A load is in flight and the chart is still the previous
-                    // window's. Fading it says so without blanking the page.
-                    opacity: q.isFetching ? 0.55 : 1,
-                    transition: 'opacity 120ms linear',
-                  }}
+                  ref={chartRef}
+                  aria-busy={q.isFetching || undefined}
+                  style={{ cursor: canDrill ? 'pointer' : 'default' }}
                 >
                   <ResponsiveContainer>
                     <ComposedChart
+                      // The keyboard can walk the buckets (arrow keys move the
+                      // tooltip); the table under the chart is the full,
+                      // operable version of the same numbers.
+                      accessibilityLayer
+                      title={`${label}${unit ? ` (${unit})` : ''}`}
+                      desc={t('trends.chartDesc', { period: windowDates(drawnWin, drawnRange, locale) })}
                       data={data}
                       margin={{ top: labelBars ? 22 : 8, right: 12, bottom: 4, left: -8 }}
                       onClick={
@@ -566,6 +593,10 @@ export default function Trends() {
                           color: 'var(--text)',
                         }}
                         labelStyle={{ color: 'var(--text-dim)' }}
+                        // ⚠️ Recharts colours each item in its series colour by
+                        // default — the chart fill, 2.7:1 on white for move and
+                        // ember. The text is text; the fill is not.
+                        itemStyle={{ color: 'var(--text)' }}
                         labelFormatter={(v: string) => tickLabel(v, drawnRange, f)}
                         formatter={(v: number | number[], name: string) => {
                           if (Array.isArray(v)) {
@@ -711,9 +742,19 @@ export default function Trends() {
                     and a gesture nothing announces is a gesture nobody finds. */}
                 {drillHint && (
                   <p className="subtle" style={{ margin: '8px 0 0' }}>
-                    {t(drillHint)}
+                    {t(drillHint)} {t('trends.table.hint')}
                   </p>
                 )}
+
+                <ChartTable
+                  rows={data}
+                  range={drawnRange}
+                  digits={drawnDef.digits}
+                  unit={unit}
+                  showBand={showBand}
+                  canDrill={canDrill}
+                  onOpen={(ms) => drillDown(new Date(ms))}
+                />
               </>
             )}
           </section>
@@ -789,6 +830,85 @@ export default function Trends() {
         </div>
       </div>
     </>
+  )
+}
+
+/**
+ * The chart's numbers as a table — every bucket, measured or not — and, where
+ * the chart can be drilled, each period a button that opens it.
+ *
+ * ⚠️ This is the keyboard's way into the chart: a click on an SVG bar is
+ * mouse-only, and Recharts' accessibility layer moves a tooltip but cannot
+ * drill. Behind a disclosure so it costs sighted readers nothing.
+ */
+function ChartTable({
+  rows,
+  range,
+  digits,
+  unit,
+  showBand,
+  canDrill,
+  onOpen,
+}: {
+  rows: { t: string; ms: number; value: number | null; band: number[] | null }[]
+  range: Range
+  digits: number
+  unit: string
+  showBand: boolean
+  canDrill: boolean
+  onOpen: (ms: number) => void
+}) {
+  const { t } = useI18n()
+  const f = useFormat()
+  const period = (iso: string) =>
+    range === 'day' ? f.hourMinute(iso) : range === 'year' ? f.yearMonth(iso) : f.date(iso)
+  return (
+    <details className="chart-table">
+      <summary>{t('trends.table.summary')}</summary>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">{t('trends.table.period')}</th>
+              <th scope="col">{unit ? `${t('trends.table.value')} (${unit})` : t('trends.table.value')}</th>
+              {showBand && <th scope="col">{t('trends.extremes')}</th>}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row) => (
+              <tr key={row.ms}>
+                <th scope="row">
+                  {canDrill ? (
+                    <button
+                      type="button"
+                      className="linkish"
+                      onClick={() => onOpen(row.ms)}
+                      aria-label={t('trends.table.open', { period: period(row.t) })}
+                    >
+                      {period(row.t)}
+                    </button>
+                  ) : (
+                    period(row.t)
+                  )}
+                </th>
+                <td className="num">
+                  {row.value == null ? (
+                    <span className="subtle">{t('trends.table.notMeasured')}</span>
+                  ) : (
+                    f.fmt(row.value, digits)
+                  )}
+                </td>
+                {showBand && (
+                  <td className="num">
+                    {row.band ? `${f.fmt(row.band[0], digits)} – ${f.fmt(row.band[1], digits)}` : '–'}
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </details>
   )
 }
 

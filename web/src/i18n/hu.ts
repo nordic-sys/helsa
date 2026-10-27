@@ -112,6 +112,16 @@ export const hu = {
     'trends.drill.toWeek':
       'Koppints a grafikonra: megnyílik a köré eső hét — az oszlopok napok, de a hét az a szint, amire általában gondolunk.',
     'trends.drill.toDay': 'Koppints a grafikonra: megnyílik az a nap, óránként.',
+    'trends.table.hint':
+      'Billentyűzettel a grafikon alatti táblázat ugyanezeket az időszakokat nyitja meg.',
+    'trends.table.summary': 'A grafikon számai',
+    'trends.table.period': 'Időszak',
+    'trends.table.value': 'Érték',
+    'trends.table.notMeasured': 'nincs mérés',
+    'trends.table.open': 'Megnyitás: {period}',
+    'trends.loading': 'Az új időszak töltődik…',
+    'trends.chartDesc':
+      'Bucketenként egy oszlop vagy pont, {period}. Az üres bucketekben nem volt mérés. A grafikon alatti táblázat ugyanezeket a számokat sorolja fel.',
 
     // --- Trendek · az előző időszakhoz képest --------------------------------
     // ⚠️ Se szín, se ítélet. Egy növekedés hol öröm (lépés), hol figyelmeztetés

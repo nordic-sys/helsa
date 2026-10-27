@@ -6,7 +6,7 @@
 // see whether a line bridges a day nobody measured.
 
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { render, screen, waitFor } from '@testing-library/react'
+import { fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { cloneElement, type ReactElement } from 'react'
 import { MemoryRouter } from 'react-router-dom'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
@@ -68,4 +68,27 @@ it('breaks the line at a day nobody measured, and dots a measured day with no ne
   expect(d.match(/M/g)?.length).toBe(3)
   // The 10th stands alone, so it is a dot rather than an invisible zero-length line.
   expect(screen.getAllByTestId('isolated-point')).toHaveLength(1)
+})
+
+it('keyboard-walks the buckets, and writes tooltip values in the text colour, not the chart fill', async () => {
+  const { container } = render(
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <I18nProvider>
+        <MemoryRouter initialEntries={['/trends?metric=restingHeartRate']}>
+          <Trends />
+        </MemoryRouter>
+      </I18nProvider>
+    </QueryClientProvider>,
+  )
+  await waitFor(() => expect(container.querySelector('.recharts-line-curve')).not.toBeNull())
+  // Recharts' accessibility layer: the surface takes focus, and arrows move the tooltip.
+  const wrapper = container.querySelector('.recharts-wrapper') as HTMLElement
+  const surface = container.querySelector('svg.recharts-surface') as SVGElement
+  expect(surface.getAttribute('tabindex')).toBe('0')
+  surface.focus()
+  fireEvent.keyDown(wrapper, { key: 'ArrowRight' })
+  fireEvent.keyDown(surface, { key: 'ArrowRight' })
+  await waitFor(() => expect(container.querySelector('.recharts-tooltip-item')).not.toBeNull())
+  const item = container.querySelector('.recharts-tooltip-item') as HTMLElement
+  expect(item.style.color).toBe('var(--text)')
 })

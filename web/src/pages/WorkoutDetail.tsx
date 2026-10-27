@@ -635,6 +635,9 @@ function HeartRateSection({ workout }: { workout: Workout }) {
                 borderRadius: 10,
                 color: 'var(--text)',
               }}
+              // The series colour is a chart fill (pulse is 4.2:1 on white);
+              // tooltip text uses the text token.
+              itemStyle={{ color: 'var(--text)' }}
               labelFormatter={(ms: number) => f.duration((Number(ms) - start) / 60000)}
               formatter={(v: number) => [`${f.num(v)} ${t('unit.bpm')}`, t('workout.hr.title')]}
             />
