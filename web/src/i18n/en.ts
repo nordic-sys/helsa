@@ -18,7 +18,7 @@ export const en: Dict = {
     'nav.nutrition': 'Nutrition',
     'nav.challenge': 'Monthly challenge',
     'nav.coverage': 'Completeness',
-    'nav.ingest': 'Ingest queue',
+    'nav.ingest': 'Sync queue',
     'nav.settings': 'Settings',
     'lang.aria': 'Choose language',
     'lang.hu': 'Hungarian',
@@ -745,6 +745,14 @@ export const en: Dict = {
     // A card's failure is one line, because a 401 takes the whole page: only one
     // endpoint having a bad day ever reaches this.
     'today.cardError': 'Could not be loaded: {reason}',
+
+    // --- The sidebar: the queue badge and the footer ---------------------------
+    'nav.badge.waiting.one': '{n} part waiting to be written',
+    'nav.badge.waiting.other': '{n} parts waiting to be written',
+    'nav.badge.setAside.one': '{n} part set aside — needs a look',
+    'nav.badge.setAside.other': '{n} parts set aside — need a look',
+    'nav.badge.unknown': 'The queue cannot be read right now',
+    'nav.serverAria': 'This server and the time zone the pages are cut in',
   },
 
   // --- Metric group names ---------------------------------------------------

@@ -738,6 +738,15 @@ export const hu = {
     // A kártya-hiba egy sor, mert a 401 az egész oldalt viszi: ide már csak egy
     // végpont rossz napja jut el.
     'today.cardError': 'Nem sikerült betölteni: {reason}',
+
+    // --- The sidebar: the queue badge and the footer ---------------------------
+    'nav.badge.waiting.one': '{n} rész vár beírásra',
+    'nav.badge.waiting.other': '{n} rész vár beírásra',
+    'nav.badge.setAside.one': '{n} rész félretéve — nézz rá',
+    'nav.badge.setAside.other': '{n} rész félretéve — nézz rá',
+    'nav.badge.unknown': 'A sor most nem olvasható',
+    'nav.serverAria':
+      'Ez a szerver, és az időzóna, amely szerint az oldalak napokra bontanak',
   },
 
   // --- Metric group names ---------------------------------------------------

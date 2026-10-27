@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import type { IngestStatus } from '../api/types'
-import { deadLetters, etaMinutes, phase, rateDigits } from './ingest'
+import {
+  deadLetters,
+  etaMinutes,
+  isApiTooOld,
+  phase,
+  queueBadge,
+  rateDigits,
+  syncState,
+  toneOf,
+} from './ingest'
 
 const base = (over: Partial<IngestStatus> = {}): IngestStatus => ({
   checked_at: '2026-10-27T12:30:30Z',
@@ -59,4 +68,67 @@ describe('dead letters', () => {
 it('keeps a decimal on a slow rate', () => {
   expect(rateDigits(0.4)).toBe(1)
   expect(rateDigits(104.8)).toBe(0)
+})
+
+/**
+ * The badge on the sidebar's queue link. Its colour follows severity — busy teal,
+ * stalled amber, error red — and its number is the one that needs a person.
+ */
+describe('the queue badge', () => {
+  it('is busy and counts the waiting batches while the worker drains them', () => {
+    expect(queueBadge(base())).toEqual({ tone: 'busy', kind: 'waiting', count: 4000 })
+  })
+  it('is absent when nothing waits and nothing is set aside', () => {
+    expect(queueBadge(base({ queue: { name: 'q', ready: 0, consumers: 1 }, eta_seconds: undefined }))).toBeNull()
+  })
+  it('turns amber when batches wait and nothing consumes them', () => {
+    expect(queueBadge(base({ queue: { name: 'q', ready: 12, consumers: 0 } }))).toEqual({
+      tone: 'stalled',
+      kind: 'waiting',
+      count: 12,
+    })
+  })
+  it('turns amber when a worker is connected but nothing finished in the window', () => {
+    const b = queueBadge(base({ throughput: { window_seconds: 600, batches: 0, items: 0, failed: 0 } }))
+    expect(b?.tone).toBe('stalled')
+  })
+  it('turns red and shows the dead-letter count rather than the backlog', () => {
+    expect(queueBadge(base({ dead_letter: { name: 'dlq', ready: 3 } }))).toEqual({
+      tone: 'error',
+      kind: 'setAside',
+      count: 3,
+    })
+  })
+  it('stays red on an empty queue when something is set aside', () => {
+    const s = base({ queue: { name: 'q', ready: 0, consumers: 1 }, dead_letter: { name: 'dlq', ready: 2 } })
+    expect(queueBadge(s)?.tone).toBe('error')
+  })
+  it('is a question mark — never a zero — when the broker cannot be asked', () => {
+    const b = queueBadge(base({ broker_reachable: false, queue: undefined, dead_letter: undefined }))
+    expect(b).toEqual({ tone: 'stalled', kind: 'unknown' })
+    expect(b && 'count' in b).toBe(false)
+  })
+  it('is absent before the first reading', () => {
+    expect(queueBadge(undefined)).toBeNull()
+  })
+})
+
+describe('the sync state the header pill reads', () => {
+  it('says "up to date" only when idle with nothing set aside', () => {
+    expect(syncState(base({ queue: { name: 'q', ready: 0, consumers: 1 } }))).toBe('upToDate')
+    expect(toneOf('upToDate')).toBe('ok')
+    expect(syncState(base())).toBe('writing')
+    expect(syncState(base({ queue: { name: 'q', ready: 0, consumers: 1 }, dead_letter: { name: 'd', ready: 1 } }))).toBe(
+      'setAside',
+    )
+    expect(syncState(base({ broker_reachable: false, queue: undefined }))).toBe('unknown')
+  })
+})
+
+describe('version skew', () => {
+  it('reads a 404 from a contract route as an API older than the page', () => {
+    expect(isApiTooOld({ status: 404 })).toBe(true)
+    expect(isApiTooOld({ status: 500 })).toBe(false)
+    expect(isApiTooOld(undefined)).toBe(false)
+  })
 })

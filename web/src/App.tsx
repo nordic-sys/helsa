@@ -1,8 +1,18 @@
 import { useState } from 'react'
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
+import { browserTz } from './api/client'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
 import { useI18n } from './i18n'
+import { useFormat } from './lib/format'
+import { queueBadge, type QueueBadge } from './lib/ingest'
+import { useIngestStatus } from './lib/useIngestStatus'
 import { DETAILS, LANDING, NAV, NAV_GROUPS, entriesIn, type NavEntry } from './nav'
+
+/** The path whose link carries the queue badge. */
+export const QUEUE_PATH = '/ingest'
+
+/** How often the badge asks when the queue page is not open (it asks every 5 s). */
+const BADGE_POLL_MS = 30_000
 
 /**
  * The frame: a grouped sidebar and the router, both read off `nav.tsx`.
@@ -26,6 +36,11 @@ export default function App() {
   // Following a link closes it — otherwise the panel stands over the page it was
   // just asked for. Escape does the same, from anywhere inside the bar.
   const close = () => setMenuOpen(false)
+  // ⚠️ A failed request is NOT a reading: a missing token or an older server
+  // draws no badge rather than a "?" — the "?" means the server answered and
+  // said it could not reach its queue, which is a different fact.
+  const ingest = useIngestStatus(BADGE_POLL_MS)
+  const badge = queueBadge(ingest.isError ? undefined : ingest.data)
 
   return (
     <div className="app">
@@ -36,13 +51,16 @@ export default function App() {
           if (e.key === 'Escape') close()
         }}
       >
-        <div className="brand">Helsa</div>
+        <div className="brand">
+          <BrandMark />
+          <span>Helsa</span>
+        </div>
 
         <div className="nav-groups" id="nav-groups" data-open={menuOpen}>
           {/* The landing page, above the headings and not under one. */}
           <div className="nav-group">
             {LANDING.map((n) => (
-              <Item key={n.path} entry={n} onNavigate={close} />
+              <Item key={n.path} entry={n} onNavigate={close} badge={null} />
             ))}
           </div>
 
@@ -57,7 +75,12 @@ export default function App() {
                 {t(group.label)}
               </div>
               {entriesIn(group.key).map((n) => (
-                <Item key={n.path} entry={n} onNavigate={close} />
+                <Item
+                  key={n.path}
+                  entry={n}
+                  onNavigate={close}
+                  badge={n.path === QUEUE_PATH ? badge : null}
+                />
               ))}
             </div>
           ))}
@@ -68,7 +91,12 @@ export default function App() {
             it. The rail is a column with `margin-top: auto` on the switcher —
             put anything above the groups and that auto pushes the LINKS to the
             bottom of the screen with it. Which is exactly what happened. */}
-        <LanguageSwitcher />
+        <div className="sidebar-foot">
+          <LanguageSwitcher />
+          <span className="sidebar-host" aria-label={t('nav.serverAria')}>
+            {window.location.host} · {browserTz()}
+          </span>
+        </div>
 
         {/* Drawn only in the bar layout. `aria-expanded` carries the state, so
             the label does not have to change between "Menu" and "Close". */}
@@ -80,6 +108,9 @@ export default function App() {
           onClick={() => setMenuOpen((v) => !v)}
         >
           {t('nav.menu')}
+          {/* The badge rides on the button while the panel is shut — otherwise a
+              phone would hide the one thing in the menu that needs a person. */}
+          {badge && !menuOpen && <Badge badge={badge} />}
           <Chevron open={menuOpen} />
         </button>
       </nav>
@@ -109,8 +140,17 @@ export default function App() {
   )
 }
 
-function Item({ entry, onNavigate }: { entry: NavEntry; onNavigate: () => void }) {
+function Item({
+  entry,
+  onNavigate,
+  badge,
+}: {
+  entry: NavEntry
+  onNavigate: () => void
+  badge: QueueBadge | null
+}) {
   const { t } = useI18n()
+  // `NavLink` sets `aria-current="page"` on the active link by itself.
   return (
     <NavLink
       to={entry.path}
@@ -118,8 +158,52 @@ function Item({ entry, onNavigate }: { entry: NavEntry; onNavigate: () => void }
       onClick={onNavigate}
       className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}
     >
-      {t(entry.label)}
+      <span>{t(entry.label)}</span>
+      {badge && <Badge badge={badge} />}
     </NavLink>
+  )
+}
+
+/**
+ * The queue badge: the number that needs attention, coloured by severity — busy
+ * teal while the worker drains, amber when nothing moves, red when something was
+ * set aside. The colour never carries the meaning alone: the visible number
+ * comes with a sentence for screen readers, and an unreadable queue is a "?",
+ * never a 0.
+ */
+export function Badge({ badge }: { badge: QueueBadge }) {
+  const { t, tp } = useI18n()
+  const f = useFormat()
+  const label =
+    badge.kind === 'unknown'
+      ? t('nav.badge.unknown')
+      : tp(badge.kind === 'setAside' ? 'nav.badge.setAside' : 'nav.badge.waiting', badge.count, {
+          n: f.num(badge.count),
+        })
+  return (
+    <span className={`badge badge--${badge.tone}`} data-tone={badge.tone} title={label}>
+      <span aria-hidden="true">
+        {badge.kind === 'unknown' ? '?' : f.num(badge.count)}
+        {badge.kind === 'setAside' ? ' !' : ''}
+      </span>
+      <span className="sr-only">{label}</span>
+    </span>
+  )
+}
+
+/** The Aurora arc over a pulse line — the brand mark, drawn in the brand colours. */
+function BrandMark() {
+  return (
+    <svg width="28" height="28" viewBox="0 0 32 32" fill="none" aria-hidden="true" focusable="false">
+      <path d="M4 22a12 12 0 0 1 24 0" stroke="var(--helsa-fjord)" strokeWidth="3" strokeLinecap="round" />
+      <path
+        d="M6 24h5l2-4 3 7 2-5h8"
+        stroke="var(--helsa-move)"
+        strokeWidth="2.2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
   )
 }
 
