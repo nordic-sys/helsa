@@ -492,3 +492,31 @@ export type WorkoutIntensity = {
   maximum?: HeartRateMaximum
   workouts: WorkoutIntensityItem[]
 }
+
+// --- GET /v1/latest — the newest measurement per type -----------------------
+
+/**
+ * One type's most recent measurement (openapi.yaml `LatestValue`).
+ *
+ * ⚠️ Exactly one of `value` and `day_total` is present, and the server picks
+ * which from its own catalog: an averaged type gets the latest SAMPLE, a summed
+ * type the source-merged total of the local day that sample fell on (the same
+ * figure the day's `/summary` bucket carries). The last sample of a summed type
+ * is a five-minute fragment, so the server does not send it at all.
+ */
+export type LatestValue = {
+  agg: 'sum' | 'avg'
+  unit?: string
+  /** When the most recent sample was taken (an instant). */
+  ts: string
+  /** Its local calendar day in the response's `tz`. */
+  day: string
+  value?: number
+  day_total?: number
+}
+
+export type LatestResponse = {
+  tz: string
+  /** A type that never reached the server is ABSENT — not zero, not empty. */
+  metrics: Record<string, LatestValue>
+}

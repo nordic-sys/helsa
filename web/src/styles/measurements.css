@@ -1,0 +1,258 @@
+/* The Measurements page (`pages/Measurements.tsx`).
+ *
+ * ⚠️ A file of its own, imported by that page only, for the same reason
+ * `summary.css` is: nothing here is shared, and every rule sits under the
+ * `meas-` prefix so it cannot reach another page. Only tokens from `tokens.css`,
+ * so dark mode comes with them. */
+
+.meas-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+
+/* The section jump links: one row of plain links, wrapping on a phone rather
+ * than scrolling sideways — the page itself must never scroll horizontally. */
+.meas-jump {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2) var(--sp-4);
+  margin-bottom: var(--sp-3);
+  font-size: var(--fs-small);
+}
+.meas-jump-link {
+  color: var(--accent-text);
+}
+
+.meas-elsewhere {
+  margin: 0 0 var(--sp-6);
+}
+
+.meas-section {
+  margin-bottom: var(--sp-8);
+  /* The jump links land the heading below the top edge, not under it. */
+  scroll-margin-top: var(--sp-6);
+}
+.meas-section-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--sp-1) var(--sp-3);
+  margin-bottom: var(--sp-3);
+}
+.meas-section-head h2 {
+  font-size: var(--fs-h2);
+  margin: 0;
+}
+
+.meas-group + .meas-group {
+  margin-top: var(--sp-5);
+}
+.meas-group-title {
+  font-size: var(--fs-small);
+  font-weight: 600;
+  color: var(--text-dim);
+  margin: 0 0 var(--sp-2);
+}
+
+/* Cards at 230px minimum, as every grid on the site: four across at 1440 with
+ * the sidebar, one on a phone.
+ *
+ * ⚠️ `auto-fill` here, against `global.css`'s `auto-fit` rule — found by
+ * screenshot. A sub-group often holds ONE card (six-minute walk, VO₂max on its
+ * row), and `auto-fit` stretched it across 1200px: a sparkline that wide reads as
+ * a full chart, and the next group's cards sat at a different size. Every card on
+ * the page being the same width is the point of a grid of like things. */
+/* Two classes: `.grid`'s own rule may load after this file. */
+.grid.meas-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr));
+  align-items: stretch;
+}
+
+.meas-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.meas-card.is-empty {
+  background: var(--surface-2);
+  box-shadow: none;
+}
+.meas-card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-small);
+  font-weight: 500;
+  color: var(--text-dim);
+  margin: 0 0 var(--sp-1);
+}
+.meas-figure {
+  margin: 0;
+}
+.meas-figure .is-missing {
+  color: var(--text-faint);
+}
+.meas-when {
+  font-size: var(--fs-caption);
+  color: var(--text-dim);
+  margin: 0;
+}
+
+/* The sparkline: short on purpose — it is the shape of the span, and the full
+ * chart is one link away. A fixed height because ResponsiveContainer needs a
+ * definite one. */
+.meas-spark {
+  height: 52px;
+  margin: var(--sp-2) 0 var(--sp-1);
+  border-radius: 6px;
+}
+.meas-spark.is-blank {
+  border-bottom: 1px dashed var(--border);
+  height: 26px;
+  margin-bottom: var(--sp-2);
+}
+
+.meas-usual,
+.meas-stale,
+.meas-note {
+  font-size: var(--fs-caption);
+  color: var(--text-dim);
+  margin: 0;
+  line-height: 1.45;
+}
+.meas-stale {
+  color: var(--text-2);
+  font-weight: 500;
+}
+.meas-note + .meas-note {
+  margin-top: var(--sp-1);
+}
+
+/* The way to the full chart sits at the bottom whatever the card above it says,
+ * so a row of cards lines its links up. */
+.meas-trends {
+  margin-top: auto;
+  padding-top: var(--sp-2);
+  font-size: var(--fs-caption);
+  color: var(--accent-text);
+  align-self: flex-start;
+}
+
+/* --- The two wide cards: blood pressure and gait --- */
+.meas-wide {
+  margin-bottom: var(--sp-4);
+}
+.meas-wide-title {
+  font-size: var(--fs-body);
+  font-weight: 600;
+  margin: 0 0 var(--sp-3);
+}
+.meas-subhead {
+  font-size: var(--fs-small);
+  font-weight: 600;
+  margin: var(--sp-3) 0 var(--sp-1);
+}
+
+.meas-bp {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: var(--sp-3) var(--sp-6);
+}
+.meas-bp-wide {
+  grid-column: 1 / -1;
+}
+@media (max-width: 760px) {
+  .meas-bp {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.meas-bp-chart {
+  height: 180px;
+}
+.meas-bp-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: var(--sp-2) var(--sp-4);
+  margin: var(--sp-3) 0 0;
+}
+.meas-bp-stats dt {
+  font-size: var(--fs-caption);
+  color: var(--text-dim);
+}
+.meas-bp-stats dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+.meas-bp-unusual {
+  list-style: none;
+  margin: 0 0 var(--sp-2);
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  font-size: var(--fs-small);
+}
+.meas-bp-unusual li {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: var(--sp-3);
+  border-left: 3px solid var(--border-strong);
+}
+
+.meas-gait-rows {
+  display: flex;
+  flex-direction: column;
+  margin: var(--sp-3) 0;
+}
+.meas-gait-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr);
+  gap: var(--sp-2) var(--sp-6);
+  padding: var(--sp-3) 0;
+  border-top: 1px solid var(--line);
+}
+@media (max-width: 760px) {
+  .meas-gait-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.meas-gait-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.meas-gait-latest {
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  margin: 0;
+}
+/* A moved metric is marked by weight, never by colour: up and down are not
+ * good and bad (lib/gait.ts). */
+.meas-gait-headline {
+  font-size: var(--fs-small);
+  margin: 0;
+}
+.meas-gait-row.has-moved .meas-gait-headline {
+  font-weight: 600;
+}
+.meas-gait-chart {
+  height: 120px;
+  min-width: 0;
+}
+.meas-gait-notes {
+  margin: var(--sp-2) 0 0;
+  padding-left: 1.2em;
+  font-size: var(--fs-caption);
+  color: var(--text-dim);
+  line-height: 1.45;
+}
+
+.meas-foot {
+  margin-top: var(--sp-6);
+}

@@ -10,6 +10,7 @@ import type {
   IngestRedriveResult,
   IngestStatus,
   Insight,
+  LatestResponse,
   Range,
   Settings,
   SamplePage,
@@ -206,6 +207,19 @@ export const api = {
    */
   workoutIntensity: (from: string, to: string) =>
     req<WorkoutIntensity>(`/workout-intensity${qs({ from, to })}`),
+
+  /**
+   * The newest measurement of each named type, in one call — what the
+   * Measurements page's cards lead with. An averaged type comes back with its
+   * latest sample, a summed type with its latest day's merged total; a type
+   * that never arrived is absent from the map.
+   *
+   * ⚠️ A 404 is version skew (an older server without the route): the page falls
+   * back to the last measured day of its 30-day window and says so
+   * (`isApiTooOld`). At most 200 names.
+   */
+  latest: (metrics: string[], tz?: string) =>
+    req<LatestResponse>(`/latest${qs({ metrics: metrics.join(','), tz })}`),
 
   /**
    * `POST /export` — the file itself, streamed. See `exportFile` below.
