@@ -81,6 +81,9 @@ server: | $(CADIR)
 		echo "   plus the server's LAN address, under CN, DNS.n and IP.n. Then run 'make server' again."; \
 		echo "   Current SANs:"; sed -n '/^\[ alt \]/,$$p' server.cnf | grep -E '^(DNS|IP)' | sed 's/^/     /'; \
 		exit 1; fi
+	@# ⚠️ Its own directory, not only through $(CADIR): after `rm -rf out/server` (the documented
+	@# way to reissue) the CA directory still exists, so that rule never runs again.
+	@mkdir -p $(OUT)/server
 	openssl ecparam -name prime256v1 -genkey -noout -out $(OUT)/server/server.key
 	chmod 600 $(OUT)/server/server.key
 	openssl req -new -key $(OUT)/server/server.key -out $(OUT)/server/server.csr -config server.cnf
