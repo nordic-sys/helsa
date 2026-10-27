@@ -65,6 +65,7 @@ import MonthMedal from './pages/MonthMedal'
 import PeriodSummary from './pages/PeriodSummary'
 import YearByYear from './pages/YearByYear'
 import Report from './pages/Report'
+import Measurements from './pages/Measurements'
 
 export type NavGroupKey = 'longView' | 'areas' | 'status'
 
@@ -124,6 +125,15 @@ export const NAV: NavEntry[] = [
   { path: '/training', label: 'nav.training', element: <Training />, group: 'areas' },
   { path: '/sleep', label: 'nav.sleep', element: <Sleep />, group: 'areas' },
   { path: '/nutrition', label: 'nav.nutrition', element: <Nutrition />, group: 'areas' },
+  // Measurements is the REST of the phone's Health tab: the generic card grid
+  // (`MetricGroupSectionView`) the two bespoke sections above stand beside. So it
+  // sits in Areas, right after them — one domain per catalog group, read card by
+  // card — and not in "The long view": a card leads with the latest reading and
+  // when it was taken, which is a today question, and the weeks-long question is
+  // what each card's link to Trends is for. After Sleep and Nutrition rather than
+  // before, because those two "earned" bespoke pages (`HealthSection`'s words)
+  // and the grid is everything that did not need one.
+  { path: '/measurements', label: 'nav.measurements', element: <Measurements />, group: 'areas' },
 
   { path: '/coverage', label: 'nav.coverage', element: <Coverage />, group: 'status' },
   { path: '/ingest', label: 'nav.ingest', element: <Ingest />, group: 'status' },

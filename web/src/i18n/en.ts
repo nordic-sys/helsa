@@ -1360,6 +1360,169 @@ export const en: Dict = {
     'years.picker.groupTake': 'Take the whole group: {group}',
     'years.picker.groupClear': 'Clear the whole group: {group}',
     'years.picker.stored': 'The choice is kept in this browser only. The phone keeps its own.',
+
+    // --- Measurements: the phone's Health tab card grid ---------------------
+    // Section and sub-group names, the blood-pressure wording and the gait
+    // sentences are the phone's own (`HealthSection.swift`, `MetricSnapshot.swift`,
+    // `BloodPressureOutlier.swift`, `StabilityRules.swift`).
+    'nav.measurements': 'Measurements',
+    'meas.title': 'Measurements',
+    'meas.subtitle':
+      'Every measurement outside sleep and nutrition, grouped as on the phone: the latest value, when it was taken, and the shape of the chosen span.',
+    'meas.span.aria': 'Span of the small charts',
+    'meas.span.week': '7 days',
+    'meas.span.month': '30 days',
+    'meas.span.year': '12 months',
+    'meas.showAll': 'Also show measurements without data',
+    'meas.jump.aria': 'Sections',
+    'meas.elsewhere': 'Sleep and nutrition have pages of their own: {sleep} · {nutrition}.',
+    'meas.latestOld':
+      'Until it is updated, each card shows the last measured day of the past 30 days instead of the latest reading — a value older than that has no number here.',
+    'meas.foot':
+      'Days are cut in your time zone ({tz}). A measurement that did not arrive is a gap, never a zero, and no card says which direction is good.',
+    'meas.empty.title': 'No measurements yet',
+    'meas.empty.hint':
+      'Nothing outside sleep and nutrition has reached the server. Turn on “Also show measurements without data” to see what could appear here.',
+    'meas.empty.section': 'No measurement in this group',
+    'meas.section.count': 'With data: {n} of {m}',
+    'meas.section.activity': 'Activity',
+    'meas.section.heart': 'Heart',
+    'meas.section.respiratory': 'Breathing',
+    'meas.section.body': 'Body',
+    'meas.section.mobility': 'Mobility',
+    'meas.section.environment': 'Environment',
+    'meas.section.other': 'Other measurements',
+    'meas.empty.activity':
+      'Steps, distance and energy burned are recorded by the phone and the watch — nothing from either has reached this server.',
+    'meas.empty.heart':
+      'Heart rate and everything around it is measured by the watch, blood pressure by a separate cuff — nothing from either has reached this server.',
+    'meas.empty.respiratory':
+      'Respiratory rate and blood oxygen are measured by the watch during sleep; lung-function values come from a separate device or from entering them by hand.',
+    'meas.empty.body':
+      'Weight, body fat and waist come from a scale or from entering them by hand — the watch does not measure these.',
+    'meas.empty.mobility':
+      'Walking and running form are measured by the iPhone in your pocket and the watch on your wrist — nothing from either has reached this server.',
+    'meas.empty.environment':
+      'Sound exposure and time in daylight are recorded by the phone and the watch while you carry them — nothing from either has reached this server.',
+    'meas.empty.other':
+      'These values are measured by a separate device or entered by hand — none of them has reached this server.',
+    'meas.sub.dailyMovement': 'Daily movement',
+    'meas.sub.energy': 'Energy',
+    'meas.sub.distancesBySport': 'Distances by sport',
+    'meas.sub.composition': 'Body composition',
+    'meas.sub.proportions': 'Body proportions',
+    'meas.sub.temperature': 'Body temperature',
+    'meas.sub.walking': 'Walking',
+    'meas.sub.stairs': 'Stairs',
+    'meas.sub.runningForm': 'Running form',
+    'meas.sub.sound': 'Sound exposure',
+    'meas.sub.daylight': 'Daylight and UV',
+    'meas.sub.moreActivity': 'More activity data',
+    'meas.sub.moreBody': 'More body data',
+    'meas.sub.moreMovement': 'More movement data',
+    'meas.sub.moreEnvironment': 'More environmental data',
+    'meas.sub.more': 'More measurements',
+    'meas.head.none': 'Nothing has reached the server',
+    'meas.head.sample': 'Latest reading · {when} · {ago}',
+    'meas.head.todaySoFar': 'Today so far — the day is not over',
+    'meas.head.dayTotal': 'Total on {date} · {ago}',
+    'meas.head.dayAverage': 'Average on {date} · {ago}',
+    'meas.head.noFigure': 'Last arrived {when}, but that day’s total could not be read',
+    'meas.stale': 'Nothing in this span — the latest is from {ago}.',
+    'meas.spark.aria': '{metric}, {span}',
+    'meas.usual.band': 'Your usual: {low}–{high} {unit} ({n} measured days of the last 60)',
+    'meas.usual.bandSum': 'Your usual day: {low}–{high} {unit} ({n} measured days of the last 60)',
+    'meas.usual.notEnough': 'No usual range yet: {n} of the last 60 days were measured, {min} are needed.',
+    'meas.usual.noVariation': 'Every measured day of the last 60 carried the same value, so there is no range to draw.',
+    'meas.usual.year': 'The usual range is a daily one, so it is drawn on the 7- and 30-day spans only.',
+    'meas.degraded': 'The server sends this type as a per-sample average, so the bars are not daily totals.',
+    'meas.toTrends': 'Full chart in Trends →',
+    'meas.bp.title': 'Blood pressure',
+    'meas.bp.unit': 'mmHg',
+    'meas.bp.none.title': 'No blood pressure data',
+    'meas.bp.none.body':
+      'The Apple Watch does not measure blood pressure — that needs a separate cuff that writes into the Health app. Its absence is therefore not a fault.',
+    'meas.bp.older': 'No reading in the last 90 days. The most recent one arrived on {when}.',
+    'meas.bp.upper': 'the upper (systolic)',
+    'meas.bp.lower': 'the lower (diastolic)',
+    'meas.bp.half.title': 'Incomplete blood pressure reading',
+    'meas.bp.half.body':
+      'Data arrived only for {present} value, {missing} is missing. Blood pressure is a pair: showing one value without the other would be misleading, so no number stands here.',
+    'meas.bp.noPair.title': 'No complete reading',
+    'meas.bp.noPair.body':
+      'There is data for both values, but no moment where they were measured together — so not one complete blood pressure reading comes together.',
+    'meas.bp.latest': 'Latest — {when} · {ago}',
+    'meas.bp.systolic': 'Systolic',
+    'meas.bp.diastolic': 'Diastolic',
+    'meas.bp.average': 'Average',
+    'meas.bp.pulsePressure': 'Pulse pressure',
+    'meas.bp.map': 'MAP',
+    'meas.bp.count.one':
+      '{n} complete reading in the last 90 days. Only the moments where both values are present count.',
+    'meas.bp.count.other':
+      '{n} complete readings in the last 90 days. Only the moments where both values are present count.',
+    'meas.bp.mapNote':
+      'Pulse pressure is the difference between the two values; the MAP (mean arterial pressure) is the usual approximation: lower + (upper − lower) / 3.',
+    'meas.bp.chart.aria': 'Complete blood pressure readings over the last 90 days',
+    'meas.bp.unusual.title': 'Readings that stand out against your own',
+    'meas.bp.unusual.notEnough':
+      'Readings are compared with each other once the last 90 days hold at least {min} of them — now there are {n}. Until then nothing is said about them, which does not mean they were usual.',
+    'meas.bp.unusual.none': 'None of the {n} readings of the last 90 days stands out against the others.',
+    'meas.bp.unusual.lead': 'This reading departs from your own average: ',
+    'meas.bp.unusual.axis': '{axis} is {amount} mmHg {direction} than usual (typically around {usual})',
+    'meas.bp.axis.systolic': 'the upper value',
+    'meas.bp.axis.diastolic': 'the lower value',
+    'meas.bp.higher': 'higher',
+    'meas.bp.lowerWord': 'lower',
+    'meas.bp.unusual.rule':
+      'Each reading is compared with your own other readings of the last 90 days — at least 1.5 standard deviations and 8 (upper) or 5 (lower) mmHg away — never with a clinical limit. A description, not an assessment.',
+    'meas.gait.title': 'Walking — the five measurements on one time axis',
+    'meas.gait.lead':
+      'The last 7 finished days against the 28 before them. The band is the average and spread of your own earlier days. It is not a normal range, and it is not a target.',
+    'meas.gait.legend.band': 'Your own band',
+    'meas.gait.legend.mean': 'Earlier average',
+    'meas.gait.legend.fall': 'Fall',
+    'meas.gait.explain.walkingSpeed':
+      'The walking pace your watch or phone measures, on level ground. Not about running.',
+    'meas.gait.explain.walkingStepLength': 'The length of one step while walking, in metres.',
+    'meas.gait.explain.walkingAsymmetryPercentage':
+      'What percentage of your walking time the two legs’ step timing differs.',
+    'meas.gait.explain.walkingDoubleSupportPercentage':
+      'What percentage of your walking time both feet are on the ground at once.',
+    'meas.gait.explain.appleWalkingSteadiness':
+      'Apple’s own combined measure, computed from several gait characteristics. That is their calculation — we only display it, we did not invent it.',
+    'meas.gait.latest': 'Latest day: {value} · {date}',
+    'meas.gait.nothing': 'No measurement in the last {n} days.',
+    'meas.gait.notEnough': 'Not enough measured days',
+    'meas.gait.notComparable': 'Nothing to compare with',
+    'meas.gait.unchanged': 'Moving with the usual',
+    'meas.gait.moved': '{delta} {direction} than the preceding {n} days',
+    'meas.gait.delta.speed': ' m/s',
+    'meas.gait.delta.length': ' metres',
+    'meas.gait.delta.points': ' percentage points',
+    'meas.gait.detail.notEnough':
+      'Of the last {recentDays} days there are measurements on {recent}, and on {baseline} of the {baselineDays} before that. Comparing needs at least {minRecent} and {minBaseline} respectively — until then we say nothing about it. That does not mean it is fine: it means we have not looked.',
+    'meas.gait.detail.notComparable':
+      'The average of the earlier days is zero, so there is nothing to compare against. That is usually a data error, not a measurement.',
+    'meas.gait.detail.unchanged':
+      'The last {recentDays} days average {recent}, the {baselineDays} before them {baseline}. The difference is smaller than what we would call a change for this measurement.',
+    'meas.gait.detail.moved':
+      'The last {recentDays} days average {recent}, the {baselineDays} before them {baseline}. This is a description, not an assessment — shoes, terrain, what you carry and the time of day all move gait data.',
+    'meas.gait.band':
+      'Your own band runs from {low} to {high} (the mean ± standard deviation of {n} days). That is not a normal value, it is the spread of your own days so far.',
+    'meas.gait.chart.aria': '{metric} over the past {n} days',
+    'meas.gait.falls.one': '{n} fall in the window, marked with a dotted line.',
+    'meas.gait.falls.other': '{n} falls in the window, marked with dotted lines.',
+    'meas.gait.fallsNote':
+      'These appear on the same time axis as the curve. That does not mean they have anything to do with each other — only that you can look at them together.',
+    'meas.gait.noFalls':
+      'No fall reached this server in the past {n} days. That may be the good case — or fall detection may be off or unreadable: from here the two look the same.',
+    'meas.gait.steadinessEvents':
+      'Apple’s walking-steadiness notifications are not on this axis: they are a kind of HealthKit record (a category sample) the phone does not upload — the only one it sends is sleep. The phone draws them on its own gait screen.',
+    'meas.gait.apple':
+      '“Walking steadiness” and its levels are Apple’s calculation and Apple’s classification, not ours. We say so wherever it appears.',
+    'meas.gait.description':
+      'This is a description, not a diagnosis and not a risk assessment. Walking data is moved by shoes, terrain, what you are carrying and the time of day.',
   },
 
   // --- Metric group names ---------------------------------------------------
@@ -1418,6 +1581,9 @@ export const en: Dict = {
     min: 'min',
     h: 'h',
     'kcal/hr/kg': 'kcal/hr/kg',
+    // The server's catalog spells Celsius `degC` (backend internal/metrics); it
+    // wins over the web catalog's `°C`, so it has to read as a unit too.
+    degC: '°C',
     'ml/kg/min': 'ml/kg/min',
     'L/min': 'L/min',
   },

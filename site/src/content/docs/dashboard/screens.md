@@ -1,10 +1,10 @@
 ---
 title: The screens
-description: "What each of the seventeen pages shows, and the rules behind the numbers on it."
+description: "What each of the eighteen pages shows, and the rules behind the numbers on it."
 sidebar:
   order: 1
 ---
-Fifteen pages in the sidebar, plus two that open from a listing: a workout and a month's medal.
+Sixteen pages in the sidebar, plus two that open from a listing: a workout and a month's medal.
 
 ## Today
 
@@ -311,6 +311,47 @@ Energy consumed, macros and micronutrients. A meal-logging app writes these into
 Health and the dashboard only reads them — ⚠️ with one exception, and it is on this
 page: **water**. That is the one nutrition value Helsa writes, from the phone, when
 you log a glass.
+
+## Measurements
+
+The rest of the phone's Health tab: every measurement outside sleep and
+nutrition, in the phone's sections — activity, heart, breathing, body, mobility,
+environment, other — with the phone's sub-groups ("Daily movement", "Body
+temperature", …). **The sections come from the metric catalog, not from a hand
+list**, and a leftover group catches anything not filed, so a newly supported
+HealthKit type gets a card without anybody remembering to add one. Sleep and
+nutrition are linked, not copied.
+
+Each card leads with **the latest value and when it was taken**. For a
+measurement taken at a moment (heart rate, weight, walking speed) that is the
+latest reading itself; for an amount (steps, energy, daylight) it is the total of
+the latest day — merged across apps exactly as everywhere else — and *today so
+far* while that day is still running. The age is always printed, and a value
+older than the chosen span says so instead of passing for current. Below it: the
+span (7 days, 30 days or 12 months) as a small chart in which an unmeasured day is
+a gap, never a zero; your usual range from the last 60 days (daily, so not drawn
+on the 12-month span, and the card says why); and a link to Trends for the full
+chart. By default only measurements with data are shown; one switch shows the
+rest, each saying that nothing has reached the server.
+
+Two kinds of measurement are kept out of the grid on purpose:
+
+- **Blood pressure is one card, as a pair.** Only a systolic and a diastolic
+  value taken at the same instant make a reading; half a reading shows no number
+  and says which half is missing. Readings that **stand out against your own**
+  are listed — each compared with your other readings of the last 90 days (at
+  least 15 needed, 1.5 standard deviations *and* 8/5 mmHg apart), the phone's rule
+  — and **never against a clinical limit** such as 140/90.
+- **The five gait measurements share one time axis**: the last 7 finished days
+  against the 28 before them, with your own band, the phone's thresholds, and the
+  wording "higher/lower", never "better/worse". Falls are drawn on the same axis.
+  Apple's walking-steadiness *notifications* are not: they are a kind of HealthKit
+  record the phone does not upload, and the card says so.
+
+The latest values come from **`GET /v1/latest`**, one call for the whole page
+instead of one per metric. **An older server answers 404**; the page then shows
+each card's last measured day from the past 30 days and says the server needs
+updating.
 
 ## Completeness
 

@@ -1358,6 +1358,168 @@ export const hu = {
     'years.picker.groupTake': 'Az egész csoport kijelölése: {group}',
     'years.picker.groupClear': 'Az egész csoport törlése: {group}',
     'years.picker.stored': 'A választás csak ebben a böngészőben marad meg. A telefon a sajátját őrzi.',
+
+    // --- Mérések: a telefon Egészség fülének kártyarácsa --------------------
+    // A szakasz- és alcsoportnevek, a vérnyomás- és a járásmondatok a telefon
+    // saját magyar szövegei (`Localizable.xcstrings`).
+    'nav.measurements': 'Mérések',
+    'meas.title': 'Mérések',
+    'meas.subtitle':
+      'Minden mérés az alváson és a táplálkozáson kívül, a telefon csoportjai szerint: a legutóbbi érték, mikor készült, és a választott időszak íve.',
+    'meas.span.aria': 'A kis grafikonok időszaka',
+    'meas.span.week': '7 nap',
+    'meas.span.month': '30 nap',
+    'meas.span.year': '12 hónap',
+    'meas.showAll': 'Az adat nélküli mérések is látszódjanak',
+    'meas.jump.aria': 'Szakaszok',
+    'meas.elsewhere': 'Az alvásnak és a táplálkozásnak saját oldala van: {sleep} · {nutrition}.',
+    'meas.latestOld':
+      'Amíg nem frissül, minden kártya a legutóbbi mérés helyett az elmúlt 30 nap utolsó mért napját mutatja — az ennél régebbi értéknek itt nincs száma.',
+    'meas.foot':
+      'A napokat a te időzónádban vágjuk ({tz}). Ami nem érkezett meg, az hézag, sosem nulla — és egyik kártya sem mondja meg, melyik irány a jó.',
+    'meas.empty.title': 'Még nincs mérés',
+    'meas.empty.hint':
+      'Az alváson és a táplálkozáson kívül semmi sem érkezett meg a szerverre. Kapcsold be „Az adat nélküli mérések is látszódjanak” gombot, hogy lásd, mi jelenhetne meg itt.',
+    'meas.empty.section': 'Ebben a csoportban nincs mérés',
+    'meas.section.count': 'Van adat: {n} / {m}',
+    'meas.section.activity': 'Aktivitás',
+    'meas.section.heart': 'Szív',
+    'meas.section.respiratory': 'Légzés',
+    'meas.section.body': 'Test',
+    'meas.section.mobility': 'Mobilitás',
+    'meas.section.environment': 'Környezet',
+    'meas.section.other': 'Egyéb mérések',
+    'meas.empty.activity':
+      'A lépéseket, a távolságot és az elégetett energiát a telefon és az óra rögzíti — egyikről sem érkezett még semmi erre a szerverre.',
+    'meas.empty.heart':
+      'A pulzust és a hozzá tartozó értékeket az óra méri, a vérnyomást külön mandzsetta — egyikről sem érkezett még semmi erre a szerverre.',
+    'meas.empty.respiratory':
+      'A légzésszámot és a véroxigént az óra alvás közben méri; a tüdőfunkciós értékek külön eszközről vagy kézi rögzítésből származnak.',
+    'meas.empty.body':
+      'A testsúly, a testzsír és a derékbőség mérlegről vagy kézi rögzítésből származik — az óra ezeket nem méri.',
+    'meas.empty.mobility':
+      'A járás- és futásformát a zsebedben hordott iPhone és a csuklódon lévő óra méri — egyikről sem érkezett még semmi erre a szerverre.',
+    'meas.empty.environment':
+      'A hangterhelést és a napfényes időt a telefon és az óra rögzíti, amíg magadnál hordod őket — egyikről sem érkezett még semmi erre a szerverre.',
+    'meas.empty.other':
+      'Ezeket az értékeket külön eszköz méri, vagy kézzel kell rögzíteni — egyik sem érkezett még meg erre a szerverre.',
+    'meas.sub.dailyMovement': 'Napi mozgás',
+    'meas.sub.energy': 'Energia',
+    'meas.sub.distancesBySport': 'Sportági távolságok',
+    'meas.sub.composition': 'Testösszetétel',
+    'meas.sub.proportions': 'Testarányok',
+    'meas.sub.temperature': 'Testhőmérséklet',
+    'meas.sub.walking': 'Séta',
+    'meas.sub.stairs': 'Lépcső',
+    'meas.sub.runningForm': 'Futóforma',
+    'meas.sub.sound': 'Hangterhelés',
+    'meas.sub.daylight': 'Napfény és UV',
+    'meas.sub.moreActivity': 'További aktivitásadatok',
+    'meas.sub.moreBody': 'További testadatok',
+    'meas.sub.moreMovement': 'További mozgásadatok',
+    'meas.sub.moreEnvironment': 'További környezeti adatok',
+    'meas.sub.more': 'További mérések',
+    'meas.head.none': 'Semmi sem érkezett meg a szerverre',
+    'meas.head.sample': 'Legutóbbi mérés · {when} · {ago}',
+    'meas.head.todaySoFar': 'Ma eddig — a nap még nem ért véget',
+    'meas.head.dayTotal': 'Napi összeg: {date} · {ago}',
+    'meas.head.dayAverage': 'Napi átlag: {date} · {ago}',
+    'meas.head.noFigure': 'Utoljára ekkor érkezett: {when}, de annak a napnak az összegét nem sikerült kiolvasni',
+    'meas.stale': 'Ebben az időszakban nincs mérés — a legutóbbi: {ago}.',
+    'meas.spark.aria': '{metric}, {span}',
+    'meas.usual.band': 'A szokásos: {low}–{high} {unit} (az elmúlt 60 napból {n} mért nap alapján)',
+    'meas.usual.bandSum': 'A szokásos napod: {low}–{high} {unit} (az elmúlt 60 napból {n} mért nap alapján)',
+    'meas.usual.notEnough': 'Még nincs szokásos tartomány: az elmúlt 60 napból {n} napon van mérés, {min} kellene.',
+    'meas.usual.noVariation': 'Az elmúlt 60 nap minden mért napján ugyanaz volt az érték, így nincs mit sávként rajzolni.',
+    'meas.usual.year': 'A szokásos tartomány napi alapú, ezért csak a 7 és a 30 napos nézeten rajzoljuk meg.',
+    'meas.degraded': 'A szerver ezt a típust mintánkénti átlagként küldi, így az oszlopok nem napi összegek.',
+    'meas.toTrends': 'Teljes grafikon a Trendekben →',
+    'meas.bp.title': 'Vérnyomás',
+    'meas.bp.unit': 'Hgmm',
+    'meas.bp.none.title': 'Nincs vérnyomásadat',
+    'meas.bp.none.body':
+      'Az Apple Watch nem mér vérnyomást — ehhez külön mandzsetta kell, ami az Egészség appba ír. A hiánya tehát nem hiba.',
+    'meas.bp.older': 'Az elmúlt 90 napban nincs mérés. A legutóbbi ekkor érkezett: {when}.',
+    'meas.bp.upper': 'a felső (szisztolés)',
+    'meas.bp.lower': 'az alsó (diasztolés)',
+    'meas.bp.half.title': 'Hiányos vérnyomásmérés',
+    'meas.bp.half.body':
+      'Csak {present} értékre érkezett adat, {missing} hiányzik. A vérnyomás két összetartozó érték: az egyiket a másik nélkül megmutatni félrevezető lenne, ezért itt nem jelenik meg szám.',
+    'meas.bp.noPair.title': 'Nincs teljes mérés',
+    'meas.bp.noPair.body':
+      'Mindkét értékre van adat, de nincs olyan időpont, amikor a kettő együtt készült volna — így egyetlen teljes vérnyomásmérés sem áll össze.',
+    'meas.bp.latest': 'Legutóbbi — {when} · {ago}',
+    'meas.bp.systolic': 'Szisztolés',
+    'meas.bp.diastolic': 'Diasztolés',
+    'meas.bp.average': 'Átlag',
+    'meas.bp.pulsePressure': 'Pulzusnyomás',
+    'meas.bp.map': 'MAP',
+    'meas.bp.count.one':
+      '{n} teljes mérés az elmúlt 90 napban. Csak azok az időpontok számítanak, amikor mindkét érték megvan.',
+    'meas.bp.count.other':
+      '{n} teljes mérés az elmúlt 90 napban. Csak azok az időpontok számítanak, amikor mindkét érték megvan.',
+    'meas.bp.mapNote':
+      'A pulzusnyomás a két érték különbsége; a MAP (artériás középnyomás) a szokásos közelítés: alsó + (felső − alsó) / 3.',
+    'meas.bp.chart.aria': 'A teljes vérnyomásmérések az elmúlt 90 napban',
+    'meas.bp.unusual.title': 'A saját méréseid közül kilógó értékek',
+    'meas.bp.unusual.notEnough':
+      'A méréseket akkor hasonlítjuk egymáshoz, ha az elmúlt 90 napban legalább {min} van belőlük — most {n}. Addig nem mondunk róluk semmit, ami nem azt jelenti, hogy szokásosak voltak.',
+    'meas.bp.unusual.none': 'Az elmúlt 90 nap méréseiből ({n}) egyik sem lóg ki a többi közül.',
+    'meas.bp.unusual.lead': 'Ez a mérés eltér a saját átlagodtól: ',
+    'meas.bp.unusual.axis': '{axis} {amount} Hgmm-rel {direction} a szokásosnál (általában {usual} körül)',
+    'meas.bp.axis.systolic': 'a felső érték',
+    'meas.bp.axis.diastolic': 'az alsó érték',
+    'meas.bp.higher': 'magasabb',
+    'meas.bp.lowerWord': 'alacsonyabb',
+    'meas.bp.unusual.rule':
+      'Minden mérést a saját többi, elmúlt 90 napos méréseddel vetünk össze — legalább 1,5 szórásnyi és 8 (felső), illetve 5 (alsó) Hgmm eltérésnél —, sosem klinikai határértékkel. Ez leírás, nem értékelés.',
+    'meas.gait.title': 'Járás — az öt mérés egy időtengelyen',
+    'meas.gait.lead':
+      'Az utolsó 7 lezárt nap az azt megelőző 28-hoz képest. A sáv a saját korábbi napjaid átlaga és szórása. Nem normálérték, és nem cél.',
+    'meas.gait.legend.band': 'A saját sávod',
+    'meas.gait.legend.mean': 'Korábbi átlag',
+    'meas.gait.legend.fall': 'Elesés',
+    'meas.gait.explain.walkingSpeed':
+      'A sétatempód sík terepen, ahogy az órád vagy a telefonod méri. Nem a futásra vonatkozik.',
+    'meas.gait.explain.walkingStepLength': 'Egy lépés hossza sétálás közben, méterben.',
+    'meas.gait.explain.walkingAsymmetryPercentage':
+      'A járás idejének hány százalékában tér el a két láb lépésideje egymástól.',
+    'meas.gait.explain.walkingDoubleSupportPercentage':
+      'A járás idejének hány százalékában van egyszerre mindkét talp a földön.',
+    'meas.gait.explain.appleWalkingSteadiness':
+      'Az Apple saját összevont mutatója, több járásjellemzőből számolva. Ez az ő számításuk — mi csak megjelenítjük, nem mi találtuk ki.',
+    'meas.gait.latest': 'Legutóbbi nap: {value} · {date}',
+    'meas.gait.nothing': 'Az elmúlt {n} napban nincs mérés.',
+    'meas.gait.notEnough': 'Nincs elég mért nap',
+    'meas.gait.notComparable': 'Nincs mihez hasonlítani',
+    'meas.gait.unchanged': 'Együtt mozog a szokásossal',
+    'meas.gait.moved': '{delta} {direction}, mint a megelőző {n} nap',
+    'meas.gait.delta.speed': ' m/s-mal',
+    'meas.gait.delta.length': ' méterrel',
+    'meas.gait.delta.points': ' százalékponttal',
+    'meas.gait.detail.notEnough':
+      'Az elmúlt {recentDays} napból {recent}, az azt megelőző {baselineDays} napból {baseline} napon van mérés. Az összehasonlításhoz legalább {minRecent}, illetve {minBaseline} kell — addig nem mondunk róla semmit. Ez nem azt jelenti, hogy rendben van: azt, hogy nem néztük meg.',
+    'meas.gait.detail.notComparable':
+      'A korábbi napok átlaga nulla, így nincs mihez viszonyítani. Ez általában adathiba, nem mérési eredmény.',
+    'meas.gait.detail.unchanged':
+      'Az elmúlt {recentDays} nap átlaga {recent}, a megelőző {baselineDays} napé {baseline}. A különbség kisebb annál, amit ennél a mérésnél változásnak neveznénk.',
+    'meas.gait.detail.moved':
+      'Az elmúlt {recentDays} nap átlaga {recent}, a megelőző {baselineDays} napé {baseline}. Ez leírás, nem értékelés — a járásadatokat a cipő, a terep, a teher és a napszak is befolyásolja.',
+    'meas.gait.band':
+      'A saját sávod {low} és {high} között van ({n} nap átlaga ± szórása). Ez nem normálérték, hanem a te eddigi napjaid szórása.',
+    'meas.gait.chart.aria': '{metric} az elmúlt {n} napban',
+    'meas.gait.falls.one': '{n} esés az időszakban, pontozott vonallal jelölve.',
+    'meas.gait.falls.other': '{n} esés az időszakban, pontozott vonalakkal jelölve.',
+    'meas.gait.fallsNote':
+      'Ezek ugyanazon az időtengelyen látszanak, mint a görbe. Ez nem jelenti azt, hogy közük van egymáshoz — csak azt, hogy egymás mellett láthatod őket.',
+    'meas.gait.noFalls':
+      'Az elmúlt {n} napban nem érkezett esés erre a szerverre. Ez lehet a jó eset — de az is lehet, hogy az esésérzékelés ki van kapcsolva vagy nem olvasható: innen nézve a kettő ugyanúgy fest.',
+    'meas.gait.steadinessEvents':
+      'Az Apple járásstabilitás-értesítései nincsenek ezen a tengelyen: ezek egy másfajta HealthKit-bejegyzés (kategóriaminta), amit a telefon nem tölt fel — ilyet egyedül az alvásból küld. A telefon a saját járás-képernyőjén rajzolja ki őket.',
+    'meas.gait.apple':
+      'A „járásstabilitás” és a szintjei az Apple számítása és az Apple besorolása, nem a miénk. Ezt mindenhol kiírjuk, ahol megjelenik.',
+    'meas.gait.description':
+      'Ez leírás, nem diagnózis és nem kockázatbecslés. A járásadatokat a cipő, a terep, a teher és a napszak is elmozdítja.',
   },
 
   // --- Metric group names ---------------------------------------------------
@@ -1420,6 +1582,8 @@ export const hu = {
     min: 'perc',
     h: 'óra',
     'kcal/hr/kg': 'kcal/ó/kg',
+    // A szerver katalógusa `degC`-nek írja a Celsiust (backend internal/metrics).
+    degC: '°C',
     'ml/kg/min': 'ml/kg/perc',
     'L/min': 'L/perc',
   },
