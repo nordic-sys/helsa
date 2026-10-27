@@ -168,7 +168,17 @@ row that is a few megabytes a day uncompressed, and TimescaleDB typically achiev
 well over 90% compression on this shape of data — many repeated `data_type` values
 and a monotonic timestamp.
 
-The practical result is on the order of tens of megabytes per year. **There is no
+The practical result is on the order of tens of megabytes per year **once compressed**.
+
+⚠️ **The first upload is not that.** It brings your whole Health history at once, and it lands
+uncompressed — compression only reaches data older than 30 days on its next run (every 12 hours).
+Measured on a real first install (2026-10-27): an iPhone + Apple Watch history of several years
+uploaded **millions of samples**; at 2.27 million the database stood at **1.3 GB**, about 580 bytes
+a sample with its indexes, plus ~380,000 GPS points. The phone finishes in minutes and the worker
+then drains the queue at roughly 100 batches a minute — the numbers in the database keep rising for
+a while after the app says *Done*. Size the disk for the first upload, not for the yearly growth:
+the 20 GB in [What you need](/getting-started/#what-you-need) holds it, with the Docker images,
+but not with much to spare. **There is no
 retention policy and there is not meant to be one**: for a personal health archive
 the old data is the interesting part. A ten-year resting-heart-rate trend is not
 stale data, it is the most valuable thing in the database.

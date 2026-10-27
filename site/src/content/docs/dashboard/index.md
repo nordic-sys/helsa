@@ -31,9 +31,18 @@ where the [hardening](/deployment/hardening/) advice is not optional reading:
 unlike the API, it is not behind mutual TLS, so **the network layer is the whole
 of its front door**.
 
-Point a browser at it from your LAN or over WireGuard, paste a device token once,
-and it is stored in that browser only. See
-[device token](/getting-started/device-token/).
+Point a browser at it from your LAN or over WireGuard — `https://<your-host>:8443` —
+paste a device token once, and it is stored in that browser only.
+
+1. **Issue the browser its own token** on the server: `make prod-token SUBJECT=browser`. It opens
+   the same data as the phone's ([Device token](/getting-started/device-token/)).
+2. **Make the computer trust your CA.** The dashboard's certificate is signed by your own CA, so the
+   browser warns until it trusts it, just as the phone did. On a Mac: open `out/ca/ca.crt` (it lands
+   in Keychain Access), double-click *Helsa Root CA* → Trust → *Always Trust*. Windows: import it
+   into *Trusted Root Certification Authorities*. Firefox keeps its own store: Settings → Privacy &
+   Security → Certificates → View Certificates → Authorities → Import.
+3. **Paste the token** on the dashboard's **Settings** page. Until then it says it has no valid
+   device token — being on your network is not being signed in.
 
 ![The dashboard's Trends page: a metric picker, a week of steps, and the usual-range band](../../../assets/screenshots/web-dashboard.png)
 
