@@ -70,8 +70,9 @@ By default, **nothing**.
 | Map tiles (the web dashboard) | Only if you switch a map on; it is off by default | Whatever tile source you chose, reached **through your own server**, never from the browser. [What each choice sends](/deployment/map-tiles/) |
 | Settings | If you have iCloud on | Your own iCloud account (preferences only — never health data) |
 | A few settings | Only if you turn on uploading and enter an address | The same server as your health data: the monthly challenge's milestones and rest days, the water goal you set, and the virtual journey's route and start day — so the web dashboard shows the same. Never the screen layout, the switches or the Spotlight settings |
+| Journal and events | Only if, on top of uploading, you also turn on **Journal and events** (Your own server ▸ Journal and events — off by default, app 1.0 (7) on) | The same server: your moods and their tags (from any app that writes them to Apple Health), the symptoms you noted — with the event, the follow-up and the workout they belong to — and the high / low / irregular heart-rate, loud-environment and walking-steadiness alerts. Turning it off stops sending at once and asks whether the server should delete what it holds; the server's copy can also be deleted from the app or the web dashboard at any time |
 
-There is no sixth row. In particular there is no telemetry, no "anonymous
+There is no seventh row. In particular there is no telemetry, no "anonymous
 usage statistics", and no error reporting: the app contains no third-party
 software development kit of any kind, and its package manifest has an empty
 dependency list.

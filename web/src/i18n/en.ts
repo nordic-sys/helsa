@@ -1287,8 +1287,6 @@ export const en: Dict = {
       'Not compared, because the two periods were measured on very different shares of their days: {list}.',
     'report.changes.withheldItem': '{name} ({now} / {days} days now, {then} / {days} before)',
     'report.journal.title': 'What I noted',
-    'report.journal.body':
-      'The journal and the symptom marks stay on the phone: they never reach the server, so this page cannot show them — and their absence here does not mean nothing was noted. The summary made in the phone app carries them.',
     'report.table.title': 'Measurements',
     'report.col.measurement': 'Measurement',
     'report.col.average': 'Daily average',
@@ -1316,7 +1314,7 @@ export const en: Dict = {
     'report.unit.minutes': 'minutes',
     'report.events.title': 'Recorded events',
     'report.events.body':
-      'Events (a fall, a heart-rate notification, an unusual blood pressure) are put together on the iPhone from its Health data and do not reach the server, so this page can say nothing about them for this period.',
+      'The phone sends its events only when its Journal and events switch is on, and it has not sent any to this server — so this page can say nothing about them for this period. Falls and an unusual blood pressure are put together on the phone and are never here.',
     'report.workouts.title': 'Workouts',
     'report.workouts.col.time': 'Time',
     'report.workouts.col.type': 'Type',
@@ -1342,6 +1340,74 @@ export const en: Dict = {
       'No measurement means no data: a missing day is not a zero, it is left out of the average. The extremes are the individual measurements for point-in-time types, and the daily totals’ extremes for cumulative ones.',
     'report.prov.notMedical':
       'Helsa is not a medical device: nothing on this page is a diagnosis, a warning or an alert.',
+
+    // --- Journal and events (pages/Journal, and the report's two sections) ---
+    // Only there when the phone's opt-in switch sent them (app 1.0 (7) on).
+    'nav.journal': 'Journal and events',
+    'journal.title': 'Journal and events',
+    'journal.subtitle':
+      'What you noted on the phone — mood, symptoms, tags — and the alerts your watch recorded. A journal, not a diagnosis.',
+    'journal.periodAria': 'Period',
+    'journal.days.30': '30 days',
+    'journal.days.90': '3 months',
+    'journal.days.365': '1 year',
+    'journal.never.title': 'The phone has not sent its journal to this server',
+    'journal.never.body':
+      'The journal and the events leave the phone only if you turn them on: in the iPhone app, Settings ▸ Export ▸ Your own server ▸ Journal and events (app 1.0 (7) or later). It is off by default, because it is the most personal part of your data. Until then this page has nothing to show — which says nothing about what you noted.',
+    'journal.lastReceived': 'Last received from the phone: {when}',
+    'journal.coverage':
+      'Noted on {n} of {of} days — the rest carry no note, which is not the same as nothing to note.',
+    'journal.emptyWindow':
+      'Nothing noted in this period. That is not the same as nothing happening: a journal is written when someone remembers to.',
+    'journal.moods.title': 'Mood, day by day',
+    'journal.moods.aria': 'Mood on each day of the period',
+    'journal.moods.cell': '{date}: {mood}',
+    'journal.moods.noNote': 'no note',
+    'journal.episodes.title': 'Illness episodes',
+    'journal.episodes.none':
+      'No illness episode in this period. An episode starts on a day with a symptom typical of an infection (fever, sore throat, cough…); fatigue or a headache alone does not open one.',
+    'journal.episodes.days.one': '{n} day',
+    'journal.episodes.days.other': '{n} days',
+    'journal.episodes.ongoing': 'ongoing',
+    'journal.episodes.rule':
+      'One day without a note inside an episode is bridged, two end it — the phone’s rule. Counted from the journal, not diagnosed.',
+    'journal.events.title': 'Events',
+    'journal.events.none':
+      'No heart-rate, loud-environment or walking-steadiness alert and no marked moment in this period.',
+    'journal.events.marked': 'Noted: {list}',
+    'journal.events.followUp': 'After {h} hours: {list}',
+    'journal.events.followUpGone': 'After {h} hours: nothing remained',
+    'journal.events.level': '{n} dB',
+    'journal.events.note':
+      'A fall is a measurement and is under Measurements; an unusual blood pressure is worked out on the phone and is not on this list.',
+    'journal.daysList.title': 'Day by day',
+    'journal.daysList.day': 'Day',
+    'journal.daysList.symptoms': 'Symptoms',
+    'journal.daysList.mood': 'Mood and tags',
+    'journal.delete.title': 'This server’s copy',
+    'journal.delete.body':
+      'The server holds {n} journal entries. Deleting them leaves Health on the phone untouched; if the phone’s switch is still on, its next sync sends them again.',
+    'journal.delete.button': 'Delete the journal from this server',
+    'journal.delete.confirm': 'Delete every mood, symptom and alert from this server?',
+    'journal.delete.done': '{n} entries deleted.',
+    'report.journal.never':
+      'The phone has not sent its journal to this server (the Journal and events switch is off, or the app is older than 1.0 (7)), so this page cannot show what was noted — and that does not mean nothing was. The summary made in the phone app carries it.',
+    'report.journal.tooOld':
+      'This server is older than the journal, so this page cannot show what was noted — update the server. The summary made in the phone app carries it.',
+    'report.journal.none':
+      'Nothing was noted on any of the {n} days of this period. That is not the same as nothing to note.',
+    'report.journal.item.one': '{name} ({n} day)',
+    'report.journal.item.other': '{name} ({n} days)',
+    'report.journal.symptoms': 'Symptoms: {list}.',
+    'report.journal.symptomsMore': 'Symptoms: {list}, and {n} more.',
+    'report.journal.tags': 'Tags: {list}.',
+    'report.journal.tagsMore': 'Tags: {list}, and {n} more.',
+    'report.journal.run': 'Longest run of days with a symptom: {n} days, starting {date}.',
+    'report.journal.omitted': '{n} more marked days are not listed.',
+    'report.events.none':
+      'No heart-rate, loud-environment or walking-steadiness alert was recorded in this period.',
+    'report.events.note':
+      'A fall and an unusual blood pressure are put together on the phone and are not on this list.',
 
     // --- The year in numbers + year by year (pages/PeriodSummary, pages/YearByYear) ---
     // The phone's period summary and long view. Wording follows the phone's own

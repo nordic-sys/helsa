@@ -321,6 +321,48 @@ Fix the cause before you retry. A batch that failed on a database restart goes
 through; one that fails on its content returns to the dead-letter queue within
 seconds, and its next entry in `recent_failures` shows the higher `redriven`.
 
+## The journal (opt-in)
+
+The journal and events — symptoms, moods, and the heart-rate, loud-environment and
+walking-steadiness alerts — do **not** travel through `/v1/ingest`. The phone sends
+them to `POST /v1/journal`, and only when its owner turns on **Journal and
+events** (off by default, app 1.0 (7) on).
+
+```http
+POST /v1/journal
+{ "entries": [ { "source_uuid": "…", "data_type": "headache",
+                 "started_at": "2026-10-20T08:00:00Z", "ended_at": "2026-10-20T08:00:00Z",
+                 "value": 3, "event_key": "highHeartRate:1792488000" } ],
+  "deletions": ["…"] }
+→ 200 { "stored": 1, "deleted": 0, "swept": 0, "server_time": "2026-10-27T21:42:14.123456Z" }
+```
+
+Why a separate path, each reason enough on its own:
+
+- **Synchronous.** A person writes a handful of these a day, so the chunk is
+  written in the request. The phone moves its journal anchor only after the
+  `200`; an **older server answers 404**, the anchor stays where it was, and the
+  app says the server is too old — nothing is lost, the first sync after the
+  update sends everything. On `/v1/ingest` an unknown field would have been
+  accepted with a `202` and dropped by the worker, with the anchor already past it.
+- **Its own anchors.** Turning the switch on is a backfill of the whole journal,
+  without touching the measurements' cursors.
+- **Its own off switch.** `DELETE /v1/journal` removes the server's whole copy;
+  the app offers it when the switch is turned off, and the web dashboard has a
+  button for it.
+
+**`sweep_before` closes a backfill.** HealthKit reports deletions only to the
+anchor that saw the object, and a backfill starts without one — so whatever was
+deleted in Health while the phone was not sending would otherwise stay on the
+server. The phone keeps the `server_time` of its backfill's first answer and
+sends it back as `sweep_before` once everything is up; the server deletes every
+entry it received before that instant. The token is the **server's** clock, so a
+phone whose clock is off cannot sweep what it just sent.
+
+At most 2,000 items (entries + deletions) per chunk; more is a `413`. An entry is
+a category sample (`value`) or a state of mind (`valence`) — exactly one — and
+`data_type` is an open string, like on the ingest path.
+
 ## Failure modes
 
 | Response | Meaning | Client should |

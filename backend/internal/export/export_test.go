@@ -11,6 +11,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/nordic-sys/helsa/backend/internal/api"
 )
 
 // fakeSource is an in-memory data source — it makes the formatting checkable
@@ -19,7 +21,17 @@ type fakeSource struct {
 	samples  []SampleRow
 	workouts []WorkoutRow
 	sleep    []SleepRow
+	journal  []api.JournalEntry
 	err      error
+}
+
+func (f *fakeSource) Journal(_ context.Context, _ uuid.UUID, _ Request, fn func(api.JournalEntry) error) error {
+	for _, e := range f.journal {
+		if err := fn(e); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func (f *fakeSource) Samples(_ context.Context, _ uuid.UUID, _ Request, fn func(SampleRow) error) error {
@@ -220,7 +232,7 @@ func TestJSONExportWithNoRowsIsStillValid(t *testing.T) {
 	if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
 		t.Fatalf("not valid JSON: %v\n%s", err, buf.String())
 	}
-	for _, key := range []string{"meta", "samples", "workouts", "sleep_segments"} {
+	for _, key := range []string{"meta", "samples", "workouts", "sleep_segments", "journal"} {
 		if _, ok := got[key]; !ok {
 			t.Errorf("missing key: %s", key)
 		}
@@ -253,5 +265,53 @@ func TestMetaForSortsMetricsAndKeepsEmptyListNonNil(t *testing.T) {
 	m = MetaFor(req, time.Now())
 	if m.Metrics == nil {
 		t.Error("a missing metric list must be [] on the wire, not null")
+	}
+}
+
+// The journal is personal data like the rest: an export of everything carries
+// it (GDPR access), a filtered one only when it names `journal`, and the CSV
+// never — its one-number-per-row shape cannot hold a mood with its tags.
+func TestJournalGoesIntoTheFullJSONExportOnly(t *testing.T) {
+	v := 2
+	src := &fakeSource{journal: []api.JournalEntry{{
+		SourceUuid: "J1", DataType: "headache", Value: &v,
+		StartedAt: time.Date(2026, 8, 3, 9, 0, 0, 0, time.UTC),
+		EndedAt:   time.Date(2026, 8, 3, 9, 0, 0, 0, time.UTC),
+	}}}
+	journalOf := func(req Request) []api.JournalEntry {
+		t.Helper()
+		var buf bytes.Buffer
+		if err := Write(context.Background(), &buf, src, uuid.New(), req); err != nil {
+			t.Fatalf("write: %v", err)
+		}
+		var got struct {
+			Journal []api.JournalEntry `json:"journal"`
+		}
+		if err := json.Unmarshal(buf.Bytes(), &got); err != nil {
+			t.Fatalf("not valid JSON: %v\n%s", err, buf.String())
+		}
+		return got.Journal
+	}
+
+	full := testRequest(FormatJSON)
+	if got := journalOf(full); len(got) != 1 || got[0].DataType != "headache" || *got[0].Value != 2 {
+		t.Errorf("the full export lost the journal: %+v", got)
+	}
+	filtered := testRequest(FormatJSON)
+	filtered.Metrics = []string{"stepCount"}
+	if got := journalOf(filtered); len(got) != 0 {
+		t.Errorf("a steps-only export carried the journal: %+v", got)
+	}
+	filtered.Metrics = []string{"stepCount", JournalMetric}
+	if got := journalOf(filtered); len(got) != 1 {
+		t.Errorf("an export naming the journal left it out: %+v", got)
+	}
+
+	var csvBuf bytes.Buffer
+	if err := Write(context.Background(), &csvBuf, src, uuid.New(), testRequest(FormatCSV)); err != nil {
+		t.Fatalf("write csv: %v", err)
+	}
+	if strings.Contains(csvBuf.String(), "headache") {
+		t.Errorf("the CSV carried a journal entry:\n%s", csvBuf.String())
 	}
 }

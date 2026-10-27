@@ -10,6 +10,7 @@ import type {
   IngestRedriveResult,
   IngestStatus,
   Insight,
+  JournalResponse,
   LatestResponse,
   Range,
   Settings,
@@ -220,6 +221,21 @@ export const api = {
    */
   latest: (metrics: string[], tz?: string) =>
     req<LatestResponse>(`/latest${qs({ metrics: metrics.join(','), tz })}`),
+
+  /**
+   * The phone's journal and events in a window of days (`to` included) —
+   * moods, symptoms, the heart-rate and other alerts. Only there if the phone's
+   * opt-in sync sent them: `last_received_at` absent means it never did.
+   *
+   * ⚠️ A 404 is version skew (a server older than the endpoint), not an empty
+   * journal — the page says so (`isApiTooOld`).
+   */
+  journal: (from: string, to: string, tz?: string) =>
+    req<JournalResponse>(`/journal${qs({ from, to, tz })}`),
+
+  /** Deletes every journal entry from the server. Health on the phone is
+   * untouched; if the phone's switch is still on, its next sync sends them again. */
+  deleteJournal: () => req<{ deleted: number }>('/journal', { method: 'DELETE' }),
 
   /**
    * `POST /export` — the file itself, streamed. See `exportFile` below.

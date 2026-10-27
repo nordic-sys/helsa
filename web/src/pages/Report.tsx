@@ -16,14 +16,19 @@
 //
 // # What the phone's page has that this one cannot, said on the page
 //
-// * **The journal** ("Amit feljegyeztem", the marked days) — the journal and
-//   the symptom marks never leave the phone (docs/06). The section is drawn with
-//   one sentence saying so, rather than left out: a page without it reads as a
-//   period in which nothing was noted.
-// * **The events** — falls, heart-rate notifications, unusual blood pressure
-//   are put together on the phone from HealthKit (`HealthEventTimeline`) and
-//   have no server endpoint. The phone's own iPad sentence is the model: "we
-//   cannot see" is said, "there were none" never is.
+// * **The journal** ("Amit feljegyeztem", the marked days) — only when the
+//   phone sent it: the journal leaves the phone solely through its opt-in
+//   "Journal and events" switch (app 1.0 (7) on, `GET /journal`). Then the
+//   section is the phone's `ReportJournal`, coverage line first. Without it the
+//   section stays, with one sentence saying why it is empty — a page without it
+//   would read as a period in which nothing was noted — and a 404 (an older
+//   server) says that instead.
+// * **The events** — the heart-rate, loud-environment and walking-steadiness
+//   alerts come with the same switch. Falls and unusual blood pressure are put
+//   together on the phone (`HealthEventTimeline`) and are never here, and the
+//   section says so. The phone's own iPad sentence is the model: "we cannot
+//   see" is said, "there were none" only when the server really holds the
+//   journal and it has none.
 // * **The source marks** ([1], [2]) — the phone asks HealthKit which app wrote
 //   each row. The server knows something close (`/coverage` carries the bundle
 //   ids per type), but not per window and row the way the key needs it; until it
@@ -81,6 +86,22 @@ import { useAvailability } from '../lib/useAvailability'
 import { useToday } from '../lib/useToday'
 import { isoDay } from '../lib/window'
 import { useWorkoutHistory } from '../lib/workoutHistory'
+import { isApiTooOld } from '../lib/ingest'
+import {
+  SUMMARY_MAX_ENTRIES,
+  dayIn,
+  eventTitle,
+  journalDays,
+  journalEvents,
+  journalSummary,
+  moodName,
+  neverReceived,
+  symptomName,
+  symptomText,
+  tagName,
+  type JournalDay,
+} from '../lib/journal'
+import type { JournalResponse } from '../api/types'
 import '../styles/report.css'
 
 const isKnown = (key: string) => key in METRICS
@@ -150,6 +171,15 @@ export default function Report() {
       ])
       return { win, base, current, baseline, at: new Date().toISOString() }
     },
+    placeholderData: keepPreviousData,
+  })
+
+  // The journal of the same window (`GET /journal`). Allowed to fail without
+  // taking the page down, as on the phone: the measurements are worth printing
+  // without it, and the section says why it is empty.
+  const journal = useQuery({
+    queryKey: ['journal', tz, win.from, win.to],
+    queryFn: () => api.journal(win.from, win.to, tz),
     placeholderData: keepPreviousData,
   })
 
@@ -338,10 +368,14 @@ export default function Report() {
 
                   {nothing && <p className="report-note report-nothing">{t('report.nothing')}</p>}
 
-                  <section className="report-section report-section--short" data-testid="report-journal">
-                    <h3>{t('report.journal.title')}</h3>
-                    <p className="report-note">{t('report.journal.body')}</p>
-                  </section>
+                  <JournalSection
+                    data={journal.data}
+                    tooOld={journal.isError && isApiTooOld(journal.error)}
+                    failed={journal.isError && !isApiTooOld(journal.error)}
+                    from={drawnWin.from}
+                    to={drawnWin.to}
+                    days={drawnWin.days}
+                  />
 
                   <section className="report-section">
                     <h3>{t('report.table.title')}</h3>
@@ -374,10 +408,7 @@ export default function Report() {
                     )}
                   </section>
 
-                  <section className="report-section report-section--short" data-testid="report-events">
-                    <h3>{t('report.events.title')}</h3>
-                    <p className="report-note">{t('report.events.body')}</p>
-                  </section>
+                  <EventsSection data={journal.data} from={drawnWin.from} to={drawnWin.to} />
 
                   <WorkoutsSection
                     workouts={workouts}
@@ -626,5 +657,145 @@ function MetricChooser({
       </div>
       <p className="subtle report-hint">{t('report.metrics.defaultNote')}</p>
     </div>
+  )
+}
+
+// --- The journal and the events --------------------------------------------------
+
+/**
+ * "What I noted" — the phone's `ReportJournal` block from the server's copy.
+ *
+ * ⛔️ The coverage line comes first and is never dropped: an unmarked day is not
+ * a symptom-free day, and a list of symptoms without it would read to a
+ * clinician as "these were the bad days and the rest were fine".
+ */
+function JournalSection({
+  data,
+  tooOld,
+  failed,
+  from,
+  to,
+  days,
+}: {
+  data: JournalResponse | undefined
+  tooOld: boolean
+  failed: boolean
+  from: string
+  to: string
+  days: number
+}) {
+  const { t, tp, lang } = useI18n()
+  const f = useFormat()
+  const marked = data ? journalDays(data.entries, data.tz) : []
+  const summary = data && !neverReceived(data) ? journalSummary(marked, from, to) : null
+
+  let body
+  if (tooOld) body = <p className="report-note">{t('report.journal.tooOld')}</p>
+  else if (failed || !data || neverReceived(data)) body = <p className="report-note">{t('report.journal.never')}</p>
+  else if (!summary) body = <p className="report-note">{t('report.journal.none', { n: days })}</p>
+  else {
+    const list = (items: { key: string; days: number }[], nameOf: (k: string) => string) =>
+      items
+        .slice(0, SUMMARY_MAX_ENTRIES)
+        .map((x) => tp('report.journal.item', x.days, { name: nameOf(x.key) }))
+        .join(', ')
+    const rest = (items: unknown[]) => Math.max(0, items.length - SUMMARY_MAX_ENTRIES)
+    const omitted = summary.markedDays - summary.detail.length
+    body = (
+      <>
+        <p className="report-note">{t('journal.coverage', { n: summary.markedDays, of: summary.periodDays })}</p>
+        {summary.symptomDays.length > 0 && (
+          <p className="report-note">
+            {rest(summary.symptomDays) > 0
+              ? t('report.journal.symptomsMore', {
+                  list: list(summary.symptomDays, (k) => symptomName(k, lang)),
+                  n: rest(summary.symptomDays),
+                })
+              : t('report.journal.symptoms', { list: list(summary.symptomDays, (k) => symptomName(k, lang)) })}
+          </p>
+        )}
+        {summary.tagDays.length > 0 && (
+          <p className="report-note">
+            {rest(summary.tagDays) > 0
+              ? t('report.journal.tagsMore', { list: list(summary.tagDays, (k) => tagName(k, lang)), n: rest(summary.tagDays) })
+              : t('report.journal.tags', { list: list(summary.tagDays, (k) => tagName(k, lang)) })}
+          </p>
+        )}
+        {summary.longestSymptomRun && summary.longestSymptomRun.days > 1 && (
+          <p className="report-note">
+            {t('report.journal.run', { n: summary.longestSymptomRun.days, date: f.date(summary.longestSymptomRun.start) })}
+          </p>
+        )}
+        <div className="table-wrap">
+          <table className="report-table report-journal-days">
+            <thead>
+              <tr>
+                <th scope="col">{t('journal.daysList.day')}</th>
+                <th scope="col">{t('journal.daysList.symptoms')}</th>
+                <th scope="col">{t('journal.daysList.mood')}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {summary.detail.map((d) => (
+                <tr key={d.day}>
+                  <td>{f.date(d.day)}</td>
+                  <td>{d.symptoms.map((s) => symptomText(s.key, s.severity, lang)).join(', ')}</td>
+                  <td>{moodAndTags(d, lang)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        {omitted > 0 && <p className="report-note">{t('report.journal.omitted', { n: omitted })}</p>}
+      </>
+    )
+  }
+  return (
+    <section className="report-section report-section--short" data-testid="report-journal">
+      <h3>{t('report.journal.title')}</h3>
+      {body}
+    </section>
+  )
+}
+
+function moodAndTags(d: JournalDay, lang: 'hu' | 'en'): string {
+  const parts: string[] = []
+  if (d.mood != null) parts.push(moodName(d.mood, lang))
+  if (d.tags.length) parts.push(d.tags.map((x) => tagName(x, lang)).join(', '))
+  return parts.join(' · ')
+}
+
+/** The alerts of the period from the same journal answer; the honest sentence
+ * when the server never received one. */
+function EventsSection({ data, from, to }: { data: JournalResponse | undefined; from: string; to: string }) {
+  const { t, lang } = useI18n()
+  const f = useFormat()
+  const tz = data?.tz
+  const events =
+    data && tz && !neverReceived(data)
+      ? journalEvents(data.entries).filter((e) => {
+          const day = dayIn(e.at, tz)
+          return e.dataType != null && day >= from && day <= to
+        }).reverse()
+      : null
+  return (
+    <section className="report-section report-section--short" data-testid="report-events">
+      <h3>{t('report.events.title')}</h3>
+      {events == null ? (
+        <p className="report-note">{t('report.events.body')}</p>
+      ) : events.length === 0 ? (
+        <p className="report-note">{t('report.events.none')}</p>
+      ) : (
+        <ul className="report-events">
+          {events.map((e) => (
+            <li key={e.id}>
+              {f.dateTime(e.at)} — {eventTitle(e, lang)}
+              {e.marked.length > 0 && ` (${e.marked.map((m) => symptomText(m.key, m.severity, lang)).join(', ')})`}
+            </li>
+          ))}
+        </ul>
+      )}
+      {events != null && <p className="report-note">{t('report.events.note')}</p>}
+    </section>
   )
 }

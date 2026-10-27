@@ -63,7 +63,10 @@ migrate: ## Apply the goose migrations (idempotent against an already bootstrapp
 # (migration 00010): "never touched" (NULL) and "deleted every milestone" ('{}')
 # have to survive pgx as two different values, and only a real round trip shows
 # that they do.
-SMOKE_PKGS := ./test/smoke ./internal/insights ./internal/coverage ./internal/sourcemerge ./internal/ingeststat ./internal/queue ./internal/workouts ./internal/latest ./internal/challenge
+# internal/journal holds the database test of the phone's opt-in journal
+# (migration 00011): a re-send replaces, a backfill's sweep keeps exactly the
+# rows stamped with its token, and the purge and the user cascade leave nothing.
+SMOKE_PKGS := ./test/smoke ./internal/insights ./internal/coverage ./internal/sourcemerge ./internal/ingeststat ./internal/queue ./internal/workouts ./internal/latest ./internal/challenge ./internal/journal
 
 smoke: $(ENV_FILE) ## E2E smoke: auth -> ingest -> summary (against the running infrastructure)
 	HELSA_AUTH_DEV_MODE=true go test -tags smoke -count=1 -v $(SMOKE_PKGS)
