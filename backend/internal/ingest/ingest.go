@@ -119,6 +119,21 @@ func (c Counts) Items() int {
 	return c.Samples + c.Workouts + c.SleepSegments + c.ActivitySummaries + c.Deletions
 }
 
+// Peek reads what a queued message says about itself — its batch id and what
+// the batch holds — without writing anything. The worker uses it to describe a
+// batch it is dead-lettering: Process may have failed half-way, and its counts
+// are then what it got through, not what the batch held. A message that does
+// not decode gives zero counts and uuid.Nil.
+func Peek(body []byte) Counts {
+	var msg Message
+	if err := json.Unmarshal(body, &msg); err != nil {
+		return Counts{}
+	}
+	c := Tally(&msg.Batch)
+	c.BatchID = msg.BatchID
+	return c
+}
+
 func Process(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, body []byte) (Counts, error) {
 	var counts Counts
 	var msg Message

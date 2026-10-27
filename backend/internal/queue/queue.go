@@ -9,6 +9,7 @@ package queue
 import (
 	"context"
 	"fmt"
+	"sync"
 	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
@@ -21,6 +22,9 @@ type Queue struct {
 	ch      *amqp.Channel
 	name    string // main queue
 	dlqName string // dead-letter queue
+
+	// redriveMu makes one Redrive run at a time in this process — see Redrive.
+	redriveMu sync.Mutex
 }
 
 // Open connects and declares the topology (idempotent).
@@ -83,10 +87,12 @@ func (q *Queue) Publish(ctx context.Context, body []byte) error {
 	})
 }
 
-// Consume blocks and calls the handler for every message.
+// Consume blocks and calls the handler for every message, with the number of
+// times the message has been redriven out of the dead-letter queue (0 for one
+// that never was — see Redrive).
 // Handler returns nil → ack; returns an error → nack(requeue=false) →
 // dead-letter (so there is no infinite retry loop).
-func (q *Queue) Consume(ctx context.Context, prefetch int, handler func(context.Context, []byte) error) error {
+func (q *Queue) Consume(ctx context.Context, prefetch int, handler func(ctx context.Context, body []byte, redriven int) error) error {
 	if err := q.ch.Qos(prefetch, 0, false); err != nil {
 		return fmt.Errorf("qos: %w", err)
 	}
@@ -102,7 +108,7 @@ func (q *Queue) Consume(ctx context.Context, prefetch int, handler func(context.
 			if !ok {
 				return fmt.Errorf("delivery channel closed")
 			}
-			if err := handler(ctx, d.Body); err != nil {
+			if err := handler(ctx, d.Body, RedriveCount(d.Headers)); err != nil {
 				_ = d.Nack(false, false) // poison → dead-letter
 				continue
 			}

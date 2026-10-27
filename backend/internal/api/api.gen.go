@@ -991,10 +991,45 @@ type IngestBatch struct {
 	Workouts *[]WorkoutIn `json:"workouts,omitempty"`
 }
 
-// IngestDeadLetter Batches the worker gave up on. They are NOT written to the database and nothing retries them — a non-zero count needs action (docs: dashboard → Ingest queue).
+// IngestDeadLetter Batches the worker gave up on. They are NOT written to the database and nothing retries them on its own — a non-zero count needs action: `POST /ingest/dead-letter/redrive` moves them back for another try (docs: dashboard → Ingest queue).
 type IngestDeadLetter struct {
-	Name  string `json:"name"`
-	Ready int    `json:"ready"`
+	// LastRedrive The most recent redrive that moved at least one batch (kept for 30 days).
+	LastRedrive *IngestLastRedrive `json:"last_redrive,omitempty"`
+	Name        string             `json:"name"`
+	Ready       int                `json:"ready"`
+
+	// RecentFailures Why the worker dead-lettered its most recent batches, newest first — at most 20, each kept for 30 days. Absent when there are none or the worker's records (in Redis) could not be read.
+	//
+	// ⚠️ This is a log of failures, NOT a listing of the dead-letter queue: an entry stays after its batch has been redriven, and a batch dead-lettered by a worker older than this field has no entry at all ("reason not recorded"). Match on `batch_id` and compare `failed_at` with `last_redrive.at`.
+	RecentFailures *[]IngestFailure `json:"recent_failures,omitempty"`
+}
+
+// IngestFailure One dead-lettered batch. Counts and an error message only — never a value from the batch.
+type IngestFailure struct {
+	ActivitySummaries int `json:"activity_summaries"`
+
+	// BatchId the id the 202 of POST /ingest returned; absent for a message queued by an API too old to give one
+	BatchId   *openapi_types.UUID `json:"batch_id,omitempty"`
+	Deletions int                 `json:"deletions"`
+
+	// Error The worker's error, at most 300 characters (an ellipsis marks a cut). Numbers and quoted strings in it are replaced with `#` and `"…"` so that no measured value can leak through a database error; UUIDs (source_uuid), SQLSTATE codes and IP addresses are kept.
+	Error    string    `json:"error"`
+	FailedAt time.Time `json:"failed_at"`
+
+	// Items what the batch held, all kinds added up (0 if the message did not decode)
+	Items int `json:"items"`
+
+	// Redriven How many times this batch had been redriven before this failure (0: it failed on its first try). 3 or more: retrying has not helped so far.
+	Redriven      int `json:"redriven"`
+	Samples       int `json:"samples"`
+	SleepSegments int `json:"sleep_segments"`
+	Workouts      int `json:"workouts"`
+}
+
+// IngestLastRedrive The most recent redrive that moved at least one batch (kept for 30 days).
+type IngestLastRedrive struct {
+	At    time.Time `json:"at"`
+	Moved int       `json:"moved"`
 }
 
 // IngestQueueDepth defines model for IngestQueueDepth.
@@ -1010,6 +1045,30 @@ type IngestQueueDepth struct {
 	Ready int `json:"ready"`
 }
 
+// IngestRedriveRequest defines model for IngestRedriveRequest.
+type IngestRedriveRequest struct {
+	// Max move at most this many; absent = every batch waiting when the call starts (capped at 1000)
+	Max *int `json:"max,omitempty"`
+}
+
+// IngestRedriveResult defines model for IngestRedriveResult.
+type IngestRedriveResult struct {
+	// MaxRedriven the highest redrive count among the moved batches, after this move (0 when none moved)
+	MaxRedriven int `json:"max_redriven"`
+
+	// Moved batches confirmed on the main queue and removed from the dead-letter queue
+	Moved int `json:"moved"`
+
+	// Remaining the dead-letter queue's depth afterwards; absent if it could not be read
+	Remaining *int `json:"remaining,omitempty"`
+
+	// Repeated moved batches now redriven 3 or more times — they have failed again after earlier retries
+	Repeated int `json:"repeated"`
+
+	// StoppedEarly Present when the run stopped before its count: why. The batch being moved at that moment went back to the dead-letter queue; `moved` still counts only the confirmed ones.
+	StoppedEarly *string `json:"stopped_early,omitempty"`
+}
+
 // IngestStatus A snapshot of the ingest pipeline. Each block is present only when it was actually measured — see the description of GET /ingest/status.
 type IngestStatus struct {
 	// BrokerError why the broker could not be asked (only when `broker_reachable` is false)
@@ -1021,7 +1080,7 @@ type IngestStatus struct {
 	// CheckedAt when the API took this snapshot
 	CheckedAt time.Time `json:"checked_at"`
 
-	// DeadLetter Batches the worker gave up on. They are NOT written to the database and nothing retries them — a non-zero count needs action (docs: dashboard → Ingest queue).
+	// DeadLetter Batches the worker gave up on. They are NOT written to the database and nothing retries them on its own — a non-zero count needs action: `POST /ingest/dead-letter/redrive` moves them back for another try (docs: dashboard → Ingest queue).
 	DeadLetter *IngestDeadLetter `json:"dead_letter,omitempty"`
 
 	// EtaSeconds An ESTIMATE of how long the current backlog takes to drain at the recent rate. Absent when there is no backlog, no consumer, or no batch was processed in the window.
@@ -1446,6 +1505,9 @@ type PutGoalsJSONRequestBody = GoalUpdate
 // PostIngestJSONRequestBody defines body for PostIngest for application/json ContentType.
 type PostIngestJSONRequestBody = IngestBatch
 
+// PostIngestDeadLetterRedriveJSONRequestBody defines body for PostIngestDeadLetterRedrive for application/json ContentType.
+type PostIngestDeadLetterRedriveJSONRequestBody = IngestRedriveRequest
+
 // PutPushPrefsJSONRequestBody defines body for PutPushPrefs for application/json ContentType.
 type PutPushPrefsJSONRequestBody = NotifPrefs
 
@@ -1505,6 +1567,9 @@ type ServerInterface interface {
 	// HealthKit chunk upload (samples + workouts + activity summaries + deletions)
 	// (POST /ingest)
 	PostIngest(w http.ResponseWriter, r *http.Request)
+	// Move dead-lettered batches back onto the ingest queue for another try
+	// (POST /ingest/dead-letter/redrive)
+	PostIngestDeadLetterRedrive(w http.ResponseWriter, r *http.Request)
 	// Ingest queue status — the backlog, its drain rate, and whether a worker is consuming
 	// (GET /ingest/status)
 	GetIngestStatus(w http.ResponseWriter, r *http.Request)
@@ -1646,6 +1711,12 @@ func (_ Unimplemented) GetHealthz(w http.ResponseWriter, r *http.Request) {
 // HealthKit chunk upload (samples + workouts + activity summaries + deletions)
 // (POST /ingest)
 func (_ Unimplemented) PostIngest(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Move dead-lettered batches back onto the ingest queue for another try
+// (POST /ingest/dead-letter/redrive)
+func (_ Unimplemented) PostIngestDeadLetterRedrive(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2259,6 +2330,26 @@ func (siw *ServerInterfaceWrapper) PostIngest(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostIngest(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostIngestDeadLetterRedrive operation middleware
+func (siw *ServerInterfaceWrapper) PostIngestDeadLetterRedrive(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostIngestDeadLetterRedrive(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2945,6 +3036,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/ingest", wrapper.PostIngest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/ingest/dead-letter/redrive", wrapper.PostIngestDeadLetterRedrive)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/ingest/status", wrapper.GetIngestStatus)

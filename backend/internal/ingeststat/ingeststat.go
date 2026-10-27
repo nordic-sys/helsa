@@ -22,6 +22,8 @@
 //   - `helsa:ingest:<queue>:worker` — one hash: when the worker started, its
 //     prefetch, when it last finished a batch, and its totals since the start.
 //     It is overwritten on every worker start.
+//   - `helsa:ingest:<queue>:failures` and `…:redrive` — why the last batches
+//     were dead-lettered, and the last redrive (see failures.go).
 //
 // A batch costs one pipelined round trip. A recording failure is logged by the
 // caller and never fails the batch: the data is what matters, not its tally.
@@ -34,6 +36,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/redis/go-redis/v9"
 
 	"github.com/nordic-sys/helsa/backend/internal/api"
@@ -90,7 +93,8 @@ func (r *Recorder) Start(ctx context.Context, prefetch int) error {
 }
 
 // Done records one finished batch: written (ok) with `items` items, or given up
-// on and dead-lettered (!ok).
+// on and dead-lettered (!ok). The worker records a dead-lettered batch with
+// DeadLettered, which also keeps the reason; !ok is the count alone.
 func (r *Recorder) Done(ctx context.Context, items int, ok bool) error {
 	now := r.now()
 	mk := minuteKey(r.queue, unixMinute(now))
@@ -131,14 +135,21 @@ type Snapshot struct {
 	// Minutes holds the buckets of the window, by unix minute; a minute with no
 	// key is simply missing (nothing was finished in it).
 	Minutes map[int64]Bucket
+	// Failures are the recorded dead-letterings, newest first (see failures.go).
+	Failures []Failure
+	// LastRedrive is nil when no redrive has moved anything in FailureTTL.
+	LastRedrive *LastRedrive
 }
 
-// Read fetches the worker hash and the buckets of the last Window, in one round trip.
+// Read fetches the worker hash, the buckets of the last Window, the failure
+// records and the last redrive, in one round trip.
 func Read(ctx context.Context, rdb *redis.Client, queueName string, now time.Time) (Snapshot, error) {
 	first := unixMinute(now.Add(-Window))
 	last := unixMinute(now)
 	pipe := rdb.Pipeline()
 	w := pipe.HGetAll(ctx, workerKey(queueName))
+	fl := pipe.LRange(ctx, failuresKey(queueName), 0, MaxFailures-1)
+	rd := pipe.HGetAll(ctx, redriveKey(queueName))
 	mins := make(map[int64]*redis.MapStringStringCmd, last-first+1)
 	for m := first; m <= last; m++ {
 		mins[m] = pipe.HGetAll(ctx, minuteKey(queueName, m))
@@ -146,7 +157,11 @@ func Read(ctx context.Context, rdb *redis.Client, queueName string, now time.Tim
 	if _, err := pipe.Exec(ctx); err != nil {
 		return Snapshot{}, err
 	}
-	snap := Snapshot{Minutes: map[int64]Bucket{}}
+	snap := Snapshot{
+		Minutes:     map[int64]Bucket{},
+		Failures:    parseFailures(fl.Val()),
+		LastRedrive: parseLastRedrive(rd.Val()),
+	}
 	for m, cmd := range mins {
 		h := cmd.Val()
 		if len(h) == 0 {
@@ -231,6 +246,12 @@ func Build(now time.Time, depth *queue.Depth, depthErr error, snap *Snapshot, sn
 				out.Queue.InFlightMax = intp(ws.Prefetch * out.Queue.Consumers)
 			}
 		}
+		if out.DeadLetter != nil {
+			out.DeadLetter.RecentFailures = recentFailures(snap.Failures)
+			if lr := snap.LastRedrive; lr != nil {
+				out.DeadLetter.LastRedrive = &api.IngestLastRedrive{At: lr.At.UTC(), Moved: lr.Moved}
+			}
+		}
 		var tp *api.IngestThroughput
 		tp, rate = throughput(now, snap)
 		out.Throughput = tp
@@ -304,3 +325,31 @@ func eta(q *api.IngestQueueDepth, perSecond float64) *int {
 }
 
 func intp(v int) *int { return &v }
+
+// recentFailures is the contract's form of the failure records; nil (absent)
+// when there are none.
+func recentFailures(fs []Failure) *[]api.IngestFailure {
+	if len(fs) == 0 {
+		return nil
+	}
+	out := make([]api.IngestFailure, 0, len(fs))
+	for _, f := range fs {
+		af := api.IngestFailure{
+			FailedAt:          f.At.UTC(),
+			Error:             f.Error,
+			Items:             f.Items(),
+			Samples:           f.Samples,
+			Workouts:          f.Workouts,
+			SleepSegments:     f.SleepSegments,
+			ActivitySummaries: f.ActivitySummaries,
+			Deletions:         f.Deletions,
+			Redriven:          f.Redriven,
+		}
+		if f.BatchID != uuid.Nil {
+			id := f.BatchID
+			af.BatchId = &id
+		}
+		out = append(out, af)
+	}
+	return &out
+}

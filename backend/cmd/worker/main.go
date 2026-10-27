@@ -78,13 +78,29 @@ func main() {
 			log.Warn("ingest stats: record", "err", err)
 		}
 	}
+	// A dead-lettered batch is also written down with its reason, so the status page
+	// can say why and the owner can decide whether a redrive could help. The record
+	// describes the batch from the message (ingest.Peek), not from Process's counts,
+	// which stop where the failure did. The error is sanitised inside the recorder.
+	deadLettered := func(ctx context.Context, body []byte, redriven int, cause error) {
+		c := ingest.Peek(body)
+		f := ingeststat.Failure{
+			BatchID: c.BatchID, Redriven: redriven,
+			Samples: c.Samples, Workouts: c.Workouts, SleepSegments: c.SleepSegments,
+			ActivitySummaries: c.ActivitySummaries, Deletions: c.Deletions,
+		}
+		if err := stats.DeadLettered(ctx, f, cause); err != nil {
+			log.Warn("ingest stats: record failure", "err", err)
+		}
+	}
 
 	log.Info("worker started", "queue", cfg.IngestQueue)
-	err = q.Consume(ctx, prefetch, func(ctx context.Context, body []byte) error {
+	err = q.Consume(ctx, prefetch, func(ctx context.Context, body []byte, redriven int) error {
 		counts, err := ingest.Process(ctx, st.DB, st.Redis, body)
 		if err != nil {
-			log.Error("process batch", "err", err, "bytes", len(body))
-			record(ctx, 0, false)
+			log.Error("process batch", "err", err, "bytes", len(body),
+				"batch_id", counts.BatchID, "redriven", redriven)
+			deadLettered(ctx, body, redriven, err)
 			return err // → nack → dead-letter
 		}
 		record(ctx, counts.Items(), true)

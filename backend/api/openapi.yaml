@@ -275,6 +275,62 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/IngestStatus' }
 
+  /ingest/dead-letter/redrive:
+    post:
+      tags: [ingestion]
+      summary: Move dead-lettered batches back onto the ingest queue for another try
+      description: >
+        Takes batches out of the dead-letter queue and puts them back on the main ingest queue, where the
+        worker processes them again. Safe to repeat: the worker's writes are idempotent upserts keyed on
+        `source_uuid`, so a batch processed twice stores nothing twice.
+
+
+        **Nothing is retried automatically** — only this call moves a batch, and only when somebody asks.
+
+
+        **No batch is lost.** Each one is republished first, with publisher confirms, and only after the
+        broker has confirmed it is the dead-letter copy acknowledged. A publish that is not confirmed puts
+        the batch back on the dead-letter queue and stops the run (`stopped_early`). The worst case is a
+        batch in both queues — a duplicate, which the upserts absorb.
+
+
+        **How many:** `max` from the body, or — with no body or no `max` — every batch that is in the
+        dead-letter queue when the call starts, and never more than 1000 in one call (call again for the
+        rest). Batches that fail again while the call runs are not moved a second time by it.
+
+
+        **One at a time:** a second call while one is running gets a 409. The lock is held in the API
+        process, which is enough because the server runs a single API instance.
+
+
+        Every moved batch carries an `x-helsa-redriven` header counting its moves. From 3 on the answer
+        counts it in `repeated`: such a batch has failed again after being retried, and pressing the button
+        once more is unlikely to help — the reason is in `GET /ingest/status` → `dead_letter.recent_failures`.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/IngestRedriveRequest' }
+      responses:
+        '200':
+          description: >
+            The run finished, or stopped part-way (`stopped_early` set). `moved` is exact either way: every
+            batch it counts is confirmed on the main queue and gone from the dead-letter queue.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/IngestRedriveResult' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '409':
+          description: "Another redrive is already running"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: "RabbitMQ could not be reached, or confirms could not be enabled — nothing was moved"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /summary:
     get:
       tags: [read]
@@ -902,11 +958,88 @@ components:
       type: object
       required: [name, ready]
       description: >
-        Batches the worker gave up on. They are NOT written to the database and nothing retries them — a
-        non-zero count needs action (docs: dashboard → Ingest queue).
+        Batches the worker gave up on. They are NOT written to the database and nothing retries them on its
+        own — a non-zero count needs action: `POST /ingest/dead-letter/redrive` moves them back for another
+        try (docs: dashboard → Ingest queue).
       properties:
         name: { type: string, example: helsa.ingest.dlq }
         ready: { type: integer }
+        recent_failures:
+          type: array
+          maxItems: 20
+          description: >
+            Why the worker dead-lettered its most recent batches, newest first — at most 20, each kept for 30
+            days. Absent when there are none or the worker's records (in Redis) could not be read.
+
+
+            ⚠️ This is a log of failures, NOT a listing of the dead-letter queue: an entry stays after its
+            batch has been redriven, and a batch dead-lettered by a worker older than this field has no
+            entry at all ("reason not recorded"). Match on `batch_id` and compare `failed_at` with
+            `last_redrive.at`.
+          items: { $ref: '#/components/schemas/IngestFailure' }
+        last_redrive: { $ref: '#/components/schemas/IngestLastRedrive' }
+
+    IngestFailure:
+      type: object
+      required: [failed_at, error, items, samples, workouts, sleep_segments, activity_summaries, deletions, redriven]
+      description: "One dead-lettered batch. Counts and an error message only — never a value from the batch."
+      properties:
+        batch_id:
+          type: string
+          format: uuid
+          description: "the id the 202 of POST /ingest returned; absent for a message queued by an API too old to give one"
+        failed_at: { type: string, format: date-time }
+        error:
+          type: string
+          maxLength: 301
+          description: >
+            The worker's error, at most 300 characters (an ellipsis marks a cut). Numbers and quoted strings
+            in it are replaced with `#` and `"…"` so that no measured value can leak through a database error;
+            UUIDs (source_uuid), SQLSTATE codes and IP addresses are kept.
+        items: { type: integer, description: "what the batch held, all kinds added up (0 if the message did not decode)" }
+        samples: { type: integer }
+        workouts: { type: integer }
+        sleep_segments: { type: integer }
+        activity_summaries: { type: integer }
+        deletions: { type: integer }
+        redriven:
+          type: integer
+          description: >
+            How many times this batch had been redriven before this failure (0: it failed on its first try).
+            3 or more: retrying has not helped so far.
+
+    IngestLastRedrive:
+      type: object
+      required: [at, moved]
+      description: "The most recent redrive that moved at least one batch (kept for 30 days)."
+      properties:
+        at: { type: string, format: date-time }
+        moved: { type: integer }
+
+    IngestRedriveRequest:
+      type: object
+      properties:
+        max:
+          type: integer
+          minimum: 1
+          maximum: 1000
+          description: "move at most this many; absent = every batch waiting when the call starts (capped at 1000)"
+
+    IngestRedriveResult:
+      type: object
+      required: [moved, max_redriven, repeated]
+      properties:
+        moved: { type: integer, description: "batches confirmed on the main queue and removed from the dead-letter queue" }
+        remaining:
+          type: integer
+          description: "the dead-letter queue's depth afterwards; absent if it could not be read"
+        max_redriven: { type: integer, description: "the highest redrive count among the moved batches, after this move (0 when none moved)" }
+        repeated: { type: integer, description: "moved batches now redriven 3 or more times — they have failed again after earlier retries" }
+        stopped_early:
+          type: string
+          description: >
+            Present when the run stopped before its count: why. The batch being moved at that moment went back
+            to the dead-letter queue; `moved` still counts only the confirmed ones.
 
     IngestWorkerStats:
       type: object

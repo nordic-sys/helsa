@@ -4,6 +4,7 @@ package ingeststat
 
 import (
 	"context"
+	"errors"
 	"os"
 	"testing"
 	"time"
@@ -88,6 +89,41 @@ func TestRecordReadAndInspect(t *testing.T) {
 	snap, _ = Read(ctx, rdb, qname, time.Now())
 	if snap.Worker.Batches != 0 || snap.Worker.Prefetch != 4 || snap.Worker.LastBatchAt != nil {
 		t.Errorf("after restart: %+v", snap.Worker)
+	}
+
+	// --- the failure log: sanitised, capped, expiring ---
+	id := uuid.New()
+	for i := 0; i < MaxFailures+5; i++ {
+		f := Failure{BatchID: id, Samples: i, Redriven: 1}
+		if err := rec.DeadLettered(ctx, f, errors.New(`insert sample: value 98.6 "x" out of range`)); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := RecordRedrive(ctx, rdb, qname, time.Now(), 4); err != nil {
+		t.Fatal(err)
+	}
+	snap, err = Read(ctx, rdb, qname, time.Now())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(snap.Failures) != MaxFailures {
+		t.Fatalf("failures kept: %d, want %d", len(snap.Failures), MaxFailures)
+	}
+	newest := snap.Failures[0]
+	if newest.Samples != MaxFailures+4 || newest.BatchID != id || newest.Redriven != 1 || newest.At.IsZero() {
+		t.Errorf("newest first: %+v", newest)
+	}
+	if newest.Error != `insert sample: value # "…" out of range` {
+		t.Errorf("not sanitised: %q", newest.Error)
+	}
+	if snap.Worker.Failed != MaxFailures+5 {
+		t.Errorf("failed counter: %d", snap.Worker.Failed)
+	}
+	if ttl := rdb.TTL(ctx, failuresKey(qname)).Val(); ttl <= 0 || ttl > FailureTTL {
+		t.Errorf("failure list TTL = %v", ttl)
+	}
+	if snap.LastRedrive == nil || snap.LastRedrive.Moved != 4 {
+		t.Errorf("last redrive: %+v", snap.LastRedrive)
 	}
 
 	// --- the queue depth ---
