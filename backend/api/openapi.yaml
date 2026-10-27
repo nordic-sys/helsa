@@ -856,6 +856,55 @@ paths:
               schema: { $ref: '#/components/schemas/CoverageResponse' }
         '400': { $ref: '#/components/responses/Problem' }
 
+  /latest:
+    get:
+      tags: [read]
+      summary: The most recent measurement of each requested type — what it was and when
+      description: >
+        For every requested type that has ever reached this server: when its most recent sample was
+        taken, and the figure that belongs to it. One call for a whole card grid, so a screen that
+        wants "the latest value" of forty metrics does not walk `/samples` forty times.
+
+
+        **What "the figure" is depends on the type, and the server decides it from its own catalog**
+        (`internal/metrics`), the same table `/summary` reads its `agg` from:
+
+
+        - an **averaged** type (heart rate, body mass, walking speed …) gets `value`: the latest
+        sample itself, at `ts`. That is the reading a person means by "my latest weight".
+
+        - a **summed** type (steps, energy, daylight …) gets `day_total`: the total of the local day
+        the latest sample fell on, **source-merged exactly as `/summary` merges it** (docs/25 F9) —
+        the same number that day's bucket of a daily `/summary` carries. Its latest sample alone is
+        a fragment (37 steps in a five-minute slice) that nobody means by a figure, so `value` is
+        left out for these types rather than offered as a trap.
+
+
+        `day` is the local calendar day of `ts` in `tz`. When it is today, a summed type's
+        `day_total` is a day still in progress, and the client has to say so.
+
+
+        **A type nothing has ever arrived for is ABSENT from `metrics`** — not present with a zero,
+        and not present with an empty object. Absence here means "never reached this server", the
+        same claim as `/coverage`'s `never_arrived`, and no more: a refused permission and a missing
+        sensor look alike from here.
+
+
+        Percentages follow the `MetricSeries` convention (0…100). At most 200 names per request.
+
+
+        An older server answers this path with 404; the client must treat that as version skew.
+      parameters:
+        - { name: metrics, in: query, required: true, schema: { type: string }, description: "a comma-separated list, as for /summary; at most 200 names" }
+        - { name: tz, in: query, required: false, schema: { type: string }, description: "IANA tz; if missing, user.time_zone. It decides `day`, and the day a summed type is totalled over." }
+      responses:
+        '200':
+          description: The latest measurement per type that has one
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LatestResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+
 components:
   securitySchemes:
     deviceToken:
@@ -1771,3 +1820,24 @@ components:
           description: "The MEDIAN of the intervals between arrivals — a median, so that one two-week holiday cannot make a daily series look sparse."
         observed_intervals: { type: integer }
         history_days: { type: integer, description: "the span the observed arrivals cover" }
+
+    LatestResponse:
+      type: object
+      required: [tz, metrics]
+      properties:
+        tz: { type: string, description: "the zone `day` was cut in" }
+        metrics:
+          type: object
+          description: "Keyed by the requested name. A type with no sample at all is LEFT OUT."
+          additionalProperties: { $ref: '#/components/schemas/LatestValue' }
+
+    LatestValue:
+      type: object
+      required: [agg, ts, day]
+      properties:
+        agg: { type: string, enum: [sum, avg], description: "the catalog's aggregation — which of `value` and `day_total` is present" }
+        unit: { type: string, description: "The same convention as `MetricSeries.unit`." }
+        ts: { type: string, format: date-time, description: "when the most recent sample was taken (its start)" }
+        day: { type: string, format: date, description: "the local day of `ts` in `tz`" }
+        value: { type: number, description: "`avg` types only: the most recent sample's value." }
+        day_total: { type: number, description: "`sum` types only: the source-merged total of `day`, the same figure as that day's daily `/summary` bucket." }

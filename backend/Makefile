@@ -56,7 +56,10 @@ migrate: ## Apply the goose migrations (idempotent against an already bootstrapp
 # database test of GET /v1/workout-intensity: the heart rate is matched to a
 # workout by its time window in SQL, and only a live Timescale can show that the
 # edges are where the phone puts them.
-SMOKE_PKGS := ./test/smoke ./internal/insights ./internal/coverage ./internal/sourcemerge ./internal/ingeststat ./internal/queue ./internal/workouts
+# internal/latest holds the database test of GET /v1/latest: the newest sample per
+# type is a LATERAL index walk, and a summed type's day total must come out
+# source-merged, which only the real query can show.
+SMOKE_PKGS := ./test/smoke ./internal/insights ./internal/coverage ./internal/sourcemerge ./internal/ingeststat ./internal/queue ./internal/workouts ./internal/latest
 
 smoke: $(ENV_FILE) ## E2E smoke: auth -> ingest -> summary (against the running infrastructure)
 	HELSA_AUTH_DEV_MODE=true go test -tags smoke -count=1 -v $(SMOKE_PKGS)

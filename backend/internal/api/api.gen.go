@@ -391,6 +391,24 @@ func (e InsightSeverity) Valid() bool {
 	}
 }
 
+// Defines values for LatestValueAgg.
+const (
+	LatestValueAggAvg LatestValueAgg = "avg"
+	LatestValueAggSum LatestValueAgg = "sum"
+)
+
+// Valid indicates whether the value is a known member of the LatestValueAgg enum.
+func (e LatestValueAgg) Valid() bool {
+	switch e {
+	case LatestValueAggAvg:
+		return true
+	case LatestValueAggSum:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MetricBaselineAgg.
 const (
 	MetricBaselineAggAvg MetricBaselineAgg = "avg"
@@ -438,16 +456,16 @@ func (e MetricBaselineStanding) Valid() bool {
 
 // Defines values for MetricSeriesAgg.
 const (
-	MetricSeriesAggAvg MetricSeriesAgg = "avg"
-	MetricSeriesAggSum MetricSeriesAgg = "sum"
+	Avg MetricSeriesAgg = "avg"
+	Sum MetricSeriesAgg = "sum"
 )
 
 // Valid indicates whether the value is a known member of the MetricSeriesAgg enum.
 func (e MetricSeriesAgg) Valid() bool {
 	switch e {
-	case MetricSeriesAggAvg:
+	case Avg:
 		return true
-	case MetricSeriesAggSum:
+	case Sum:
 		return true
 	default:
 		return false
@@ -1173,6 +1191,39 @@ type InsightKind string
 // InsightSeverity defines model for Insight.Severity.
 type InsightSeverity string
 
+// LatestResponse defines model for LatestResponse.
+type LatestResponse struct {
+	// Metrics Keyed by the requested name. A type with no sample at all is LEFT OUT.
+	Metrics map[string]LatestValue `json:"metrics"`
+
+	// Tz the zone `day` was cut in
+	Tz string `json:"tz"`
+}
+
+// LatestValue defines model for LatestValue.
+type LatestValue struct {
+	// Agg the catalog's aggregation — which of `value` and `day_total` is present
+	Agg LatestValueAgg `json:"agg"`
+
+	// Day the local day of `ts` in `tz`
+	Day openapi_types.Date `json:"day"`
+
+	// DayTotal `sum` types only: the source-merged total of `day`, the same figure as that day's daily `/summary` bucket.
+	DayTotal *float32 `json:"day_total,omitempty"`
+
+	// Ts when the most recent sample was taken (its start)
+	Ts time.Time `json:"ts"`
+
+	// Unit The same convention as `MetricSeries.unit`.
+	Unit *string `json:"unit,omitempty"`
+
+	// Value `avg` types only: the most recent sample's value.
+	Value *float32 `json:"value,omitempty"`
+}
+
+// LatestValueAgg the catalog's aggregation — which of `value` and `day_total` is present
+type LatestValueAgg string
+
 // MetricBaseline One metric's usual range.
 //
 // ⚠️ **Everything but `day_count` may be absent, and the absence IS the answer:** too few measured days, or a reference window that never varied, means there is no band to draw. It does not mean zero, and it must not be shown as a narrower or a guessed one.
@@ -1491,6 +1542,15 @@ type GetCoverageParams struct {
 	Tz *string `form:"tz,omitempty" json:"tz,omitempty"`
 }
 
+// GetLatestParams defines parameters for GetLatest.
+type GetLatestParams struct {
+	// Metrics a comma-separated list, as for /summary; at most 200 names
+	Metrics string `form:"metrics" json:"metrics"`
+
+	// Tz IANA tz; if missing, user.time_zone. It decides `day`, and the day a summed type is totalled over.
+	Tz *string `form:"tz,omitempty" json:"tz,omitempty"`
+}
+
 // GetSamplesParams defines parameters for GetSamples.
 type GetSamplesParams struct {
 	DataType string     `form:"data_type" json:"data_type"`
@@ -1621,6 +1681,9 @@ type ServerInterface interface {
 	// Rule-based insights / anomalies
 	// (GET /insights)
 	GetInsights(w http.ResponseWriter, r *http.Request)
+	// The most recent measurement of each requested type — what it was and when
+	// (GET /latest)
+	GetLatest(w http.ResponseWriter, r *http.Request, params GetLatestParams)
 	// Profile
 	// (GET /me)
 	GetMe(w http.ResponseWriter, r *http.Request)
@@ -1777,6 +1840,12 @@ func (_ Unimplemented) GetIngestStatus(w http.ResponseWriter, r *http.Request) {
 // Rule-based insights / anomalies
 // (GET /insights)
 func (_ Unimplemented) GetInsights(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The most recent measurement of each requested type — what it was and when
+// (GET /latest)
+func (_ Unimplemented) GetLatest(w http.ResponseWriter, r *http.Request, params GetLatestParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2444,6 +2513,58 @@ func (siw *ServerInterfaceWrapper) GetInsights(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetInsights(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetLatest operation middleware
+func (siw *ServerInterfaceWrapper) GetLatest(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetLatestParams
+
+	// ------------- Required query parameter "metrics" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "metrics", r.URL.Query(), &params.Metrics, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "metrics"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "metrics", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tz" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tz", r.URL.Query(), &params.Tz, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tz"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tz", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetLatest(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3151,6 +3272,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/insights", wrapper.GetInsights)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/latest", wrapper.GetLatest)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me", wrapper.GetMe)
