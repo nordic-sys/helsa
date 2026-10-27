@@ -155,7 +155,10 @@ downloads it as a *profile* that you then install in Settings.
 :::danger
 **Installing the CA is not the same as trusting it.** After installing the
 profile you must additionally enable it under
-**Settings → General → About → Certificate Trust Settings**. Until you flip that
+**Settings → General → About → scroll to the very bottom → Certificate Trust Settings**, and switch
+**Helsa Root CA** on under *Enable full trust for root certificates*. ⚠️ Nothing points you there: the
+profile itself (General → VPN & Device Management → Helsa Root CA) looks complete and correct
+without it — the fingerprint, the dates, everything — so checking the profile proves nothing. Until you flip that
 switch the certificate is present but inert, and the app reports a connection
 error that looks like a network problem. This is the single most common failure
 in this whole setup.
@@ -302,7 +305,8 @@ Two mitigations, and you want both:
 
 | Symptom | Cause | Fix |
 |---|---|---|
-| Phone says the connection is not secure | CA installed but trust not enabled | Certificate Trust Settings |
+| Phone says the connection is not secure, or the app says the TLS connection could not be made | CA installed but trust not enabled — the most likely cause by far, even when the profile looks fine | General → About → bottom → Certificate Trust Settings → switch Helsa Root CA on |
+| Same, and trust is on | The phone holds a different CA than the one that signed the server — e.g. one made earlier and thrown away. All of them are called "Helsa Root CA" | Compare the SHA-256 fingerprint in the profile's details with `openssl x509 -in out/ca/ca.crt -noout -fingerprint -sha256` |
 | Handshake fails, no HTTP status | Client certificate missing or from a different CA | `openssl verify -CAfile out/ca/ca.crt out/clients/iphone/iphone.crt` |
 | Works by IP address, fails by hostname | The hostname is missing from the server certificate's SAN list | Add it to `server.cnf`, `make server`, redeploy |
 | Works by hostname, fails by IP | Expected. Caddy enforces strict SNI/Host matching once client authentication is configured. | Use the hostname. |
