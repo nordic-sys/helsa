@@ -28,7 +28,7 @@ by you, with a command.
 
 ## Issuing a token
 
-```bash
+```bash title="On the server"
 cd helsa/deploy
 make prod-token SUBJECT=iphone
 ```
@@ -49,7 +49,7 @@ Issue **one token per device**, with a name you will recognise later. `SUBJECT` 
 names the **device**, not a person: every token opens the same — the only — user's data, so the
 dashboard's own token shows exactly what the phone uploaded.
 
-```bash
+```bash title="On the server"
 make prod-token SUBJECT=iphone
 make prod-token SUBJECT=browser
 ```
@@ -77,7 +77,7 @@ as well.
 
 Set your own value when issuing:
 
-```bash
+```bash title="On the server"
 HELSA_DEVICE_TOKEN_TTL=17520h make prod-token SUBJECT=iphone
 ```
 
@@ -107,7 +107,7 @@ no endpoint that issues tokens, in any mode.
 
 A device token can be taken back on its own, from the server:
 
-```bash
+```bash title="On the server"
 make prod-token-revoke TOKEN="<the access token>"
 # revoked the token of device "browser". ...
 ```

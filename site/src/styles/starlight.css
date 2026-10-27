@@ -1,115 +1,263 @@
 /* ---------------------------------------------------------------------------
-   Starlight, wearing the Helsa palette.
+   Starlight, drawn in the server web's language.
 
-   This file only re-points Starlight's own variables at the tokens defined in
-   tokens.css; it does not restyle the theme's components. That is deliberate —
-   Starlight's layout, focus states and keyboard behaviour are the reason it is
-   here, and overriding its internals is how a docs theme stops being upgradable.
+   The colour variables are re-pointed in sl-palette.css (shared with the
+   hand-built pages). This file restyles what a variable cannot reach: the
+   header frame, the content typography, tables, asides, the table of
+   contents and the menu button.
+
+   What is deliberately NOT touched: Starlight's layout grid, its offsets, the
+   mobile "On this page" bar and the focus/keyboard behaviour. Those are the
+   reason Starlight is here, and overriding its internals is how a docs theme
+   stops being upgradable. The bigger changes are component overrides in
+   src/components/starlight/ (Header, Sidebar, PageTitle, Pagination).
 
    These rules are outside `@layer`, so they win against the theme's layered
-   defaults without needing !important.
+   defaults without !important.
 --------------------------------------------------------------------------- */
 
 :root {
-  --sl-font: var(--helsa-font-sans);
-  --sl-font-mono: var(--helsa-font-mono);
-
-  /* Dark theme (Starlight's default state). */
-  --sl-color-accent: var(--helsa-brand);
-  --sl-color-accent-low: var(--helsa-brand-quiet);
-  --sl-color-accent-high: var(--helsa-brand-strong);
-
-  --sl-color-white: #FFFFFF;
-  --sl-color-gray-1: #DCE6E9;
-  --sl-color-gray-2: var(--helsa-ink-muted);
-  --sl-color-gray-3: var(--helsa-ink-faint);
-  --sl-color-gray-4: var(--helsa-border-strong);
-  --sl-color-gray-5: var(--helsa-border);
-  --sl-color-gray-6: var(--helsa-surface);
-  --sl-color-gray-7: var(--helsa-surface-raised);
-  --sl-color-black: var(--helsa-bg);
-
-  --sl-color-text: var(--helsa-ink);
-  --sl-color-text-accent: var(--helsa-brand-strong);
-  --sl-color-bg: var(--helsa-bg);
-  --sl-color-bg-nav: var(--helsa-bg-sunken);
-  --sl-color-bg-sidebar: var(--helsa-bg-sunken);
-  --sl-color-bg-inline-code: var(--helsa-surface-raised);
-
-  --sl-color-hairline: var(--helsa-border);
-  --sl-color-hairline-light: var(--helsa-border-strong);
-  --sl-color-hairline-shade: var(--helsa-bg-sunken);
+  /* 64px, as on the hand-built pages; every Starlight offset derives from it. */
+  --sl-nav-height: 4rem;
+  --sl-nav-pad-x: var(--helsa-gutter);
+  --sl-menu-button-size: var(--helsa-touch);
+  --sl-sidebar-width: 17.5rem;
+  --sl-sidebar-pad-x: 0.75rem;
+  --sl-content-width: 46rem;
+  --sl-text-h1: clamp(2rem, 4.5vw, 2.5rem);
+  --sl-text-h2: 1.625rem;
+  --sl-text-h3: 1.25rem;
+  --sl-text-h4: 1.0625rem;
+  --sl-line-height: 1.65;
 }
 
-:root[data-theme='light'] {
-  --sl-color-accent: var(--helsa-brand);
-  --sl-color-accent-low: var(--helsa-brand-quiet);
-  --sl-color-accent-high: var(--helsa-brand-strong);
-
-  --sl-color-white: var(--helsa-ink);
-  --sl-color-gray-1: var(--helsa-surface-raised);
-  --sl-color-gray-2: var(--helsa-border);
-  --sl-color-gray-3: var(--helsa-border-strong);
-  --sl-color-gray-4: var(--helsa-ink-faint);
-  --sl-color-gray-5: var(--helsa-ink-muted);
-  --sl-color-gray-6: #26383D;
-  --sl-color-gray-7: #1A2A2F;
-  --sl-color-black: var(--helsa-surface);
-
-  --sl-color-text: var(--helsa-ink-muted);
-  --sl-color-text-accent: var(--helsa-brand-strong);
-  --sl-color-bg: var(--helsa-bg);
-  --sl-color-bg-nav: var(--helsa-surface);
-  --sl-color-bg-sidebar: var(--helsa-surface);
-  --sl-color-bg-inline-code: var(--helsa-bg-sunken);
-
-  --sl-color-hairline: var(--helsa-border);
-  --sl-color-hairline-light: var(--helsa-border-strong);
-  --sl-color-hairline-shade: var(--helsa-border);
+/* -- The header frame: Starlight's fixed bar, the site header inside it ----- */
+/* ⚠️ Scoped to the page frame's direct child. A bare `.header` also matches
+   the inner wrapper of Starlight's own Header component, and changing its
+   `position` broke the fixed bar before (Codex review, finding 5). */
+.page > header.header {
+  background: var(--helsa-header-bg);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border-bottom: 1px solid var(--helsa-border);
+  padding-block: 0;
 }
 
-/* A one-pixel aurora under the header, so the docs and the landing page are
-   visibly the same site rather than two that happen to share a colour. */
-.header {
-  border-bottom: 0;
+/* The menu button: a 44px target in the dashboard's quiet-button style. */
+starlight-menu-button button {
+  width: var(--helsa-touch);
+  height: var(--helsa-touch);
+  border-radius: var(--helsa-radius-sm);
+  background: var(--helsa-surface);
+  color: var(--helsa-text);
+  border: 1px solid var(--helsa-border-strong);
   box-shadow: none;
-  position: relative;
 }
-.header::after {
-  content: '';
-  position: absolute;
-  inset-inline: 0;
-  bottom: 0;
-  height: 2px;
-  background: var(--helsa-aurora);
-  opacity: 0.85;
+starlight-menu-button[aria-expanded='true'] button {
+  background: var(--helsa-surface-2);
+  color: var(--helsa-text);
 }
 
-/* The wordmark sits next to the logo; give it the display face and let the
-   logo carry the colour. */
-.site-title {
+/* -- Sidebar pane: the dashboard's white rail --------------------------------- */
+.sidebar-pane {
+  border-inline-end-color: var(--helsa-border);
+}
+.sidebar-content { padding-top: 24px; }
+
+/* -- Content ------------------------------------------------------------------ */
+.main-frame { background: var(--helsa-bg); }
+
+.sl-markdown-content {
+  color: var(--helsa-text-2);
+}
+.sl-markdown-content :is(h1, h2, h3, h4, h5, h6) {
   font-family: var(--helsa-font-display);
-  font-weight: 600;
-  letter-spacing: -0.015em;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--helsa-text);
+}
+.sl-markdown-content :is(strong, b) { color: var(--helsa-text); }
+.sl-markdown-content a { color: var(--helsa-accent-text); }
+.sl-markdown-content a:hover { color: var(--helsa-accent-hover); }
+h1#_top {
+  font-family: var(--helsa-font-display);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: var(--helsa-text);
+}
+.sl-markdown-content :not(pre) > code {
+  background: var(--helsa-inline-code-bg);
+  color: var(--helsa-text);
+  border-radius: 6px;
+  padding: 0.1em 0.38em;
 }
 
 /* Long command lines and wide tables scroll inside their own box rather than
-   pushing the page sideways on a phone. Carried over from the Jekyll site,
-   where it was the one CSS rule worth keeping. */
+   pushing the page sideways on a phone. */
 .sl-markdown-content pre,
 .sl-markdown-content table {
   max-width: 100%;
   overflow-x: auto;
 }
+
+/* Tables: a white card, rows split by hairlines — the dashboard's tables. */
 .sl-markdown-content table {
   display: block;
   width: max-content;
   max-width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background: var(--helsa-surface);
+  border: 1px solid var(--helsa-card-border);
+  border-radius: var(--helsa-radius);
+  font-size: 15px;
+}
+.sl-markdown-content :is(th, td) {
+  border: 0;
+  border-bottom: 1px solid var(--helsa-line);
+  padding: 10px 14px;
+  vertical-align: top;
+}
+.sl-markdown-content tr:last-child > td { border-bottom: 0; }
+.sl-markdown-content th {
+  color: var(--helsa-text);
+  font-weight: 600;
+  background: transparent;
+}
+.sl-markdown-content td { color: var(--helsa-text-2); }
+
+/* Screenshots: on a card, with the dashboard's radius. Phone screenshots are
+   tall and narrow; unconstrained they take over a docs page. */
+.sl-markdown-content img {
+  border-radius: var(--helsa-radius);
+  border: 1px solid var(--helsa-border);
+  background: var(--helsa-surface);
 }
 
-/* Screenshots of a phone are tall and narrow; unconstrained they take over a
-   docs page. */
-.sl-markdown-content img {
-  border-radius: var(--helsa-radius-sm);
-  border: 1px solid var(--helsa-border);
+.sl-markdown-content hr { border-color: var(--helsa-border); }
+.sl-markdown-content blockquote {
+  border-inline-start: 3px solid var(--helsa-border-strong);
+  color: var(--helsa-text-2);
+}
+
+/* -- Asides: the dashboard's banners ------------------------------------------
+   :::note → info, :::tip → ok, :::caution → warn, :::danger → error.
+   Background, border, title and body colours are the server's alert pairs,
+   all ≥ 4.5:1 for text in both themes. */
+.starlight-aside {
+  border: 1px solid var(--aside-border);
+  border-radius: var(--helsa-radius-card);
+  background: var(--aside-bg);
+  color: var(--aside-body);
+  padding: 18px 22px;
+}
+.starlight-aside--note {
+  --aside-bg: var(--helsa-info-bg); --aside-border: var(--helsa-info-border);
+  --aside-title: var(--helsa-info-fg); --aside-body: var(--helsa-info-body); --aside-icon: var(--helsa-info-fg);
+}
+.starlight-aside--tip {
+  --aside-bg: var(--helsa-ok-bg); --aside-border: var(--helsa-ok-border);
+  --aside-title: var(--helsa-ok-fg); --aside-body: var(--helsa-ok-body); --aside-icon: var(--helsa-ok-fg);
+}
+.starlight-aside--caution {
+  --aside-bg: var(--helsa-warn-bg); --aside-border: var(--helsa-warn-border);
+  --aside-title: var(--helsa-warn-fg); --aside-body: var(--helsa-warn-body); --aside-icon: var(--helsa-warn-icon);
+}
+.starlight-aside--danger {
+  --aside-bg: var(--helsa-error-bg); --aside-border: var(--helsa-error-border);
+  --aside-title: var(--helsa-error-fg); --aside-body: var(--helsa-error-body); --aside-icon: var(--helsa-error-icon);
+}
+.starlight-aside .starlight-aside__title {
+  color: var(--aside-title);
+  font-size: 17px;
+  font-weight: 600;
+  gap: 10px;
+}
+.starlight-aside .starlight-aside__icon { color: var(--aside-icon); }
+.starlight-aside .starlight-aside__content,
+.starlight-aside .starlight-aside__content :is(p, li) { color: var(--aside-body); }
+.starlight-aside .starlight-aside__content :is(strong, b) { color: inherit; }
+.starlight-aside .starlight-aside__content a { color: var(--aside-title); font-weight: 600; }
+.starlight-aside .starlight-aside__content :not(pre) > code {
+  background: color-mix(in srgb, var(--aside-border) 55%, transparent);
+  color: inherit;
+}
+
+/* -- Code: Expressive Code frames (colours in astro.config.mjs) --------------
+   The terminal title is the location — "On your computer", "On the server",
+   "On the phone" — so it is read like a caption: left-aligned, after a dot,
+   not centred between window-chrome circles. */
+.expressive-code .frame.is-terminal .header {
+  justify-content: flex-start;
+  padding-inline-start: 16px;
+}
+.expressive-code .frame.is-terminal .header::before {
+  /* the three window dots become one status dot */
+  -webkit-mask-image: none;
+  mask-image: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #46d585;
+  opacity: 1;
+  position: static;
+  margin-inline-end: 8px;
+  flex: none;
+}
+.expressive-code .frame.is-terminal .header .title {
+  text-align: start;
+}
+
+/* -- On this page ---------------------------------------------------------- */
+.right-sidebar-panel h2,
+starlight-toc h2 {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--helsa-text-faint);
+}
+starlight-toc a { color: var(--helsa-text-2); }
+starlight-toc a:hover { color: var(--helsa-text); }
+starlight-toc a[aria-current='true'] { color: var(--helsa-accent-text); font-weight: 600; }
+
+/* The mobile "On this page" bar */
+mobile-starlight-toc nav {
+  background: var(--helsa-header-bg);
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
+  border-bottom-color: var(--helsa-border);
+}
+mobile-starlight-toc summary {
+  min-height: var(--helsa-touch);
+}
+mobile-starlight-toc .toggle {
+  border-color: var(--helsa-border-strong);
+  background: var(--helsa-surface);
+  color: var(--helsa-text);
+}
+mobile-starlight-toc .dropdown {
+  background: var(--helsa-surface);
+  border-color: var(--helsa-border);
+}
+
+/* -- Footer meta (edit link, last updated) ------------------------------------ */
+.sl-container footer .meta,
+footer .meta {
+  color: var(--helsa-text-dim);
+}
+
+/* Phone screenshots in the docs (the two iOS settings screens) at a phone's
+   width rather than the column's: full width, one of them was taller than the
+   whole viewport. Matched on the asset name, which Astro keeps in the URL. */
+.sl-markdown-content img[src*='ios-'] {
+  max-width: min(340px, 100%);
+  height: auto;
+}
+
+/* Inline code inside an aside's title (":::danger[Edit `server.cnf` …]"). */
+.starlight-aside .starlight-aside__title code {
+  background: color-mix(in srgb, var(--aside-border) 55%, transparent);
+  color: inherit;
 }

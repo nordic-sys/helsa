@@ -20,18 +20,34 @@ Node 22.12 or newer.
 
 ## How it is put together
 
-Two shells share one set of design tokens:
+Two shells share one set of design tokens — the server web's (`web/src/styles/tokens.css`),
+carried over role for role, so the site, the docs and the dashboard look like one product:
 
 | | Owns | Lives in |
 |---|---|---|
-| **Hand-built pages** | `/`, `/the-app/`, `/privacy/`, `/disclaimer/`, `/support/` | `src/pages/`, `src/layouts/`, `src/components/` |
-| **Starlight** | `/getting-started/`, `/deployment/`, `/api/`, `/integrations/` | `src/content/docs/` |
+| **Hand-built pages** | `/`, `/the-app/`, `/privacy/`, `/disclaimer/`, `/support/`, the 404 | `src/pages/`, `src/layouts/`, `src/components/` |
+| **Starlight** | `/getting-started/`, `/deployment/`, `/dashboard/`, `/api/`, `/integrations/`, `/troubleshooting/` | `src/content/docs/` |
 
 - `src/styles/tokens.css` is the only place colours, type and spacing are
-  defined. A literal colour anywhere else is a bug.
-- `src/styles/starlight.css` re-points Starlight's own variables at those
-  tokens. It does not restyle the theme's components, so the theme stays
-  upgradable.
+  defined, light on `:root` and dark as an override. A literal colour anywhere
+  else is a bug.
+- `src/styles/sl-palette.css` re-points Starlight's colour variables at those
+  tokens **by role** (which variable draws links, borders, surfaces), on both
+  shells. `src/styles/starlight.css` restyles what a variable cannot reach —
+  asides as the dashboard's banners, tables, the header frame.
+- Four Starlight components are overridden, in `src/components/starlight/`:
+  `Header` (the shared header with Starlight's own search inside), `Sidebar`,
+  `PageTitle` (the "step N of 4" bar) and `Pagination`. Each says why at the
+  top. Layout, offsets and the mobile menu stay Starlight's.
+- One header, `src/components/SiteHeader.astro`, on both shells. The Pagefind
+  search trigger is in it on the hand-built pages too; `search-bridge.css`
+  supplies the few Starlight variables it needs there.
+- Code blocks are Expressive Code frames, dark in both themes; a Getting
+  started block's location is its `title="On your computer"` / `"On the
+  server"` / `"On the phone"` in the Markdown. ⚠️ After changing the
+  `expressiveCode` options, delete `node_modules/.astro` — the content cache
+  keeps the old rendering and the pages then link a stylesheet that no longer
+  exists.
 - Both shells read the theme from one `localStorage` key (`starlight-theme`),
   so switching it on the landing page switches it in the docs.
 

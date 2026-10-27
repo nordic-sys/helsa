@@ -4,38 +4,106 @@ import BaseLayout from '../layouts/BaseLayout.astro';
 import { url } from '../lib/url';
 
 // Every screenshot in one map, keyed by file name, so a screen is described
-// once and rendered four times (phone/tablet × English/Hungarian) instead of
-// being listed four times as the Markdown tables did.
-const files = import.meta.glob<ImageMetadata>('../assets/screenshots/app/*.png', {
+// once and rendered four times (phone/tablet × English/Hungarian).
+const files = import.meta.glob<ImageMetadata>('../assets/screenshots/*/*.png', {
   eager: true,
   import: 'default',
 });
-const shot = (name: string) => files[`../assets/screenshots/app/${name}.png`];
+const shot = (dir: string, name: string) => files[`../assets/screenshots/${dir}/${name}.png`];
 
-const screens = [
-  { slug: '01-today', en: 'Today', hu: 'Ma',
-    note: 'The opening tab, in four named bands of cards. Every card can be switched off and reordered.' },
-  { slug: '02-trends', en: 'Trends', hu: 'Trendek',
-    note: '120 metrics, grouped; day, week, month and year. The dashed line is the previous period.' },
-  { slug: '03-workouts', en: 'Workouts', hu: 'Edzések',
-    note: 'Grouped by month with a count and a total, filterable by type, place, duration, distance, energy and heart rate.' },
-  { slug: '04-sleep', en: 'Sleep', hu: 'Alvás',
-    note: 'The night as it was recorded, with stages, efficiency, and the pattern across the period.' },
-  { slug: '05-hydration', en: 'Water', hu: 'Folyadék',
-    note: 'The daily amount, and a moss that dries out and comes back. Written to Apple Health, not kept separately.' },
-  { slug: '06-events', en: 'Events', hu: 'Események',
-    note: 'What the watch recorded, and what you felt at the time. The second half is the part no other app keeps.' },
-  { slug: '07-challenge', en: 'Challenge', hu: 'Kihívás',
-    note: 'The monthly streak, with rest days built in rather than bolted on.' },
-  { slug: '08-settings', en: 'Settings', hu: 'Beállítások',
-    note: 'Everything is off by default, including notifications and the calendar.' },
+type WebMark = { label: string; qualifier?: string };
+
+type Screen = {
+  slug: string;
+  en: string;
+  hu: string;
+  dot: string;
+  note: string;
+  /** Only where the dashboard has a corresponding READ view. */
+  web?: WebMark;
+};
+
+// Grouped the way the phone's tab bar groups them: five tabs — Today, Trends,
+// Workouts, Measurements, Settings. Water, Events and the challenge are not
+// tabs; they open from cards on Today, so they are shown under it.
+//
+// ⚠️ The "server web" marks claim a corresponding read view, never the same
+// screen: Today on the web leaves out the phone's write band, the journal
+// reaches the server only behind its own switch, and a streak there can be
+// shorter. And the web's events list has no blood pressure — unusual readings
+// are worked out on the phone (the dashboard lists them on its Measurements
+// page, against your own readings), so the Events mark must not suggest it.
+const groups: { tab: string; tabHu: string; claim: string; screens: Screen[] }[] = [
+  {
+    tab: 'Today', tabHu: 'Ma', claim: 'what today asks of you — and the screens its cards open',
+    screens: [
+      { slug: '01-today', en: 'Today', hu: 'Ma', dot: 'var(--helsa-fjord)',
+        note: 'The opening tab, in four named bands of cards. Every card can be switched off and reordered.',
+        web: { label: 'Also on the server web', qualifier: 'Without the check-in band: those are writes into Health, which only the phone makes.' } },
+      { slug: '05-hydration', en: 'Water', hu: 'Folyadék', dot: 'var(--helsa-fjord)',
+        note: 'The daily amount, and a moss that dries out and comes back. Written to Apple Health, not kept separately.',
+        web: { label: 'Also on the server web', qualifier: 'Read-only, on the Nutrition page, against the goal the phone sent.' } },
+      { slug: '06-events', en: 'Events', hu: 'Események', dot: 'var(--helsa-pulse)',
+        note: 'What the watch recorded, and what you felt at the time. The second half is the part no other app keeps.',
+        web: { label: 'On the server web, if you opt in', qualifier: 'The watch’s alerts and your notes, once “Journal and events” sending is on. Unusual blood pressure is not in that list.' } },
+      { slug: '07-challenge', en: 'Challenge', hu: 'Kihívás', dot: 'var(--helsa-move)',
+        note: 'The monthly streak, with rest days built in rather than bolted on.',
+        web: { label: 'Also on the server web', qualifier: 'The streak there can be shorter: illness days never reach the server.' } },
+    ],
+  },
+  {
+    tab: 'Trends', tabHu: 'Trendek', claim: 'what a metric has done over weeks',
+    screens: [
+      { slug: '02-trends', en: 'Trends', hu: 'Trendek', dot: 'var(--helsa-nordlys)',
+        note: '120 metrics, grouped; day, week, month and year. The dashed line is the previous period.',
+        web: { label: 'Also on the server web' } },
+    ],
+  },
+  {
+    tab: 'Workouts', tabHu: 'Edzések', claim: 'sessions, one by one',
+    screens: [
+      { slug: '03-workouts', en: 'Workouts', hu: 'Edzések', dot: 'var(--helsa-ember)',
+        note: 'Grouped by month with a count and a total, filterable by type, place, duration, distance, energy and heart rate.',
+        web: { label: 'Also on the server web' } },
+    ],
+  },
+  {
+    tab: 'Measurements', tabHu: 'Mérések', claim: 'one domain at a time',
+    screens: [
+      { slug: '04-sleep', en: 'Sleep', hu: 'Alvás', dot: 'var(--helsa-nordlys)',
+        note: 'The night as it was recorded, with stages, efficiency, and the pattern across the period.',
+        web: { label: 'Also on the server web' } },
+    ],
+  },
+  {
+    tab: 'Settings', tabHu: 'Beállítások', claim: 'what is on, and where data may go',
+    screens: [
+      { slug: '08-settings', en: 'Settings', hu: 'Beállítások', dot: 'var(--helsa-text-faint)',
+        note: 'Everything is off by default, including notifications and the calendar.' },
+    ],
+  },
 ];
 
-const views = [
+const appViews = [
   { device: 'iphone', lang: 'en', prefix: 'en' },
   { device: 'iphone', lang: 'hu', prefix: 'hu' },
   { device: 'ipad', lang: 'en', prefix: 'ipad-en' },
   { device: 'ipad', lang: 'hu', prefix: 'ipad-hu' },
+] as const;
+
+// The dashboard, photographed from a development build against a fixture API
+// (site/scripts/web-fixture-api.mjs) — the same invented person, 1440 wide.
+const webScreens = [
+  { slug: 'today', en: 'Today', hu: 'Ma', docs: '/dashboard/screens/#today',
+    note: 'The day as it stands, in three of the phone’s four bands. The pill at the top reads the sync queue, not the phone.' },
+  { slug: 'trends', en: 'Trends', hu: 'Trendek', docs: '/dashboard/screens/#trends',
+    note: 'One metric over weeks, bucketed in your own time zone, against your usual range from the last 60 days.' },
+  { slug: 'workouts', en: 'Workouts', hu: 'Edzések', docs: '/dashboard/screens/#workouts',
+    note: 'Sessions grouped by month, with the heart rate, pace and energy of the one you open.' },
+  { slug: 'journal', en: 'Journal and events', hu: 'Napló és események', docs: '/dashboard/screens/#journal-and-events',
+    note: 'Empty until you switch on sending the journal on the phone. The watch’s alerts and what you noted; blood pressure readings are under Measurements, not here.' },
+  { slug: 'ingest', en: 'Sync queue', hu: 'Feltöltési sor', docs: '/dashboard/screens/#sync-queue',
+    note: 'What the phone has handed over and the server has not written yet — and what was set aside.' },
 ];
 
 const notRecordable = [
@@ -48,27 +116,122 @@ const notRecordable = [
 
 <BaseLayout
   title="The app — Helsa"
-  description="What Helsa looks like on iPhone and iPad, in both languages it ships in."
+  description="What Helsa looks like on iPhone and iPad, in both languages it ships in — and the server's web dashboard beside it."
   current="the-app"
 >
-  <div class="shell prose-page">
-    <header class="prose-header">
-      <h1>The app</h1>
-      <p class="lede">
-        The server in this repository is optional. This is the thing it is optional <em>for</em>.
-      </p>
-    </header>
+  <section class="shell intro">
+    <h1>The app, screen by screen</h1>
+    <p class="lede">
+      The server in this repository is optional. This is the thing it is optional <em>for</em>.
+      Grouped the way the app’s tab bar groups them; every screen also exists in Hungarian and
+      on iPad. Taken from the running app with an invented person’s data.
+    </p>
 
-    <div class="callout callout--note narrow">
-      <p>
-        <strong>The app is in closed testing.</strong> It is not on the App Store yet,
-        and these pages describe a build that is on TestFlight, not in the App Store. The source
-        of the app itself is not in this repository — only the backend it can optionally
-        talk to.
-      </p>
+    <div class="banner banner--info availability">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg>
+      <div class="banner-body">
+        <p>
+          <strong>The app is in closed testing.</strong> It is not on the App Store yet,
+          and these pages describe a build that is on TestFlight, not in the App Store. The source
+          of the app itself is not in this repository — only the backend it can optionally
+          talk to.
+        </p>
+      </div>
     </div>
+  </section>
 
-    <section class="about-pictures">
+  <div class="shell">
+    <div class="gallery" data-gallery data-device="iphone" data-lang="en">
+      <div class="switchers">
+        <div class="segmented" role="group" aria-label="Device">
+          <button type="button" data-set="device" data-value="iphone" aria-pressed="true">iPhone</button>
+          <button type="button" data-set="device" data-value="ipad" aria-pressed="false">iPad</button>
+          <button type="button" data-set="device" data-value="web" aria-pressed="false">Server web</button>
+        </div>
+        <div class="segmented" role="group" aria-label="Screenshot language">
+          <button type="button" data-set="lang" data-value="en" aria-pressed="true">English</button>
+          <button type="button" data-set="lang" data-value="hu" aria-pressed="false">Magyar</button>
+        </div>
+      </div>
+
+      {appViews.map((view, viewIndex) => (
+        <div class:list={['view', 'view--app', view.device === 'ipad' && 'view--wide']} data-view={`${view.device}-${view.lang}`} hidden={viewIndex !== 0}>
+          {groups.map((group) => (
+            <section class:list={['tab-group', group.screens.length > 1 && 'tab-group--many']} aria-label={`${group.tab} tab`}>
+              <div class="tab-head">
+                <h2>{view.lang === 'hu' ? `${group.tabHu}` : group.tab}{view.lang === 'hu' && <span class="tab-en"> · {group.tab}</span>}</h2>
+                <span>{group.claim}</span>
+              </div>
+              <div class:list={['screens', view.device === 'ipad' && 'screens--wide']}>
+                {group.screens.map((screen, index) => (
+                  <article class="screen">
+                    <Image
+                      src={shot('app', `${view.prefix}-${screen.slug}`)}
+                      alt={`${view.lang === 'hu' ? screen.hu : screen.en} — ${screen.note}`}
+                      widths={view.device === 'ipad' ? [420, 840] : [320, 640]}
+                      sizes={view.device === 'ipad'
+                        ? '(max-width: 46rem) 90vw, 420px'
+                        : '(max-width: 46rem) 90vw, 280px'}
+                      loading={viewIndex === 0 && group.tab === 'Today' && index < 2 ? 'eager' : 'lazy'}
+                    />
+                    <div class="screen-text">
+                      <h3><span class="dot" style={`--accent: ${screen.dot}`}></span>{view.lang === 'hu' ? screen.hu : screen.en}</h3>
+                      <p>{screen.note}</p>
+                      {screen.web && (
+                        <p class="web-mark">
+                          <span class="web-chip">{screen.web.label}</span>
+                          {screen.web.qualifier && <span class="web-q">{screen.web.qualifier}</span>}
+                        </p>
+                      )}
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      ))}
+
+      {(['en', 'hu'] as const).map((lang) => (
+        <div class="view" data-view={`web-${lang}`} hidden>
+          <p class="web-intro">
+            The dashboard on your own server, photographed from a development build with the
+            same invented person’s data. These are its <strong>corresponding read views</strong>,
+            not copies of the phone’s screens: it reads what the phone sent and runs the app’s
+            rules on it, and it never writes into Health.
+          </p>
+          <div class="screens screens--web">
+            {webScreens.map((w) => (
+              <article class="screen">
+                <Image
+                  src={shot('web', `${lang}-${w.slug}`)}
+                  alt={`The server web’s ${w.en} page — ${w.note}`}
+                  widths={[720, 1440]}
+                  sizes="(max-width: 46rem) 92vw, 560px"
+                  loading="lazy"
+                />
+                <div class="screen-text">
+                  <h3>{lang === 'hu' ? w.hu : w.en}</h3>
+                  <p>{w.note} <a href={url(w.docs)}>What it shows</a></p>
+                </div>
+              </article>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      <div class="card cta-card">
+        <div>
+          <strong>The server web reads what the phone sent</strong>
+          <span>Eighteen pages in its sidebar, computed from the same rules — once the phone has a server to send to.</span>
+        </div>
+        <a class="btn btn-primary" href={url('/dashboard/')}>Its pages, in the docs</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="shell">
+    <div class="prose">
       <h2>About these pictures</h2>
       <p>
         They are taken from the running app on a simulator, one launch per screen, no
@@ -86,48 +249,7 @@ const notRecordable = [
         own language and region — there is no language switch inside it. Both sets are
         here, because a translation you cannot see is a translation nobody checked.
       </p>
-    </section>
-  </div>
 
-  <div class="shell">
-    <div class="gallery" data-gallery data-device="iphone" data-lang="en">
-      <div class="switchers">
-        <div class="switch" role="group" aria-label="Device">
-          <button type="button" data-set="device" data-value="iphone" aria-pressed="true">iPhone</button>
-          <button type="button" data-set="device" data-value="ipad" aria-pressed="false">iPad</button>
-        </div>
-        <div class="switch" role="group" aria-label="Language">
-          <button type="button" data-set="lang" data-value="en" aria-pressed="true">English</button>
-          <button type="button" data-set="lang" data-value="hu" aria-pressed="false">Magyar</button>
-        </div>
-      </div>
-
-      {views.map((view, viewIndex) => (
-        <div class="grid-shots" data-view={`${view.device}-${view.lang}`} hidden={viewIndex !== 0}>
-          {screens.map((screen, index) => (
-            <figure class:list={['screen', view.device === 'ipad' && 'screen--wide']}>
-              <Image
-                src={shot(`${view.prefix}-${screen.slug}`)}
-                alt={`${view.lang === 'hu' ? screen.hu : screen.en} — ${screen.note}`}
-                widths={view.device === 'ipad' ? [420, 840] : [320, 640]}
-                sizes={view.device === 'ipad'
-                  ? '(max-width: 46rem) 90vw, 420px'
-                  : '(max-width: 46rem) 45vw, 300px'}
-                loading={viewIndex === 0 && index < 2 ? 'eager' : 'lazy'}
-              />
-              <figcaption>
-                <strong>{view.lang === 'hu' ? screen.hu : screen.en}</strong>
-                <span>{screen.note}</span>
-              </figcaption>
-            </figure>
-          ))}
-        </div>
-      ))}
-    </div>
-  </div>
-
-  <div class="shell prose-page">
-    <section class="prose">
       <h2>Apple Health is the only store</h2>
       <p>
         Everything the app records goes into Apple Health: the daily journal, the symptoms
@@ -140,14 +262,17 @@ const notRecordable = [
         worth saying out loud rather than leaving to be discovered:
       </p>
 
-      <aside class="callout callout--warning">
-        <p>
-          <strong>Apple Health’s list of measurement types is fixed, and an app cannot add
-          to it.</strong> So what is missing there is missing from Helsa.
-        </p>
+      <aside class="banner banner--warn">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3z" /><path d="M12 10v4M12 17h.01" /></svg>
+        <div class="banner-body">
+          <p>
+            <strong>Apple Health’s list of measurement types is fixed, and an app cannot add
+            to it.</strong> So what is missing there is missing from Helsa.
+          </p>
+        </div>
       </aside>
 
-      <dl class="boundaries">
+      <dl class="inset-list inset-list--in-card">
         {notRecordable.map(([what, why]) => (
           <div><dt>{what}</dt><dd>{why}</dd></div>
         ))}
@@ -161,7 +286,7 @@ const notRecordable = [
         Apple keeps adding types, and adding one here is a line in a list rather than a
         change of shape — the catalogue is maintained by hand, because HealthKit cannot be
         asked what types exist.
-        </p>
+      </p>
 
       <h2>What is not shown here</h2>
       <p>
@@ -174,13 +299,13 @@ const notRecordable = [
       <p class="next-link">
         <a href={url('/getting-started/')}>Run the optional server →</a>
       </p>
-    </section>
+    </div>
   </div>
 </BaseLayout>
 
 <script>
-  // Progressive enhancement: with no JavaScript the first view stays visible and
-  // the switchers simply do nothing, which is a worse page but not a broken one.
+  // Progressive enhancement: with no JavaScript the first view (iPhone, English)
+  // stays visible and the switchers do nothing — a worse page, not a broken one.
   document.querySelectorAll<HTMLElement>('[data-gallery]').forEach((gallery) => {
     const apply = () => {
       const wanted = `${gallery.dataset.device}-${gallery.dataset.lang}`;
@@ -203,99 +328,122 @@ const notRecordable = [
 </script>
 
 <style>
-  .narrow { max-width: var(--helsa-measure); margin-top: 2rem; }
-  .about-pictures {
-    max-width: var(--helsa-measure);
-    padding-block: 2.5rem 0;
+  .intro {
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+    padding-block: clamp(40px, 6vw, 56px) 8px;
   }
-  .about-pictures h2 { font-size: 1.3rem; margin-bottom: 0.9rem; }
-  .about-pictures p { color: var(--helsa-ink-muted); }
-  .about-pictures strong { color: var(--helsa-ink); }
+  .intro h1 {
+    font-size: clamp(32px, 5vw, 44px);
+    line-height: 1.1;
+    font-weight: 700;
+    letter-spacing: -0.025em;
+  }
+  .lede { margin: 0; font-size: 18px; color: var(--helsa-text-2); max-width: 40em; }
+  .availability { max-width: 52rem; }
 
-  .gallery { padding-block: 2.5rem 1rem; }
-
+  .gallery { padding-block: 24px 16px; }
   .switchers {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-bottom: 2rem;
+    gap: 12px;
+    margin-bottom: 32px;
   }
-  .switch {
-    display: inline-flex;
-    padding: 3px;
-    gap: 3px;
-    border: 1px solid var(--helsa-border);
-    border-radius: 999px;
-    background: var(--helsa-surface);
-  }
-  .switch button {
-    border: 0;
-    background: transparent;
-    color: var(--helsa-ink-muted);
-    font: inherit;
-    font-size: 0.9rem;
-    padding: 0.4rem 1rem;
-    border-radius: 999px;
-    cursor: pointer;
-  }
-  .switch button:hover { color: var(--helsa-ink); }
-  .switch button[aria-pressed='true'] {
-    background: var(--helsa-brand);
-    color: var(--helsa-brand-contrast);
-  }
-  .switch button:focus-visible { outline: 2px solid var(--helsa-brand); outline-offset: 2px; }
 
   /* An author `display` beats the UA stylesheet's `[hidden] { display: none }`,
-     so without this rule the attribute toggles and every view stays on screen.
-     The switchers looked wired up and were: the CSS was overriding them. */
-  .grid-shots[hidden] { display: none; }
-
-  .grid-shots {
+     so without this rule the attribute toggles and every view stays on screen. */
+  .view[hidden] { display: none; }
+  .view { display: flex; flex-direction: column; gap: 40px; }
+  /* The tabs with several screens take a full row; the four one-screen tabs
+     sit side by side, each under its own tab heading. */
+  .view--app {
     display: grid;
-    gap: 2rem 1.6rem;
-    grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+    gap: 40px 16px;
+    grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr));
+    align-items: start;
   }
-  .grid-shots:has(.screen--wide) {
-    grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
-  }
+  .view--app.view--wide { grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr)); }
+  .tab-group--many { grid-column: 1 / -1; }
+  .tab-group:not(.tab-group--many) .screens { grid-template-columns: minmax(0, 1fr); }
+  .tab-group:not(.tab-group--many) .tab-head { flex-direction: column; gap: 2px; min-height: 56px; }
 
-  .screen { margin: 0; }
-  .screen img {
+  .tab-group { display: flex; flex-direction: column; gap: 16px; }
+  .tab-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 14px;
+  }
+  .tab-head h2 { font-size: 24px; font-weight: 700; }
+  .tab-en { font-weight: 500; color: var(--helsa-text-dim); font-size: 18px; }
+  .tab-head > span { font-size: 15px; color: var(--helsa-text-dim); }
+
+  .screens {
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr));
+  }
+  .screens--wide { grid-template-columns: repeat(auto-fill, minmax(min(360px, 100%), 1fr)); }
+  .screens--web { grid-template-columns: repeat(auto-fill, minmax(min(480px, 100%), 1fr)); }
+
+  .screen {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    padding: 18px;
+    background: var(--helsa-surface);
+    border: 1px solid var(--helsa-card-border);
+    border-radius: var(--helsa-radius-card);
+    min-width: 0;
+  }
+  /* Intrinsic aspect ratio, never a crop: the whole screen, tab bar included. */
+  .screen :global(img) {
     display: block;
     width: 100%;
     height: auto;
     border-radius: var(--helsa-radius);
-    border: 1px solid var(--helsa-border);
-    box-shadow: var(--helsa-shadow);
-    background: var(--helsa-surface);
+    border: 1px solid var(--helsa-line);
+    background: var(--helsa-surface-2);
   }
-  .screen figcaption {
-    margin-top: 0.85rem;
-    font-size: 0.88rem;
-    color: var(--helsa-ink-muted);
+  .screen-text { display: flex; flex-direction: column; gap: 4px; }
+  .screen h3 { margin: 0; font-size: 17px; font-weight: 600; letter-spacing: 0; display: flex; align-items: center; gap: 8px; }
+  .screen p { margin: 0; font-size: 14px; color: var(--helsa-text-2); }
+  .web-mark { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; margin-top: 8px !important; }
+  .web-chip {
+    display: inline-flex;
+    align-items: center;
+    min-height: 26px;
+    padding: 0 10px;
+    border-radius: var(--helsa-radius-pill);
+    background: var(--helsa-accent-tint);
+    color: var(--helsa-accent-text);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .web-q { font-size: 13px; color: var(--helsa-text-dim); }
+
+  .web-intro { margin: 0; max-width: 46em; color: var(--helsa-text-2); }
+  .web-intro strong { color: var(--helsa-text); }
+
+  .cta-card {
+    margin-top: 40px;
     display: flex;
-    flex-direction: column;
-    gap: 0.2rem;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
   }
-  .screen figcaption strong { color: var(--helsa-ink); font-size: 0.95rem; }
+  .cta-card > div { display: flex; flex-direction: column; gap: 4px; max-width: 44em; }
+  .cta-card strong { font-size: 17px; }
+  .cta-card span { font-size: 15px; color: var(--helsa-text-2); }
+  .cta-card .btn { min-height: var(--helsa-touch); }
 
-  .boundaries {
-    margin: 1.8rem 0;
-    display: grid;
+  .prose { margin-top: 32px; margin-bottom: 8px; }
+  .prose .banner { margin: 20px 0; }
+  .inset-list--in-card {
+    margin: 20px 0;
+    background: var(--helsa-surface-2);
   }
-  .boundaries > div {
-    display: grid;
-    grid-template-columns: minmax(10rem, 16rem) 1fr;
-    gap: 0.4rem 1.6rem;
-    padding-block: 0.9rem;
-    border-top: 1px solid var(--helsa-border);
-  }
-  .boundaries > div:last-child { border-bottom: 1px solid var(--helsa-border); }
-  .boundaries dt { font-weight: 600; color: var(--helsa-ink); }
-  .boundaries dd { margin: 0; color: var(--helsa-ink-muted); font-size: 0.95rem; }
-  @media (max-width: 42rem) {
-    .boundaries > div { grid-template-columns: 1fr; gap: 0.25rem; }
-  }
-
-  .next-link { margin-top: 2.4rem; font-size: 1rem; }
+  .next-link { margin-top: 28px; font-weight: 600; }
 </style>

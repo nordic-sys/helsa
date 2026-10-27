@@ -1,6 +1,6 @@
 ---
 /**
- * Light/dark toggle for the hand-built pages.
+ * Light/dark toggle, on both shells.
  *
  * It deliberately reads and writes the same localStorage key as Starlight
  * (`starlight-theme`) and sets the same `data-theme` attribute, so a visitor
@@ -8,12 +8,17 @@
  * switched — and the other way round. The two shells share a preference rather
  * than each keeping their own.
  *
- * Starlight's own control also offers "auto". This one cycles only light and
- * dark; writing either value is something Starlight's picker understands.
+ * Starlight's own picker (still in the docs' mobile menu) also offers "auto".
+ * This one cycles only light and dark; writing either value is something
+ * Starlight's picker understands, and on a docs page the picker is told to
+ * show the new value so the two controls never disagree.
+ *
+ * With no stored choice the theme follows the system — the pre-paint scripts
+ * in both shells resolve it the same way.
  */
 ---
 
-<button class="theme-toggle" type="button" aria-live="polite" data-theme-toggle>
+<button class="theme-toggle" type="button" data-theme-toggle>
   <svg class="icon sun" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"
        fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
     <circle cx="12" cy="12" r="4" />
@@ -27,50 +32,61 @@
 </button>
 
 <script is:inline>
-  document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
-      document.documentElement.dataset.theme = next;
-      try {
-        localStorage.setItem('starlight-theme', next);
-      } catch {
-        /* Private browsing refuses the write; the page still switches. */
-      }
-      document.querySelectorAll('[data-theme-label]').forEach((label) => {
-        label.textContent = next === 'dark' ? 'Switch to light theme' : 'Switch to dark theme';
+  (() => {
+    const label = () => {
+      const dark = document.documentElement.dataset.theme === 'dark';
+      document.querySelectorAll('[data-theme-label]').forEach((el) => {
+        el.textContent = dark ? 'Switch to light theme' : 'Switch to dark theme';
+      });
+    };
+    label();
+    document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
+      if (button.dataset.wired) return;
+      button.dataset.wired = '1';
+      button.addEventListener('click', () => {
+        const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = next;
+        try {
+          localStorage.setItem('starlight-theme', next);
+        } catch {
+          /* Private browsing refuses the write; the page still switches. */
+        }
+        // On a docs page, keep Starlight's own picker (mobile menu) in step.
+        if (window.StarlightThemeProvider) window.StarlightThemeProvider.updatePickers(next);
+        label();
       });
     });
-  });
+  })();
 </script>
 
 <style>
   .theme-toggle {
+    position: relative;
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 2.25rem;
-    height: 2.25rem;
+    width: var(--helsa-touch);
+    height: var(--helsa-touch);
     padding: 0;
-    border: 1px solid var(--helsa-border);
-    border-radius: 999px;
-    background: transparent;
-    color: var(--helsa-ink-muted);
+    border: 1px solid var(--helsa-border-strong);
+    border-radius: var(--helsa-radius-pill);
+    background: var(--helsa-surface);
+    color: var(--helsa-text-2);
     cursor: pointer;
-    transition: color 0.15s, border-color 0.15s, background-color 0.15s;
+    flex: none;
   }
   .theme-toggle:hover {
-    color: var(--helsa-ink);
-    border-color: var(--helsa-border-strong);
-    background: var(--helsa-surface);
+    color: var(--helsa-text);
+    background: var(--helsa-surface-2);
   }
   .theme-toggle:focus-visible {
-    outline: 2px solid var(--helsa-brand);
+    outline: 2px solid var(--helsa-focus);
     outline-offset: 2px;
   }
   /* One button, two glyphs: show the theme you would switch *to*. */
   .icon { display: none; }
   :global(:root[data-theme='dark']) .sun { display: block; }
-  :global(:root[data-theme='light']) .moon { display: block; }
+  :global(:root:not([data-theme='dark'])) .moon { display: block; }
 
   .sr-only {
     position: absolute;

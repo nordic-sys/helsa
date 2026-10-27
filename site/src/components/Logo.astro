@@ -1,0 +1,32 @@
+---
+/**
+ * The Aurora mark, inline rather than as an <img>.
+ *
+ * The pulse line is `currentColor`, which only works when the SVG is part of
+ * the document: as an image it is drawn in black on the dark theme too. The
+ * gradient id is per instance, because two marks on one page (the header and
+ * the 404 page) would otherwise share one `id` and the second would reference
+ * the first.
+ */
+interface Props {
+  size?: number;
+  id?: string;
+}
+const { size = 30, id = 'helsa-mark' } = Astro.props;
+---
+
+<svg class="helsa-mark" width={size} height={size} viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+  <defs>
+    <linearGradient id={id} x1="5" y1="23" x2="27" y2="9" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#0E7E8C" />
+      <stop offset="0.36" stop-color="#2F7FB8" />
+      <stop offset="0.68" stop-color="#4C5FC0" />
+      <stop offset="1" stop-color="#2E9A5F" />
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M4 23a12 12 0 0 1 24 0" stroke={`url(#${id})`} stroke-width="3" />
+    <path d="M22.6 20.6A7 7 0 0 0 9.9 19.5" stroke={`url(#${id})`} stroke-width="2.4" opacity="0.7" />
+    <path d="M7 27.5h4.6l1.7-3.2 2.3 6.2 1.8-3H25" stroke="currentColor" stroke-width="2" />
+  </g>
+</svg>

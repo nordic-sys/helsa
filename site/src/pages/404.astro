@@ -1,0 +1,64 @@
+---
+/**
+ * The site's own 404, in the hand-built shell.
+ *
+ * Starlight's built-in 404 route is switched off (`disable404Route` in
+ * astro.config.mjs) so a dead link — most often an old address from the
+ * Jekyll site that the redirect list does not know — lands on a page in the
+ * same language as the rest of the site, with the way back to the four places
+ * people are usually looking for.
+ */
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Logo from '../components/Logo.astro';
+import { url } from '../lib/url';
+
+const ways = [
+  ['The app', '/the-app/', 'What the iPhone app looks like, screen by screen.'],
+  ['Getting started', '/getting-started/', 'Run the optional server, in four steps.'],
+  ['When it does not work', '/troubleshooting/', 'A symptom index for the server.'],
+  ['Privacy', '/privacy/', 'What the app reads, writes, and sends — by default nothing.'],
+];
+---
+
+<BaseLayout title="Page not found — Helsa" description="This address does not exist on the Helsa site.">
+  <div class="shell prose-page notfound">
+    <div class="notfound-head">
+      <Logo size={48} id="helsa-mark-404" />
+      <p class="eyebrow">404</p>
+      <h1>This page does not exist</h1>
+      <p class="lede">
+        The address may be from an older version of this site, or mistyped. Nothing is
+        broken on your side. Search above, or start from one of these:
+      </p>
+    </div>
+    <ul class="ways">
+      {ways.map(([title, href, body]) => (
+        <li>
+          <a class="card way" href={url(href)}>
+            <strong>{title}</strong>
+            <span>{body}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+    <p><a class="btn btn-primary" href={url('/')}>Back to the start</a></p>
+  </div>
+</BaseLayout>
+
+<style>
+  .notfound-head { display: flex; flex-direction: column; gap: 12px; max-width: 40em; color: var(--helsa-text); }
+  .notfound-head h1 { font-size: clamp(32px, 5vw, 44px); line-height: 1.1; font-weight: 700; letter-spacing: -0.025em; }
+  .lede { margin: 0; font-size: 18px; color: var(--helsa-text-2); }
+  .ways {
+    list-style: none;
+    margin: 32px 0;
+    padding: 0;
+    display: grid;
+    gap: 16px;
+    grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr));
+  }
+  .way { display: flex; flex-direction: column; gap: 4px; height: 100%; color: inherit; text-decoration: none; }
+  .way:hover { box-shadow: var(--helsa-shadow-pop); color: inherit; }
+  .way strong { color: var(--helsa-accent-text); font-size: 17px; }
+  .way span { color: var(--helsa-text-2); font-size: 15px; }
+</style>

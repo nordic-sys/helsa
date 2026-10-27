@@ -2,11 +2,20 @@
 import { Image } from 'astro:assets';
 import BaseLayout from '../layouts/BaseLayout.astro';
 import Architecture from '../components/Architecture.astro';
+import { STEPS } from '../lib/steps';
 import { url } from '../lib/url';
 
 import today from '../assets/screenshots/app/en-01-today.png';
 import trends from '../assets/screenshots/app/en-02-trends.png';
+import workouts from '../assets/screenshots/app/en-03-workouts.png';
 import sleep from '../assets/screenshots/app/en-04-sleep.png';
+
+const shots = [
+  { src: today, title: 'Today', caption: 'what today asks of you', alt: 'The Today tab: four named bands of cards' },
+  { src: trends, title: 'Trends', caption: 'against your usual range', alt: 'The Trends tab: grouped metrics with a previous-period comparison' },
+  { src: sleep, title: 'Sleep', caption: 'the night as recorded', alt: 'The Sleep screen: the night as recorded, with stages and efficiency' },
+  { src: workouts, title: 'Workouts', caption: 'route, laps, zones', alt: 'The Workouts tab: sessions grouped by month' },
+];
 
 const reasonsFor = [
   {
@@ -43,12 +52,21 @@ const notThis = [
 ];
 
 const next = [
-  ['Getting started', '/getting-started/', 'Bring the stack up locally with Docker Compose, issue a device token, verify a first sync. Nothing is exposed to the internet.'],
   ['Deployment', '/deployment/', 'TLS, mutual TLS with a private CA, the reverse proxy, backups and restore, and a hardening checklist. Read before you open a port.'],
+  ['The web dashboard', '/dashboard/', 'What the browser reader shows once the server is up: pages that compute what the app computes, from the same rules.'],
   ['API', '/api/', 'The contract: what /v1/ingest accepts, what the read endpoints return, and the conventions — UTC, SI units, cursors — that apply everywhere.'],
-  ['The web dashboard', '/dashboard/', 'What the browser reader shows once the server is up: nine screens that compute what the app computes, from the same rules.'],
   ['Integrations', '/integrations/', 'Home Assistant over MQTT with discovery, plus a REST fallback. Daily summaries only, and the page explains why that limit matters.'],
+  ['When it does not work', '/troubleshooting/', 'A symptom index: find what you are seeing, and the page that owns the explanation.'],
 ];
+
+// The miniature dashboard in the hero: the server web's own sidebar groups.
+const miniNav = [
+  { heading: null, items: ['Today'] },
+  { heading: 'The long view', items: ['Trends', 'Year by year', 'Health summary'] },
+  { heading: 'Areas', items: ['Workouts', 'Sleep', 'Journal and events'] },
+  { heading: 'Status', items: ['Sync queue'] },
+];
+const bars = [62, 74, 48, 70, 55, 31, 44];
 ---
 
 <BaseLayout
@@ -57,9 +75,9 @@ const next = [
   current="home"
   wide
 >
-  <section class="hero">
-    <div class="shell">
-      <p class="section-label">Local-first · MIT licensed</p>
+  <section class="hero shell">
+    <div class="hero-copy">
+      <p class="chip">Local-first · MIT-licensed server</p>
       <h1>Your Apple Health data, read where it already lives.</h1>
       <p class="lede">
         The Helsa app reads HealthKit on your iPhone, does its analysis on the
@@ -68,122 +86,171 @@ const next = [
         your own endpoint. This is the server that endpoint can point at.
       </p>
       <div class="cta">
-        <a class="btn btn-primary" href={url('/getting-started/')}>Run the server</a>
-        <a class="btn" href={url('/the-app/')}>See the app</a>
+        <a class="btn btn-primary" href={url('/the-app/')}>See the app</a>
+        <a class="btn" href={url('/getting-started/')}>Run the server</a>
       </div>
       {/* The fact that governs an app reader's visit, attached to the button it
           qualifies rather than left two screens further down. */}
-      <p class="hero-note">
-        The app is in closed testing and is not on the App Store yet.
-      </p>
+      <p class="hero-note">The app is in closed testing and is not on the App Store yet.</p>
       <p class="hero-note">
         Go API · ingestion worker · TimescaleDB · <a href={url('/dashboard/')}>web dashboard</a> · deployment recipe.
         Fork it, or replace it with your own that speaks the same <a href={url('/api/')}>API contract</a>.
       </p>
     </div>
+
+    <figure class="hero-visual">
+      {/* A miniature of the server web's Today page, drawn in markup — the real
+          one is shown, photographed, on the app tour. */}
+      <div class="mini" role="img" aria-label="A miniature of the server's web dashboard: the Today page with steps, resting heart rate and a week of steps, beside its grouped sidebar.">
+        <div class="mini-side" aria-hidden="true">
+          <span class="mini-brand">Helsa</span>
+          {miniNav.map((g) => (
+            <>
+              {g.heading && <span class="mini-head">{g.heading}</span>}
+              {g.items.map((item) => <span class:list={['mini-item', item === 'Today' && 'is-on']}>{item}</span>)}
+            </>
+          ))}
+        </div>
+        <div class="mini-main" aria-hidden="true">
+          <span class="mini-title">Today</span>
+          <div class="mini-tiles">
+            <div class="mini-tile"><span class="mini-label"><span class="dot" style="--accent: var(--helsa-move)"></span>Steps</span><span class="mini-fig">8,412</span></div>
+            <div class="mini-tile"><span class="mini-label"><span class="dot" style="--accent: var(--helsa-pulse)"></span>Resting HR</span><span class="mini-fig">56<small>/min</small></span></div>
+          </div>
+          <div class="mini-tile">
+            <span class="mini-label">Steps · last 7 days</span>
+            <div class="mini-bars">
+              {bars.map((h, i) => <span style={`height: ${h}%`} class:list={[i === bars.length - 1 && 'is-today']}></span>)}
+            </div>
+          </div>
+        </div>
+      </div>
+      <Image
+        class="hero-phone"
+        src={today}
+        alt="The Today tab of the Helsa app on an iPhone"
+        widths={[250, 500]}
+        sizes="250px"
+        loading="eager"
+        fetchpriority="high"
+      />
+      <figcaption>
+        Left: the server’s web dashboard, in miniature. Right: the phone. The same
+        cards and colours — and the server runs the app’s rules on what the phone sent.
+      </figcaption>
+    </figure>
   </section>
 
-  <div class="shell">
-    <div class="callout callout--important">
-      <h2>The app is in closed testing</h2>
-      <p>
-        <strong>Helsa is not on the App Store yet.</strong> The iPhone app is in a
-        TestFlight round — invitation only, and the invitations go to people the
-        author already knows. There is no public link, and this site is not one.
-      </p>
-      <p>
-        What you can use today is the <strong>server</strong>: it is MIT licensed, it
-        is documented here, and its <a href={url('/api/')}>API contract</a> is the thing
-        to implement if you would rather write your own client. The contract can still
-        move while the app is in testing; a breaking change is described in the commit
-        that makes it, because nobody outside depends on a deprecation window yet.
-      </p>
+  <div class="shell notices">
+    <div class="banner banner--info">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></svg>
+      <div class="banner-body">
+        <h2>The app is in closed testing</h2>
+        <p>
+          <strong>Helsa is not on the App Store yet.</strong> The iPhone app is in a
+          TestFlight round — invitation only, and the invitations go to people the
+          author already knows. There is no public link, and this site is not one.
+        </p>
+        <p>
+          What you can use today is the <strong>server</strong>: it is MIT licensed, it
+          is documented here, and its <a href={url('/api/')}>API contract</a> is the thing
+          to implement if you would rather write your own client. The contract can still
+          move while the app is in testing; a breaking change is described in the commit
+          that makes it, because nobody outside depends on a deprecation window yet.
+        </p>
+      </div>
     </div>
 
-    <div class="callout callout--warning">
-      <h2>Not a medical device</h2>
-      <p>
-        Helsa is a hobby project for looking at your own fitness data. It is{' '}
-        <strong>not a medical device</strong>, it is <strong>not for diagnosis,
-        treatment, or monitoring of any medical condition</strong>, and its output
-        must not be used to make health decisions. It comes with no warranty of any
-        kind. See the <a href={url('/disclaimer/')}>full disclaimer</a>.
-      </p>
+    <div class="banner banner--warn">
+      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3 2 20h20L12 3z" /><path d="M12 10v4M12 17h.01" /></svg>
+      <div class="banner-body">
+        <h2>Not a medical device</h2>
+        <p>
+          Helsa is a hobby project for looking at your own fitness data. It is{' '}
+          <strong>not a medical device</strong>, it is <strong>not for diagnosis,
+          treatment, or monitoring of any medical condition</strong>, and its output
+          must not be used to make health decisions. It comes with no warranty of any
+          kind. See the <a href={url('/disclaimer/')}>full disclaimer</a>.
+        </p>
+      </div>
     </div>
   </div>
 
-  <section class="app-band">
+  <section class="section section--white">
     <div class="shell">
-      <p class="section-label">On the phone</p>
-      <h2 class="section-title">The part that works without any of this</h2>
-      <p class="section-intro">
-        Everything below runs on the device: 120 metrics, sleep stages, workouts,
-        hydration, and a journal of what you felt at the time. The screenshots are
-        taken from the running app, and the person in them does not exist.
-      </p>
-
-      <div class="shots">
-        <figure><Image src={today} alt="The Today tab: four named bands of cards" widths={[280, 560]} sizes="(max-width: 40rem) 60vw, 260px" loading="eager" /><figcaption>Today</figcaption></figure>
-        <figure><Image src={trends} alt="The Trends tab: grouped metrics with a previous-period comparison" widths={[280, 560]} sizes="(max-width: 40rem) 60vw, 260px" /><figcaption>Trends</figcaption></figure>
-        <figure><Image src={sleep} alt="The Sleep tab: the night as recorded, with stages and efficiency" widths={[280, 560]} sizes="(max-width: 40rem) 60vw, 260px" /><figcaption>Sleep</figcaption></figure>
+      <div class="section-head">
+        <p class="eyebrow">On the phone</p>
+        <h2 class="section-title">The part that works without any of this</h2>
+        <p class="section-intro">
+          Everything below runs on the device: 120 metrics, sleep stages, workouts,
+          hydration, and a journal of what you felt at the time. The screenshots are
+          taken from the running app, and the person in them does not exist.
+        </p>
       </div>
 
-      <p class="shots-more"><a href={url('/the-app/')}>See every screen, in both languages →</a></p>
+      <div class="shots">
+        {shots.map((s) => (
+          <figure>
+            <Image src={s.src} alt={s.alt} widths={[280, 560]} sizes="(max-width: 40rem) 45vw, 260px" loading="lazy" />
+            <figcaption><strong>{s.title}</strong> — {s.caption}</figcaption>
+          </figure>
+        ))}
+      </div>
+
+      <p class="more"><a href={url('/the-app/')}>See every screen, in both languages →</a></p>
     </div>
   </section>
 
-  <hr class="rule" />
-
-  <section>
+  <section class="section">
     <div class="shell">
-      <p class="section-label">What it is</p>
-      <h2 class="section-title">Two layers, and the second one is optional</h2>
+      <div class="section-head">
+        <p class="eyebrow">What it is</p>
+        <h2 class="section-title">Two layers, and the second one is optional</h2>
+      </div>
       <Architecture />
     </div>
   </section>
 
-  <hr class="rule" />
-
-  <section>
-    <div class="shell">
-      <p class="section-label">Why you might want it</p>
-      <h2 class="section-title">Four reasons to run a server</h2>
-      <div class="grid grid--pairs">
-        {reasonsFor.map((reason) => (
-          <article class="card">
-            <h3><span class="dot" style={`--accent: ${reason.accent}`}></span>{reason.title}</h3>
-            <p>{reason.body}</p>
-          </article>
-        ))}
+  <section class="section section--flush">
+    <div class="shell why">
+      <div class="why-for">
+        <p class="eyebrow">Why you might want it</p>
+        <h2 class="section-title section-title--sm">Four reasons to run a server</h2>
+        <div class="grid grid--reasons">
+          {reasonsFor.map((reason) => (
+            <article class="card">
+              <h3><span class="dot" style={`--accent: ${reason.accent}`}></span>{reason.title}</h3>
+              <p>{reason.body}</p>
+            </article>
+          ))}
+        </div>
       </div>
+
+      <aside class="counterweight" aria-labelledby="counterweight-title">
+        <p class="eyebrow eyebrow--plain">Why you might not</p>
+        <h2 class="section-title section-title--sm" id="counterweight-title">You probably do not need this</h2>
+        <p>
+          If you just want to look at your numbers on your phone, <strong>you do not
+          need any of it</strong>. Run the app without a server. That is the intended
+          default, and the project is built so that the default is the complete
+          experience for a single device.
+        </p>
+        <p>
+          Running a server means running a server: TLS certificates that expire,
+          backups that must be tested, a port on your router, and a database that is
+          now your responsibility. The rest of these pages spell out that cost.
+        </p>
+      </aside>
     </div>
   </section>
 
-  <section class="counterweight">
+  <section class="section">
     <div class="shell">
-      <p class="section-label">Why you might not</p>
-      <h2 class="section-title">You probably do not need this</h2>
-      <p class="section-intro">
-        If you just want to look at your numbers on your phone, <strong>you do not
-        need any of it</strong>. Run the app without a server. That is the intended
-        default, and the project is built so that the default is the complete
-        experience for a single device.
-      </p>
-      <p class="section-intro">
-        Running a server means running a server: TLS certificates that expire,
-        backups that must be tested, a port on your router, and a database that is
-        now your responsibility. The rest of these pages spell out that cost.
-      </p>
-    </div>
-  </section>
-
-  <hr class="rule" />
-
-  <section>
-    <div class="shell">
-      <p class="section-label">Boundaries</p>
-      <h2 class="section-title">What it deliberately does not do</h2>
-      <dl class="boundaries">
+      <div class="section-head">
+        <p class="eyebrow">Boundaries</p>
+        <h2 class="section-title section-title--sm">What it deliberately does not do</h2>
+      </div>
+      <dl class="inset-list">
         {notThis.map(([title, why]) => (
           <div>
             <dt>{title}</dt>
@@ -194,13 +261,34 @@ const next = [
     </div>
   </section>
 
-  <hr class="rule" />
-
-  <section>
+  <section class="section section--white">
     <div class="shell">
-      <p class="section-label">Where to go next</p>
-      <h2 class="section-title">The documentation</h2>
-      <div class="grid">
+      <div class="section-head">
+        <p class="eyebrow">Run the server</p>
+        <h2 class="section-title">Four steps, in this order</h2>
+        <p class="section-intro">
+          Bring the stack up locally with Docker Compose, issue a device token, make the
+          certificates, verify a first sync. Nothing is exposed to the internet.
+          Start with <a href={url('/getting-started/')}>the overview</a> — what you need,
+          what gets deployed, and the mistakes people actually make.
+        </p>
+      </div>
+
+      <ol class="steps">
+        {STEPS.map((step) => (
+          <li>
+            <a class="step-card" href={url(`/${step.id}/`)}>
+              <span class="step-n" aria-hidden="true">{step.n}</span>
+              <strong><span class="sr-only">Step {step.n}: </span>{step.label}</strong>
+              <span class="step-where">{step.where}</span>
+              <span class="step-blurb">{step.blurb}</span>
+            </a>
+          </li>
+        ))}
+      </ol>
+
+      <h3 class="then-title">Then</h3>
+      <div class="grid then">
         {next.map(([title, href, body]) => (
           <a class="card card--link" href={url(href)}>
             <h3>{title}</h3>
@@ -223,84 +311,263 @@ const next = [
 </BaseLayout>
 
 <style>
-  .hero .lede strong { color: var(--helsa-ink); font-weight: 600; }
+  /* -- Hero ---------------------------------------------------------------- */
+  .hero {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 48px;
+    padding-block: clamp(40px, 7vw, 72px) clamp(36px, 5vw, 56px);
+  }
+  .hero-copy {
+    flex: 1 1 440px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+  }
+  .chip {
+    align-self: flex-start;
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    margin: 0;
+    padding: 0 14px;
+    border-radius: var(--helsa-radius-pill);
+    background: var(--helsa-accent-tint);
+    color: var(--helsa-accent-text);
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .hero h1 {
+    font-size: clamp(36px, 6vw, 56px);
+    line-height: 1.05;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+  }
+  .lede {
+    margin: 0;
+    font-size: clamp(17px, 1.6vw, 19px);
+    color: var(--helsa-text-2);
+    max-width: 34em;
+  }
+  .lede strong { color: var(--helsa-text); }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; padding-top: 4px; }
+  .hero-note { margin: 0; font-size: 14px; color: var(--helsa-text-dim); }
 
-  .app-band { padding-block: clamp(3rem, 7vw, 5rem); }
+  .hero-visual {
+    flex: 1 1 500px;
+    min-width: 0;
+    margin: 0;
+    position: relative;
+    min-height: 560px;
+  }
+  .mini {
+    position: absolute;
+    left: 0;
+    right: 120px;
+    top: 40px;
+    display: flex;
+    overflow: hidden;
+    background: var(--helsa-surface);
+    border: 1px solid var(--helsa-card-border);
+    border-radius: var(--helsa-radius-card);
+    box-shadow: var(--helsa-shadow-pop);
+  }
+  .mini-side {
+    flex: none;
+    width: 140px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 16px 12px;
+    border-inline-end: 1px solid var(--helsa-line);
+    font-size: 12px;
+    color: var(--helsa-text-dim);
+  }
+  .mini-brand { font-weight: 700; color: var(--helsa-text); font-size: 14px; padding: 0 8px 8px; }
+  .mini-head { padding: 6px 8px 0; font-size: 10px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--helsa-text-faint); }
+  .mini-item { padding: 4px 8px; border-radius: 8px; color: var(--helsa-text-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mini-item.is-on { background: var(--helsa-accent-tint); color: var(--helsa-accent-text); font-weight: 600; }
+  .mini-main {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 18px;
+    background: var(--helsa-bg);
+  }
+  .mini-title { font-size: 20px; font-weight: 700; }
+  .mini-tiles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .mini-tile {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 12px;
+    background: var(--helsa-surface);
+    border: 1px solid var(--helsa-card-border);
+    border-radius: 14px;
+  }
+  .mini-label { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--helsa-text-dim); }
+  .mini-label .dot { width: 7px; height: 7px; }
+  .mini-fig { font-family: var(--helsa-font-num); font-size: 22px; font-weight: 700; line-height: 1.1; }
+  .mini-fig small { font-family: var(--helsa-font-sans); font-size: 11px; font-weight: 500; color: var(--helsa-text-dim); margin-left: 2px; }
+  .mini-bars { display: flex; align-items: flex-end; gap: 8px; height: 90px; }
+  .mini-bars span { flex: 1; background: var(--helsa-move); border-radius: 4px; }
+  .mini-bars span.is-today { opacity: 0.45; }
+
+  .hero-visual :global(.hero-phone) {
+    position: absolute;
+    right: 0;
+    top: 0;
+    width: 250px;
+    height: auto;
+    border-radius: 38px;
+    border: 8px solid #1c1c1e;
+    box-shadow: var(--helsa-shadow-device);
+    background: #ffffff;
+  }
+  .hero-visual figcaption {
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    max-width: 300px;
+    margin: 0;
+    font-size: 13px;
+    color: var(--helsa-text-dim);
+  }
+
+  /* On a phone the composition stops overlapping: the miniature dashboard at
+     full width, the phone under it, the caption last — all in normal flow. */
+  @media (max-width: 40rem) {
+    .hero { gap: 32px; }
+    .hero-visual {
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+    .mini, .hero-visual :global(.hero-phone), .hero-visual figcaption { position: static; }
+    .mini { width: 100%; }
+    .mini-side { width: 112px; padding: 12px 8px; }
+    .mini-main { padding: 12px; }
+    .mini-bars { height: 64px; gap: 5px; }
+    .hero-visual :global(.hero-phone) { width: min(220px, 70%); }
+    .hero-visual figcaption { max-width: none; align-self: stretch; }
+  }
+
+  /* -- Notices --------------------------------------------------------------- */
+  .notices {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr));
+    gap: 16px;
+    padding-bottom: clamp(48px, 7vw, 64px);
+  }
+
+  /* -- The phone band ---------------------------------------------------------- */
   .shots {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 1.4rem;
-    margin-top: 2.4rem;
-    max-width: 52rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+    gap: 24px;
   }
-  .shots figure { margin: 0; }
-  .shots img {
+  @media (max-width: 40rem) {
+    .shots { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  }
+  .shots figure { margin: 0; display: flex; flex-direction: column; gap: 10px; }
+  .shots :global(img) {
+    display: block;
     width: 100%;
     height: auto;
-    border-radius: var(--helsa-radius);
+    border-radius: 28px;
     border: 1px solid var(--helsa-border);
-    box-shadow: var(--helsa-shadow);
-    display: block;
+    background: var(--helsa-surface);
   }
-  .shots figcaption {
-    margin-top: 0.7rem;
-    font-size: 0.87rem;
-    color: var(--helsa-ink-muted);
-  }
-  .shots-more { margin-top: 1.8rem; font-size: 0.95rem; }
+  .shots figcaption { font-size: 14px; color: var(--helsa-text-dim); }
+  .shots figcaption strong { color: var(--helsa-text); }
+  .more { margin: 28px 0 0; font-size: 16px; font-weight: 600; }
+  .more a { text-decoration: none; }
+  .more a:hover { text-decoration: underline; }
 
+  /* -- Reasons for / against ------------------------------------------------------ */
+  .section--flush { padding-top: 0; }
+  .why {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .why-for { flex: 2 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+  .why-for .section-title { margin-bottom: 8px; }
+  .grid--reasons { grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr)); }
   .counterweight {
-    background: var(--helsa-bg-sunken);
-    border-block: 1px solid var(--helsa-border);
+    flex: 1 1 320px;
+    min-width: 0;
+    align-self: stretch;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 28px;
+    border-radius: var(--helsa-radius-card);
+    background: var(--helsa-surface-3);
   }
-  .counterweight .section-intro strong { color: var(--helsa-ink); }
+  .counterweight p { margin: 0; font-size: 15px; color: var(--helsa-text-2); }
+  .counterweight strong { color: var(--helsa-text); }
+  .eyebrow--plain { color: var(--helsa-text-dim); }
 
-  .boundaries {
-    margin: 2.4rem 0 0;
+  /* -- The four steps ---------------------------------------------------------------- */
+  .steps {
+    list-style: none;
+    margin: 0;
+    padding: 0;
     display: grid;
-    gap: 0;
-    max-width: 58rem;
+    grid-template-columns: repeat(auto-fit, minmax(min(230px, 100%), 1fr));
+    gap: 16px;
   }
-  .boundaries > div {
-    display: grid;
-    grid-template-columns: minmax(11rem, 18rem) 1fr;
-    gap: 0.4rem 2rem;
-    padding-block: 1rem;
-    border-top: 1px solid var(--helsa-border);
-  }
-  .boundaries > div:last-child { border-bottom: 1px solid var(--helsa-border); }
-  .boundaries dt { font-weight: 600; color: var(--helsa-ink); }
-  .boundaries dd { margin: 0; color: var(--helsa-ink-muted); font-size: 0.95rem; }
-
-  @media (max-width: 42rem) {
-    .boundaries > div { grid-template-columns: 1fr; gap: 0.3rem; }
-  }
-
-  /* Four cards: a three-up auto-fit grid strands the fourth on its own row. */
-  .grid--pairs { grid-template-columns: repeat(auto-fit, minmax(24rem, 1fr)); }
-  @media (max-width: 34rem) {
-    .grid--pairs { grid-template-columns: 1fr; }
-  }
-
-  .card--link {
+  .step-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 22px;
+    border-radius: var(--helsa-radius-card);
+    background: var(--helsa-surface-2);
+    color: inherit;
     text-decoration: none;
-    color: inherit;
+  }
+  .step-card:hover { box-shadow: var(--helsa-shadow-pop); color: inherit; }
+  .step-card strong { font-size: 17px; margin-top: 6px; }
+  .step-n {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    background: var(--helsa-accent-text);
+    color: var(--helsa-on-accent);
+    font-family: var(--helsa-font-num);
+    font-weight: 700;
+    font-size: 15px;
+  }
+  .step-where { font-size: 13px; font-weight: 600; color: var(--helsa-accent-text); }
+  .step-blurb { font-size: 15px; color: var(--helsa-text-2); }
+
+  .then-title { margin: 40px 0 16px; font-size: 20px; font-weight: 700; }
+  .card--link {
     display: block;
-    transition: border-color 0.15s, transform 0.12s;
-  }
-  .card--link:hover {
-    border-color: var(--helsa-brand);
-    transform: translateY(-2px);
     color: inherit;
+    text-decoration: none;
   }
-  .card--link h3 { color: var(--helsa-brand); }
+  .card--link:hover { box-shadow: var(--helsa-shadow-pop); color: inherit; }
+  .card--link h3 { color: var(--helsa-accent-text); }
 
   .status {
-    margin-top: 2.6rem;
-    padding-top: 1.6rem;
+    margin-top: 40px;
+    padding-top: 24px;
     border-top: 1px solid var(--helsa-border);
     max-width: var(--helsa-measure);
   }
-  .status h3 { font-size: 1.02rem; margin-bottom: 0.6rem; }
-  .status p { color: var(--helsa-ink-muted); font-size: 0.95rem; }
+  .status h3 { font-size: 17px; margin-bottom: 8px; letter-spacing: 0; }
+  .status p { color: var(--helsa-text-2); font-size: 15px; }
 </style>

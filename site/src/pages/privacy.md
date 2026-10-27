@@ -2,6 +2,7 @@
 title: Privacy
 description: "What the Helsa app reads, what it writes, and what leaves your device — which by default is nothing."
 layout: ../layouts/ProseLayout.astro
+current: privacy
 lede: "Last updated: 27 October 2026"
 ---
 

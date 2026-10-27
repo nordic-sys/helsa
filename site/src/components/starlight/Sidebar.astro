@@ -1,0 +1,177 @@
+---
+/**
+ * Starlight `Sidebar` override: the server web's sidebar.
+ *
+ * The same tree Starlight would draw — every group, every page, the section
+ * overviews — taken from `Astro.locals.starlightRoute.sidebar`, which is
+ * built from the `sidebar` config in astro.config.mjs. What changes is the
+ * drawing, to match `web/src/nav.tsx`:
+ *
+ *  - group headings are headings, not disclosures. A sidebar at desktop width
+ *    shows every link at once; that is the reason the dashboard does not copy
+ *    the phone's tabs, and folding the groups away would undo it.
+ *  - the current page is a tinted pill (`aria-current="page"`), as on the
+ *    dashboard.
+ *  - the four Getting started steps carry their number. Position only: the
+ *    current step's number is filled, the others are outlined, and nothing is
+ *    ticked off (see lib/steps.ts).
+ *
+ * The mobile menu footer (Starlight's ThemeSelect and social links) is kept,
+ * as is the persister that restores the sidebar's scroll position between
+ * pages.
+ */
+import MobileMenuFooter from 'virtual:starlight/components/MobileMenuFooter';
+import SidebarPersister from '@astrojs/starlight/components/SidebarPersister.astro';
+import { stepOf } from '../../lib/steps';
+
+const { sidebar } = Astro.locals.starlightRoute;
+type Entry = (typeof sidebar)[number];
+type Link = Extract<Entry, { type: 'link' }>;
+
+/** A nested group is flattened into its parent: the docs tree is two levels. */
+const links = (entries: Entry[]): Link[] =>
+  entries.flatMap((e) => (e.type === 'link' ? [e] : links(e.entries)));
+---
+
+<SidebarPersister>
+  <div class="helsa-sidebar">
+    {
+      sidebar.map((entry) =>
+        entry.type === 'link' ? (
+          <ul class="nav-list">
+            <li>
+              <a
+                class="nav-item"
+                href={entry.href}
+                aria-current={entry.isCurrent ? 'page' : undefined}
+                {...entry.attrs}
+              >
+                <span>{entry.label}</span>
+              </a>
+            </li>
+          </ul>
+        ) : (
+          <section class="nav-group" aria-label={entry.label}>
+            <h2 class="nav-group-title">{entry.label}</h2>
+            <ul class="nav-list">
+              {links(entry.entries).map((link) => {
+                const step = stepOf(link.href);
+                return (
+                  <li>
+                    <a
+                      class="nav-item"
+                      href={link.href}
+                      aria-current={link.isCurrent ? 'page' : undefined}
+                      {...link.attrs}
+                    >
+                      {step && (
+                        <span class="step-num" aria-hidden="true">
+                          {step.n}
+                        </span>
+                      )}
+                      <span>
+                        {step && <span class="sr-only">Step {step.n}: </span>}
+                        {link.label}
+                      </span>
+                    </a>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+        )
+      )
+    }
+  </div>
+</SidebarPersister>
+
+<div class="md:sl-hidden">
+  <MobileMenuFooter />
+</div>
+
+<style>
+  .helsa-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding-bottom: 24px;
+    font-family: var(--helsa-font-sans);
+  }
+  .nav-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .nav-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .nav-group-title {
+    margin: 0;
+    padding: 0 10px 6px;
+    font-family: var(--helsa-font-sans);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--helsa-text-faint);
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-height: var(--helsa-touch);
+    padding: 6px 10px;
+    border-radius: var(--helsa-radius-sm);
+    color: var(--helsa-text-2);
+    font-size: 15px;
+    font-weight: 500;
+    line-height: 1.3;
+    text-decoration: none;
+  }
+  .nav-item:hover {
+    background: var(--helsa-surface-2);
+    color: var(--helsa-text);
+  }
+  .nav-item[aria-current='page'] {
+    background: var(--helsa-accent-tint);
+    color: var(--helsa-accent-text);
+    font-weight: 600;
+  }
+  .nav-item:focus-visible {
+    outline: 2px solid var(--helsa-focus);
+    outline-offset: -2px;
+  }
+
+  .step-num {
+    flex: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 1.5px solid var(--helsa-field-border);
+    color: var(--helsa-text-dim);
+    font-family: var(--helsa-font-num);
+    font-size: 12px;
+    font-weight: 700;
+  }
+  /* The current step's number is filled: the text-safe teal with the card
+     colour on it (white on #0B6E7A, near-black on #5CC8D5). */
+  [aria-current='page'] .step-num {
+    border-color: var(--helsa-accent-text);
+    background: var(--helsa-accent-text);
+    color: var(--helsa-on-accent);
+  }
+
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip-path: inset(50%); white-space: nowrap; border: 0;
+  }
+</style>
