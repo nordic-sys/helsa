@@ -231,6 +231,10 @@ func (s *Server) PostIngest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := ingest.Validate(&batch); err != nil {
+		if errors.Is(err, ingest.ErrTooLarge) {
+			problem(w, http.StatusRequestEntityTooLarge, "Batch too large", err.Error())
+			return
+		}
 		problem(w, http.StatusBadRequest, "Invalid batch", err.Error())
 		return
 	}

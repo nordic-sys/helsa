@@ -9,6 +9,7 @@ package ingest
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -53,6 +54,12 @@ func Tally(b *api.IngestBatch) Counts {
 	}
 }
 
+// ErrTooLarge marks a batch over the size limit. The API answers it with 413 rather than 400,
+// because the two ask different things of the client: a 400 says the batch is wrong and
+// resending it will not help, a 413 says "halve it and send it again" — the contract and the
+// client's chunking both rest on that distinction (`docs/34`: it used to come back as a 400).
+var ErrTooLarge = errors.New("batch too large")
+
 // Validate checks the batch size (400/413 in the API).
 func Validate(b *api.IngestBatch) error {
 	// Route points count as items too: the track of a single long hike is bigger
@@ -64,10 +71,10 @@ func Validate(b *api.IngestBatch) error {
 		return fmt.Errorf("empty batch")
 	}
 	if count(b.Samples) > MaxSamples {
-		return fmt.Errorf("too many samples (max %d)", MaxSamples)
+		return fmt.Errorf("%w: too many samples (max %d)", ErrTooLarge, MaxSamples)
 	}
 	if n > MaxItems {
-		return fmt.Errorf("batch too large (max %d items)", MaxItems)
+		return fmt.Errorf("%w (max %d items)", ErrTooLarge, MaxItems)
 	}
 	return nil
 }

@@ -2,6 +2,7 @@ package ingest
 
 import (
 	"context"
+	"errors"
 	"os"
 	"strings"
 	"testing"
@@ -112,8 +113,15 @@ func TestValidateCountsRoutePoints(t *testing.T) {
 
 	huge := make([]api.RoutePoint, MaxItems+1)
 	over := []api.WorkoutIn{{SourceUuid: "wk-2", ActivityType: "hiking", StartedAt: ts, Route: &huge}}
-	if err := Validate(&api.IngestBatch{Workouts: &over}); err == nil {
+	err := Validate(&api.IngestBatch{Workouts: &over})
+	if err == nil {
 		t.Error("a route that exceeds the budget cannot be valid as a single workout")
+	}
+	if !errors.Is(err, ErrTooLarge) {
+		t.Errorf("an oversized batch must be ErrTooLarge (the API's 413), got %v", err)
+	}
+	if err := Validate(&api.IngestBatch{}); errors.Is(err, ErrTooLarge) {
+		t.Error("an EMPTY batch is a 400, not a 413")
 	}
 	if n := routePoints(&over); n != MaxItems+1 {
 		t.Errorf("routePoints=%d", n)
