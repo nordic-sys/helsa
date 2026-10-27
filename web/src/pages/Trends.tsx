@@ -17,6 +17,7 @@ import {
 } from 'recharts'
 import { api, browserTz } from '../api/client'
 import type { BaselineRange, Range } from '../api/types'
+import { DayGrid } from '../components/DayGrid'
 import { MetricPicker } from '../components/MetricPicker'
 import { PeriodStepper } from '../components/PeriodStepper'
 import { Card, Empty, ErrorState, Loading, Note, PageHead } from '../components/ui'
@@ -24,6 +25,7 @@ import { useI18n } from '../i18n'
 import type { UiKey } from '../i18n'
 import { STANDING_ARROW, bandOf, noBandReason, pickBaseline } from '../lib/baseline'
 import { coverageVerdict } from '../lib/compare'
+import { dayGridApplies, makeDayGrid } from '../lib/dayGrid'
 import { useFormat, type Formatters } from '../lib/format'
 import { METRIC_LIST, metricDef, pickSeries, readSeries } from '../lib/metrics'
 import { useAvailability } from '../lib/useAvailability'
@@ -41,6 +43,7 @@ import {
   type WindowKind,
 } from '../lib/window'
 import { windowDates } from '../lib/windowLabel'
+import { WEIGHT_TREND, makeWeightTrend, signedRate, type WeightTrend } from '../lib/weightTrend'
 
 const RANGES: { key: Range; label: UiKey }[] = [
   { key: 'day', label: 'range.day' },
@@ -394,6 +397,62 @@ export default function Trends() {
     r.effectiveAgg === 'sum' &&
     (plotWidth == null ? data.length <= 14 : plotWidth / Math.max(1, data.length) >= labelPx(widestValue) + 2)
 
+  /**
+   * The window's days as a weekday grid — the app's "Day by day" card
+   * (`TrendsView.dayGridCard`). Only where the buckets ARE days (week, month):
+   * a grid of hours or months would invite weekday conclusions about cells that
+   * are not weekdays. Built from `data`, so an unmeasured day is an empty cell
+   * here exactly as it is a gap in the chart.
+   */
+  const dayGrid = useMemo(
+    () =>
+      r.hasData && dayGridApplies(drawnRange)
+        ? makeDayGrid(
+            data.map((d) => ({ date: new Date(d.ms), value: d.value })),
+            firstDay,
+            locale,
+          )
+        : null,
+    [data, drawnRange, firstDay, locale, r.hasData],
+  )
+
+  /**
+   * The body-mass trend line and its kg/week rate (`lib/weightTrend.ts`, a port
+   * of the app's `WeightTrend.swift`). `null` for every other metric.
+   *
+   * ⚠️ Not on the day view at all. The app hands its hourly buckets the same
+   * "the yearly view shows monthly averages" sentence it gives the year, which
+   * is the right refusal with the wrong reason; here the card simply is not
+   * drawn under a single day's hours, and the year still gets the app's
+   * sentence.
+   */
+  const weightTrend: WeightTrend | null = useMemo(() => {
+    if (!r.hasData || drawnRange === 'day') return null
+    return makeWeightTrend(
+      data.filter((d) => d.value != null).map((d) => ({ date: new Date(d.ms), value: d.value as number })),
+      drawnDef.key,
+      r.unit,
+      dayGridApplies(drawnRange),
+    )
+  }, [data, drawnRange, drawnDef.key, r.unit, r.hasData])
+
+  /** The trend's stretches, one chart key each (`trend0`, `trend1`, …). ⚠️ One
+   * key per stretch so the line can bridge the days between two weighings
+   * (`connectNulls`) and still break across a hole wider than the threshold —
+   * one key for all of them would draw a line straight through the hole. */
+  const trendSegments = useMemo(
+    () => [...new Set((weightTrend?.points ?? []).map((p) => p.segment))],
+    [weightTrend],
+  )
+  const chartData = useMemo(() => {
+    if (!weightTrend?.points.length) return data
+    const byDay = new Map(weightTrend.points.map((p) => [bucketKey(p.date.getTime(), drawnRange), p]))
+    return data.map((row) => {
+      const p = byDay.get(bucketKey(row.ms, drawnRange))
+      return p ? { ...row, [`trend${p.segment}`]: p.trend } : row
+    })
+  }, [data, weightTrend, drawnRange])
+
   return (
     <>
       <PageHead
@@ -521,7 +580,7 @@ export default function Trends() {
                       accessibilityLayer
                       title={`${label}${unit ? ` (${unit})` : ''}`}
                       desc={t('trends.chartDesc', { period: windowDates(drawnWin, drawnRange, locale) })}
-                      data={data}
+                      data={chartData}
                       margin={{ top: labelBars ? 22 : 8, right: 12, bottom: 4, left: -8 }}
                       onClick={
                         canDrill
@@ -673,6 +732,26 @@ export default function Trends() {
                           isAnimationActive={false}
                         />
                       )}
+                      {/* The smoothed trend ON TOP of the weighings, never in
+                          place of them: a computation shown alone starts to
+                          look like a measurement (`WeightTrend.swift`). Darker
+                          and thicker than the raw line, and named in the legend
+                          below, so it cannot be mistaken for a second series. */}
+                      {trendSegments.map((seg) => (
+                        <Line
+                          key={`trend${seg}`}
+                          type="monotone"
+                          dataKey={`trend${seg}`}
+                          name={t('trends.weight.series')}
+                          stroke="var(--text-2)"
+                          strokeWidth={2.5}
+                          dot={false}
+                          activeDot={false}
+                          connectNulls
+                          isAnimationActive={false}
+                          legendType="none"
+                        />
+                      ))}
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
@@ -717,6 +796,19 @@ export default function Trends() {
                   {showBand && (
                     <span className="legend-item">{t('trends.bandNote').replace(/^·\s*/, '')}</span>
                   )}
+                  {trendSegments.length > 0 && (
+                    <span className="legend-item">
+                      {/* Solid, not the dashed swatch of "your average": the
+                          two lines are different things and must not share a
+                          key. */}
+                      <span
+                        className="swatch-line"
+                        aria-hidden="true"
+                        style={{ color: 'var(--text-2)', borderTopStyle: 'solid', borderTopWidth: 3 }}
+                      />
+                      {t('trends.weight.legend', { days: WEIGHT_TREND.maxGapDays })}
+                    </span>
+                  )}
                 </div>
 
                 {/* ⚠️ When there is not enough yet, SAY so. A band that quietly
@@ -758,6 +850,25 @@ export default function Trends() {
               </>
             )}
           </section>
+
+          {/* Under the chart, not instead of it: the chart shows the shape of
+              the stretch, the grid which weekday each number fell on — the one
+              thing a curve cannot show at any resolution. */}
+          {dayGrid && !dayGrid.isEmpty && (
+            <section className="card" aria-label={t('trends.dayGrid.title')}>
+              <h2 className="card-title" style={{ marginBottom: 12 }}>
+                {t('trends.dayGrid.title')}
+              </h2>
+              <DayGrid
+                grid={dayGrid}
+                style={{
+                  format: (v) => f.fmt(v, drawnDef.digits),
+                  spoken: (v) => `${f.fmt(v, drawnDef.digits)} ${unit}`.trim(),
+                  tint: drawnDef.color,
+                }}
+              />
+            </section>
+          )}
 
           {drawn && r.hasData && (
             <div className="grid grid-2">
@@ -825,6 +936,8 @@ export default function Trends() {
                   </p>
                 </Card>
               )}
+
+              {weightTrend && <WeightTrendCard trend={weightTrend} unit={unit} />}
             </div>
           )}
         </div>
@@ -910,6 +1023,53 @@ function ChartTable({
       </div>
     </details>
   )
+}
+
+/**
+ * The kg/week rate of the smoothed line — or, when there is no line, the
+ * sentence saying why. The app's `TrendsView.weightTrendCard`.
+ *
+ * The absence is printed rather than left blank: an empty space under a chart
+ * reads as a bug, while "not enough data yet" is itself worth knowing.
+ *
+ * ⚠️ No colour and no verdict. Losing weight is not automatically good and
+ * gaining it is not automatically bad — this page has no idea which the reader
+ * is after, the same neutrality as the comparison card beside it.
+ */
+function WeightTrendCard({ trend, unit }: { trend: WeightTrend; unit: string }) {
+  const { t, locale } = useI18n()
+  const s = trend.shortfall
+  let body
+  if (trend.changePerWeek != null) {
+    const rate = signedRate(trend.changePerWeek, locale)
+    body = (
+      <>
+        <p className="figure" style={{ margin: '0 0 6px' }} data-testid="weight-rate">
+          {unit ? t('trends.weight.rate', { rate, unit }) : t('trends.weight.rateNoUnit', { rate })}
+        </p>
+        <p style={{ margin: 0, fontSize: 14, color: 'var(--text-2)' }}>
+          {t('trends.weight.explanation', { days: WEIGHT_TREND.rateWindowDays })}
+        </p>
+      </>
+    )
+  } else {
+    const sentence =
+      s?.kind === 'yearly'
+        ? t('trends.weight.yearly')
+        : s?.kind === 'fewSamples'
+          ? t('trends.weight.fewSamples', { min: s.min, count: s.count })
+          : s?.kind === 'shortSpan'
+            ? t('trends.weight.shortSpan', { span: s.span, min: s.min })
+            : // A line, but the last stretch is too short for a weekly rate — a
+              // number extrapolated from four days would be noise wearing a unit.
+              t('trends.weight.noRate', { days: WEIGHT_TREND.minRateSpanDays })
+    body = (
+      <p style={{ margin: 0, fontSize: 14, color: 'var(--text-2)' }} data-testid="weight-shortfall">
+        {sentence}
+      </p>
+    )
+  }
+  return <Card title={t('trends.weight.title')}>{body}</Card>
 }
 
 /** Indices of non-null values whose neighbours are both null (or absent). */

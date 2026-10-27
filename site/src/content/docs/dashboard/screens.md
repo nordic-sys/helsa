@@ -73,6 +73,27 @@ carried a measurement, and it says over how many. Dividing by the window's lengt
 would count a day the phone did not sync as a day of sitting still. The metric is
 in the address (`/trends?metric=…`), so a chart is a link.
 
+Under the chart, the week and month views add **Day by day**: the window as a
+weekday grid, a column per day with its exact value under it, scaled to the
+window's own best day. It answers what a curve cannot — which weekday each number
+fell on ("every Sunday is empty"). An unmeasured day is an empty cell with a dash,
+never a zero-height bar, and the grid counts how many there are. The week starts on
+the day your region starts it (Monday in Hungary and most of Europe); the weekday
+letters follow the page's language. The day view (hours) and the year view (months)
+have no grid, because their cells are not days.
+
+For **body mass** (and lean body mass) the chart also carries a **trend line** — a
+weighted moving average that smooths the day-to-day swing of salt, water and the
+hour of the weighing — drawn over the weighings, never instead of them. A card
+beside the comparison gives its **change in kg/week** over the last 28 days. Both
+follow the phone's rules exactly: the smoothing decays with the days actually
+elapsed between two weighings, the line breaks across a gap of more than 21 days,
+and below 5 weighings or 14 days in one unbroken stretch there is no line at all —
+the card says why instead. That is also why the week view always explains rather
+than draws: seven days are shorter than the minimum. The year view gets no line,
+because its buckets are already monthly averages. No colour and no verdict: losing
+weight is not automatically good, and the page does not know what you are after.
+
 ## Observations
 
 :::danger
@@ -92,8 +113,17 @@ Milestones already earned, grouped into families that collapse. Each one is a
 kept as it stood then. A milestone you later changed does not rewrite a badge you
 already have.
 
-Opening a month gives its detail sheet, a daily grid, and the daily average on the
-caption.
+A monthly medal's period is a link. Opening it (`/achievements/2026-08`) shows the
+month as the medal recorded it — the steps it was earned with, that total spread
+over **the whole month** as a daily average, and the milestones that were in force,
+marked by the medal's own value — and under it a **day-by-day grid** of the month.
+The grid is the only part read fresh (from the [monthly challenge](#monthly-challenge)
+endpoint), because it is the one thing a medal does not store; if it cannot be
+read, the rest of the page stands. When some days were not measured, a second
+average over the measured days alone is printed beside the first, labelled, because
+the difference between the two is exactly how much of the month is missing. A
+solid column is a day that met the daily target — the month's goal over its days.
+A medal that kept no milestone snapshot says so instead of guessing them.
 
 ## Monthly challenge
 
@@ -290,6 +320,17 @@ be read, the depth is still shown and the rate and estimate are marked **unknown
 
 The device token, the devices that have one, the goals, the language, the time
 zone — and [the map source](/deployment/map-tiles/).
+
+**Export** downloads your raw samples from the server (`POST /v1/export`): CSV, one
+sample per row, or JSON with the period's workouts and sleep segments as well. The
+period is 30 days, 90 days, a year (each ending today, today included) or two dates
+you choose; the metrics are all of them or the ones you tick from those that have
+data — the choice narrows the samples only. The server streams the file, so the
+page shows how much has **arrived** rather than a percentage it cannot know, and you
+can stop it. Once the server has started sending it cannot change its answer, so an
+export that fails half-way arrives short: a JSON file is checked for its closing
+bracket and is not saved when it is missing; a CSV cannot be checked that way, and
+the page says so. There is no PDF — the server does not make one yet.
 
 There is no sign-in on this page because there is no second user. What it does
 carry is the honest description of the two access layers, which is the thing worth

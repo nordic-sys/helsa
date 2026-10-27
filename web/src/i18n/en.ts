@@ -165,6 +165,31 @@ export const en: Dict = {
     'trends.standing.above': 'Above your usual',
     'trends.standing.wellAbove': 'Well above your usual',
 
+    // --- Trends · day by day, and the weight trend -----------------------------
+    // The words are the phone's (`DayValueGrid.swift`, `WeightTrend.swift`,
+    // `TrendsView.swift`), so the two say the same thing about the same number.
+    'daygrid.aria': 'Day by day',
+    'daygrid.noData': 'no data',
+    'daygrid.gaps.one': '{n} day brought no measurement — that cell is empty, not zero.',
+    'daygrid.gaps.other': '{n} days brought no measurement — those cells are empty, not zero.',
+    'trends.dayGrid.title': 'Day by day',
+    'trends.weight.title': 'Trend line',
+    'trends.weight.series': 'Trend line',
+    'trends.weight.rate': '{rate} {unit}/week',
+    'trends.weight.rateNoUnit': '{rate}/week',
+    'trends.weight.explanation':
+      'The trend line’s change over the last {days} days. Not the difference between readings: daily variation comes from salt, water and the time of the weigh-in, and that is not you.',
+    'trends.weight.noRate':
+      'The line is there, but a weekly change needs at least {days} days without a break in them.',
+    'trends.weight.yearly':
+      'The yearly view shows monthly averages — a trend line says nothing new about those. Switch to “Month”.',
+    'trends.weight.fewSamples':
+      'The trend line needs at least {min} readings within one unbroken stretch — right now there are {count}. Until then the raw readings are shown, with no invented curve.',
+    'trends.weight.shortSpan':
+      'The readings span {span} days; the trend line needs at least {min}. Over a shorter stretch the curve would still be mostly the first reading, merely dressed as a trend.',
+    'trends.weight.legend':
+      'The dark line is the weighted moving average: it smooths the daily swing. Where more than {days} days are missing it breaks — under that we do not know what happened.',
+
     // --- Workouts ----------------------------------------------------------
     'workouts.title': 'Workouts',
     'workouts.subtitle':
@@ -548,6 +573,52 @@ export const en: Dict = {
     'settings.language.note':
       'The language of the interface. It is stored in the browser only — text that comes from the server (insight sentences, error messages) stays in the server’s language regardless.',
 
+    // --- Settings · export ---------------------------------------------------
+    // The phone's server-export words where they fit (`ExportView.swift`). The
+    // web can only offer the server half: it has no HealthKit to read from.
+    'settings.export.title': 'Export',
+    'settings.export.intro':
+      'Your raw samples from the server, one measurement per row — every heart-rate reading, not daily summaries. The server makes the file synchronously: the response is the file itself.',
+    'settings.export.format': 'Format',
+    'settings.export.format.csvNote':
+      'One sample per row: time, type, value, unit, source device. Opens in a spreadsheet.',
+    'settings.export.format.jsonNote':
+      'The samples, plus the workouts and the sleep segments of the period, in one file.',
+    'settings.export.period': 'Period',
+    'settings.export.days.one': '{n} day',
+    'settings.export.days.other': '{n} days',
+    'settings.export.year': '1 year',
+    'settings.export.custom': 'Choose dates',
+    'settings.export.from': 'From',
+    'settings.export.to': 'To (included)',
+    'settings.export.periodNote':
+      'Backwards, up to and including today. A longer period is a longer wait — a year of heart rate alone is hundreds of thousands of rows.',
+    'settings.export.customNote':
+      'Calendar days in the server’s time zone; the last day is included.',
+    'settings.export.badRange': 'The first day cannot be later than the last.',
+    'settings.export.metrics': 'Metrics',
+    'settings.export.metrics.all': 'All metrics',
+    'settings.export.metrics.some': 'Only the ones I tick',
+    'settings.export.metrics.selected.one': '{n} selected',
+    'settings.export.metrics.selected.other': '{n} selected',
+    'settings.export.metrics.listing': 'Listing the metrics that have data…',
+    'settings.export.metrics.none': 'Tick at least one metric, or choose all of them.',
+    'settings.export.metrics.note':
+      'This narrows the samples only. The workouts and sleep segments in a JSON file come for the whole period either way.',
+    'settings.export.download': 'Download from the server',
+    'settings.export.cancel': 'Stop',
+    'settings.export.waiting': 'Waiting for the server to start the file…',
+    'settings.export.receiving': 'Arriving: {size} so far, {seconds} s',
+    'settings.export.noTotal':
+      'The server streams the file without announcing its size, so there is no percentage — only what has arrived.',
+    'settings.export.done': 'Handed to the browser: {file} ({size}).',
+    'settings.export.cancelled': 'Stopped. Nothing was saved.',
+    'settings.export.failed': 'The export failed: {error}',
+    'settings.export.truncated':
+      'The file arrived cut off: the server started sending it and then stopped. It was not saved — try again, or try a shorter period.',
+    'settings.export.footer':
+      'The PDF is in the contract but not implemented yet — which is why we do not offer it. A CSV that breaks off mid-way cannot be told from a complete one; a JSON file is checked for its closing bracket before it is saved.',
+
     // --- Metric picker -----------------------------------------------------
     'picker.search': 'Search {n} metrics…',
     'picker.searchAria': 'Search metrics',
@@ -633,6 +704,35 @@ export const en: Dict = {
     'achievements.thresholds.missed': 'not reached',
     'achievements.thresholds.note':
       'The thresholds are a snapshot of what was in force at the moment the medal was earned, which is why a medal cannot lose its value when the targets are later rewritten.',
+
+    // --- Medals · one month, opened -------------------------------------------
+    // The phone's `MonthMedalDetailView` / `MonthStepsCard` words.
+    'achievements.month.open': 'Open {period}',
+    'achievements.month.back': '← All medals',
+    'achievements.month.notFound.title': 'No monthly medal for {period}',
+    'achievements.month.notFound.hint':
+      'The phone works the medals out and uploads them; the list it sent has none for this month.',
+    'achievements.month.total': 'Steps, as earned',
+    'achievements.month.perDay': 'A day, over the whole month',
+    'achievements.month.milestonesReached': 'Milestones reached',
+    'achievements.month.milestones.title': 'Milestones',
+    'achievements.month.steps': '{steps} steps',
+    'achievements.month.days.title': 'Day by day',
+    'achievements.month.days.perDay': '{steps} steps a day on average over the whole month.',
+    'achievements.month.days.measured.one': '{steps} a day counting only the {n} day that was measured.',
+    'achievements.month.days.measured.other': '{steps} a day counting only the {n} days that were measured.',
+    'achievements.month.days.best': 'The strongest day: {day} — {steps} steps.',
+    'achievements.month.days.goal': 'A solid column is a day that reached the daily target of {steps} steps.',
+    'achievements.month.days.loading': 'Loading the days…',
+    'achievements.month.days.error': 'The daily breakdown did not load: {error}',
+    'achievements.month.days.empty': 'No day of this month brought a step measurement.',
+    'achievements.month.textOnly.title': 'The month',
+    'achievements.month.textOnly.body':
+      'This medal did not keep the milestones it was earned with, so they cannot be shown for it.',
+    'achievements.month.foot.locked':
+      'The numbers are the ones the medal was earned with — changing a milestone today does not rewrite them.',
+    'achievements.month.foot.fresh':
+      'The day-by-day breakdown is read fresh each time: it is the one thing a medal does not store.',
     // --- Data completeness -------------------------------------------------
     'coverage.title': 'Data completeness',
     'coverage.subtitle': 'Which of your measurements are arriving here, and who writes them.',

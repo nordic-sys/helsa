@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api/client'
 import type { Achievement } from '../api/types'
@@ -12,6 +13,7 @@ import {
   periodLabel,
   reachedThresholds,
 } from '../lib/achievements'
+import { opensMonth } from '../lib/monthMedal'
 
 const THRESHOLD_REACHED = 'var(--helsa-move)'
 const THRESHOLD_MISSED = 'var(--surface-2)'
@@ -109,7 +111,24 @@ function Row({
   return (
     <tr>
       <td>{badgeLabel(a, t)}</td>
-      <td>{periodLabel(a.period, f)}</td>
+      <td>
+        {/* A monthly medal is a door: the period opens the month — its detail,
+            the day-by-day grid and the daily average (`MonthMedal.tsx`, the
+            phone's `MonthMedalDetailView`). Every other family has no month to
+            open, so its period stays plain text. */}
+        {opensMonth(a) ? (
+          <Link
+            className="linkish"
+            style={{ whiteSpace: 'nowrap' }}
+            to={`/achievements/${a.period}`}
+            aria-label={t('achievements.month.open', { period: periodLabel(a.period, f) })}
+          >
+            {periodLabel(a.period, f)}
+          </Link>
+        ) : (
+          periodLabel(a.period, f)
+        )}
+      </td>
       <td className="num">{valueLabel(a, f, tp)}</td>
       {showThresholds && (
         <td>{a.thresholds?.length ? <Thresholds achievement={a} /> : '–'}</td>

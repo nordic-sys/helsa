@@ -170,6 +170,31 @@ export const hu = {
     'trends.standing.above': 'A szokásod fölött',
     'trends.standing.wellAbove': 'Jóval a szokásod fölött',
 
+    // --- Trendek · napról napra és a testsúly-trend ----------------------------
+    // A szövegek a telefonéi (`DayValueGrid.swift`, `WeightTrend.swift`,
+    // `TrendsView.swift`), hogy a kettő ugyanazt mondja ugyanarról a számról.
+    'daygrid.aria': 'Napról napra',
+    'daygrid.noData': 'nincs adat',
+    'daygrid.gaps.one': '{n} napon nincs mérés — az a mező üres, nem nulla.',
+    'daygrid.gaps.other': '{n} napon nincs mérés — azok a mezők üresek, nem nullák.',
+    'trends.dayGrid.title': 'Napról napra',
+    'trends.weight.title': 'Trendvonal',
+    'trends.weight.series': 'Trendvonal',
+    'trends.weight.rate': '{rate} {unit}/hét',
+    'trends.weight.rateNoUnit': '{rate}/hét',
+    'trends.weight.explanation':
+      'A trendvonal változása az elmúlt {days} napban. Nem a mérések különbsége: a napi ingadozás a sótól, a víztől és a mérés időpontjától jön, nem tőled.',
+    'trends.weight.noRate':
+      'A vonal megvan, de a heti változáshoz legalább {days} napnyi megszakítás nélküli szakasz kell.',
+    'trends.weight.yearly':
+      'Az éves nézet havi átlagokat mutat — azokra a trendvonal már nem mond újat. Válts a „Hónap” nézetre.',
+    'trends.weight.fewSamples':
+      'A trendvonalhoz legalább {min} mérés kell egy megszakítás nélküli szakaszon belül — most {count} van. Addig a nyers mérések látszanak, kitalált görbe nélkül.',
+    'trends.weight.shortSpan':
+      'A mérések {span} napot fognak át; a trendvonalhoz legalább {min} nap kell. Rövidebb szakaszon a görbe még jórészt az első mérés lenne, csak trendnek öltöztetve.',
+    'trends.weight.legend':
+      'A sötét vonal a súlyozott mozgóátlag: a napi ingadozást simítja el. Ahol több mint {days} nap kimarad, ott megszakad — azalatt nem tudjuk, mi történt.',
+
     // --- Workouts ----------------------------------------------------------
     'workouts.title': 'Edzések',
     'workouts.subtitle':
@@ -547,6 +572,52 @@ export const hu = {
     'settings.language.note':
       'A felület nyelve. Csak a böngészőben tárolódik — a szervertől érkező szöveg (insights-mondatok, hibaüzenetek) ettől függetlenül a szerver nyelvén marad.',
 
+    // --- Beállítások · export ------------------------------------------------
+    // Ahol illik, a telefon szerverexport-szövegei (`ExportView.swift`). A web
+    // csak a szerveres felet tudja: nincs HealthKit, amiből olvasna.
+    'settings.export.title': 'Export',
+    'settings.export.intro':
+      'A nyers mintáid a szerverről, soronként egy mérés — minden egyes pulzusmérés, nem napi összesítők. A szerver szinkron módon készíti: a válasz maga a fájl.',
+    'settings.export.format': 'Formátum',
+    'settings.export.format.csvNote':
+      'Soronként egy minta: időpont, típus, érték, mértékegység, forráseszköz. Táblázatkezelőben is megnyílik.',
+    'settings.export.format.jsonNote':
+      'A minták, mellettük az időszak edzései és alvásszakaszai, egyetlen fájlban.',
+    'settings.export.period': 'Időszak',
+    'settings.export.days.one': '{n} nap',
+    'settings.export.days.other': '{n} nap',
+    'settings.export.year': '1 év',
+    'settings.export.custom': 'Dátumok megadása',
+    'settings.export.from': 'Ettől',
+    'settings.export.to': 'Eddig (bezárólag)',
+    'settings.export.periodNote':
+      'A mai nappal bezárólag visszafelé. Minél hosszabb az időszak, annál tovább tart — egy évnyi pulzus önmagában több százezer sor.',
+    'settings.export.customNote':
+      'Naptári napok a szerver időzónájában; az utolsó nap is benne van.',
+    'settings.export.badRange': 'Az első nap nem lehet későbbi az utolsónál.',
+    'settings.export.metrics': 'Metrikák',
+    'settings.export.metrics.all': 'Minden metrika',
+    'settings.export.metrics.some': 'Csak a bejelöltek',
+    'settings.export.metrics.selected.one': '{n} kiválasztva',
+    'settings.export.metrics.selected.other': '{n} kiválasztva',
+    'settings.export.metrics.listing': 'Az adattal rendelkező metrikák listázása…',
+    'settings.export.metrics.none': 'Jelölj be legalább egy metrikát, vagy válaszd mindet.',
+    'settings.export.metrics.note':
+      'Ez csak a mintákat szűkíti. A JSON-fájlban az edzések és az alvásszakaszok mindenképp a teljes időszakra jönnek.',
+    'settings.export.download': 'Letöltés a szerverről',
+    'settings.export.cancel': 'Leállítás',
+    'settings.export.waiting': 'Várjuk, hogy a szerver elkezdje a fájlt…',
+    'settings.export.receiving': 'Érkezik: eddig {size}, {seconds} mp',
+    'settings.export.noTotal':
+      'A szerver úgy küldi a fájlt, hogy előre nem mondja meg a méretét, ezért nincs százalék — csak az látszik, ami már megérkezett.',
+    'settings.export.done': 'Átadva a böngészőnek: {file} ({size}).',
+    'settings.export.cancelled': 'Leállítva. Semmi sem lett elmentve.',
+    'settings.export.failed': 'Az export nem sikerült: {error}',
+    'settings.export.truncated':
+      'A fájl csonkán érkezett: a szerver elkezdte küldeni, aztán abbahagyta. Nem mentettük el — próbáld újra, vagy rövidebb időszakkal.',
+    'settings.export.footer':
+      'A PDF a kontraktusban szerepel, de még nincs megvalósítva — ezért nem kínáljuk fel. Egy félbeszakadt CSV nem különböztethető meg egy teljestől; a JSON-fájlnál mentés előtt ellenőrizzük a záró zárójelet.',
+
     // --- Metric picker -----------------------------------------------------
     'picker.search': 'Keresés {n} metrika közt…',
     'picker.searchAria': 'Metrika keresése',
@@ -632,6 +703,35 @@ export const hu = {
     'achievements.thresholds.missed': 'nem elért',
     'achievements.thresholds.note':
       'A küszöbök pillanatfelvételek arról, mi volt érvényben az érem megszerzésekor — ezért nem veszíthet az értékéből egy érem, ha a célokat később átírják.',
+
+    // --- Érmek · egy hónap kinyitva -------------------------------------------
+    // A telefon `MonthMedalDetailView` / `MonthStepsCard` szövegei.
+    'achievements.month.open': '{period} megnyitása',
+    'achievements.month.back': '← Az összes érem',
+    'achievements.month.notFound.title': 'Ehhez a hónaphoz nincs havi érem: {period}',
+    'achievements.month.notFound.hint':
+      'Az érmeket a telefon számolja ki és tölti fel; az általa küldött listában erre a hónapra nincs.',
+    'achievements.month.total': 'Lépés, a megszerzéskor',
+    'achievements.month.perDay': 'Naponta, a teljes hónapra',
+    'achievements.month.milestonesReached': 'Elért mérföldkövek',
+    'achievements.month.milestones.title': 'Mérföldkövek',
+    'achievements.month.steps': '{steps} lépés',
+    'achievements.month.days.title': 'Napról napra',
+    'achievements.month.days.perDay': 'Átlagosan napi {steps} lépés a teljes hónapban.',
+    'achievements.month.days.measured.one': 'Csak a mért {n} napot számolva napi {steps}.',
+    'achievements.month.days.measured.other': 'Csak a mért {n} napot számolva napi {steps}.',
+    'achievements.month.days.best': 'A legerősebb nap: {day} — {steps} lépés.',
+    'achievements.month.days.goal': 'A telt oszlop olyan nap, ami elérte a napi {steps} lépéses célt.',
+    'achievements.month.days.loading': 'Napok betöltése…',
+    'achievements.month.days.error': 'A napi bontás nem töltődött be: {error}',
+    'achievements.month.days.empty': 'Ennek a hónapnak egyik napján sem volt lépésmérés.',
+    'achievements.month.textOnly.title': 'A hónap',
+    'achievements.month.textOnly.body':
+      'Ez az érem nem őrizte meg a mérföldköveket, amikkel megszerezted, ezért nem tudjuk megmutatni őket.',
+    'achievements.month.foot.locked':
+      'A számok azok maradnak, amikkel az érmet megszerezted — ha ma átírsz egy mérföldkövet, ezeket az nem írja át.',
+    'achievements.month.foot.fresh':
+      'A napi bontást minden alkalommal frissen olvassuk be: ez az egyetlen dolog, amit az érem nem tárol el.',
     // --- Adat-teljesség ----------------------------------------------------
     'coverage.title': 'Adat-teljesség',
     'coverage.subtitle': 'Melyik mérésed érkezik ide, és ki írja őket.',
