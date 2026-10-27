@@ -208,6 +208,11 @@ h1#_top {
 .expressive-code .frame.is-terminal .header .title {
   text-align: start;
 }
+/* No location written for this block: no caption bar at all — an empty dark
+   strip above the code reads as a rendering fault. */
+.expressive-code .frame.is-terminal:not(.has-title) .header {
+  display: none;
+}
 
 /* -- On this page ---------------------------------------------------------- */
 .right-sidebar-panel h2,

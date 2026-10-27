@@ -14,9 +14,11 @@ interface Props {
   current?: 'home' | 'the-app' | 'docs' | 'support' | 'privacy';
   /** Set on pages that draw their own full-bleed hero. */
   wide?: boolean;
+  /** Keep the page out of the search index and search engines (the 404). */
+  noindex?: boolean;
 }
 
-const { title, description, current, wide = false } = Astro.props;
+const { title, description, current, wide = false, noindex = false } = Astro.props;
 const canonical = new URL(Astro.url.pathname, Astro.site);
 ---
 
@@ -36,6 +38,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta name="twitter:card" content="summary" />
+    {noindex && <meta name="robots" content="noindex" />}
 
     {/*
       Applied before first paint so the page never flashes the wrong theme.
@@ -81,7 +84,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
       Store listing looks for, and searching the site for "privacy" returned the map
       page instead.
     -->
-    <main id="main" data-pagefind-body>
+    <main id="main" data-pagefind-body={noindex ? undefined : ''}>
       <slot />
     </main>
     <SiteFooter />
