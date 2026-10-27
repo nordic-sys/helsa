@@ -8,6 +8,29 @@ This page holds no explanations of its own. It exists because the explanations a
 spread across six pages under six different headings, and a reader at midnight does not
 know which one owns their symptom.
 
+## The mistakes people actually make
+
+Collected from a first install by somebody following these pages on a fresh VM and a real iPhone.
+Every one of them happened; most cost more time than the step they belong to. In the order you
+meet them.
+
+| Step | The mistake | What you see | The fix |
+|---|---|---|---|
+| Before you start | `make`, `jq` or `git` missing on a fresh cloud image | `make: command not found` | `sudo apt install git make jq openssl` — [What you need](/getting-started/#what-you-need) |
+| 1 · Quick start | Looking for `HELSA_JWT_SECRET` in `.env` | It is not there | It is meant to be appended, with `LAN_SUBNET` and `WG_SUBNET` — [Configure secrets](/getting-started/quick-start/#2-configure-secrets) |
+| 1 · Quick start | Leaving `LAN_SUBNET` / `WG_SUBNET` out | Nothing — they fall back to example ranges, and the dashboard later answers `403` from your own sofa | Set both to your own ranges |
+| 1 · Quick start | Changing a password after the first `docker compose up` | api or worker cannot log in | PostgreSQL and RabbitMQ keep the first one: on an empty install `docker compose down -v` and start again |
+| 3 · Certificates | Running `make ca` on the server | (`make ca` now refuses) | Clone the repository on your own computer and make the CA there — [Certificates](/getting-started/certificates/) |
+| 3 · Certificates | `make server` with the example names still in `server.cnf` | (`make server` now refuses) — before, a certificate for `helsa.example.com`, and the phone's TLS fails | Edit `CN`, `DNS.n`, `IP.n` first — [Issuing](/getting-started/certificates/#issuing--on-your-own-computer) |
+| 3 · Certificates | `docker compose restart proxy` | `no such service: proxy` | Both Compose files: `docker compose -f docker-compose.yml -f docker-compose.prod.yml restart proxy` |
+| 3 · Certificates | Trusting the CA profile because it looks fine | The app: *"the TLS connection could not be made"* | **General → About → bottom → Certificate Trust Settings → Helsa Root CA on.** The profile looks complete without it. |
+| 3 · Certificates | Installing the `.p12` as a profile, like the CA | The app behaves as if there were no client certificate | Import it **in the app**: Settings → Export → Your own server → Client certificate |
+| 3 · Certificates | A CA from an earlier attempt still on the phone | TLS fails although trust is on — every attempt is called "Helsa Root CA" | Compare the SHA-256 fingerprints; remove the stale profile |
+| 4 · First sync | Looking for "Your own server" in Settings | No such row | It is under **Settings → Export**, at the bottom |
+| 4 · First sync | Saving and expecting it to work at once | No device ever registers | Restart the app — the connection is built at launch |
+| 4 · First sync | Expecting background sync on iOS 27 | Data goes up only while the app is open | iPhone Settings → General → Background App Refresh → Helsa on |
+| Tokens | One `SUBJECT` per person instead of per device (tool before 2026-10-27) | The dashboard is empty while the phone uploads | Since then every token binds to the one user; on an old install use `TOKEN_USER` — [Device token](/getting-started/device-token/) |
+
 ## Nothing arrives from the phone
 
 | What you see | Where the answer is |

@@ -24,6 +24,12 @@ Exposing the server is a separate, deliberate step afterwards, in [Deployment](/
 Then, only if the phone should sync from outside your home: **[Deployment](/deployment/)** —
 the router, backups, and the hardening checklist.
 
+:::tip[Before you start]
+Skim **[the mistakes people actually make](/troubleshooting/#the-mistakes-people-actually-make)** —
+a dozen lines, collected from a real first install. Most of them cost more time than the step
+they belong to.
+:::
+
 ## What you need
 
 | | |
