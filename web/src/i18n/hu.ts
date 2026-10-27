@@ -1147,6 +1147,97 @@ export const hu = {
       'Az edzésnapló betöltése az időszak eleje előtt megállt, ezért a legrégebbi hetekből hiányozhatnak alkalmak.',
     'training.source':
       'Forrás: az edzések, a pulzus, a nyugalmi pulzus és a HRV, amit a telefon erre a szerverre küldött. Ehhez az oldalhoz semmi nem tárolódik.',
+    // --- Egészségösszesítő (pages/Report.tsx) ------------------------------------
+    // ⚠️ Ahol a telefon összesítőjén ugyanaz a mondat áll (HelsaKit `Report/`), a
+    // szöveg onnan jön szóról szóra: egy orvos két nyomtatott lapon ne olvasson
+    // két megfogalmazást ugyanarról.
+    'nav.report': 'Egészségösszesítő',
+    'report.title': 'Egészségösszesítő',
+    'report.subtitle':
+      'A telefon orvosnak szánt, nyomtatható összesítője abból, ami a szerveren van. Nyomtasd ki, vagy a nyomtatási ablakban mentsd PDF-be.',
+    'report.periodAria': 'Időszak',
+    'report.days.30': '30 nap',
+    'report.days.90': '3 hónap',
+    'report.days.180': '6 hónap',
+    'report.days.365': '1 év',
+    // The file name "Save as PDF" offers — impersonal on purpose (`ReportContent.fileName`).
+    'report.fileName': 'helsa-osszesito-{day}',
+    'report.print': 'Nyomtatás vagy mentés PDF-be',
+    'report.printHint':
+      'A PDF a böngésző nyomtatási ablakából jön: nyomtatóként a „Mentés PDF-ként” lehetőséget válaszd. A szerver maga még nem készít PDF-et.',
+    'report.metrics.title': 'A lapon szereplő mérések',
+    'report.metrics.add': 'Mérés hozzáadása',
+    'report.metrics.remove': '{metric} eltávolítása',
+    'report.metrics.reset': 'Vissza az alapkészlethez',
+    'report.metrics.withData': 'Van adat',
+    'report.metrics.noData': 'Még nincs adat',
+    'report.metrics.defaultNote':
+      'Az alapkészlet kiindulópont, nem ajánlás: hogy miről szól a vizit, azt te választod.',
+    'report.metrics.none': 'Válassz legalább egy mérést.',
+    'report.made': 'Készült: {when}',
+    'report.period': '{range} · {n} nap',
+    'report.changes.title': 'Az előző, ugyanilyen hosszú időszakhoz képest:',
+    'report.changes.line': '{name}: {from} → {to} ({pct})',
+    'report.changes.lineNoPct': '{name}: {from} → {to}',
+    'report.changes.withheld':
+      'Nincs összevetve, mert a két időszakban nagyon eltérő arányban volt mérés: {list}.',
+    'report.changes.withheldItem': '{name} (most {now} / {days} napon, előtte {then} / {days} napon)',
+    'report.journal.title': 'Amit feljegyeztem',
+    'report.journal.body':
+      'A napló és a tünetjelölések a telefonon maradnak: a szerverre sosem jutnak el, ezért ez a lap nem tudja megmutatni őket — és az, hogy itt nincsenek, nem jelenti, hogy nem volt mit feljegyezni. A telefonos appban készült összesítőn rajta vannak.',
+    'report.table.title': 'Mérések',
+    'report.col.measurement': 'Mérés',
+    'report.col.average': 'Napi átlag',
+    'report.col.extremes': 'Szélső értékek',
+    'report.col.usual': 'Szokásos tartomány',
+    'report.col.days': 'Mérési nap',
+    'report.noMeasurement': 'nincs mérés',
+    'report.usual.none': 'nincs saját mérés',
+    'report.usual.little': 'kevés adat ({n} nap)',
+    'report.coverage': '{n} / {of} napon van mérés',
+    'report.sub.latest': 'legutóbbi mérés: {value}',
+    'report.sub.middle': 'szokásos közép: {value}',
+    'report.sub.total': 'időszaki összeg: {value}',
+    'report.sub.degraded': 'mintánkénti átlagként érkezik, nem napi összegként',
+    'report.empty': 'Ebben az időszakban nincs mérés: {list}.',
+    'report.nothing': 'Ebben az időszakban nincs rögzített mérés és edzés. Ez is válasz: nem kell fejből elmondanod.',
+    'report.baselineFailed':
+      'A szokásos tartományt nem sikerült az elmúlt évből beolvasni, ezért csak ebből az időszakból számoltuk, és összevetés sincs.',
+    'report.unit.bpm': 'szívverés/perc',
+    'report.unit.breaths': 'légzés/perc',
+    'report.unit.steps': 'lépés',
+    'report.unit.floors': 'emelet',
+    'report.unit.mmHg': 'Hgmm',
+    'report.unit.minutes': 'perc',
+    'report.events.title': 'Rögzített események',
+    'report.events.body':
+      'Az eseményeket (elesés, pulzusértesítés, szokatlan vérnyomás) az iPhone állítja össze az Egészség-adataiból, és a szerverre nem jutnak el, ezért erről az időszakról ez a lap nem tud mit mondani.',
+    'report.workouts.title': 'Edzések',
+    'report.workouts.col.time': 'Időpont',
+    'report.workouts.col.type': 'Típus',
+    'report.workouts.col.duration': 'Időtartam',
+    'report.workouts.col.distance': 'Táv',
+    'report.workouts.col.pulse': 'Pulzus',
+    'report.workouts.count.one': '{n} edzés',
+    'report.workouts.count.other': '{n} edzés',
+    'report.workouts.inTotal': 'összesen {d}',
+    'report.workouts.avgHr': 'átl. {n} szívverés/perc',
+    'report.workouts.none': 'Ebben az időszakban nincs rögzített edzés.',
+    'report.workouts.notLoaded': 'Az edzéseket nem sikerült beolvasni, ezért erről a lap nem tud mit mondani.',
+    'report.workouts.over': 'Az időszakban {all} edzés volt, ebből a legutóbbi {shown} szerepel itt.',
+    'report.prov.made':
+      'Ezt az oldalt a Helsa webes felülete állította össze a saját Apple Health adataimból, amelyeket a telefonom a saját szerveremre küldött.',
+    'report.prov.self':
+      'Saját rögzítésű adat: viselhető eszköz, telefon, otthoni mérőeszköz és saját bejegyzések. Ez nem klinikai mérés.',
+    'report.prov.usual':
+      'A „szokásos tartomány” a saját napi értékeim középső 80%-a (10–90. percentilis) az utolsó {n} napból. Nem orvosi referenciatartomány.',
+    'report.prov.noAssessment':
+      'A lapon nincs értékelés, minősítés, diagnózis vagy javaslat: csak mért számok és dátumok.',
+    'report.prov.gaps':
+      'Ahol nincs mérés, ott nincs adat: a hiányzó nap nem nulla, hanem kimarad az átlagból. A szélső értékek a pillanatnyi méréseknél az egyes mérések, a gyűjtő jellegűeknél a napi összegek szélső értékei.',
+    'report.prov.notMedical':
+      'A Helsa nem orvosi eszköz: ezen a lapon semmi sem diagnózis, figyelmeztetés vagy riasztás.',
+
     // --- Év a számokban + évről évre (pages/PeriodSummary, pages/YearByYear) ---
     'nav.period': 'Év a számokban',
     'nav.years': 'Évről évre',
