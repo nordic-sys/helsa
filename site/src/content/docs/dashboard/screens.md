@@ -1,10 +1,10 @@
 ---
 title: The screens
-description: "What each of the eleven pages shows, and the rules behind the numbers on it."
+description: "What each of the twelve pages shows, and the rules behind the numbers on it."
 sidebar:
   order: 1
 ---
-Ten pages in the sidebar, plus one that opens from a listing.
+Eleven pages in the sidebar, plus one that opens from a listing.
 
 ## Today
 
@@ -113,6 +113,36 @@ type that was never granted and a type that has no sensor arrive here identicall
 as an absence — so every state on this page is a statement about *what reached
 this server*, never about what your phone was asked.
 :::
+
+## Ingest queue
+
+What the phone sent and the server has not yet written. The phone uploads much
+faster than the worker writes: on a first install, years of history can arrive in
+minutes and then take the worker the better part of an hour. While that runs, the
+other pages look as if data were missing — this page shows that it is on its way.
+It refreshes itself every five seconds.
+
+| On the page | What it means |
+|---|---|
+| **Waiting** | Batches in the queue not yet handed to a worker. Exact. The "+ up to N in progress" beside it is an upper bound on the batches a worker is holding (its prefetch × the workers connected); plain AMQP cannot count those exactly. |
+| **Dead-letter queue** | Batches the worker gave up on. See below. |
+| **Workers connected** | Consumers on the queue. Batches waiting and **zero** workers is the failure that looks like slowness — the page says so in red, because the queue will not go down at all. |
+| **Batches / min**, **Items / min** | Finished over the last ten minutes, or since the worker started if that is more recent. An item is a sample, workout, sleep segment, activity summary or deletion. |
+| **About N left** | The waiting batches divided by the recent batch rate. **An estimate**: batches differ in size, so it moves. It is left out whenever it would be invented — nothing waiting, no worker, or nothing finished in the window. |
+| **Worker** | When the worker started, when it last finished a batch, and its totals since the start (they restart from zero with the worker). |
+
+:::danger[A non-empty dead-letter queue is data that is not on the server]
+A batch the worker could not write goes to `helsa.ingest.dlq`, and **nothing retries
+it** — today every processing error ends there, including a database that was
+restarting at the wrong moment. The page puts this above everything else. Find the
+reason in the worker log (`docker compose logs worker`, the `process batch` lines),
+fix it, then move the messages back to `helsa.ingest` with RabbitMQ's own tools;
+Helsa has no redrive command yet. Re-sending is safe: the write is idempotent.
+:::
+
+When the API cannot reach RabbitMQ the page says so and shows **no** queue figures —
+an unknown depth is not an empty queue. When the worker's counters (in Redis) cannot
+be read, the depth is still shown and the rate and estimate are marked unknown.
 
 ## Settings
 

@@ -44,6 +44,7 @@ meet them.
 | The token is refused, and the body says it was revoked | It was. [Revoking](/getting-started/device-token/#revoking) |
 | `503` on every call, with a healthy-looking server | The revocation deny-list is unreachable. [Authentication](/api/authentication/) |
 | Uploads are rejected as too large | Chunking. [Ingest failure modes](/api/ingest/#failure-modes) |
+| The phone says it is done, and the dashboard is still missing days | The worker is still writing the backlog. The [Ingest queue](/dashboard/screens/#ingest-queue) page shows how much is left — and whether anything went to the dead-letter queue. |
 
 ## The numbers look wrong
 

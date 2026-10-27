@@ -62,6 +62,7 @@ look weird".
 | | |
 |---|---|
 | `POST /v1/ingest` | The only write path for health data. Chunked, idempotent, asynchronous. [Details](ingest/) |
+| `GET /v1/ingest/status` | The queue between the two: waiting and dead-lettered batches, workers connected, the recent drain rate and an estimated time left. Counts only. [Details](ingest/#watching-the-queue) |
 
 ### Reading
 

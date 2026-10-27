@@ -196,6 +196,58 @@ normally enough to diagnose a chunking problem without adding instrumentation.
 replayed after a failed acknowledgement logs the same numbers and stores nothing new;
 the log says what arrived, and the database decides what that means.
 
+## Watching the queue
+
+`GET /v1/ingest/status` (same device token as every other `/v1` route) reports what
+the queue between the `202` and the database is doing. It carries counts only.
+
+```json
+{
+  "checked_at": "2026-10-27T12:30:30Z",
+  "broker_reachable": true,
+  "queue": { "name": "helsa.ingest", "ready": 4000, "consumers": 1, "in_flight_max": 8 },
+  "dead_letter": { "name": "helsa.ingest.dlq", "ready": 0 },
+  "stats_reachable": true,
+  "worker": {
+    "started_at": "2026-10-27T11:30:00Z",
+    "last_batch_at": "2026-10-27T12:30:28Z",
+    "prefetch": 8,
+    "batches_since_start": 2400,
+    "items_since_start": 9000000,
+    "failed_since_start": 0
+  },
+  "throughput": {
+    "window_seconds": 630,
+    "batches": 1100,
+    "items": 4400000,
+    "failed": 0,
+    "batches_per_minute": 104.8,
+    "items_per_minute": 419047.6
+  },
+  "eta_seconds": 2296
+}
+```
+
+- **`queue.ready` is exact**, read with an AMQP passive declare. The batches a worker
+  holds unacknowledged are not in it and cannot be counted over AMQP;
+  `in_flight_max` is their upper bound (prefetch × consumers).
+- **`throughput`** covers the last ten minutes plus the current one, cut short to the
+  worker's start if that is later; the rate is divided by at least a minute, so a
+  worker that has just started does not report a burst.
+- **`eta_seconds` is an estimate** — (`ready` + `in_flight_max`) ÷ the batch rate —
+  and is absent when there is no backlog, no consumer, or no batch finished in the
+  window.
+- **Nothing unmeasured is reported as zero.** It is always a `200`: if RabbitMQ
+  cannot be asked, `broker_reachable` is `false`, `broker_error` says why, and
+  `queue`/`dead_letter` are absent. If the worker's counters cannot be read,
+  `stats_reachable` is `false` and `worker`/`throughput` are absent.
+- A non-zero **`dead_letter.ready`** means batches that were not written and that
+  nothing will retry. See the [Ingest queue screen](/dashboard/screens/#ingest-queue).
+
+The worker keeps its counters in Redis: one hash per worker (reset on start) and
+one small hash per minute that expires after two hours, so the footprint stays
+bounded however long it runs.
+
 ## Failure modes
 
 | Response | Meaning | Client should |
