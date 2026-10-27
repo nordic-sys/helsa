@@ -9,6 +9,7 @@ package queue
 import (
 	"context"
 	"fmt"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 
@@ -108,4 +109,75 @@ func (q *Queue) Consume(ctx context.Context, prefetch int, handler func(context.
 			_ = d.Ack(false)
 		}
 	}
+}
+
+// Depth is what a passive declare can tell about the two queues.
+//
+// ⚠️ `Ready` is the broker's message count from queue.declare-ok, which is the
+// messages WAITING to be delivered — the ones a consumer holds unacknowledged are
+// not in it, and plain AMQP has no way to ask for them (only the management HTTP
+// API does, and the code does not depend on it). The status endpoint therefore
+// reports the in-flight batches as an upper bound, prefetch × consumers.
+type Depth struct {
+	Name      string
+	Ready     int
+	Consumers int
+
+	DLQName  string
+	DLQReady int
+}
+
+// inspectTimeout bounds one Inspect. A broker whose TCP connection died silently
+// would otherwise hold the status request until the heartbeat noticed.
+const inspectTimeout = 3 * time.Second
+
+// Inspect reads both queues' depth with a passive declare.
+//
+// It opens a channel of its own and closes it afterwards, rather than borrowing the
+// publishing channel: AMQP closes a channel on any failed passive declare (a queue
+// that does not exist is a 404 channel exception), and on the publishing channel
+// that would turn a status lookup into a broken POST /ingest.
+func (q *Queue) Inspect(ctx context.Context) (Depth, error) {
+	if err := q.Ready(); err != nil {
+		return Depth{}, err
+	}
+	type result struct {
+		d   Depth
+		err error
+	}
+	done := make(chan result, 1)
+	go func() {
+		d, err := q.inspect()
+		done <- result{d, err}
+	}()
+	ctx, cancel := context.WithTimeout(ctx, inspectTimeout)
+	defer cancel()
+	select {
+	case r := <-done:
+		return r.d, r.err
+	case <-ctx.Done():
+		// The goroutine finishes on its own once the library gives up; its result
+		// lands in the buffered channel and is dropped.
+		return Depth{}, fmt.Errorf("rabbitmq did not answer: %w", ctx.Err())
+	}
+}
+
+func (q *Queue) inspect() (Depth, error) {
+	ch, err := q.conn.Channel()
+	if err != nil {
+		return Depth{}, fmt.Errorf("amqp channel: %w", err)
+	}
+	defer ch.Close() //nolint:errcheck // already closed after a failed declare
+	main, err := ch.QueueDeclarePassive(q.name, true, false, false, false, nil)
+	if err != nil {
+		return Depth{}, fmt.Errorf("inspect %s: %w", q.name, err)
+	}
+	dlq, err := ch.QueueDeclarePassive(q.dlqName, true, false, false, false, nil)
+	if err != nil {
+		return Depth{}, fmt.Errorf("inspect %s: %w", q.dlqName, err)
+	}
+	return Depth{
+		Name: q.name, Ready: main.Messages, Consumers: main.Consumers,
+		DLQName: q.dlqName, DLQReady: dlq.Messages,
+	}, nil
 }

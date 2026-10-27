@@ -49,7 +49,9 @@ migrate: ## Apply the goose migrations (idempotent against an already bootstrapp
 # check the day grid is cut in the user's timezone — both need the same live
 # Timescale and would be meaningless without it. internal/sourcemerge holds the
 # database tests of the source merge (docs/25 F9) for the same reason.
-SMOKE_PKGS := ./test/smoke ./internal/insights ./internal/coverage ./internal/sourcemerge
+# internal/ingeststat needs only Redis and RabbitMQ: the worker's tally round trip
+# and the passive-declare queue depth behind GET /v1/ingest/status.
+SMOKE_PKGS := ./test/smoke ./internal/insights ./internal/coverage ./internal/sourcemerge ./internal/ingeststat
 
 smoke: $(ENV_FILE) ## E2E smoke: auth -> ingest -> summary (against the running infrastructure)
 	HELSA_AUTH_DEV_MODE=true go test -tags smoke -count=1 -v $(SMOKE_PKGS)

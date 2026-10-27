@@ -991,6 +991,86 @@ type IngestBatch struct {
 	Workouts *[]WorkoutIn `json:"workouts,omitempty"`
 }
 
+// IngestDeadLetter Batches the worker gave up on. They are NOT written to the database and nothing retries them — a non-zero count needs action (docs: dashboard → Ingest queue).
+type IngestDeadLetter struct {
+	Name  string `json:"name"`
+	Ready int    `json:"ready"`
+}
+
+// IngestQueueDepth defines model for IngestQueueDepth.
+type IngestQueueDepth struct {
+	// Consumers workers consuming the queue; 0 with a backlog means nothing is draining it
+	Consumers int `json:"consumers"`
+
+	// InFlightMax Upper bound of the batches handed to a worker and not yet acknowledged (prefetch × consumers). Absent when the worker has not reported its prefetch.
+	InFlightMax *int   `json:"in_flight_max,omitempty"`
+	Name        string `json:"name"`
+
+	// Ready batches waiting to be handed to a worker (exact)
+	Ready int `json:"ready"`
+}
+
+// IngestStatus A snapshot of the ingest pipeline. Each block is present only when it was actually measured — see the description of GET /ingest/status.
+type IngestStatus struct {
+	// BrokerError why the broker could not be asked (only when `broker_reachable` is false)
+	BrokerError *string `json:"broker_error,omitempty"`
+
+	// BrokerReachable false → RabbitMQ could not be asked; `queue` and `dead_letter` are absent
+	BrokerReachable bool `json:"broker_reachable"`
+
+	// CheckedAt when the API took this snapshot
+	CheckedAt time.Time `json:"checked_at"`
+
+	// DeadLetter Batches the worker gave up on. They are NOT written to the database and nothing retries them — a non-zero count needs action (docs: dashboard → Ingest queue).
+	DeadLetter *IngestDeadLetter `json:"dead_letter,omitempty"`
+
+	// EtaSeconds An ESTIMATE of how long the current backlog takes to drain at the recent rate. Absent when there is no backlog, no consumer, or no batch was processed in the window.
+	EtaSeconds *int              `json:"eta_seconds,omitempty"`
+	Queue      *IngestQueueDepth `json:"queue,omitempty"`
+
+	// StatsReachable false → the worker's counters (in Redis) could not be read; `worker` and `throughput` are absent
+	StatsReachable bool `json:"stats_reachable"`
+
+	// Throughput Batches finished in the recent window. The window is the last 10 minutes, cut short to the worker's start if it started later — a worker that has run for two minutes is measured over two minutes.
+	Throughput *IngestThroughput `json:"throughput,omitempty"`
+
+	// Worker What the worker reported about itself. Absent if no worker has ever started with this version.
+	Worker *IngestWorkerStats `json:"worker,omitempty"`
+}
+
+// IngestThroughput Batches finished in the recent window. The window is the last 10 minutes, cut short to the worker's start if it started later — a worker that has run for two minutes is measured over two minutes.
+type IngestThroughput struct {
+	Batches int `json:"batches"`
+
+	// BatchesPerMinute absent when the window is empty
+	BatchesPerMinute *float32 `json:"batches_per_minute,omitempty"`
+
+	// Failed batches dead-lettered in the window
+	Failed int `json:"failed"`
+	Items  int `json:"items"`
+
+	// ItemsPerMinute absent when the window is empty
+	ItemsPerMinute *float32 `json:"items_per_minute,omitempty"`
+	WindowSeconds  int      `json:"window_seconds"`
+}
+
+// IngestWorkerStats What the worker reported about itself. Absent if no worker has ever started with this version.
+type IngestWorkerStats struct {
+	// BatchesSinceStart written successfully since `started_at`
+	BatchesSinceStart *int `json:"batches_since_start,omitempty"`
+
+	// FailedSinceStart batches dead-lettered since `started_at`
+	FailedSinceStart *int `json:"failed_since_start,omitempty"`
+
+	// ItemsSinceStart items in those batches (samples + workouts + sleep segments + activity summaries + deletions) — received, not necessarily new
+	ItemsSinceStart *int `json:"items_since_start,omitempty"`
+
+	// LastBatchAt absent until the worker has finished a batch
+	LastBatchAt *time.Time `json:"last_batch_at,omitempty"`
+	Prefetch    *int       `json:"prefetch,omitempty"`
+	StartedAt   *time.Time `json:"started_at,omitempty"`
+}
+
 // Insight defines model for Insight.
 type Insight struct {
 	// Detail The longer form of `title`, and a fallback in exactly the same sense.
@@ -1012,7 +1092,7 @@ type Insight struct {
 	Title *string `json:"title,omitempty"`
 
 	// Values **The numbers the rule computed — this is the payload.** The server sends DATA, not sentences: the client composes the wording from `rule` and these values, in its own language and with its own number formatting.
-	// The keys are per rule and are pinned by the shared vectors (`docs/api/insight-vectors.md`), so a threshold that quietly drifts fails a test rather than merely reading differently. Directions are encoded as `+1` / `-1` (`direction`), never as a word — a word is language.
+	// The keys are per rule and are pinned by the shared vectors (`docs/api/insight-vectors.md`), so a threshold that quietly drifts fails a test rather than merely reading differently. Directions are encoded as `+1` / `-1` never as a word — a word is language. ⚠️ There is no `direction` key: the spec used to describe one (`+1`/`-1`) and nothing has ever sent it. A trend's direction is the SIGN of `changePct`, which is how `docs/api/insight-vectors.md` describes it and how every client reads it.
 	Values *map[string]float64 `json:"values,omitempty"`
 }
 
@@ -1386,7 +1466,7 @@ type ServerInterface interface {
 	// Activity rings (Move/Exercise/Stand), daily value + goal
 	// (GET /activity)
 	GetActivity(w http.ResponseWriter, r *http.Request, params GetActivityParams)
-	// Sign out (revoke the refresh token)
+	// End this device's session — the token on the request stops working
 	// (POST /auth/logout)
 	PostAuthLogout(w http.ResponseWriter, r *http.Request)
 	// Refresh the access token with a refresh token
@@ -1425,6 +1505,9 @@ type ServerInterface interface {
 	// HealthKit chunk upload (samples + workouts + activity summaries + deletions)
 	// (POST /ingest)
 	PostIngest(w http.ResponseWriter, r *http.Request)
+	// Ingest queue status — the backlog, its drain rate, and whether a worker is consuming
+	// (GET /ingest/status)
+	GetIngestStatus(w http.ResponseWriter, r *http.Request)
 	// Rule-based insights / anomalies
 	// (GET /insights)
 	GetInsights(w http.ResponseWriter, r *http.Request)
@@ -1488,7 +1571,7 @@ func (_ Unimplemented) GetActivity(w http.ResponseWriter, r *http.Request, param
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Sign out (revoke the refresh token)
+// End this device's session — the token on the request stops working
 // (POST /auth/logout)
 func (_ Unimplemented) PostAuthLogout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -1563,6 +1646,12 @@ func (_ Unimplemented) GetHealthz(w http.ResponseWriter, r *http.Request) {
 // HealthKit chunk upload (samples + workouts + activity summaries + deletions)
 // (POST /ingest)
 func (_ Unimplemented) PostIngest(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ingest queue status — the backlog, its drain rate, and whether a worker is consuming
+// (GET /ingest/status)
+func (_ Unimplemented) GetIngestStatus(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2170,6 +2259,26 @@ func (siw *ServerInterfaceWrapper) PostIngest(w http.ResponseWriter, r *http.Req
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostIngest(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetIngestStatus operation middleware
+func (siw *ServerInterfaceWrapper) GetIngestStatus(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetIngestStatus(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2836,6 +2945,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/ingest", wrapper.PostIngest)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/ingest/status", wrapper.GetIngestStatus)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/insights", wrapper.GetInsights)

@@ -113,6 +113,12 @@ type Counts struct {
 	BatchID uuid.UUID
 }
 
+// Items is the batch's size as the status page counts it: every kind added up.
+// Route points travel inside their workout and are not counted separately.
+func (c Counts) Items() int {
+	return c.Samples + c.Workouts + c.SleepSegments + c.ActivitySummaries + c.Deletions
+}
+
 func Process(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, body []byte) (Counts, error) {
 	var counts Counts
 	var msg Message
