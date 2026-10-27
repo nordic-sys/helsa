@@ -71,56 +71,66 @@ export function MetricPicker({ value, onChange, availability }: Props) {
 
   return (
     <div className="picker">
-      <div className="picker-toolbar">
+      <label className="picker-search">
+        <span>{t('picker.searchLabel', { n: METRIC_LIST.length })}</span>
         <input
           className="field"
           type="search"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder={t('picker.search', { n: METRIC_LIST.length })}
+          placeholder={t('picker.placeholder')}
           aria-label={t('picker.searchAria')}
         />
-        <button
-          className="seg"
-          aria-pressed={filterByData}
-          onClick={() => setOnlyWithData((v) => !v)}
-          title={t('picker.onlyWithDataTitle')}
-        >
+      </label>
+
+      {/* A real checkbox: "only those with data" is on or off, and a checkbox is
+          the control that says so without being learned. */}
+      <label className="picker-check" title={t('picker.onlyWithDataTitle')}>
+        <input
+          type="checkbox"
+          checked={filterByData}
+          disabled={availability.known && availability.count === 0}
+          onChange={() => setOnlyWithData((v) => !v)}
+        />
+        <span>
           {t('picker.onlyWithData')}
           {availability.known ? ` (${availability.count})` : availability.isLoading ? ' …' : ''}
-        </button>
-      </div>
+        </span>
+      </label>
 
-      <div className="picker-toolbar">
-        <button className="seg" aria-pressed={group === 'all'} onClick={() => setGroup('all')}>
-          {t('picker.all')}
-        </button>
-        {METRIC_GROUPS.map((g) => (
-          <button
-            key={g.key}
-            className="seg"
-            aria-pressed={group === g.key}
-            onClick={() => setGroup(g.key)}
-          >
-            {tGroup(g.key)}
-          </button>
-        ))}
-      </div>
+      {/* The group filter, kept — as one dropdown rather than ten chips, which
+          is what lets the picker live in a side panel. */}
+      <label className="picker-groups">
+        <span className="sr-only">{t('picker.groupLabel')}</span>
+        <select
+          className="field"
+          value={group}
+          onChange={(e) => setGroup(e.target.value as MetricGroupKey | 'all')}
+        >
+          <option value="all">{t('picker.all')}</option>
+          {METRIC_GROUPS.map((g) => (
+            <option key={g.key} value={g.key}>
+              {tGroup(g.key)}
+            </option>
+          ))}
+        </select>
+      </label>
 
       {visible.length === 0 ? (
-        <p className="subtle" style={{ margin: '4px 0 0' }}>
-          {t('picker.noMatch')}
-        </p>
+        <p className="subtle picker-foot">{t('picker.noMatch')}</p>
       ) : (
         <div className="picker-list" role="group" aria-label={t('picker.listAria')}>
           {grouped.map(({ group: g, items }) => (
             <div key={g.key}>
-              <div className="picker-group">{tGroup(g.key)}</div>
+              <div className="picker-group" aria-hidden="true">
+                {tGroup(g.key)}
+              </div>
               {items.map((d) => {
                 const has = availability.has(d.key)
                 return (
                   <button
                     key={d.key}
+                    type="button"
                     className={`picker-item${has || !availability.known ? '' : ' dim'}`}
                     aria-pressed={d.key === value}
                     onClick={() => onChange(d.key)}
@@ -142,7 +152,7 @@ export function MetricPicker({ value, onChange, availability }: Props) {
 
       {/* The footnote is a sentence with the two aggregation glyphs embedded in
           it, so it goes through tx() rather than t(). */}
-      <p className="subtle" style={{ margin: '10px 0 0' }}>
+      <p className="subtle picker-foot">
         {tx('picker.selected', {
           name: <strong>{tMetric(value)}</strong>,
           sum: <span aria-hidden="true">Σ</span>,

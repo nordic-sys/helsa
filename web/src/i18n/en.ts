@@ -784,6 +784,20 @@ export const en: Dict = {
     'today.sync.stuck.one': '{n} part is waiting, and nothing is moving',
     'today.sync.stuck.other': '{n} parts are waiting, and nothing is moving',
     'today.sync.allWritten': 'Everything it sent is in the database.',
+
+    // --- Trends: the redesigned chart card -------------------------------------
+    'trends.periodAria': 'Period',
+    'trends.total': 'Total',
+    'trends.perDay': 'A day · over {n} measured days',
+    'trends.perMonth': 'A month · over {n} measured months',
+    'trends.legend.usualRange': 'your usual range',
+    'trends.legend.average': 'your average',
+    'trends.sources.title': 'Where these numbers come from',
+    'trends.sources.body':
+      'When more than one device or app recorded the same hour, that hour counts once: the largest of them wins. The Health app merges sources more finely, so the server can read a little above what the phone shows.',
+    'picker.searchLabel': 'Search {n} measurements',
+    'picker.groupLabel': 'Group',
+    'picker.placeholder': 'Steps, heart rate…',
   },
 
   // --- Metric group names ---------------------------------------------------

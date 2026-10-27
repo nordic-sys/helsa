@@ -777,6 +777,20 @@ export const hu = {
     'today.sync.stuck.one': '{n} rész vár, és semmi nem halad',
     'today.sync.stuck.other': '{n} rész vár, és semmi nem halad',
     'today.sync.allWritten': 'Minden, amit küldött, bekerült az adatbázisba.',
+
+    // --- Trends: the redesigned chart card -------------------------------------
+    'trends.periodAria': 'Időszak',
+    'trends.total': 'Összesen',
+    'trends.perDay': 'Naponta · {n} mért nap átlaga',
+    'trends.perMonth': 'Havonta · {n} mért hónap átlaga',
+    'trends.legend.usualRange': 'a szokásos tartományod',
+    'trends.legend.average': 'az átlagod',
+    'trends.sources.title': 'Honnan jönnek ezek a számok',
+    'trends.sources.body':
+      'Ha ugyanazt az órát több eszköz vagy app is rögzítette, az az óra egyszer számít: a legnagyobb érték nyer. Az Egészség app finomabban fésüli össze a forrásokat, ezért a szerver kicsivel többet mutathat, mint a telefon.',
+    'picker.searchLabel': 'Keresés {n} mérés között',
+    'picker.groupLabel': 'Csoport',
+    'picker.placeholder': 'Lépés, pulzus…',
   },
 
   // --- Metric group names ---------------------------------------------------

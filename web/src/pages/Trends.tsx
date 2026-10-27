@@ -1,12 +1,15 @@
 import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
   Area,
   Bar,
   CartesianGrid,
   ComposedChart,
+  LabelList,
   Line,
   ReferenceArea,
+  ReferenceLine,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -16,12 +19,12 @@ import { api, browserTz } from '../api/client'
 import type { BaselineRange, Range } from '../api/types'
 import { MetricPicker } from '../components/MetricPicker'
 import { PeriodStepper } from '../components/PeriodStepper'
-import { Card, Empty, ErrorState, Loading, Note } from '../components/ui'
+import { Card, Empty, ErrorState, Loading, Note, PageHead } from '../components/ui'
 import { useI18n } from '../i18n'
 import type { UiKey } from '../i18n'
 import { STANDING_ARROW, bandOf, pickBaseline } from '../lib/baseline'
 import { useFormat, type Formatters } from '../lib/format'
-import { metricDef, pickSeries, readSeries } from '../lib/metrics'
+import { METRIC_LIST, metricDef, pickSeries, readSeries } from '../lib/metrics'
 import { useAvailability } from '../lib/useAvailability'
 import {
   bucketKey,
@@ -109,7 +112,25 @@ export default function Trends() {
    * near September".
    */
   const [kind, setKind] = useState<WindowKind>('rolling')
-  const [metric, setMetric] = useState('stepCount')
+  // The metric can arrive in the URL — the Today page's tiles open Trends on
+  // their own metric — and the choice is written back, so a chart is a link.
+  // An unknown name falls back to steps rather than drawing a blank chart.
+  const [params, setParams] = useSearchParams()
+  const fromUrl = params.get('metric')
+  const [metric, setMetricState] = useState(
+    fromUrl && METRIC_LIST.some((d) => d.key === fromUrl) ? fromUrl : 'stepCount',
+  )
+  function setMetric(key: string) {
+    setMetricState(key)
+    setParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.set('metric', key)
+        return next
+      },
+      { replace: true },
+    )
+  }
   const availability = useAvailability()
   const { t, tx, tMetric, locale } = useI18n()
   const f = useFormat()
@@ -305,289 +326,412 @@ export default function Trends() {
   const delta = r.total != null && previous.total != null ? r.total - previous.total : null
   const ratio = delta != null && previous.total ? delta / previous.total : null
 
+  /**
+   * The second headline figure beside the total.
+   *
+   * For a summed metric over daily buckets (week, month) it is the average of
+   * the days that CARRIED a measurement — named as such, because dividing by the
+   * window's length would count an unsynced day as a day of sitting still. Over
+   * monthly buckets (year) it is per month, and over hourly ones (day) there is
+   * no second figure: the total is the day.
+   */
+  const measured = data.filter((d) => d.value != null).length
+  const perBucket =
+    r.effectiveAgg === 'sum' && r.total != null && measured > 0 && drawnRange !== 'day'
+      ? r.total / measured
+      : null
+
+  // Values printed on the bars only when there is room for them to be read.
+  const labelBars = r.effectiveAgg === 'sum' && data.length <= 14
+
   return (
     <>
-      <h1>{t('trends.title')}</h1>
-      <p className="subtle">{t('trends.subtitle')}</p>
-
-      <div className="controls">
-        {RANGES.map((x) => (
-          <button
-            key={x.key}
-            className="seg"
-            aria-pressed={range === x.key}
-            onClick={() => selectRange(x.key)}
-          >
-            {t(x.label)}
-          </button>
-        ))}
-      </div>
-
-      {/* Above the error and empty branches on purpose: a window with nothing in
-          it is exactly the window you need to be able to step out of. */}
-      <PeriodStepper
-        window={drawnWin}
-        range={drawnRange}
-        canStepForward={canStepForward}
-        isBrowsing={isBrowsing}
-        onBack={() => setOffset((o) => o - 1)}
-        onForward={() => setOffset((o) => Math.min(o + 1, 0))}
-        onNow={returnToPresent}
+      <PageHead
+        title={t('trends.title')}
+        subtitle={t('trends.subtitle')}
+        aside={
+          <div className="segmented" role="group" aria-label={t('trends.periodAria')}>
+            {RANGES.map((x) => (
+              <button
+                key={x.key}
+                type="button"
+                className="seg"
+                aria-pressed={range === x.key}
+                onClick={() => selectRange(x.key)}
+              >
+                {t(x.label)}
+              </button>
+            ))}
+          </div>
+        }
       />
 
-      <div style={{ marginBottom: 16 }}>
-        <Card title={t('trends.metric')}>
+      <div className="trends-layout">
+        <aside className="card picker-panel" aria-label={t('trends.metric')}>
           <MetricPicker value={metric} onChange={setMetric} availability={availability} />
-        </Card>
-      </div>
+        </aside>
 
-      {r.degraded && (
-        <Note title={t('trends.degraded.title')}>
-          {tx('trends.degraded.body', {
-            metric: <code>{drawnDef.key}</code>,
-            file: <code>internal/summary/summary.go</code>,
-          })}
-        </Note>
-      )}
-
-      {q.isLoading ? (
-        <Loading rows={1} />
-      ) : q.isError ? (
-        <ErrorState error={q.error} />
-      ) : !r.hasData ? (
-        <Empty
-          title={t('trends.empty.title', { metric: label })}
-          hint={
-            availability.has(drawnDef.key)
-              ? t('trends.empty.hintElsewhere')
-              : t('trends.empty.hintNever')
-          }
-        />
-      ) : (
-        <Card title={`${label}${unit ? ` (${unit})` : ''}`}>
-          {/* Wide by nature, and tall in proportion: `.chart`'s height follows
-              the window, so a desktop gets a chart worth the room rather than a
-              laptop's chart with air under it. */}
-          <div
-            className="chart"
-            style={{
-              cursor: canDrill ? 'pointer' : 'default',
-              // A load is in flight and the chart below is still the previous
-              // window's. Fading it says so without blanking the page.
-              opacity: q.isFetching ? 0.55 : 1,
-              transition: 'opacity 120ms linear',
-            }}
-          >
-            <ResponsiveContainer>
-              <ComposedChart
-                data={data}
-                margin={{ top: 8, right: 12, bottom: 4, left: -8 }}
-                onClick={
-                  canDrill
-                    ? (state: unknown) => {
-                        const ms = tappedBucket(state)
-                        if (ms != null) drillDown(new Date(ms))
-                      }
-                    : undefined
-                }
-              >
-                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
-                {band && (
-                  // The furthest back layer, so that everything else is read THROUGH
-                  // it: the band is a property of the person, not of any particular
-                  // day, which is why it has no x extent and spans the whole plot.
-                  //
-                  // `extendDomain` because the axis has to make room for it — a band
-                  // clipped at the top of the chart would say the period sat inside a
-                  // range it never reached. Swift Charts does the same on its own, by
-                  // letting the rectangle mark take part in the automatic y scale.
-                  //
-                  // ⚠️ The axis ids are spelled out because recharts' own defaults for
-                  // them do not survive this React version, and the domain-extending
-                  // pass matches reference elements BY axis id
-                  // (`detectReferenceElementsDomain`). Without them the band drew
-                  // fine and silently failed to widen the axis — the one failure
-                  // shape a green test suite cannot see.
-                  <ReferenceArea
-                    y1={band.low}
-                    y2={band.high}
-                    xAxisId={0}
-                    yAxisId={0}
-                    ifOverflow="extendDomain"
-                    stroke="none"
-                    fill={drawnDef.color}
-                    fillOpacity={0.1}
-                    isFront={false}
-                  />
-                )}
-                <XAxis
-                  dataKey="t"
-                  tick={{ fill: 'var(--text-dim)', fontSize: 12 }}
-                  stroke="var(--border)"
-                  ticks={xTicks}
-                  // `interval={0}` so recharts prints the labels we chose rather
-                  // than thinning them a second time.
-                  interval={0}
-                  tickFormatter={(v: string) => tickLabel(v, drawnRange, f)}
-                />
-                <YAxis
-                  tick={{ fill: 'var(--text-dim)', fontSize: 12 }}
-                  stroke="var(--border)"
-                  width={yAxisWidth}
-                  tickFormatter={(v: number) => f.fmt(v, drawnDef.digits)}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: 'var(--surface)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 10,
-                    color: 'var(--text)',
-                  }}
-                  labelStyle={{ color: 'var(--text-dim)' }}
-                  labelFormatter={(v: string) => tickLabel(v, drawnRange, f)}
-                  formatter={(v: number | number[], name: string) => {
-                    if (Array.isArray(v)) {
-                      return [
-                        `${f.fmt(v[0], drawnDef.digits)} – ${f.fmt(v[1], drawnDef.digits)}`,
-                        t('trends.extremes'),
-                      ]
-                    }
-                    return [`${f.fmt(v, drawnDef.digits)} ${unit}`.trim(), name]
-                  }}
-                />
-                {showBand && (
-                  <Area
-                    dataKey="band"
-                    name={t('trends.extremes')}
-                    stroke="none"
-                    fill={drawnDef.color}
-                    fillOpacity={0.13}
-                    isAnimationActive={false}
-                    connectNulls
-                  />
-                )}
-                {r.effectiveAgg === 'sum' ? (
-                  // Discrete per-period totals → bars; a continuous measurement → a line.
-                  <Bar
-                    dataKey="value"
-                    name={label}
-                    fill={drawnDef.color}
-                    radius={[4, 4, 0, 0]}
-                    maxBarSize={34}
-                    isAnimationActive={false}
-                  />
-                ) : (
-                  <Line
-                    type="monotone"
-                    dataKey="value"
-                    name={label}
-                    stroke={drawnDef.color}
-                    strokeWidth={2}
-                    dot={false}
-                    activeDot={{ r: 4 }}
-                    isAnimationActive={false}
-                    connectNulls
-                  />
-                )}
-              </ComposedChart>
-            </ResponsiveContainer>
-          </div>
-          {r.total != null && (
-            <p className="subtle" style={{ margin: '10px 0 0' }}>
-              {r.effectiveAgg === 'avg' ? t('trends.periodAverage') : t('trends.periodTotal')}:{' '}
-              <strong>{f.fmt(r.total, drawnDef.digits)}</strong> {unit}
-              {showBand && ` ${t('trends.bandNote')}`}
-            </p>
-          )}
-
-          {/* The chart is the only thing that can be tapped to drill, and a
-              gesture nothing announces is a gesture nobody finds. */}
-          {drillHint && (
-            <p className="subtle" style={{ margin: '4px 0 0' }}>
-              {t(drillHint)}
-            </p>
-          )}
-
-          {/* Where this period stands against the person's own usual.
-              ⚠️ No colour, and the arrow only repeats the words. The direction is a
-              fact; whether it is welcome is not something this screen can know —
-              more steps than usual is probably good, a higher resting heart rate
-              than usual probably is not, and we have no idea which the reader is
-              after. The number of reference days is named on purpose: a band
-              resting on 14 days and one resting on 60 are not equally strong
-              claims, and the reader is entitled to tell them apart. */}
-          {band && usual?.standing && (
-            <p style={{ margin: '8px 0 0', display: 'flex', alignItems: 'baseline', gap: 6 }}>
-              <span aria-hidden="true" className="subtle">
-                {STANDING_ARROW[usual.standing]}
-              </span>
-              <strong>{t(`trends.standing.${usual.standing}`)}</strong>
-            </p>
-          )}
-
-          {/* What the pale rectangle is, and how many days it rests on. */}
-          {band && usual?.day_count != null && (
-            <p className="subtle" style={{ margin: '4px 0 0' }}>
-              {t('trends.usual.band', { days: usual.day_count })}
-            </p>
-          )}
-
-          {/* ⚠️ And when there is not enough yet, SAY so. A band that quietly fails
-              to appear looks like a band that does not exist for this metric. */}
-          {drawn?.usual && !band && drawn.baseline?.min_days != null && (
-            <p className="subtle" style={{ margin: '8px 0 0' }}>
-              {t('trends.usual.pending', {
-                days: usual?.day_count ?? 0,
-                min: drawn.baseline.min_days,
+        <div className="sections" style={{ minWidth: 0 }}>
+          {r.degraded && (
+            <Note title={t('trends.degraded.title')}>
+              {tx('trends.degraded.body', {
+                metric: <code>{drawnDef.key}</code>,
+                file: <code>internal/summary/summary.go</code>,
               })}
-            </p>
+            </Note>
           )}
-        </Card>
-      )}
 
-      {/* The comparison, and — when the period is still running — what it was
-          measured against. ⚠️ A missing previous period is not "−100%": it is
-          two windows, one of which we know nothing about. */}
-      {drawn && r.hasData && (
-        <div style={{ marginTop: 16 }}>
-          <Card title={t('trends.compare.title')}>
-            {delta == null ? (
-              <p className="subtle" style={{ margin: 0 }}>
-                {t('trends.compare.none')}
-              </p>
+          <section className="card" aria-label={`${label}${unit ? ` (${unit})` : ''}`}>
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 12,
+                marginBottom: 16,
+              }}
+            >
+              {/* Above the error and empty branches on purpose: a window with
+                  nothing in it is exactly the window you need to step out of. */}
+              <PeriodStepper
+                window={drawnWin}
+                range={drawnRange}
+                canStepForward={canStepForward}
+                isBrowsing={isBrowsing}
+                onBack={() => setOffset((o) => o - 1)}
+                onForward={() => setOffset((o) => Math.min(o + 1, 0))}
+                onNow={returnToPresent}
+              />
+              {r.hasData && r.total != null && (
+                <div style={{ display: 'flex', gap: 28, textAlign: 'right', flexWrap: 'wrap' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column' }}>
+                    <span className="stat-note">
+                      {r.effectiveAgg === 'avg' ? t('trends.periodAverage') : t('trends.total')}
+                    </span>
+                    <span className="figure" style={{ justifyContent: 'flex-end' }}>
+                      {f.fmt(r.total, drawnDef.digits)}
+                      {unit && <small style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-dim)' }}>{unit}</small>}
+                    </span>
+                  </div>
+                  {perBucket != null && (
+                    <div style={{ display: 'flex', flexDirection: 'column' }}>
+                      <span className="stat-note">
+                        {drawnRange === 'year'
+                          ? t('trends.perMonth', { n: measured })
+                          : t('trends.perDay', { n: measured })}
+                      </span>
+                      <span className="figure" style={{ justifyContent: 'flex-end' }}>
+                        {f.fmt(perBucket, drawnDef.digits)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {q.isLoading ? (
+              <Loading rows={1} />
+            ) : q.isError ? (
+              <ErrorState error={q.error} />
+            ) : !r.hasData ? (
+              <Empty
+                title={t('trends.empty.title', { metric: label })}
+                hint={
+                  availability.has(drawnDef.key)
+                    ? t('trends.empty.hintElsewhere')
+                    : t('trends.empty.hintNever')
+                }
+              />
             ) : (
               <>
-                <p style={{ margin: 0, display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                  <strong style={{ fontSize: 20 }}>
-                    {delta === 0
-                      ? t('trends.compare.unchanged')
-                      : `${signed(delta, drawnDef.digits, f)} ${unit}`.trim()}
-                  </strong>
-                  {ratio != null && delta !== 0 && (
-                    <span className="subtle" style={{ margin: 0 }}>
-                      {signedPercent(ratio)}
+                <h2 className="card-title" style={{ marginBottom: 8 }}>
+                  {label}
+                  {unit ? ` (${unit})` : ''}
+                </h2>
+                {/* Wide by nature, and tall in proportion: `.chart`'s height
+                    follows the window. */}
+                <div
+                  className="chart"
+                  style={{
+                    cursor: canDrill ? 'pointer' : 'default',
+                    // A load is in flight and the chart is still the previous
+                    // window's. Fading it says so without blanking the page.
+                    opacity: q.isFetching ? 0.55 : 1,
+                    transition: 'opacity 120ms linear',
+                  }}
+                >
+                  <ResponsiveContainer>
+                    <ComposedChart
+                      data={data}
+                      margin={{ top: labelBars ? 22 : 8, right: 12, bottom: 4, left: -8 }}
+                      onClick={
+                        canDrill
+                          ? (state: unknown) => {
+                              const ms = tappedBucket(state)
+                              if (ms != null) drillDown(new Date(ms))
+                            }
+                          : undefined
+                      }
+                    >
+                      <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                      {band && (
+                        // The furthest back layer: the band is a property of the
+                        // person, not of any day, so it spans the whole plot.
+                        // `extendDomain` so a band is never clipped at the top.
+                        // ⚠️ The axis ids are spelled out because recharts'
+                        // defaults do not survive this React version, and the
+                        // domain pass matches reference elements BY axis id.
+                        <ReferenceArea
+                          y1={band.low}
+                          y2={band.high}
+                          xAxisId={0}
+                          yAxisId={0}
+                          ifOverflow="extendDomain"
+                          stroke="none"
+                          fill={drawnDef.color}
+                          fillOpacity={0.12}
+                          isFront={false}
+                        />
+                      )}
+                      {band && usual?.mean != null && (
+                        // The middle of the band. ⚠️ The server sends a MEAN, not
+                        // a median, and the legend says "your average" for that
+                        // reason — a line labelled "median" would be a claim
+                        // about a number we do not have.
+                        <ReferenceLine
+                          y={usual.mean}
+                          xAxisId={0}
+                          yAxisId={0}
+                          stroke={drawnDef.color}
+                          strokeDasharray="6 4"
+                          strokeWidth={2}
+                          strokeOpacity={0.7}
+                          ifOverflow="extendDomain"
+                        />
+                      )}
+                      <XAxis
+                        dataKey="t"
+                        tick={{ fill: 'var(--text-faint)', fontSize: 12 }}
+                        stroke="var(--border)"
+                        ticks={xTicks}
+                        // `interval={0}` so recharts prints the labels we chose
+                        // rather than thinning them a second time.
+                        interval={0}
+                        tickFormatter={(v: string) => tickLabel(v, drawnRange, f)}
+                      />
+                      <YAxis
+                        tick={{ fill: 'var(--text-faint)', fontSize: 12 }}
+                        stroke="var(--border)"
+                        width={yAxisWidth}
+                        tickFormatter={(v: number) => f.fmt(v, drawnDef.digits)}
+                      />
+                      <Tooltip
+                        cursor={{ fill: 'var(--surface-2)' }}
+                        contentStyle={{
+                          background: 'var(--surface)',
+                          border: '1px solid var(--border)',
+                          borderRadius: 10,
+                          color: 'var(--text)',
+                        }}
+                        labelStyle={{ color: 'var(--text-dim)' }}
+                        labelFormatter={(v: string) => tickLabel(v, drawnRange, f)}
+                        formatter={(v: number | number[], name: string) => {
+                          if (Array.isArray(v)) {
+                            return [
+                              `${f.fmt(v[0], drawnDef.digits)} – ${f.fmt(v[1], drawnDef.digits)}`,
+                              t('trends.extremes'),
+                            ]
+                          }
+                          return [`${f.fmt(v, drawnDef.digits)} ${unit}`.trim(), name]
+                        }}
+                      />
+                      {showBand && (
+                        <Area
+                          dataKey="band"
+                          name={t('trends.extremes')}
+                          stroke="none"
+                          fill={drawnDef.color}
+                          fillOpacity={0.13}
+                          isAnimationActive={false}
+                          connectNulls
+                        />
+                      )}
+                      {r.effectiveAgg === 'sum' ? (
+                        // Discrete per-period totals → bars.
+                        <Bar
+                          dataKey="value"
+                          name={label}
+                          fill={drawnDef.color}
+                          radius={[8, 8, 3, 3]}
+                          maxBarSize={64}
+                          isAnimationActive={false}
+                        >
+                          {labelBars && (
+                            <LabelList
+                              dataKey="value"
+                              position="top"
+                              fill="var(--text-2)"
+                              fontSize={12}
+                              fontWeight={600}
+                              // A bucket with nothing in it gets no label — not "0".
+                              formatter={(v: number | null) =>
+                                v == null ? '' : f.fmt(v, drawnDef.digits)
+                              }
+                            />
+                          )}
+                        </Bar>
+                      ) : (
+                        // A continuous measurement → a line.
+                        <Line
+                          type="monotone"
+                          dataKey="value"
+                          name={label}
+                          stroke={drawnDef.color}
+                          strokeWidth={2}
+                          dot={false}
+                          activeDot={{ r: 4 }}
+                          isAnimationActive={false}
+                          connectNulls
+                        />
+                      )}
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+
+                {/* Where this period stands against the person's own usual, and
+                    what the pale band and the dashed line are.
+                    ⚠️ No colour on the standing, and the arrow only repeats the
+                    words: the direction is a fact, whether it is welcome is not
+                    something this screen can know. */}
+                <div className="legend" style={{ alignItems: 'center' }}>
+                  {band && usual?.standing && (
+                    <span style={{ display: 'flex', alignItems: 'baseline', gap: 6, fontSize: 17 }}>
+                      <span aria-hidden="true" className="subtle" style={{ margin: 0, fontSize: 17 }}>
+                        {STANDING_ARROW[usual.standing]}
+                      </span>
+                      <strong>{t(`trends.standing.${usual.standing}`)}</strong>
                     </span>
                   )}
-                </p>
-                <p className="subtle" style={{ margin: '6px 0 0' }}>
-                  {t('trends.compare.previous', {
-                    dates: windowDates(drawn.prev, drawn.range, locale),
-                    value: `${f.fmt(previous.total, drawnDef.digits)} ${unit}`.trim(),
-                  })}
-                </p>
+                  {/* How many days the band rests on: 14 and 60 are not equally
+                      strong claims. */}
+                  {band && usual?.day_count != null && (
+                    <span className="legend-item" style={{ fontSize: 14 }}>
+                      {t('trends.usual.band', { days: usual.day_count })}
+                    </span>
+                  )}
+                  {band && (
+                    <span className="legend-item">
+                      <span
+                        className="swatch"
+                        aria-hidden="true"
+                        style={{ width: 16, background: drawnDef.color, opacity: 0.25 }}
+                      />
+                      {t('trends.legend.usualRange')}
+                    </span>
+                  )}
+                  {band && usual?.mean != null && (
+                    <span className="legend-item">
+                      <span className="swatch-line" aria-hidden="true" style={{ color: drawnDef.color }} />
+                      {t('trends.legend.average')}
+                    </span>
+                  )}
+                  {showBand && (
+                    <span className="legend-item">{t('trends.bandNote').replace(/^·\s*/, '')}</span>
+                  )}
+                </div>
+
+                {/* ⚠️ When there is not enough yet, SAY so. A band that quietly
+                    fails to appear looks like a band that does not exist. */}
+                {drawn?.usual && !band && drawn.baseline?.min_days != null && (
+                  <p className="subtle" style={{ margin: '8px 0 0' }}>
+                    {t('trends.usual.pending', {
+                      days: usual?.day_count ?? 0,
+                      min: drawn.baseline.min_days,
+                    })}
+                  </p>
+                )}
+
+                {/* The chart is the only thing that can be clicked to drill,
+                    and a gesture nothing announces is a gesture nobody finds. */}
+                {drillHint && (
+                  <p className="subtle" style={{ margin: '8px 0 0' }}>
+                    {t(drillHint)}
+                  </p>
+                )}
               </>
             )}
-            {/* ⚠️ The bill a calendar period comes with, paid here rather than
-                left to the reader: this month on the 3rd is three days, and its
-                total beside last month's whole one would read as a collapse. */}
-            {drawnWin.isPartial && (
-              <p className="subtle" style={{ margin: '6px 0 0' }}>
-                {t('trends.compare.clipped', { days: dayCount(drawnWin) })}
-              </p>
-            )}
-          </Card>
+          </section>
+
+          {drawn && r.hasData && (
+            <div className="grid grid-2">
+              {/* The comparison. ⚠️ A missing previous period is not "−100%":
+                  it is two windows, one of which we know nothing about. */}
+              <Card title={t('trends.compare.title')}>
+                {delta == null ? (
+                  <p className="subtle" style={{ margin: 0 }}>
+                    {t('trends.compare.none')}
+                  </p>
+                ) : (
+                  <>
+                    <p className="figure" style={{ margin: '0 0 6px' }}>
+                      {delta !== 0 && <DeltaArrow up={delta > 0} />}
+                      {delta === 0
+                        ? t('trends.compare.unchanged')
+                        : `${signed(delta, drawnDef.digits, f)} ${unit}`.trim()}
+                    </p>
+                    <p style={{ margin: 0, fontSize: 14, color: 'var(--text-2)' }}>
+                      {ratio != null && delta !== 0 && `${signedPercent(ratio)} · `}
+                      {t('trends.compare.previous', {
+                        dates: windowDates(drawn.prev, drawn.range, locale),
+                        value: `${f.fmt(previous.total, drawnDef.digits)} ${unit}`.trim(),
+                      })}
+                    </p>
+                  </>
+                )}
+                {/* ⚠️ The bill a calendar period comes with: this month on the
+                    3rd is three days, beside last month's whole one. */}
+                {drawnWin.isPartial && (
+                  <p className="subtle" style={{ margin: '6px 0 0' }}>
+                    {t('trends.compare.clipped', { days: dayCount(drawnWin) })}
+                  </p>
+                )}
+              </Card>
+
+              {/* Where the summed numbers come from. ⚠️ Generic on purpose: the
+                  summary carries no per-source breakdown, so this names no
+                  device and no app — only the rule the server applies. Averaged
+                  metrics are not merged, so they get no such card. */}
+              {r.effectiveAgg === 'sum' && (
+                <Card title={t('trends.sources.title')}>
+                  <p style={{ margin: 0, fontSize: 14, color: 'var(--text-2)' }}>
+                    {t('trends.sources.body')}
+                  </p>
+                </Card>
+              )}
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </>
+  )
+}
+
+/** The direction of a change, drawn; the sign in the number says it too. */
+function DeltaArrow({ up }: { up: boolean }) {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      aria-hidden="true"
+      focusable="false"
+    >
+      <path d={up ? 'M7 17L17 7M9 7h8v8' : 'M7 7l10 10M17 9v8H9'} />
+    </svg>
   )
 }

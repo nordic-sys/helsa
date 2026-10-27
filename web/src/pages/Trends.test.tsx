@@ -10,12 +10,16 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { BaselineResponse, SummaryResponse } from '../api/types'
+import { MemoryRouter } from 'react-router-dom'
 import { I18nProvider } from '../i18n'
 import Trends from './Trends'
 
 type SummaryArgs = [string, string[], string?, string?, string?]
 
 const calls: SummaryArgs[] = []
+
+/** What one day of a window holds — a test can make two windows differ. */
+let dayValue: (from?: string) => number = () => 10_000
 
 /** A bucket a day across whatever window was asked for, so the page has data. */
 function fakeSummary(from?: string, to?: string): SummaryResponse {
@@ -24,14 +28,14 @@ function fakeSummary(from?: string, to?: string): SummaryResponse {
     const day = new Date(`${from}T00:00:00`)
     const end = new Date(`${to}T00:00:00`)
     while (day <= end) {
-      buckets.push({ t: new Date(day).toISOString(), v: 10_000 })
+      buckets.push({ t: new Date(day).toISOString(), v: dayValue(from) })
       day.setDate(day.getDate() + 1)
     }
   }
   return {
     from,
     to,
-    metrics: { stepCount: { agg: 'sum', unit: 'count', buckets, total: buckets.length * 10_000 } },
+    metrics: { stepCount: { agg: 'sum', unit: 'count', buckets, total: buckets.length * dayValue(from) } },
   }
 }
 
@@ -46,12 +50,14 @@ vi.mock('../api/client', () => ({
   browserTz: () => 'Europe/Budapest',
 }))
 
-function show() {
+function show(path = '/trends') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>
       <I18nProvider>
-        <Trends />
+        <MemoryRouter initialEntries={[path]}>
+          <Trends />
+        </MemoryRouter>
       </I18nProvider>
     </QueryClientProvider>,
   )
@@ -67,6 +73,7 @@ function chartWindows(range: string) {
 
 beforeEach(() => {
   calls.length = 0
+  dayValue = () => 10_000
   vi.useFakeTimers({ shouldAdvanceTime: true })
   // A Thursday, so the rolling week and the calendar week are visibly different.
   vi.setSystemTime(new Date(2026, 8, 10, 12, 0, 0))
@@ -145,5 +152,52 @@ describe('the Trends period stepper', () => {
     expect(
       await screen.findByText(/The previous period \(Aug 28, 2026 – Sep 3, 2026\)/),
     ).toBeInTheDocument()
+  })
+})
+
+describe('the redesigned chart card', () => {
+  it('opens on the metric the URL names — the Today tiles link that way', async () => {
+    show('/trends?metric=activeEnergy')
+    await screen.findByText('The last 7 days')
+    await waitFor(() =>
+      expect(calls.some((c) => c[0] === 'week' && c[1][0] === 'activeEnergy')).toBe(true),
+    )
+  })
+
+  it('falls back to steps for a name it does not know', async () => {
+    show('/trends?metric=notAMetric')
+    await waitFor(() => expect(chartWindows('week').length).toBeGreaterThan(0))
+  })
+
+  it('shows the total AND the average of the measured days', async () => {
+    show()
+    // Seven days at 10,000 each.
+    expect(await screen.findByText('70,000')).toBeInTheDocument()
+    expect(screen.getByText('A day · over 7 measured days')).toBeInTheDocument()
+    expect(screen.getByText('10,000')).toBeInTheDocument()
+  })
+
+  it('headlines the change as a signed absolute delta, with the previous window under it', async () => {
+    dayValue = (from) => (from === '2026-09-04' ? 12_000 : 10_000)
+    show()
+    // 84,000 this week against 70,000 the week before.
+    expect(await screen.findByText('+14,000')).toBeInTheDocument()
+    expect(
+      screen.getByText(/^\+20% · The previous period \(Aug 28, 2026 – Sep 3, 2026\): 70,000$/),
+    ).toBeInTheDocument()
+  })
+
+  it('explains, without naming any device, how overlapping sources are counted', async () => {
+    show()
+    const title = await screen.findByText('Where these numbers come from')
+    const card = title.closest('.card') as HTMLElement
+    expect(card.textContent).toMatch(/counts once: the largest of them wins/)
+    expect(card.textContent).not.toMatch(/watch|iphone|garmin|oura/i)
+  })
+
+  it('offers the period as a segmented control with the state on the buttons', async () => {
+    show()
+    const group = await screen.findByRole('group', { name: 'Period' })
+    expect(group.querySelector('[aria-pressed="true"]')).toHaveTextContent('Week')
   })
 })
