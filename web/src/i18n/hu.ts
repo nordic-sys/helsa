@@ -965,6 +965,88 @@ export const hu = {
     'ingest.reason.raw': 'A worker üzenete',
     'ingest.reason.batch': 'Köteg: {id}',
     'ingest.reason.lastRedrive': 'Legutóbbi újrapróbálás vége: {when}, visszakerült: {moved}.',
+
+    // --- Training progress (pages/Training.tsx) -------------------------------
+    // The phone's Hungarian (HelsaKit Localizable.xcstrings) wherever the phone
+    // says the same thing; web-only lines are the ones about the server. The
+    // "Edzés-" prefix is the web's own: the phone's bare "Előrehaladás" sits
+    // inside the Workouts tab, while a sidebar entry has to say progress in WHAT.
+    'nav.training': 'Edzés-előrehaladás',
+    'training.title': 'Edzés-előrehaladás',
+    'training.subtitle':
+      'Amit az Egészség app már tud, hétről hétre megszámolva: milyen gyakran, mennyi ideig, milyen keményen. Pontszám és tanács nélkül.',
+    'training.spanAria': 'Időszak',
+    'training.span.4': '4 hét',
+    'training.span.12': '3 hónap',
+    'training.span.52': 'Év',
+    'training.step.back': 'Előző időszak',
+    'training.step.forward': 'Következő időszak',
+    'training.step.now': 'Vissza a mostanihoz',
+    'training.window.last': 'Az elmúlt {n} hét',
+    'training.window.past': '{n} hét',
+    'training.empty': 'Ebben az időszakban nem volt edzés.',
+    'training.sessions.title': 'Alkalmak',
+    'training.weeksTrained.title': 'Hetek edzéssel',
+    'training.weeksOf': '{total} hétből {active} hétben',
+    'training.perWeek': 'hetente',
+    'training.workoutIn': '{total} hétből {active} hétben volt edzés.',
+    'training.chartAria': 'Grafikon',
+    'training.chart.grid': 'Heti rács',
+    'training.chart.bars': 'Oszlopok',
+    'training.grid.aria': 'Alkalmak hetente',
+    'training.legend.rest': 'nincs edzés',
+    'training.legend.max': '4+ alkalom',
+    'training.cell.one': '{date}: {n} alkalom, {time}',
+    'training.cell.other': '{date}: {n} alkalom, {time}',
+    'training.cell.rest': '{date}: nincs edzés',
+    'training.cell.partial': '(a mostani hét, még nem ért véget)',
+    'training.week': 'A {date} kezdetű hét',
+    'training.table.summary': 'A hetek táblázatként',
+    'training.table.week': 'A hét kezdete',
+    'training.cat.strength': 'Erősítés',
+    'training.cat.cardio': 'Kardió',
+    'training.cat.other': 'Egyéb',
+    'training.typical': 'Egy szokásos hét: {sessions} alkalom, {time} ({n} hét mediánja).',
+    'training.gapRule':
+      'Az edzés nélküli hét résként marad a grafikonon, és beleszámít az átlagba. A mostani hét csak akkor számít bele, ha már véget ért. A két eszközzel rögzített edzés egynek számít.',
+    'training.time.title': 'Edzésidő',
+    'training.inTypical': 'egy szokásos héten',
+    'training.total.one': 'Összesen {time}, {n} alkalommal.',
+    'training.total.other': 'Összesen {time}, {n} alkalommal.',
+    'training.compare.same': 'Ugyanannyi, mint az előző {n} hétben.',
+    'training.compare.diff': 'Az előző {n} héthez képest: {diff}',
+    'training.rest.title': 'Leghosszabb szünet',
+    'training.rest.none': 'Nem volt edzés nélküli hét',
+    'training.rest.span.one': '{n} hét, {from} – {to}',
+    'training.rest.span.other': '{n} hét, {from} – {to}',
+    'training.rest.hint': 'Csak a lezárult hetek — a mostani hét még nem szünet.',
+    'training.types.title': 'Típus szerint',
+    'training.types.row': '{n} × · {time}',
+    'training.types.hint': 'A típust a rögzítő app adta meg. A sáv az edzésidő.',
+    'training.zone.title': '3. zóna és fölötte',
+    'training.zone.aria': 'Percek a 3. zónában és fölötte, hetente',
+    'training.zone.minutes': 'Perc',
+    'training.zone.loading': 'A szerver számolja a perceket…',
+    'training.zone.noMaximum':
+      'Az elmúlt évben kevesebb mint {n} edzés rögzített maximális pulzust, ezért a zónákat még nem lehet kiszámolni.',
+    'training.zone.method':
+      'Ez nem pontszám: azok a percek, amikor a pulzusod legalább {threshold} szívverés/perc volt. Ez 70 százaléka annak a pulzusnak ({max} szívverés/perc), amely az elmúlt év edzéseinek második legmagasabb értéke volt ({n} edzésből). Ha még sosem edzettél teljes erőből, a valódi maximumod magasabb, így itt több perc jön ki, mint ha a maximumodat laborban mérték volna.',
+    'training.zone.window':
+      'A pulzust az idő köti az edzéshez, nem egy hivatkozás: minden mérés számít, amely az edzés kezdete és vége közé esik, bármelyik eszközről. Az edzés közben mért, de hozzá nem kapcsolt érték tehát szintén beleszámít.',
+    'training.zone.unmeasured.one': '{n} edzésnél nem volt pulzusmérés, ez nem számít bele a percekbe.',
+    'training.zone.unmeasured.other': '{n} edzésnél nem volt pulzusmérés, ezek nem számítanak bele a percekbe.',
+    'training.vitals.title': 'Közben a nyugalmi pulzusod',
+    'training.vitals.rhr': 'Nyugalmi pulzus',
+    'training.vitals.hrv': 'HRV',
+    'training.vitals.start': 'Az időszak elején: {v}',
+    'training.vitals.notEnough': 'Nincs elég mérés.',
+    'training.vitals.hint':
+      'Ez minden napra megvan, az edzés nélküli heteken is, ezért itt nincs rés. Együtt mozog az edzéssel, de ebből nem következik, hogy az edzés okozta.',
+    'training.history.loading': 'Még töltődik az edzésnapló — a legrégebbi hetek még kiegészülhetnek.',
+    'training.history.capped':
+      'Az edzésnapló betöltése az időszak eleje előtt megállt, ezért a legrégebbi hetekből hiányozhatnak alkalmak.',
+    'training.source':
+      'Forrás: az edzések, a pulzus, a nyugalmi pulzus és a HRV, amit a telefon erre a szerverre küldött. Ehhez az oldalhoz semmi nem tárolódik.',
   },
 
   // --- Metric group names ---------------------------------------------------

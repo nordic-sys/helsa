@@ -60,6 +60,7 @@ import Coverage from './pages/Coverage'
 import Ingest from './pages/Ingest'
 import SettingsPage from './pages/Settings'
 import WorkoutDetail from './pages/WorkoutDetail'
+import Training from './pages/Training'
 
 export type NavGroupKey = 'longView' | 'areas' | 'status'
 
@@ -89,6 +90,14 @@ export const NAV: NavEntry[] = [
   { path: '/challenge', label: 'nav.challenge', element: <Challenge />, group: 'longView' },
 
   { path: '/workouts', label: 'nav.workouts', element: <Workouts />, group: 'areas' },
+  // Training progress sits in Areas, right under Workouts, and not in "The long
+  // view" where its subject (weeks) might seem to point. On the phone it is a
+  // section of the Workouts TAB, not a card of the long-term band: it is the
+  // workouts domain read week by week rather than entry by entry, and the
+  // reader who wants it is the one already looking at workouts. A sidebar link
+  // rather than a tab inside the Workouts page, because that page is a two-pane
+  // list + detail and a year-wide grid needs the whole column.
+  { path: '/training', label: 'nav.training', element: <Training />, group: 'areas' },
   { path: '/sleep', label: 'nav.sleep', element: <Sleep />, group: 'areas' },
   { path: '/nutrition', label: 'nav.nutrition', element: <Nutrition />, group: 'areas' },
 

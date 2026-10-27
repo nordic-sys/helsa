@@ -144,6 +144,43 @@ markers, and a scale bar. Whether a map goes behind it is
 [a setting whose default is no map](/deployment/map-tiles/), and with the
 setting off the page contacts nothing but the Helsa server.
 
+## Training progress
+
+The phone's progress screen, counted the same way: how often, how long and how
+hard you trained, week by week, over 4 weeks, 3 months or — the default here — a
+year. **On a wide screen the year is one row of 52 squares**, oldest on the left,
+so a break is a run of dashed squares you can see at once; on a narrow screen it
+folds into the phone's 13 columns of four weeks.
+
+The rules are the phone's, and each has a test on both sides:
+
+- **A week without a workout is a gap, not a missing week.** It stays in the grid
+  and counts in the averages — a month off is part of how often somebody trains.
+- **The current week is not over**, so it is outlined, left out of every average,
+  and not yet counted as a break.
+- **A session recorded twice counts once**, with the same fold the Workouts page
+  uses.
+- The *typical week* is a **median** over at least three finished weeks, so one
+  training camp does not make every ordinary week look lazy. The comparison with
+  the previous period appears only when the history reaches back that far.
+
+**Zone 3 and above** is minutes at or above 70% of your *measured* maximum heart
+rate: the second-highest maximum your workouts recorded in the past year (one
+sensor spike does not set the zones), from at least five workouts, readings
+outside 100–230 bpm ignored. Never `220 − age`. Each reading stands for the time
+to the next one, at most 60 seconds — a minute of silence is missing data, not
+hard minutes — and a workout with fewer than two readings is *unmeasured*, not
+zero. As on the workout detail page, a workout's heart rate is every reading in its
+time window, by any device; the card says so. The server computes this
+(`GET /v1/workout-intensity`) because the browser would need hundreds of
+`/samples` pages for a year. **An older server answers 404**, and the card then
+says the server needs updating rather than showing an error.
+
+Beside it, resting heart rate and HRV as weekly averages of the daily values —
+with the explicit line that moving together with training does not make
+training the cause. No score, no advice, and the phone's effort ratings are not
+here: they stay in Health and never reach the server.
+
 ## Sleep
 
 Night by night, broken into stages. **The quality figures are derived** —

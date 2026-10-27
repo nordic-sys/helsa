@@ -492,6 +492,46 @@ paths:
         '404':
           description: No such workout
 
+  /workout-intensity:
+    get:
+      tags: [read]
+      summary: Minutes at or above heart-rate zone 3, per workout (training progress)
+      description: >
+        The phone's `WorkoutIntensity` rules, computed where the heart rate lives. The phone does
+        this with one `/samples` walk per workout; the web would need the same, which for a year
+        of weeks is hundreds of paged requests — so the server answers it in one.
+
+
+        **The maximum** is the SECOND-highest per-session maximum heart rate (`max_heart_rate`,
+        from the samples linked to the workout) among the sessions that started in the
+        `lookback_days` before now, two recordings of one session counting once
+        (the `WorkoutDuplicates` rule). Values outside 100–230 bpm are sensor errors and are
+        dropped. Below `minimum_workouts` usable sessions there is no maximum: `maximum` is
+        absent and so are the per-workout figures — no zones, nothing to count.
+
+
+        **Per workout** (every recording that started in `[from, to)`, duplicates included —
+        folding is the client's job, the same as on `/workouts`): the seconds spent at or above
+        `zone3_fraction` × the maximum. Heart-rate samples are matched to a workout by its
+        **time window** `[started_at, ended_at]` (inclusive; a workout with no end runs to now),
+        from every source, not by a link — the same window the workout detail screen draws.
+        Each sample stands for the time to the next one, at most `max_gap_seconds`; the last one
+        for the time to the end, under the same cap. `seconds: null` = fewer than two samples:
+        an unmeasured workout, not zero hard minutes.
+
+
+        An older server answers this path with 404; the client must treat that as version skew.
+      parameters:
+        - { name: from, in: query, required: true, schema: { type: string, format: date-time } }
+        - { name: to, in: query, required: true, schema: { type: string, format: date-time } }
+      responses:
+        '200':
+          description: The maximum (if there is one) and the per-workout figures
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WorkoutIntensity' }
+        '400': { $ref: '#/components/responses/Problem' }
+
   /achievements:
     get:
       tags: [achievements]
@@ -1292,6 +1332,39 @@ components:
         points:
           type: array
           items: { $ref: '#/components/schemas/RoutePoint' }
+
+    WorkoutIntensity:
+      type: object
+      required: [zone3_fraction, lookback_days, minimum_workouts, max_gap_seconds, workouts]
+      properties:
+        # The rules travel with the answer, so the screen can state the method next to the
+        # number without hard-coding a copy of the server's constants.
+        zone3_fraction: { type: number, description: "zone 3 starts at this fraction of the maximum (0.7)" }
+        lookback_days: { type: integer, description: "how far back the maximum is looked for (365)" }
+        minimum_workouts: { type: integer, description: "below this many usable sessions there is no maximum (5)" }
+        max_gap_seconds: { type: number, description: "a gap between samples longer than this is not filled (60)" }
+        maximum:
+          # ABSENT when there is no maximum (too few sessions with a heart rate) — not null.
+          $ref: '#/components/schemas/HeartRateMaximum'
+        workouts:
+          type: array
+          description: "Every workout that started in [from, to); empty when there is no maximum."
+          items: { $ref: '#/components/schemas/WorkoutIntensityItem' }
+
+    HeartRateMaximum:
+      type: object
+      required: [bpm, workouts, zone3_threshold_bpm]
+      properties:
+        bpm: { type: number, description: "the second-highest per-session maximum in the look-back" }
+        workouts: { type: integer, description: "how many sessions with a usable maximum it was taken from" }
+        zone3_threshold_bpm: { type: number, description: "bpm × zone3_fraction" }
+
+    WorkoutIntensityItem:
+      type: object
+      required: [id, seconds]
+      properties:
+        id: { type: string, format: uuid }
+        seconds: { type: [number, 'null'], description: "at or above zone 3; null = fewer than two heart-rate samples in the window" }
 
     Achievement:
       type: object

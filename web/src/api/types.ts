@@ -465,3 +465,30 @@ export type IngestStatus = {
   /** An ESTIMATE; absent when there is nothing to estimate from. */
   eta_seconds?: number
 }
+
+// --- GET /v1/workout-intensity (training progress, zone 3+) -----------------
+
+export type HeartRateMaximum = {
+  /** The second-highest per-session maximum of the look-back. */
+  bpm: number
+  /** How many sessions with a usable maximum it was taken from. */
+  workouts: number
+  zone3_threshold_bpm: number
+}
+
+export type WorkoutIntensityItem = {
+  id: string
+  /** `null` = fewer than two heart-rate samples in the window — unmeasured,
+   * not zero hard minutes. */
+  seconds: number | null
+}
+
+export type WorkoutIntensity = {
+  zone3_fraction: number
+  lookback_days: number
+  minimum_workouts: number
+  max_gap_seconds: number
+  /** ABSENT when too few sessions recorded a maximum — there are no zones. */
+  maximum?: HeartRateMaximum
+  workouts: WorkoutIntensityItem[]
+}
