@@ -67,6 +67,7 @@ import PeriodSummary from './pages/PeriodSummary'
 import YearByYear from './pages/YearByYear'
 import Report from './pages/Report'
 import Measurements from './pages/Measurements'
+import Journal from './pages/Journal'
 
 export type NavGroupKey = 'longView' | 'areas' | 'status'
 
@@ -141,6 +142,17 @@ export const NAV: NavEntry[] = [
   // before, because those two "earned" bespoke pages (`HealthSection`'s words)
   // and the grid is everything that did not need one.
   { path: '/measurements', label: 'nav.measurements', element: <Measurements />, group: 'areas' },
+  // The journal and events close Areas: one more domain read entry by entry —
+  // the noted days, the alerts, the illness episodes — and on the phone they
+  // are screens of the Health tab's own (`DailyContextView`, `HealthEventsView`,
+  // `IllnessEpisodesView`), not cards of the long-term band. Not in "The long
+  // view" although the mood strip spans months: what the page answers is "what
+  // did I note, and what did the watch flag", entry by entry, and the long
+  // question (does it move with a metric) is deliberately not asked here.
+  // Last in the group because it is the one page that may be empty by design:
+  // the phone sends the journal only when its owner turns on a separate,
+  // off-by-default switch (app 1.0 (7) on), and the page says so.
+  { path: '/journal', label: 'nav.journal', element: <Journal />, group: 'areas' },
 
   { path: '/coverage', label: 'nav.coverage', element: <Coverage />, group: 'status' },
   { path: '/ingest', label: 'nav.ingest', element: <Ingest />, group: 'status' },

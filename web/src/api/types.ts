@@ -563,3 +563,35 @@ export type LatestResponse = {
   /** A type that never reached the server is ABSENT — not zero, not empty. */
   metrics: Record<string, LatestValue>
 }
+
+// --- The phone's opt-in journal and events (`GET /journal`, openapi.yaml) ---
+// The rules that read them are in `lib/journal.ts`.
+
+export type JournalEntry = {
+  source_uuid: string
+  data_type: string
+  started_at: string
+  ended_at: string
+  value?: number
+  valence?: number
+  mood_kind?: 'daily_mood' | 'momentary_emotion'
+  labels?: string[]
+  associations?: string[]
+  event_key?: string
+  follow_up_hours?: number
+  workout_source_uuid?: string
+  day_key?: string
+  audio_level_dbaspl?: number
+  source_device?: string
+  source_bundle?: string
+  user_entered?: boolean
+}
+
+export type JournalResponse = {
+  tz: string
+  from: string
+  to: string
+  entries: JournalEntry[]
+  total: number
+  last_received_at?: string | null
+}

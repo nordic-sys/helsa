@@ -1278,8 +1278,6 @@ export const hu = {
       'Nincs összevetve, mert a két időszakban nagyon eltérő arányban volt mérés: {list}.',
     'report.changes.withheldItem': '{name} (most {now} / {days} napon, előtte {then} / {days} napon)',
     'report.journal.title': 'Amit feljegyeztem',
-    'report.journal.body':
-      'A napló és a tünetjelölések a telefonon maradnak: a szerverre sosem jutnak el, ezért ez a lap nem tudja megmutatni őket — és az, hogy itt nincsenek, nem jelenti, hogy nem volt mit feljegyezni. A telefonos appban készült összesítőn rajta vannak.',
     'report.table.title': 'Mérések',
     'report.col.measurement': 'Mérés',
     'report.col.average': 'Napi átlag',
@@ -1306,7 +1304,7 @@ export const hu = {
     'report.unit.minutes': 'perc',
     'report.events.title': 'Rögzített események',
     'report.events.body':
-      'Az eseményeket (elesés, pulzusértesítés, szokatlan vérnyomás) az iPhone állítja össze az Egészség-adataiból, és a szerverre nem jutnak el, ezért erről az időszakról ez a lap nem tud mit mondani.',
+      'A telefon csak akkor küldi el az eseményeit, ha a Napló és események kapcsolója be van kapcsolva, és erre a szerverre még nem küldött — ezért erről az időszakról ez a lap nem tud mit mondani. Az elesést és a szokatlan vérnyomást a telefon állítja össze, ezek sosem kerülnek ide.',
     'report.workouts.title': 'Edzések',
     'report.workouts.col.time': 'Időpont',
     'report.workouts.col.type': 'Típus',
@@ -1332,6 +1330,74 @@ export const hu = {
       'Ahol nincs mérés, ott nincs adat: a hiányzó nap nem nulla, hanem kimarad az átlagból. A szélső értékek a pillanatnyi méréseknél az egyes mérések, a gyűjtő jellegűeknél a napi összegek szélső értékei.',
     'report.prov.notMedical':
       'A Helsa nem orvosi eszköz: ezen a lapon semmi sem diagnózis, figyelmeztetés vagy riasztás.',
+
+    // --- Napló és események (pages/Journal, és az összefoglaló két szakasza) ---
+    // Csak akkor van adat, ha a telefon opt-in kapcsolója elküldte (1.0 (7)-től).
+    'nav.journal': 'Napló és események',
+    'journal.title': 'Napló és események',
+    'journal.subtitle':
+      'Amit a telefonon feljegyeztél — közérzet, tünetek, címkék —, és a jelzések, amelyeket az órád rögzített. Napló, nem diagnózis.',
+    'journal.periodAria': 'Időszak',
+    'journal.days.30': '30 nap',
+    'journal.days.90': '3 hónap',
+    'journal.days.365': '1 év',
+    'journal.never.title': 'A telefon még nem küldte el a naplóját erre a szerverre',
+    'journal.never.body':
+      'A napló és az események csak akkor hagyják el a telefont, ha bekapcsolod: az iPhone-appban Beállítások ▸ Exportálás ▸ Saját szerver ▸ Napló és események (1.0 (7)-es verziótól). Alapból ki van kapcsolva, mert ez az adataid legszemélyesebb része. Addig ezen a lapon nincs mit mutatni — és ez semmit nem mond arról, mit jegyeztél fel.',
+    'journal.lastReceived': 'Utoljára érkezett a telefonról: {when}',
+    'journal.coverage':
+      'Feljegyzés: {of} napból {n} napon — a többi napon nincs bejegyzés, ami nem ugyanaz, mint hogy nem volt mit feljegyezni.',
+    'journal.emptyWindow':
+      'Ebben az időszakban nincs feljegyzés. Ez nem ugyanaz, mint hogy semmi nem történt: naplót akkor ír az ember, amikor eszébe jut.',
+    'journal.moods.title': 'Közérzet, napról napra',
+    'journal.moods.aria': 'A közérzet az időszak minden napján',
+    'journal.moods.cell': '{date}: {mood}',
+    'journal.moods.noNote': 'nincs bejegyzés',
+    'journal.episodes.title': 'Betegség-epizódok',
+    'journal.episodes.none':
+      'Ebben az időszakban nincs betegség-epizód. Egy epizód olyan napon kezdődik, amelyen fertőzésre jellemző tünet szerepel (láz, torokfájás, köhögés…); a fáradtság vagy a fejfájás önmagában nem nyit epizódot.',
+    'journal.episodes.days.one': '{n} nap',
+    'journal.episodes.days.other': '{n} nap',
+    'journal.episodes.ongoing': 'tart',
+    'journal.episodes.rule':
+      'Egy epizódon belül egy bejegyzés nélküli napot áthidalunk, kettő lezárja — a telefon szabálya szerint. A naplóból számolva, nem diagnózis.',
+    'journal.events.title': 'Események',
+    'journal.events.none':
+      'Ebben az időszakban nincs pulzus-, hangoskörnyezet- vagy járásstabilitás-jelzés, és megjelölt pillanat sem.',
+    'journal.events.marked': 'Feljegyezve: {list}',
+    'journal.events.followUp': '{h} óra múlva: {list}',
+    'journal.events.followUpGone': '{h} óra múlva: semmi nem maradt',
+    'journal.events.level': '{n} dB',
+    'journal.events.note':
+      'Az elesés mérés, a Mérések között találod; a szokatlan vérnyomást a telefon számolja ki, ezen a listán nem szerepel.',
+    'journal.daysList.title': 'Napról napra',
+    'journal.daysList.day': 'Nap',
+    'journal.daysList.symptoms': 'Tünetek',
+    'journal.daysList.mood': 'Közérzet és címkék',
+    'journal.delete.title': 'A szerveren lévő másolat',
+    'journal.delete.body':
+      'A szerver {n} naplóbejegyzést tárol. A törlés a telefon Egészség appjához nem nyúl; ha a telefon kapcsolója még be van kapcsolva, a következő szinkron újra elküldi őket.',
+    'journal.delete.button': 'Napló törlése erről a szerverről',
+    'journal.delete.confirm': 'Törlöd az összes közérzetet, tünetet és jelzést erről a szerverről?',
+    'journal.delete.done': '{n} bejegyzés törölve.',
+    'report.journal.never':
+      'A telefon még nem küldte el a naplóját erre a szerverre (a Napló és események kapcsoló ki van kapcsolva, vagy az app régebbi az 1.0 (7)-esnél), ezért ez a lap nem tudja megmutatni, mit jegyeztél fel — és ez nem jelenti azt, hogy semmit. A telefonos appban készült összefoglalón rajta van.',
+    'report.journal.tooOld':
+      'Ez a szerver régebbi a naplónál, ezért ez a lap nem tudja megmutatni, mit jegyeztél fel — frissítsd a szervert. A telefonos appban készült összefoglalón rajta van.',
+    'report.journal.none':
+      'Az időszak {n} napjának egyikén sincs feljegyzés. Ez nem ugyanaz, mint hogy nem volt mit feljegyezni.',
+    'report.journal.item.one': '{name} ({n} nap)',
+    'report.journal.item.other': '{name} ({n} nap)',
+    'report.journal.symptoms': 'Tünetek: {list}.',
+    'report.journal.symptomsMore': 'Tünetek: {list}, és még {n}.',
+    'report.journal.tags': 'Címkék: {list}.',
+    'report.journal.tagsMore': 'Címkék: {list}, és még {n}.',
+    'report.journal.run': 'A tünetes napok leghosszabb sora: {n} nap, kezdete: {date}.',
+    'report.journal.omitted': 'További {n} feljegyzett nap nem fért a listára.',
+    'report.events.none':
+      'Ebben az időszakban nem rögzült pulzus-, hangoskörnyezet- vagy járásstabilitás-jelzés.',
+    'report.events.note':
+      'Az elesést és a szokatlan vérnyomást a telefon állítja össze, ezen a listán nem szerepelnek.',
 
     // --- Év a számokban + évről évre (pages/PeriodSummary, pages/YearByYear) ---
     'nav.period': 'Év a számokban',

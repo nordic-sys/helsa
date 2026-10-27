@@ -19,6 +19,9 @@ import Report from './Report'
 type SummaryArgs = [string, string[], string?, string?, string?]
 const summaryCalls: SummaryArgs[] = []
 let baselineFails = false
+/** What `GET /journal` answers: `never` = the phone never sent one (the switch
+ * is off), `old` = a server older than the endpoint (404), or a body. */
+let journalAnswer: 'never' | 'old' | object = 'never'
 
 /** Daily buckets from `from` to `to`, steps 8000 a day before the last 30 days
  * and 10 000 inside them; resting heart rate 60 throughout. */
@@ -55,6 +58,11 @@ vi.mock('../api/client', () => ({
       return Promise.resolve(daily(from, to, metrics))
     },
     workouts: () => Promise.resolve({ items: [], next_cursor: null }),
+    journal: (from: string, to: string) => {
+      if (journalAnswer === 'old') return Promise.reject(Object.assign(new Error('Not Found'), { status: 404 }))
+      if (journalAnswer === 'never') return Promise.resolve({ tz: 'Europe/Budapest', from, to, entries: [], total: 0 })
+      return Promise.resolve({ tz: 'Europe/Budapest', from, to, ...journalAnswer })
+    },
   },
   browserTz: () => 'Europe/Budapest',
 }))
@@ -79,6 +87,7 @@ beforeEach(() => {
   localStorage.setItem('helsa.lang', 'en')
   summaryCalls.length = 0
   baselineFails = false
+  journalAnswer = 'never'
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date(2026, 9, 27, 9, 12))
 })
@@ -118,8 +127,45 @@ describe('the health summary page', () => {
 
   it('says in words what the server cannot show, rather than leaving it out', async () => {
     show()
-    expect(await screen.findByTestId('report-journal')).toHaveTextContent(en.ui['report.journal.body'])
+    expect(await screen.findByTestId('report-journal')).toHaveTextContent(en.ui['report.journal.never'])
     expect(screen.getByTestId('report-events')).toHaveTextContent(en.ui['report.events.body'])
+  })
+
+  it('an older server without the journal says so, not "never sent"', async () => {
+    journalAnswer = 'old'
+    show()
+    expect(await screen.findByTestId('report-journal')).toHaveTextContent(en.ui['report.journal.tooOld'])
+  })
+
+  it('prints the journal the phone sent: coverage first, then the symptoms, the days and the alerts', async () => {
+    journalAnswer = {
+      total: 4,
+      last_received_at: '2026-10-27T06:00:00Z',
+      entries: [
+        { source_uuid: 'a', data_type: 'fever', started_at: '2026-10-20T08:00:00Z', ended_at: '2026-10-20T08:00:00Z', value: 3 },
+        { source_uuid: 'b', data_type: 'fever', started_at: '2026-10-21T08:00:00Z', ended_at: '2026-10-21T08:00:00Z', value: 4 },
+        { source_uuid: 'c', data_type: 'stateOfMind', started_at: '2026-10-21T19:00:00Z', ended_at: '2026-10-21T19:00:00Z', valence: -0.5, associations: ['work'] },
+        { source_uuid: 'd', data_type: 'highHeartRateEvent', started_at: '2026-10-22T10:00:00Z', ended_at: '2026-10-22T10:10:00Z', value: 0 },
+      ],
+    }
+    show()
+    const journal = await screen.findByTestId('report-journal')
+    await within(journal).findByText(/Noted on 2 of 90 days/)
+    expect(journal).toHaveTextContent('Symptoms: Fever (2 days).')
+    expect(journal).toHaveTextContent('Tags: Work (1 day).')
+    expect(journal).toHaveTextContent('Fever (severe)')
+    expect(journal).toHaveTextContent('Bad · Work')
+    const events = screen.getByTestId('report-events')
+    expect(events).toHaveTextContent('High heart rate')
+    expect(events).toHaveTextContent(en.ui['report.events.note'])
+  })
+
+  it('a server that holds the journal but nothing in the period says so for the whole period', async () => {
+    journalAnswer = { total: 3, last_received_at: '2026-10-27T06:00:00Z', entries: [] }
+    show('/report?d=30')
+    const journal = await screen.findByTestId('report-journal')
+    await within(journal).findByText(/Nothing was noted on any of the 30 days/)
+    expect(screen.getByTestId('report-events')).toHaveTextContent(en.ui['report.events.none'])
   })
 
   it('an unmeasured metric is "no measurement" and named, never a zero', async () => {
