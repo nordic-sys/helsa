@@ -1,10 +1,10 @@
 ---
 title: The screens
-description: "What each of the twelve pages shows, and the rules behind the numbers on it."
+description: "What each of the fourteen pages shows, and the rules behind the numbers on it."
 sidebar:
   order: 1
 ---
-Eleven pages in the sidebar, plus one that opens from a listing.
+Thirteen pages in the sidebar, plus one that opens from a listing.
 
 ## Today
 
@@ -72,6 +72,57 @@ Beside the total, a summed metric shows **a day** — the average of the days th
 carried a measurement, and it says over how many. Dividing by the window's length
 would count a day the phone did not sync as a day of sitting still. The metric is
 in the address (`/trends?metric=…`), so a chart is a link.
+
+## Year in numbers
+
+One named **calendar** period at once — a year, or a month — the phone's *year in
+numbers* card, laid out side by side. Four totals (steps, active energy, exercise
+time, walking/running distance), each with a strip of the period's months (or days)
+under it, the nights, the workouts, the medals that name the period, and the peaks:
+the best month, the longest night, the longest and farthest workout. The period is in
+the address (`/period?p=2026`, `/period?p=2026-08`).
+
+The rules are the phone's, ported with its tests:
+
+- **A running period says so.** "2026" in October is ten months, and the line under
+  the title names the day the data reaches. The comparison is cut to **the same
+  stretch** of the previous period, never set against the whole of it.
+- **A month without data is a gap, not a zero.** Each total says how many of the
+  elapsed months carried data, and the "a month" figure beside it is over those
+  months only. The same holds for nights: the average is over the measured nights.
+- **An uneven comparison is flagged — or withheld.** When the two periods were
+  measured on different numbers of months the delta carries the caveat; when the
+  measured *shares* differ by more than half, a total is not compared at all — the
+  same rule as Trends.
+- **Two recordings of one workout count once**, as on the Workouts page — one
+  deliberate difference from the phone, which counts what HealthKit hands it.
+- A medal without a period (a milestone) is not listed: its timestamp is when it was
+  first evaluated, not when it was reached.
+
+The totals are summed, so the server's per-hour source merge applies: they can read
+a little above the phone's.
+
+## Year by year
+
+The phone's *long view*: the measurements you choose, every calendar year beside the
+others, up to five years back. On the phone it is a button with a progress bar,
+because reading five years out of HealthKit costs battery; here it is **one request**
+— monthly buckets across all the years at once — and the page simply shows it.
+
+- **The figure is the average month** (or the average level, for an averaged
+  measurement), over the months that carried data. A year's total beside a
+  part-year's would only say that one of them is shorter.
+- **A year needs three measured months** before it gets a figure. Fewer is shown as
+  *2 months · too few*, not hidden and not compared.
+- **The span printed is the span found** — *measured data found for: 2023–2026* —
+  never the five years that were asked for.
+- The last column is the change from the first measured year to the last; when the
+  two were measured on very different shares of their months, it says to read it
+  loosely.
+
+The choice of measurements is kept in **this browser** (the *Recommended* button
+gives the phone's eight). Sleep is not offered: it does not come from the same
+source as the rest and would only ever be an empty row.
 
 ## Observations
 

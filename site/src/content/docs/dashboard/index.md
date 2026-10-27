@@ -48,14 +48,14 @@ paste a device token once, and it is stored in that browser only.
 
 ## How it is organised
 
-Nine pages in three groups, plus the landing page. The grouping is not decoration:
+Twelve pages in three groups, plus the landing page. The grouping is not decoration:
 the router is generated from the same list the sidebar is, so a page cannot reach
 the web without being handed a group.
 
 | Group | Pages | The claim it makes |
 |---|---|---|
 | — | **Today** | the landing page: where you are right now |
-| **The long view** | Trends · Observations · Medals · Monthly challenge | something to look at, over weeks and months |
+| **The long view** | Trends · Year in numbers · Year by year · Observations · Medals · Monthly challenge | something to look at, over weeks, months and years |
 | **Areas** | Workouts · Sleep · Nutrition | one domain each, read entry by entry |
 | **Status** | Completeness · Settings | whether the thing that moves your data is working |
 
@@ -66,7 +66,7 @@ is the same.
 :::note
 **The phone's five tabs are deliberately not copied.** A phone shows one thing at
 a time, and a sixth tab would fall into a "More" menu nobody opens. A sidebar
-shows all ten links and their headings at once, so the web pays none of that cost
+shows every link and its heading at once, so the web pays none of that cost
 — and copying the compromise would have buried Observations, Medals, the challenge
 and Completeness one level down for no reason.
 :::
