@@ -11,6 +11,8 @@ import (
 	"fmt"
 
 	amqp "github.com/rabbitmq/amqp091-go"
+
+	"github.com/nordic-sys/helsa/backend/internal/config"
 )
 
 type Queue struct {
@@ -24,7 +26,10 @@ type Queue struct {
 func Open(url, name string) (*Queue, error) {
 	conn, err := amqp.Dial(url)
 	if err != nil {
-		return nil, fmt.Errorf("amqp dial: %w", err)
+		// ⚠️ The AMQP client quotes the whole URL when it cannot parse it, password
+		// included — and this line ends up in `docker compose logs`, which people
+		// paste into issues. The redaction covers the string url.Parse refused too.
+		return nil, fmt.Errorf("amqp dial %s: %w", config.RedactURL(url), config.RedactURLError(err, url))
 	}
 	ch, err := conn.Channel()
 	if err != nil {

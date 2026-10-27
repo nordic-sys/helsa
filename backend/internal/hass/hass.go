@@ -141,7 +141,8 @@ func (p *Publisher) Run(ctx context.Context) error {
 func (p *Publisher) clientOptions() (*mqtt.ClientOptions, error) {
 	u, err := url.Parse(p.cfg.URL)
 	if err != nil {
-		return nil, fmt.Errorf("HELSA_MQTT_URL: %w", err)
+		// ⚠️ url.Parse quotes the whole string it refused — password included.
+		return nil, fmt.Errorf("HELSA_MQTT_URL: %w", config.RedactURLError(err, p.cfg.URL))
 	}
 	if u.Host == "" {
 		return nil, fmt.Errorf("HELSA_MQTT_URL %q has no host", redactBroker(p.cfg.URL))

@@ -20,7 +20,19 @@ type Store struct {
 }
 
 // Open builds the pool + redis connections and pings both.
+//
+// ⚠️ Every error it returns has the configuration's secrets blanked out. pgx
+// redacts its own connection string, but not the fragment of the password its
+// "invalid port" message quotes, and the message goes to `docker compose logs`.
 func Open(ctx context.Context, cfg *config.Config) (*Store, error) {
+	st, err := open(ctx, cfg)
+	if err != nil {
+		return nil, config.Redact(err, cfg.Secrets()...)
+	}
+	return st, nil
+}
+
+func open(ctx context.Context, cfg *config.Config) (*Store, error) {
 	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("pgxpool new: %w", err)

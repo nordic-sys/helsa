@@ -83,6 +83,12 @@ func Load() (*Config, error) {
 			UserID:      env("HELSA_MQTT_USER_ID", ""),
 		},
 	}
+	// ⚠️ Repaired here, once, rather than in every client: a password pasted raw into
+	// one of these URLs either fails to parse or — worse — parses into a different
+	// host. connurl.go has the whole story.
+	c.DatabaseURL = NormalizeConnURL(c.DatabaseURL)
+	c.RabbitMQURL = NormalizeConnURL(c.RabbitMQURL)
+	c.MQTT.URL = NormalizeConnURL(c.MQTT.URL)
 	if c.JWTSecret == "" {
 		return nil, fmt.Errorf("HELSA_JWT_SECRET is required")
 	}

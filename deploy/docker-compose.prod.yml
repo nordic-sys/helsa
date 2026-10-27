@@ -96,7 +96,13 @@ services:
     container_name: helsa-migrate
     environment:
       GOOSE_DRIVER: postgres
-      GOOSE_DBSTRING: "postgres://${POSTGRES_USER:-helsa}:${POSTGRES_PASSWORD}@timescaledb:5432/${POSTGRES_DB:-helsa}?sslmode=disable"
+      # ⚠️ The keyword/value form, NOT a postgres:// URL. goose hands this string to
+      # pgx as it is, and a password pasted raw into a URL breaks it: base64 brings
+      # `/`, which ends the host part (`invalid port … after host`). The api and the
+      # worker repair their URLs in code (backend/internal/config/connurl.go); goose
+      # is a stock binary and cannot. In this form, inside single quotes, only a `'`
+      # or a `\` in the password would still need escaping.
+      GOOSE_DBSTRING: "host=timescaledb port=5432 user=${POSTGRES_USER:-helsa} password='${POSTGRES_PASSWORD}' dbname=${POSTGRES_DB:-helsa} sslmode=disable"
       GOOSE_MIGRATION_DIR: /migrations
     volumes:
       - ../backend/db/migrations:/migrations:ro
