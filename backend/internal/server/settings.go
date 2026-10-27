@@ -45,8 +45,7 @@ func (s *Server) PutSettings(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body api.Settings
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		problem(w, http.StatusBadRequest, "Malformed JSON", err.Error())
+	if !decodeBody(w, r, &body, "Invalid settings") {
 		return
 	}
 	params := db.UpdateSettingsParams{ID: pgconv.UUID(uid)}

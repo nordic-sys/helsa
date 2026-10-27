@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 
@@ -31,8 +30,7 @@ func (s *Server) PostPushRegister(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body api.PushRegister
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		problem(w, http.StatusBadRequest, "Malformed JSON", err.Error())
+	if !decodeBody(w, r, &body, "Invalid push registration") {
 		return
 	}
 	if body.Token == "" {
@@ -89,8 +87,7 @@ func (s *Server) PutPushPrefs(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body api.NotifPrefs
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		problem(w, http.StatusBadRequest, "Malformed JSON", err.Error())
+	if !decodeBody(w, r, &body, "Invalid notif_prefs") {
 		return
 	}
 	cur, err := s.q.GetSettings(r.Context(), pgconv.UUID(uid))

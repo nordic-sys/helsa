@@ -30,9 +30,27 @@ const (
 
 // Message is the envelope that goes on the queue: the authenticated user_id
 // plus the batch.
+//
+// BatchID is the id the 202 response handed the client. It rides along so the
+// worker's "batch processed" line carries the same id, which is the whole point
+// of giving the client one. A message queued by an older API has none (uuid.Nil).
 type Message struct {
-	UserID uuid.UUID       `json:"user_id"`
-	Batch  api.IngestBatch `json:"batch"`
+	UserID  uuid.UUID       `json:"user_id"`
+	BatchID uuid.UUID       `json:"batch_id"`
+	Batch   api.IngestBatch `json:"batch"`
+}
+
+// Tally counts what a batch holds, per kind — what the 202 response reports as
+// `received`. Route points are not a kind of their own: they travel inside their
+// workout, and they count against MaxItems (see Validate) but not here.
+func Tally(b *api.IngestBatch) Counts {
+	return Counts{
+		Samples:           count(b.Samples),
+		Workouts:          count(b.Workouts),
+		SleepSegments:     count(b.SleepSegments),
+		ActivitySummaries: count(b.ActivitySummaries),
+		Deletions:         count(b.Deletions),
+	}
 }
 
 // Validate checks the batch size (400/413 in the API).
@@ -72,6 +90,10 @@ func Validate(b *api.IngestBatch) error {
 // a number invented to fill a column is the thing this project does not do.
 type Counts struct {
 	Workouts, Samples, SleepSegments, ActivitySummaries, Deletions int
+
+	// BatchID is copied from the message, not counted: it is here so the worker's
+	// log line can name the batch the client was told about in its 202.
+	BatchID uuid.UUID
 }
 
 func Process(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, body []byte) (Counts, error) {
@@ -80,6 +102,7 @@ func Process(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, body []
 	if err := json.Unmarshal(body, &msg); err != nil {
 		return counts, fmt.Errorf("decode message: %w", err)
 	}
+	counts.BatchID = msg.BatchID
 	uid := pgconv.UUID(msg.UserID)
 
 	tx, err := pool.Begin(ctx)

@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"math"
 	"net/http"
@@ -50,8 +49,7 @@ func (s *Server) PostAchievements(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body []api.AchievementInput
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		problem(w, http.StatusBadRequest, "Malformed JSON", err.Error())
+	if !decodeBody(w, r, &body, "Invalid badge") {
 		return
 	}
 	params := make([]db.UpsertAchievementParams, 0, len(body))

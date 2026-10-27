@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"time"
@@ -54,8 +53,7 @@ func (s *Server) PostDevices(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body api.Device
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		problem(w, http.StatusBadRequest, "Malformed JSON", err.Error())
+	if !decodeBody(w, r, &body, "Invalid device") {
 		return
 	}
 	if !body.Platform.Valid() {

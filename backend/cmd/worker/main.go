@@ -67,7 +67,7 @@ func main() {
 		// The alternative — printing a "duplicates skipped" figure — would need a
 		// rows-affected count the queries do not return, and a number invented to fill a
 		// column is worse than a column that is not there.
-		log.Info("batch processed", "bytes", len(body),
+		log.Info("batch processed", "batch_id", counts.BatchID, "bytes", len(body),
 			"samples", counts.Samples, "workouts", counts.Workouts,
 			"sleep_segments", counts.SleepSegments,
 			"activity_summaries", counts.ActivitySummaries,

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -28,8 +27,7 @@ func (s *Server) PostExport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var body api.ExportRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		problem(w, http.StatusBadRequest, "Malformed JSON", err.Error())
+	if !decodeBody(w, r, &body, "Invalid export request") {
 		return
 	}
 

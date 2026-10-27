@@ -173,14 +173,26 @@ func TestSmoke(t *testing.T) {
 	}}
 
 	tzc := tz
+	var accepted api.IngestAccepted
 	status := c.do(t, http.MethodPost, "/v1/ingest", token, api.IngestBatch{
 		DeviceId: dev.Id, TimeZone: &tzc, Samples: &samples, Workouts: &workouts,
 		SleepSegments: &sleeps, ActivitySummaries: &activities,
-	}, nil)
+	}, &accepted)
 	if status != http.StatusAccepted {
 		t.Fatalf("ingest status=%d (expected 202)", status)
 	}
-	t.Logf("✓ ingest: %d samples + 1 workout + 1 sleep + 1 activity accepted (202)", len(samples))
+	// The 202 body is part of the contract (IngestAccepted) — it was empty until
+	// 2026-10-27, while the documentation described every field below.
+	if accepted.BatchId == nil || accepted.MaxItems == nil || *accepted.MaxItems <= 0 || accepted.Received == nil {
+		t.Fatalf("the 202 body is missing a field: %+v", accepted)
+	}
+	if r := accepted.Received; r.Samples == nil || *r.Samples != len(samples) || r.Workouts == nil || *r.Workouts != 1 ||
+		r.SleepSegments == nil || *r.SleepSegments != 1 || r.ActivitySummaries == nil || *r.ActivitySummaries != 1 ||
+		r.Deletions == nil || *r.Deletions != 0 {
+		t.Fatalf("the 202 received counts do not match what was sent: %+v", *r)
+	}
+	t.Logf("✓ ingest: %d samples + 1 workout + 1 sleep + 1 activity accepted (202, batch %s, max_items %d)",
+		len(samples), *accepted.BatchId, *accepted.MaxItems)
 
 	// --- 5) Summary (polled, because the worker processes asynchronously) ---
 	deadline := time.Now().Add(20 * time.Second)

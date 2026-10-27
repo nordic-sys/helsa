@@ -16,6 +16,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/google/uuid"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/nordic-sys/helsa/backend/internal/api"
@@ -219,15 +220,15 @@ func (s *Server) PostIngest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var batch api.IngestBatch
-	if err := json.NewDecoder(r.Body).Decode(&batch); err != nil {
-		problem(w, http.StatusBadRequest, "Malformed JSON", err.Error())
+	if !decodeBody(w, r, &batch, "Invalid batch") {
 		return
 	}
 	if err := ingest.Validate(&batch); err != nil {
 		problem(w, http.StatusBadRequest, "Invalid batch", err.Error())
 		return
 	}
-	msg, err := json.Marshal(ingest.Message{UserID: uid, Batch: batch})
+	batchID := uuid.New()
+	msg, err := json.Marshal(ingest.Message{UserID: uid, BatchID: batchID, Batch: batch})
 	if err != nil {
 		problem(w, http.StatusInternalServerError, "Serialization failed", err.Error())
 		return
@@ -236,7 +237,38 @@ func (s *Server) PostIngest(w http.ResponseWriter, r *http.Request) {
 		problem(w, http.StatusServiceUnavailable, "Queue unreachable", err.Error())
 		return
 	}
-	w.WriteHeader(http.StatusAccepted)
+	writeJSON(w, http.StatusAccepted, ingestAccepted(batchID, ingest.Tally(&batch)))
+}
+
+// ingestAccepted is the 202 body the contract promises (IngestAccepted).
+//
+// ⚠️ It used to be EMPTY — `content-length: 0` — while both the OpenAPI document and
+// the public API page described `batch_id`, `received` and `max_items`, and the
+// first-sync guide told people to size their chunks from `max_items`. Nothing in the
+// iOS client reads it today (it treats any 2xx as done), which is how an empty body
+// survived; a script written from the documentation would have found nothing.
+//
+// `received` is what was TAKEN IN, not what was written: the worker does the writing,
+// later, and it is the worker's log line (same batch_id) that says how that went.
+func ingestAccepted(batchID uuid.UUID, c ingest.Counts) api.IngestAccepted {
+	id := openapi_types.UUID(batchID)
+	maxItems := ingest.MaxItems
+	out := api.IngestAccepted{BatchId: &id, MaxItems: &maxItems}
+	samples, workouts, sleep, rings, deletions := c.Samples, c.Workouts, c.SleepSegments, c.ActivitySummaries, c.Deletions
+	out.Received = &struct {
+		ActivitySummaries *int `json:"activity_summaries,omitempty"`
+		Deletions         *int `json:"deletions,omitempty"`
+		Samples           *int `json:"samples,omitempty"`
+		SleepSegments     *int `json:"sleep_segments,omitempty"`
+		Workouts          *int `json:"workouts,omitempty"`
+	}{
+		ActivitySummaries: &rings,
+		Deletions:         &deletions,
+		Samples:           &samples,
+		SleepSegments:     &sleep,
+		Workouts:          &workouts,
+	}
+	return out
 }
 
 // --- Summary (read path, timezone-aware) ---
