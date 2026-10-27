@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { averages, flatten, groupByNight, lastNight, normalizeStage } from './sleep'
+import { averages, flatten, groupByNight, lastNight, nightTitle, normalizeStage } from './sleep'
 import type { SleepSegment } from '../api/types'
 
 const seg = (stage: string, from: string, to: string): SleepSegment =>
@@ -137,5 +137,43 @@ describe('"last night" on the Today card', () => {
     const picked = lastNight(groupByNight(nap()))
     expect(picked?.overnight).toBe(false)
     expect(picked?.night.asleepMin).toBe(60)
+  })
+})
+
+/**
+ * The Sleep page's detail card used to call the newest session "Last night" — a
+ * 14:00 nap included, and in a window a month in the past too.
+ */
+describe('what the Sleep page may call a session', () => {
+  // `at` builds 2026-08-24, so that is "today" here.
+  const today = '2026-08-24'
+  const night = () => [
+    seg('asleepCore', new Date(2026, 7, 23, 23, 0).toISOString(), new Date(2026, 7, 24, 6, 0).toISOString()),
+  ]
+  const nap = () => [seg('asleepCore', at(14), at(15))]
+
+  it('keeps "last night" for the night and calls the nap after it the latest sleep', () => {
+    const nights = groupByNight([...night(), ...nap()])
+    const [napSession, nightSession] = nights
+    expect(nightTitle(nightSession, nights, { current: true, today })).toBe('lastNight')
+    expect(nightTitle(napSession, nights, { current: true, today })).toBe('latest')
+  })
+
+  it('never calls a nap "last night", even when it is the only session', () => {
+    const nights = groupByNight(nap())
+    expect(nightTitle(nights[0], nights, { current: true, today })).toBe('latest')
+  })
+
+  it('does not call a night from days ago "last night"', () => {
+    const nights = groupByNight(night())
+    expect(nightTitle(nights[0], nights, { current: true, today: '2026-08-27' })).toBe('latest')
+    // The night that ended yesterday morning still counts — before going to bed tonight
+    // it is the most recent night there is.
+    expect(nightTitle(nights[0], nights, { current: true, today: '2026-08-25' })).toBe('lastNight')
+  })
+
+  it('uses plain titles in a window in the past', () => {
+    const nights = groupByNight([...night(), ...nap()])
+    for (const n of nights) expect(nightTitle(n, nights, { current: false, today })).toBe('plain')
   })
 })

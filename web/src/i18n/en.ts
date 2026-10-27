@@ -402,6 +402,8 @@ export const en: Dict = {
     'sleep.night.latest': 'Last night · {date} — {duration} asleep',
     'sleep.night.title.notRecorded': '{date} — sleep duration not recorded',
     'sleep.night.latest.notRecorded': 'Last night · {date} — sleep duration not recorded',
+    'sleep.night.newest': 'Latest sleep · {date} — {duration} asleep',
+    'sleep.night.newest.notRecorded': 'Latest sleep · {date} — sleep duration not recorded',
     'sleep.nights.title.one': 'The night in this period',
     'sleep.nights.title.other': 'The {n} nights in this period',
     'sleep.nights.hint':

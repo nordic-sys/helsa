@@ -38,10 +38,20 @@ import { api, browserTz } from '../api/client'
 import type { Range } from '../api/types'
 import { PeriodStepper } from '../components/PeriodStepper'
 import { Card, Empty, ErrorState, Legend, Loading, Stat } from '../components/ui'
-import { useI18n } from '../i18n'
+import { useI18n, type UiKey } from '../i18n'
 import { STAGE_CHART, STAGE_COLOR, STAGE_ORDER, useFormat } from '../lib/format'
 import { metricDef, pickSeries, readSeries } from '../lib/metrics'
-import { averages, groupByNight, segmentMinutes, sliceMinutes, type Night } from '../lib/sleep'
+import {
+  averages,
+  groupByNight,
+  lastNight,
+  nightTitle,
+  segmentMinutes,
+  sliceMinutes,
+  type Night,
+  type NightTitle,
+} from '../lib/sleep'
+import { useToday } from '../lib/useToday'
 import { rollingWindow } from '../lib/window'
 
 /** The two window lengths, in the vocabulary the window code already speaks:
@@ -72,6 +82,7 @@ export default function Sleep() {
   const [chosen, setChosen] = useState<string | null>(null)
   const { t, tp, tx, tMetric } = useI18n()
   const f = useFormat()
+  const today = useToday()
 
   const win = useMemo(() => rollingWindow(range, offset, new Date()), [range, offset])
   const nightCount = WINDOWS.find((w) => w.range === range)?.nights ?? 7
@@ -105,7 +116,11 @@ export default function Sleep() {
   // ⚠️ Resolved here rather than stored, so a stale key simply falls back to the
   // newest night. Storing the resolution would mean a window step could leave
   // the card pointing at a night that is no longer in the list.
-  const selected = nights.find((n) => n.startedAt === chosen) ?? nights[0]
+  // ⚠️ The default is the newest OVERNIGHT session, not simply the newest: a
+  // nap after last night is its own session (see `groupByNight`), and opening on
+  // it put "Last night" over a 14:00 doze. The nap stays in the list below.
+  const selected =
+    nights.find((n) => n.startedAt === chosen) ?? lastNight(nights)?.night ?? nights[0]
 
   // Only the stages that actually occur make it onto the chart.
   const presentStages = STAGE_ORDER.filter((s) => nights.some((n) => (n.stages[s] ?? 0) > 0))
@@ -183,7 +198,12 @@ export default function Sleep() {
             />
           </div>
 
-          {selected && <NightCard night={selected} isLatest={selected === nights[0]} />}
+          {selected && (
+            <NightCard
+              night={selected}
+              title={nightTitle(selected, nights, { current: offset === 0, today })}
+            />
+          )}
 
           {/* The rest of the period. One row a night, newest first — and the
               rows are buttons, because a row that changes what the card above
@@ -379,7 +399,15 @@ function NightRow({
   )
 }
 
-function NightCard({ night, isLatest }: { night: Night; isLatest: boolean }) {
+/** The card title's i18n key per `NightTitle` — sentence with a duration, and
+ * the one for a session that never recorded sleep. */
+const TITLE_KEYS: Record<NightTitle, [UiKey, UiKey]> = {
+  lastNight: ['sleep.night.latest', 'sleep.night.latest.notRecorded'],
+  latest: ['sleep.night.newest', 'sleep.night.newest.notRecorded'],
+  plain: ['sleep.night.title', 'sleep.night.title.notRecorded'],
+}
+
+function NightCard({ night, title }: { night: Night; title: NightTitle }) {
   const { t, tp } = useI18n()
   const f = useFormat()
   const stages = STAGE_ORDER.filter((s) => (night.stages[s] ?? 0) > 0)
@@ -392,12 +420,8 @@ function NightCard({ night, isLatest }: { night: Night; isLatest: boolean }) {
           // ⚠️ A night with no sleep segment never measured sleep: it says so
           // rather than "– asleep".
           night.asleepMin == null
-            ? isLatest
-              ? t('sleep.night.latest.notRecorded', { date: day })
-              : t('sleep.night.title.notRecorded', { date: day })
-            : isLatest
-              ? t('sleep.night.latest', { date: day, duration: f.duration(night.asleepMin) })
-              : t('sleep.night.title', { date: day, duration: f.duration(night.asleepMin) })
+            ? t(TITLE_KEYS[title][1], { date: day })
+            : t(TITLE_KEYS[title][0], { date: day, duration: f.duration(night.asleepMin) })
         }
       >
         <Hypnogram night={night} />

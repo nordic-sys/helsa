@@ -405,6 +405,8 @@ export const hu = {
     'sleep.night.latest': 'Múlt éjjel · {date} — alvás {duration}',
     'sleep.night.title.notRecorded': '{date} — az alvás hossza nincs rögzítve',
     'sleep.night.latest.notRecorded': 'Múlt éjjel · {date} — az alvás hossza nincs rögzítve',
+    'sleep.night.newest': 'Legutóbbi alvás · {date} — alvás {duration}',
+    'sleep.night.newest.notRecorded': 'Legutóbbi alvás · {date} — az alvás hossza nincs rögzítve',
     'sleep.nights.title.one': 'Az időszak éjszakája',
     'sleep.nights.title.other': 'Az időszak {n} éjszakája',
     'sleep.nights.hint':

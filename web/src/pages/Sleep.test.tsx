@@ -86,6 +86,51 @@ describe('one night in full, the rest as rows', () => {
   })
 })
 
+/** A daytime nap after last night is its own session — and it is not last night. */
+describe('a nap after last night', () => {
+  /** Two nights and a 50-minute nap at 14:00 after the newer one. Before 15:00 the
+   * fixture shifts a day back — the nap must have ended already — which makes
+   * the newer night yesterday's: still "last night" until tonight's sleep. */
+  function napAfter(withNights: boolean): SleepSegment[] {
+    const early = new Date().getHours() < 15
+    const d = new Date()
+    d.setHours(14, 0, 0, 0)
+    if (early) d.setDate(d.getDate() - 1)
+    const nap: SleepSegment = {
+      started_at: d.toISOString(),
+      ended_at: new Date(d.getTime() + 50 * 60000).toISOString(),
+      stage: 'core',
+    }
+    if (!withNights) return [nap]
+    const shift = early ? 1 : 0
+    return [...night(shift), ...night(shift + 1), nap]
+  }
+
+  it('opens on the night, still titled "last night"', async () => {
+    sleep.mockResolvedValue(napAfter(true))
+    show()
+    expect(await screen.findByText(/^last night/i)).toBeInTheDocument()
+    expect(screen.getByText(/50 min/)).toBeInTheDocument() // the nap's row in the list
+  })
+
+  it('titles the nap "latest sleep" when it is chosen, never "last night"', async () => {
+    sleep.mockResolvedValue(napAfter(true))
+    show()
+    await screen.findByText(/^last night/i)
+    const rows = screen.getAllByRole('button').filter((b) => b.className.includes('night-row'))
+    await userEvent.click(rows[0])
+    expect(screen.getByText(/^latest sleep/i)).toBeInTheDocument()
+    expect(screen.queryByText(/^last night/i)).not.toBeInTheDocument()
+  })
+
+  it('calls a lone nap the latest sleep', async () => {
+    sleep.mockResolvedValue(napAfter(false))
+    show()
+    expect(await screen.findByText(/^latest sleep/i)).toBeInTheDocument()
+    expect(screen.queryByText(/last night/i)).not.toBeInTheDocument()
+  })
+})
+
 describe('walking back through the history', () => {
   it('asks the server for the stretch before this one', async () => {
     show()

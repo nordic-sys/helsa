@@ -215,6 +215,46 @@ export function lastNight(nights: Night[]): { night: Night; overnight: boolean }
 }
 
 /**
+ * What the Sleep page's detail card may call a session.
+ *
+ * - `lastNight` — the newest OVERNIGHT session (`lastNight` above, the same rule
+ *   the Today card uses), and only while the page shows the window that ends
+ *   today and that night ended today or yesterday. A week-old night is not
+ *   "last night" just because the watch was off since.
+ * - `latest` — the newest session in the current window when it is not that
+ *   night: a nap, a shift worker's daytime sleep, or a night older than
+ *   yesterday. Honest without guessing which of those it was.
+ * - `plain` — everything else, and every session of a window in the past.
+ *
+ * ⚠️ The phone has no separate nap classifier to port: its widget files a night
+ * under its start minus twelve hours and prefers yesterday's key, precisely so
+ * that "a doze at 15:00 today" is not shown as "múlt éjjel"
+ * (`WidgetSleepKitchen.lastNightSeconds`). `isOvernight` draws the same line —
+ * a 15:00 nap is not overnight, a 23:10 or a 01:20 bedtime is.
+ */
+export type NightTitle = 'lastNight' | 'latest' | 'plain'
+
+export function nightTitle(
+  night: Night,
+  nights: Night[],
+  opts: { current: boolean; today: string },
+): NightTitle {
+  if (!opts.current) return 'plain'
+  const picked = lastNight(nights)
+  if (picked?.overnight && picked.night === night && isRecentKey(night.key, opts.today)) {
+    return 'lastNight'
+  }
+  return night === nights[0] ? 'latest' : 'plain'
+}
+
+/** `key` is `today` or the day before it (both local ISO dates). */
+function isRecentKey(key: string, today: string): boolean {
+  const [y, m, d] = today.split('-').map(Number)
+  const yesterday = localDate(new Date(y, m - 1, d - 1, 12).toISOString())
+  return key === today || key === yesterday
+}
+
+/**
  * Threads the segments into sleep sessions (nights): a continuous run of segments
  * is one night, and a gap longer than `SESSION_GAP_MIN` closes it. A daytime nap
  * therefore shows up as its own entry, instead of bleeding into the previous
