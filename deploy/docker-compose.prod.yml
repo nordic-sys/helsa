@@ -113,7 +113,7 @@ services:
   # (ADR-0003) — the operator issues the token, once per device. That is why it sits
   # in the "tools" profile: it does not run on its own.
   #
-  #   make prod-token SUBJECT=bob-web
+  #   make prod-token SUBJECT=iphone     (SUBJECT is the device; every token opens the one user's data)
   token:
     profiles: ["tools"]
     image: ${HELSA_BACKEND_IMAGE:-ghcr.io/nordic-sys/helsa/backend:main}

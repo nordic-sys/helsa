@@ -130,7 +130,21 @@ type Session struct {
 	AccessToken  string
 	RefreshToken string
 	ExpiresIn    int
+	ExpiresAt    time.Time // the access token's own `exp`, so nobody has to recompute it
 	UserID       uuid.UUID
+}
+
+// accessClaims is the access token's payload: the user in `sub`, and — on a device
+// token — which device it was issued for.
+//
+// ⚠️ `device` is a LABEL, not an identity. The data belongs to the user in `sub`, and
+// every device of that user reads the same data; the label is there so that a token
+// pulled out of a browser or a log can be told apart from its siblings when it is
+// revoked. VerifyAccess parses into jwt.RegisteredClaims and ignores the field, so
+// the tokens issued before it existed keep working unchanged.
+type accessClaims struct {
+	Device string `json:"device,omitempty"`
+	jwt.RegisteredClaims
 }
 
 // LoginWithApple is the full sign-in: verify → users upsert → issue session.
@@ -150,20 +164,50 @@ func (s *Service) LoginWithApple(ctx context.Context, identityToken, nonce strin
 	if err != nil {
 		return nil, fmt.Errorf("user upsert: %w", err)
 	}
-	return s.issueSession(ctx, pgconv.ToUUID(u.ID))
+	return s.issueSession(ctx, pgconv.ToUUID(u.ID), "")
+}
+
+// IssueDeviceToken issues a token for an EXISTING user, labelled with the device it
+// is for (cmd/token). Choosing the user is the caller's job — see cmd/token for why
+// the device name must never be what picks it.
+func (s *Service) IssueDeviceToken(ctx context.Context, userID uuid.UUID, device string) (*Session, error) {
+	return s.issueSession(ctx, userID, device)
+}
+
+// signAccess mints the access JWT and reports when it expires.
+func (s *Service) signAccess(userID uuid.UUID, device string, now time.Time) (string, time.Time, error) {
+	exp := now.Add(s.cfg.AccessTokenTTL)
+	claims := accessClaims{
+		Device: device,
+		RegisteredClaims: jwt.RegisteredClaims{
+			Subject:   userID.String(),
+			IssuedAt:  jwt.NewNumericDate(now),
+			ExpiresAt: jwt.NewNumericDate(exp),
+		},
+	}
+	tok, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(s.cfg.JWTSecret))
+	if err != nil {
+		return "", time.Time{}, fmt.Errorf("sign access: %w", err)
+	}
+	// The NumericDate is whole seconds; report what is actually in the token.
+	return tok, claims.ExpiresAt.Time, nil
+}
+
+// TokenDevice reads the device label out of a token WITHOUT verifying it. For
+// display only (the revoke output); never for a decision.
+func TokenDevice(token string) string {
+	var claims accessClaims
+	if _, _, err := jwt.NewParser().ParseUnverified(token, &claims); err != nil {
+		return ""
+	}
+	return claims.Device
 }
 
 // issueSession issues an access JWT and a refresh token (in Redis, with a TTL).
-func (s *Service) issueSession(ctx context.Context, userID uuid.UUID) (*Session, error) {
-	now := time.Now()
-	claims := jwt.RegisteredClaims{
-		Subject:   userID.String(),
-		IssuedAt:  jwt.NewNumericDate(now),
-		ExpiresAt: jwt.NewNumericDate(now.Add(s.cfg.AccessTokenTTL)),
-	}
-	access, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(s.cfg.JWTSecret))
+func (s *Service) issueSession(ctx context.Context, userID uuid.UUID, device string) (*Session, error) {
+	access, exp, err := s.signAccess(userID, device, time.Now())
 	if err != nil {
-		return nil, fmt.Errorf("sign access: %w", err)
+		return nil, err
 	}
 	refresh, err := randomToken()
 	if err != nil {
@@ -176,6 +220,7 @@ func (s *Service) issueSession(ctx context.Context, userID uuid.UUID) (*Session,
 		AccessToken:  access,
 		RefreshToken: refresh,
 		ExpiresIn:    int(s.cfg.AccessTokenTTL.Seconds()),
+		ExpiresAt:    exp,
 		UserID:       userID,
 	}, nil
 }
@@ -193,7 +238,7 @@ func (s *Service) Refresh(ctx context.Context, refresh string) (*Session, error)
 		return nil, ErrUnauthorized
 	}
 	s.redis.Del(ctx, refreshKey(refresh)) // rotation
-	return s.issueSession(ctx, userID)
+	return s.issueSession(ctx, userID, "")
 }
 
 // Logout revokes the refresh token.
@@ -205,8 +250,8 @@ func (s *Service) Logout(ctx context.Context, refresh string) error {
 //
 // # Why this touches Redis, when a JWT is supposed to be checkable on its own
 //
-// A device token here lives for a year (`HELSA_ACCESS_TTL=8760h` is the documented
-// setting). A signature-and-expiry check alone therefore means that a phone which is
+// A device token here lives for a year (`HELSA_DEVICE_TOKEN_TTL`, default 8760h, which
+// the compose file hands the token tool as `HELSA_ACCESS_TTL`). A signature-and-expiry check alone therefore means that a phone which is
 // lost on day two keeps full access for the remaining three hundred and sixty-three
 // days, and the only way to stop it is to rotate `HELSA_JWT_SECRET` — which logs out
 // every other device at the same time. That is not a revocation, it is an evacuation.

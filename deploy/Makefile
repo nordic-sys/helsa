@@ -108,8 +108,13 @@ prod-exec-api: ## [VM] Run a command inside the api container (CMD="wget -qO- ht
 	@# reads as a broken API rather than as a closed door. This asks the container instead.
 	$(PROD) exec api sh -c "$${CMD:?set CMD, e.g. wget -qO- http://127.0.0.1:8080/readyz}"
 
-prod-token: ## [VM] Issue a device token (SUBJECT=bob-web)
-	$(PROD) --profile tools run --rm token -subject $${SUBJECT:-bob}
+prod-token: ## [VM] Issue a device token (SUBJECT=iphone; TOKEN_USER=... only if there are several users)
+	@# ⚠️ SUBJECT names the DEVICE — a label on the token. It used to name the user, so
+	@# every device got its own empty data space; the tool now binds every token to the one
+	@# user (cmd/token/users.go). TOKEN_USER, not USER: $$USER is your shell login name.
+	$(PROD) --profile tools run --rm token \
+	  -subject "$${SUBJECT:?set SUBJECT to the device name, e.g. SUBJECT=iphone}" \
+	  $${TOKEN_USER:+-user "$${TOKEN_USER}"}
 
 prod-token-revoke: ## [VM] Revoke ONE device token; the others keep working (TOKEN=...)
 	$(PROD) --profile tools run --rm token -revoke "$${TOKEN:?set TOKEN to the access token to revoke}"
