@@ -179,8 +179,9 @@ next to your electricity meter is simply wrong.
 ### How the numbers are cut
 
 - **Steps and active energy** are today's totals in **your timezone**, the one in
-  your Helsa settings — the same cut the dashboard uses, so the two cannot
-  disagree.
+  your Helsa settings — the same cut, and the same merge of overlapping sources
+  (iPhone, Watch, third-party apps), the dashboard uses, so the two cannot
+  disagree. See [several sources, one number](/api/reading-data/#several-sources-one-number).
 - **Sleep** is the most recent sleep **session**, not "sleep on today's date":
   sleep crosses midnight, and a calendar-day cut would split one night into two
   half-nights. A gap of more than three hours starts a new session, so an

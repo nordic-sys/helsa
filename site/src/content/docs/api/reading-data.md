@@ -63,6 +63,33 @@ real behaviour is the better of the two. The tz-aware bucketing is why: it canno
 precomputed per day without choosing a zone in advance.
 :::
 
+### Several sources, one number
+
+The same walk is often in HealthKit three times — the iPhone, the Watch, and a
+third-party app each wrote it. Adding them up would triple the day, so for every
+metric with `agg: "sum"` the server **merges sources** first:
+
+1. per **hour** (cut in your time zone) and per **source**, it sums the samples —
+   a source is the writing app's bundle id (`source_bundle`), or `source_device`
+   when the bundle is empty;
+2. the hour's value is the **largest** of those per-source sums;
+3. every wider bucket — a day, a month — and `total` are the **sum of the merged
+   hours**, so the hourly buckets of a day always add up to that day.
+
+⚠️ This is an **approximation** of HealthKit's own merge, not a copy of it. Health
+merges by a source priority list over each sample's start *and end* time; the
+server stores only the start and knows no priority list. The merged figure is
+never below the largest single source and can sit a few percent above Health
+where sources trade the lead within an hour (one measured day: Health 21 874,
+the server 24 200 — a plain sum had said 67 406). A day with one source is
+exactly the plain sum.
+
+`agg: "avg"` metrics (heart rate and the like) are not merged: `avg`, `min` and
+`max` are taken over every sample of every source.
+
+The same merge feeds the insight rules, the step challenge and the Home Assistant
+daily sensors, so none of them can disagree with this endpoint.
+
 ### Time zones matter more than they look
 
 Daily buckets are cut in a time zone. `time_bucket` in UTC would put a run at

@@ -49,7 +49,7 @@ meet them.
 
 | What you see | Where the answer is |
 |---|---|
-| Steps roughly doubled against the Health app | The server sums every source; HealthKit's merged statistics exist only on the phone. [First sync](/getting-started/first-sync/#when-it-does-not-work) |
+| Steps a little higher than the Health app | Several sources recorded the same steps. The server keeps the largest source per hour — an approximation of HealthKit's merge, a few percent high at most, never doubled. [First sync](/getting-started/first-sync/#when-it-does-not-work) |
 | A figure that will not update | It is cached for 60 seconds and dropped when a batch lands. [Reading data](/api/reading-data/#summary) |
 | An observation resting on very little | Every rule states what it needs first. [Reading data](/api/reading-data/#insights) |
 | A Home Assistant sensor showing `unknown` | That is the design — a missing measurement is never a zero. [Home Assistant](/integrations/home-assistant/) |
