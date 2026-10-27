@@ -62,7 +62,8 @@ look weird".
 | | |
 |---|---|
 | `POST /v1/ingest` | The only write path for health data. Chunked, idempotent, asynchronous. [Details](ingest/) |
-| `GET /v1/ingest/status` | The queue between the two: waiting and dead-lettered batches, workers connected, the recent drain rate and an estimated time left. Counts only. [Details](ingest/#watching-the-queue) |
+| `GET /v1/ingest/status` | The queue between the two: waiting and dead-lettered batches (with why the recent ones failed), workers connected, the recent drain rate and an estimated time left. No health data. [Details](ingest/#watching-the-queue) |
+| `POST /v1/ingest/dead-letter/redrive` | Moves dead-lettered batches back onto the ingest queue for another try. Never retries on its own; never loses a batch. [Details](ingest/#retrying-dead-lettered-batches) |
 
 ### Reading
 

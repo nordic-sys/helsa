@@ -125,7 +125,7 @@ It refreshes itself every five seconds.
 | On the page | What it means |
 |---|---|
 | **Waiting** | Batches in the queue not yet handed to a worker. Exact. The "+ up to N in progress" beside it is an upper bound on the batches a worker is holding (its prefetch × the workers connected); plain AMQP cannot count those exactly. |
-| **Dead-letter queue** | Batches the worker gave up on. See below. |
+| **Dead-letter queue** | Batches the worker gave up on, why it gave up on the most recent ones, and a button that sends them back for another try. See below. |
 | **Workers connected** | Consumers on the queue. Batches waiting and **zero** workers is the failure that looks like slowness — the page says so in red, because the queue will not go down at all. |
 | **Batches / min**, **Items / min** | Finished over the last ten minutes, or since the worker started if that is more recent. An item is a sample, workout, sleep segment, activity summary or deletion. |
 | **About N left** | The waiting batches divided by the recent batch rate. **An estimate**: batches differ in size, so it moves. It is left out whenever it would be invented — nothing waiting, no worker, or nothing finished in the window. |
@@ -133,12 +133,36 @@ It refreshes itself every five seconds.
 
 :::danger[A non-empty dead-letter queue is data that is not on the server]
 A batch the worker could not write goes to `helsa.ingest.dlq`, and **nothing retries
-it** — today every processing error ends there, including a database that was
-restarting at the wrong moment. The page puts this above everything else. Find the
-reason in the worker log (`docker compose logs worker`, the `process batch` lines),
-fix it, then move the messages back to `helsa.ingest` with RabbitMQ's own tools;
-Helsa has no redrive command yet. Re-sending is safe: the write is idempotent.
+it on its own** — every processing error ends there, including a database that was
+restarting at the wrong moment. The page puts this above everything else.
 :::
+
+**Why it failed.** Under the count the page lists the worker's reasons for its most
+recent failures (up to 20, kept for 30 days): when, which batch, how many items it
+held, and the error. The error is the worker's own message with every number and
+quoted string blanked out (`#`, `"…"`), so no measured value can reach the page
+through a database error; what identifies — a `source_uuid`, a `SQLSTATE` code, a
+host address — is kept. Two things this list is **not**:
+
+- **Not a listing of the dead-letter queue.** RabbitMQ cannot show what is in a queue
+  without taking it out. An entry stays after its batch has been sent back, which is
+  why the page also shows when the last retry ran.
+- **Not complete for old batches.** A batch dead-lettered before the server recorded
+  reasons has none — the page says *reason not recorded*. The full error is still in
+  the worker log (`docker compose logs worker`, the `process batch` lines).
+
+**Retry.** The button moves the dead-lettered batches back onto `helsa.ingest`, and
+the worker processes them again. It is safe to press: the writes are idempotent
+upserts keyed on `source_uuid`, so a batch written twice stores nothing twice, and a
+batch is removed from the dead-letter queue only after RabbitMQ has confirmed the copy
+on the main queue — a batch is never lost on the way, at worst it is briefly in both.
+One press moves at most 1000; press again for the rest.
+
+Fix the cause first. A batch that failed because the database was restarting will go
+through; one that fails on its content will be back in the dead-letter queue within
+seconds. Every retry is counted on the batch, and from the third one the page says so
+— *this one has failed N times after retries* — because pressing again is then
+unlikely to help. Nothing is ever retried automatically.
 
 When the API cannot reach RabbitMQ the page says so and shows **no** queue figures —
 an unknown depth is not an empty queue. When the worker's counters (in Redis) cannot

@@ -186,7 +186,8 @@ POST /v1/ingest ──▶ api ──▶ rabbitmq ──▶ worker ──▶ time
 
 The worker normalises units to SI, resolves workout references, applies deletions,
 and writes with `ON CONFLICT DO NOTHING`. Unprocessable messages go to a
-dead-letter queue rather than blocking the queue behind them.
+dead-letter queue rather than blocking the queue behind them; they stay there until
+somebody [sends them back](#retrying-dead-lettered-batches).
 
 Each batch is logged with what it contained — `samples`, `workouts`,
 `sleep_segments`, `activity_summaries`, `deletions` — beside its byte size, which is
@@ -206,7 +207,21 @@ the queue between the `202` and the database is doing. It carries counts only.
   "checked_at": "2026-10-27T12:30:30Z",
   "broker_reachable": true,
   "queue": { "name": "helsa.ingest", "ready": 4000, "consumers": 1, "in_flight_max": 8 },
-  "dead_letter": { "name": "helsa.ingest.dlq", "ready": 0 },
+  "dead_letter": {
+    "name": "helsa.ingest.dlq",
+    "ready": 1,
+    "recent_failures": [
+      {
+        "batch_id": "0b6c5c1e-3f0a-4a52-9d55-2f3c8e1b7a10",
+        "failed_at": "2026-10-27T12:10:04Z",
+        "error": "begin tx: failed to connect to `host=timescaledb user=helsa database=helsa`: dial tcp 172.18.0.2:5432: connect: connection refused",
+        "items": 2000, "samples": 1990, "workouts": 4, "sleep_segments": 6,
+        "activity_summaries": 0, "deletions": 0,
+        "redriven": 0
+      }
+    ],
+    "last_redrive": { "at": "2026-10-26T20:01:12Z", "moved": 3 }
+  },
   "stats_reachable": true,
   "worker": {
     "started_at": "2026-10-27T11:30:00Z",
@@ -242,11 +257,69 @@ the queue between the `202` and the database is doing. It carries counts only.
   `queue`/`dead_letter` are absent. If the worker's counters cannot be read,
   `stats_reachable` is `false` and `worker`/`throughput` are absent.
 - A non-zero **`dead_letter.ready`** means batches that were not written and that
-  nothing will retry. See the [Ingest queue screen](/dashboard/screens/#ingest-queue).
+  nothing will retry on its own — [send them back](#retrying-dead-lettered-batches)
+  once the cause is fixed. See the [Ingest queue screen](/dashboard/screens/#ingest-queue).
+- **`dead_letter.recent_failures`** is why the worker gave up on its most recent
+  batches, newest first: at most 20, each kept for 30 days, absent when there are none
+  or when Redis cannot be read. `error` is the worker's message cut at 300 characters,
+  with every number replaced by `#` and every quoted string by `"…"`, so no measured
+  value can leak through it; UUIDs (`source_uuid`), `SQLSTATE` codes and IP addresses
+  are kept. `redriven` is how many retries the batch had already had when it failed
+  this time. `batch_id` is the id the `202` returned, absent for a batch queued by an
+  older server.
+- ⚠️ **That list is a log, not the queue's contents.** A batch dead-lettered before
+  the server recorded reasons has no entry, and an entry outlives the retry of its
+  batch — compare `failed_at` with **`dead_letter.last_redrive.at`** (the last retry
+  that moved anything, kept for 30 days).
 
-The worker keeps its counters in Redis: one hash per worker (reset on start) and
-one small hash per minute that expires after two hours, so the footprint stays
-bounded however long it runs.
+The worker keeps its counters in Redis: one hash per worker (reset on start), one
+small hash per minute that expires after two hours, and the capped failure list, so
+the footprint stays bounded however long it runs.
+
+## Retrying dead-lettered batches
+
+`POST /v1/ingest/dead-letter/redrive` (same device token) moves dead-lettered batches
+back onto the ingest queue, where the worker processes them again. The body is
+optional:
+
+```json
+{ "max": 10 }
+```
+
+Without a body, or without `max`, it moves every batch that is in the dead-letter
+queue when the call starts. Either way at most **1000** per call; `max` outside
+1–1000 is a `400`.
+
+```json
+{ "moved": 3, "remaining": 0, "max_redriven": 1, "repeated": 0 }
+```
+
+| Field | Meaning |
+|---|---|
+| `moved` | Batches confirmed on the main queue **and** removed from the dead-letter queue. Exact. |
+| `remaining` | The dead-letter queue's depth afterwards. Absent if it could not be read — never a guessed 0. |
+| `max_redriven` | The highest retry count among the moved batches, after this retry (`1` for a first retry, `0` when nothing moved). |
+| `repeated` | Moved batches now on their third retry or later. They have failed again after earlier retries; the cause is probably in the data, not a passing outage. |
+| `stopped_early` | Present only when the run stopped before its count, with the reason. `moved` still counts only the confirmed ones, and the batch in hand went back to the dead-letter queue. |
+
+- **Safe to repeat.** The worker's writes are idempotent upserts keyed on
+  `source_uuid`, so a batch processed twice stores nothing twice.
+- **No batch is lost.** Each batch is republished first, with RabbitMQ publisher
+  confirms; only after the broker confirms it — and has not returned it as
+  unroutable — is the dead-letter copy acknowledged. An unconfirmed publish puts the
+  batch back on the dead-letter queue and stops the run. The worst case is a batch in
+  both queues, which the upserts absorb.
+- **Nothing retries automatically.** Each moved batch carries an `x-helsa-redriven`
+  header counting its retries; it is reported, never acted on.
+- **No double move.** The number to move is fixed when the call starts, so a batch
+  that fails again during the run is not picked up a second time. A second call while
+  one is running gets a `409`. The lock lives in the API process, which is enough
+  because the server runs a single API instance.
+- **`503`** means nothing could be moved: RabbitMQ is unreachable.
+
+Fix the cause before you retry. A batch that failed on a database restart goes
+through; one that fails on its content returns to the dead-letter queue within
+seconds, and its next entry in `recent_failures` shows the higher `redriven`.
 
 ## Failure modes
 
