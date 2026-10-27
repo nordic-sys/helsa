@@ -14,6 +14,7 @@ import (
 	"github.com/nordic-sys/helsa/backend/internal/hass"
 	"github.com/nordic-sys/helsa/backend/internal/ingest"
 	"github.com/nordic-sys/helsa/backend/internal/queue"
+	"github.com/nordic-sys/helsa/backend/internal/startup"
 	"github.com/nordic-sys/helsa/backend/internal/store"
 )
 
@@ -29,14 +30,19 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
-	st, err := store.Open(ctx, cfg)
+	// After a host reboot the databases may still be starting — see internal/startup.
+	st, err := startup.Wait(ctx, log, "postgres+redis", startup.Budget, func(ctx context.Context) (*store.Store, error) {
+		return store.Open(ctx, cfg)
+	})
 	if err != nil {
 		log.Error("store open", "err", err)
 		os.Exit(1)
 	}
 	defer st.Close()
 
-	q, err := queue.Open(cfg.RabbitMQURL, cfg.IngestQueue)
+	q, err := startup.Wait(ctx, log, "rabbitmq", startup.Budget, func(context.Context) (*queue.Queue, error) {
+		return queue.Open(cfg.RabbitMQURL, cfg.IngestQueue)
+	})
 	if err != nil {
 		log.Error("queue open", "err", err)
 		os.Exit(1)

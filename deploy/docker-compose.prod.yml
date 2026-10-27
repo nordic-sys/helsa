@@ -80,8 +80,13 @@ services:
       HELSA_REDIS_PASSWORD: "${REDIS_PASSWORD}"
       HELSA_RABBITMQ_URL: "amqp://${RABBITMQ_USER:-helsa}:${RABBITMQ_PASSWORD}@rabbitmq:5672/"
       HELSA_JWT_SECRET: "${HELSA_JWT_SECRET:?must be set in .env}"
+    # Redis too: the worker pings it on start and invalidates the summary cache in it.
+    # ⚠️ depends_on orders `compose up` only. After a host reboot the daemon restarts
+    # every container at once and ignores it; the binaries wait for their
+    # dependencies themselves (backend/internal/startup).
     depends_on:
       timescaledb: { condition: service_healthy }
+      redis:       { condition: service_healthy }
       rabbitmq:    { condition: service_healthy }
     restart: unless-stopped
 
