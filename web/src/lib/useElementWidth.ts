@@ -6,13 +6,24 @@
 //
 // `0` until measured — and in environments without `ResizeObserver` (jsdom) it
 // stays `0`, which callers read as "unknown" and handle with a fallback.
+//
+// ⚠️ A CALLBACK ref, not a `RefObject`. The Trends chart's container is only
+// mounted once the first load finishes; with a `RefObject` the effect ran once
+// on mount, found `ref.current === null` (the skeleton was on screen), and never
+// looked again — so the width stayed `0`, the label thinning fell back to its
+// seven-label ceiling, and at 390 px the dates were printed on top of each
+// other. Holding the element in state re-runs the observer whenever the element
+// appears, changes or goes away.
 
-import { useEffect, useState, type RefObject } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 
-export function useElementWidth(ref: RefObject<HTMLElement | null>): number {
+export function useElementWidth<T extends HTMLElement = HTMLDivElement>(): [
+  (el: T | null) => void,
+  number,
+] {
+  const [el, setEl] = useState<T | null>(null)
   const [width, setWidth] = useState(0)
   useEffect(() => {
-    const el = ref.current
     if (!el || typeof ResizeObserver === 'undefined') return
     const ro = new ResizeObserver((entries) => {
       const w = Math.round(entries[0]?.contentRect.width ?? 0)
@@ -20,8 +31,9 @@ export function useElementWidth(ref: RefObject<HTMLElement | null>): number {
     })
     ro.observe(el)
     return () => ro.disconnect()
-  }, [ref])
-  return width
+  }, [el])
+  const ref = useCallback((node: T | null) => setEl(node), [])
+  return [ref, width]
 }
 
 /**

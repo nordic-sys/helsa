@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
@@ -317,8 +317,7 @@ export default function Trends() {
   }, [data, band, drawnDef.digits, f])
 
   // The chart's real width, for the label decisions below. `0` = not measured.
-  const chartRef = useRef<HTMLDivElement>(null)
-  const chartWidth = useElementWidth(chartRef)
+  const [chartRef, chartWidth] = useElementWidth()
   /** The plot area: the chart minus the y axis and the margins. `null` = unknown. */
   const plotWidth = chartWidth > 0 ? Math.max(0, chartWidth - yAxisWidth - 4) : null
 
@@ -348,6 +347,19 @@ export default function Trends() {
     const chosen: string[] = []
     for (let i = data.length - 1; i >= 0; i -= step) chosen.push(data[i].t)
     return chosen.reverse()
+  }, [data, drawnRange, f, plotWidth])
+
+  /**
+   * Room on the right for the LAST label, which `xTicks` always keeps. It is
+   * centred on the last bucket, and at 390 px a bucket is ~10 px wide, so half
+   * of "2026. okt." or "11:00 PM" hung past the plot and the SVG cut it off.
+   * On a desktop the bucket is wider than the label and this stays at 12.
+   */
+  const rightMargin = useMemo(() => {
+    const last = data.at(-1)
+    if (!last || plotWidth == null || data.length === 0) return 12
+    const half = labelPx(tickLabel(last.t, drawnRange, f).length) / 2
+    return Math.max(12, Math.ceil(half - plotWidth / data.length / 2))
   }, [data, drawnRange, f, plotWidth])
 
   // Off while the chart on screen is a placeholder for a window still loading.
@@ -581,7 +593,7 @@ export default function Trends() {
                       title={`${label}${unit ? ` (${unit})` : ''}`}
                       desc={t('trends.chartDesc', { period: windowDates(drawnWin, drawnRange, locale) })}
                       data={chartData}
-                      margin={{ top: labelBars ? 22 : 8, right: 12, bottom: 4, left: -8 }}
+                      margin={{ top: labelBars ? 22 : 8, right: rightMargin, bottom: 4, left: -8 }}
                       onClick={
                         canDrill
                           ? (state: unknown) => {
