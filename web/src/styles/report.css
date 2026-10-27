@@ -1,0 +1,382 @@
+/* The health summary (`pages/Report.tsx`) — on screen, and on A4.
+ *
+ * ⚠️ A file of its own, imported only by that page, and every rule is under a
+ * `report-` prefix — the same arrangement as `summary.css`, for the same reason:
+ * nothing here is shared, so nothing here may reach another page. The one
+ * exception is the print block's chrome rules (sidebar, footer), and those are
+ * gated on `:has(.report-sheet)` so printing any OTHER page is untouched.
+ *
+ * On screen the page follows the theme through the tokens. On paper it does
+ * not — see the print block for why. */
+
+/* --- The controls --- */
+.report-controls {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  margin-bottom: var(--sp-5);
+}
+.report-hint {
+  margin: 0;
+  max-width: 70ch;
+}
+.report-label {
+  font-size: var(--fs-small);
+  color: var(--text-dim);
+  font-weight: 500;
+}
+.report-metrics-choice {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.report-chips {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+.report-chips li {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  min-height: 36px;
+  padding: 0 4px 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--surface);
+  font-size: var(--fs-small);
+  color: var(--text);
+}
+.report-chips button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-dim);
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+.report-chips button:hover {
+  background: var(--surface-2);
+  color: var(--text);
+}
+.report-metrics-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+  align-items: center;
+}
+.report-metrics-actions .field {
+  flex: 0 1 320px;
+}
+
+/* --- The sheet --- */
+.report-sheet {
+  background: var(--surface);
+  border: 1px solid var(--card-border);
+  border-radius: var(--radius-card);
+  padding: var(--sp-6);
+  box-shadow: var(--shadow);
+  min-width: 0;
+  color: var(--text);
+}
+/* The frame is a layout device, not data: its <thead>/<tfoot> are what repeat
+ * on every printed sheet. None of the data-table styling applies to it. */
+.report-frame {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+  font-size: var(--fs-body);
+}
+.report-frame > thead > tr > td,
+.report-frame > tfoot > tr > td,
+.report-frame > tbody > tr > td {
+  padding: 0;
+  border: 0;
+  white-space: normal;
+  vertical-align: top;
+}
+.report-head {
+  padding-bottom: var(--sp-2);
+  margin-bottom: var(--sp-4);
+  border-bottom: 2px solid var(--text);
+}
+.report-head-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sp-1) var(--sp-4);
+}
+.report-title {
+  margin: 0;
+  font-size: var(--fs-h2);
+  font-weight: 600;
+  color: var(--text);
+}
+.report-made {
+  font-size: var(--fs-caption);
+  color: var(--text-faint);
+}
+.report-period {
+  margin: 2px 0 0;
+  color: var(--text-2);
+  font-size: var(--fs-small);
+}
+
+.report-changes {
+  margin-bottom: var(--sp-4);
+}
+.report-changes-title {
+  margin: 0 0 2px;
+  font-size: var(--fs-caption);
+  color: var(--text-faint);
+}
+.report-changes ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-variant-numeric: tabular-nums;
+}
+.report-changes li {
+  font-size: var(--fs-body);
+}
+
+.report-section {
+  margin-top: var(--sp-5);
+}
+.report-section > h3 {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-body);
+  font-weight: 600;
+  color: var(--text);
+}
+.report-note {
+  margin: var(--sp-2) 0 0;
+  font-size: var(--fs-small);
+  color: var(--text-dim);
+  max-width: 90ch;
+}
+.report-section > h3 + .report-note {
+  margin-top: 0;
+}
+.report-total {
+  margin: 0 0 var(--sp-2);
+  font-size: var(--fs-small);
+  color: var(--text-2);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The data tables. Rules between rows, no fills, no colour that means
+ * anything (`ClinicalReportPage`: "white paper, black ink, grey rules"). */
+.report-table th[scope='row'] {
+  font-weight: 500;
+  color: var(--text);
+  white-space: normal;
+  min-width: 12em;
+}
+.report-table td {
+  color: var(--text);
+}
+.report-table .report-muted {
+  color: var(--text-faint);
+}
+.report-unit {
+  font-size: var(--fs-caption);
+  color: var(--text-faint);
+  font-weight: 400;
+}
+/* A measurement's second line hangs under its row: the rule goes under the
+ * pair, not between them. */
+.report-metric > tr:first-child > * {
+  border-bottom: 0;
+  padding-bottom: 2px;
+}
+.report-metric > tr:only-child > *,
+.report-subrow > td {
+  border-bottom: 1px solid var(--line);
+}
+.report-subrow > td {
+  padding-top: 0;
+  font-size: var(--fs-caption);
+  color: var(--text-dim);
+  white-space: normal;
+}
+
+@media (max-width: 640px) {
+  .report-sheet {
+    padding: var(--sp-4);
+  }
+}
+
+/* --- Paper ---
+ *
+ * What the sheet becomes when printed (or saved as a PDF from the print dialog).
+ *
+ * ⚠️ **Black on white, whatever the screen's theme.** The tokens are redefined
+ * on the sheet rather than the colours overridden one rule at a time, so a rule
+ * added above later cannot leak a dark-mode grey onto paper. And not a light
+ * variant of the palette either: the app's metric colours mean something, and on
+ * this page a coloured number would be read as a verdict (`ReportInk` on the
+ * phone, the same five greys). With no colour there is nothing to lose in a grey
+ * printer — the "legible in grayscale" requirement is met by having nothing that
+ * depends on hue.
+ *
+ * Page breaks: the honesty block and the header repeat on every sheet (the
+ * frame's tfoot/thead). A measurement and its second line never split; a short
+ * section never splits; a heading never ends a sheet. A long workout list starts
+ * on a sheet of its own — but a one-sentence section does not, because forcing a
+ * break before "the server does not receive the journal" would print a page with
+ * one sentence on it. */
+@page {
+  size: A4;
+  margin: 14mm 14mm 16mm;
+  /* Which sheet of how many — printed on every page, because a reader handed a
+   * stack cannot otherwise tell a two-page report from a three-page one with
+   * the middle sheet lost (`ReportContent.pageNumber`). Numbers only, so it is
+   * the same in both languages. */
+  @bottom-right {
+    content: counter(page) ' / ' counter(pages);
+    font: 8pt -apple-system, 'Helvetica Neue', Arial, sans-serif;
+    color: #555;
+  }
+}
+
+@media print {
+  /* The chrome around the page — gated on the sheet being there. */
+  body:has(.report-sheet) {
+    background: #fff;
+  }
+  .app:has(.report-sheet) {
+    display: block;
+    background: #fff;
+  }
+  .app:has(.report-sheet) > .sidebar,
+  .main:has(.report-sheet) > .app-footer,
+  .report .page-head,
+  .report-controls {
+    display: none;
+  }
+  .main:has(.report-sheet) {
+    padding: 0;
+    margin: 0;
+    max-width: none;
+    display: block;
+  }
+
+  .report-sheet {
+    --text: #111;
+    --text-2: #333;
+    --text-dim: #555;
+    --text-faint: #6b6b6b;
+    --line: #d9d9d9;
+    --surface: #fff;
+    background: #fff;
+    color: #111;
+    border: 0;
+    border-radius: 0;
+    padding: 0;
+    box-shadow: none;
+    font-size: 9.5pt;
+    -webkit-print-color-adjust: economy;
+    print-color-adjust: economy;
+  }
+  .report-frame {
+    font-size: 9.5pt;
+  }
+  .report-title {
+    font-size: 15pt;
+  }
+  .report-made,
+  .report-changes-title {
+    font-size: 7.5pt;
+  }
+  .report-period,
+  .report-note,
+  .report-total {
+    font-size: 8.5pt;
+  }
+  .report-changes li {
+    font-size: 9.5pt;
+  }
+  .report-section {
+    margin-top: 5mm;
+  }
+  .report-section > h3 {
+    font-size: 10.5pt;
+    break-after: avoid;
+  }
+  .report-section--short,
+  .report-changes,
+  .report-metric {
+    break-inside: avoid;
+  }
+  .report-section--newpage {
+    break-before: page;
+  }
+  /* The tables print whole: no scroll box on paper, and cells wrap rather
+   * than run off the sheet's edge. */
+  .report-sheet .table-wrap {
+    overflow: visible;
+  }
+  .report-table {
+    font-size: 8.5pt;
+  }
+  .report-table th,
+  .report-table td {
+    padding: 3pt 6pt 3pt 0;
+    white-space: normal;
+  }
+  .report-table thead {
+    /* Repeated over a table that runs onto a second sheet. */
+    display: table-header-group;
+  }
+  .report-table th[scope='row'] {
+    min-width: 0;
+    width: 34%;
+  }
+  .report-subrow > td {
+    font-size: 7.5pt;
+  }
+  .report-unit {
+    font-size: 7.5pt;
+  }
+  .report-head {
+    margin-bottom: 4mm;
+    border-bottom: 1.5pt solid #111;
+  }
+}
+
+/* The honesty block. Small on screen as on paper — but never hidden on either.
+ * (After the print block in the file, so its print overrides follow it.) */
+.report-foot {
+  margin-top: var(--sp-6);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--text);
+  font-size: var(--fs-caption);
+  color: var(--text-dim);
+}
+.report-foot p {
+  margin: 0 0 2px;
+}
+.report-foot-strong {
+  color: var(--text);
+  font-weight: 600;
+}
+@media print {
+  .report-foot {
+    font-size: 7pt;
+    margin-top: 6mm;
+    padding-top: 2mm;
+    border-top: 1pt solid #111;
+  }
+}

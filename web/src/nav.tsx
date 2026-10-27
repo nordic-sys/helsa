@@ -64,6 +64,7 @@ import Training from './pages/Training'
 import MonthMedal from './pages/MonthMedal'
 import PeriodSummary from './pages/PeriodSummary'
 import YearByYear from './pages/YearByYear'
+import Report from './pages/Report'
 
 export type NavGroupKey = 'longView' | 'areas' | 'status'
 
@@ -97,6 +98,17 @@ export const NAV: NavEntry[] = [
   // phone's screen is, because that is already the heading it stands under.
   { path: '/period', label: 'nav.period', element: <PeriodSummary />, group: 'longView' },
   { path: '/years', label: 'nav.years', element: <YearByYear />, group: 'longView' },
+  // The health summary closes that run of summaries, and in "The long view"
+  // rather than in Status beside Settings — although on the phone it opens from
+  // Settings and from Export (`SettingsView`, `ExportView`). There it sits next
+  // to the export because a phone hands a file over through the share sheet, and
+  // the share sheet lives there; the web's Print button is on the page itself,
+  // so the web owes the machinery nothing. What is left is the content, and the
+  // content is the band's question: what the last one to twelve months were,
+  // against the person's own usual range — something to look at and hand over,
+  // not something to touch today. Status is "whether the thing that moves your
+  // data is working", which a printed summary does not answer.
+  { path: '/report', label: 'nav.report', element: <Report />, group: 'longView' },
   { path: '/insights', label: 'nav.insights', element: <Insights />, group: 'longView' },
   { path: '/achievements', label: 'nav.achievements', element: <Achievements />, group: 'longView' },
   { path: '/challenge', label: 'nav.challenge', element: <Challenge />, group: 'longView' },

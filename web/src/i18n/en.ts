@@ -1148,6 +1148,98 @@ export const en: Dict = {
       'The workout history stopped loading before the start of this period, so its oldest weeks may be missing sessions.',
     'training.source':
       'Source: the workouts, heart rate, resting heart rate and HRV the phone sent to this server. Nothing is stored for this page.',
+    // --- Health summary (pages/Report.tsx) ---------------------------------------
+    // ⚠️ Where the phone's printed summary has the same sentence (HelsaKit
+    // `Report/`), the wording is taken from there word for word: a doctor holding
+    // both printouts should not read two phrasings of one fact.
+    'nav.report': 'Health summary',
+    'report.title': 'Health summary',
+    'report.subtitle':
+      'The phone’s printable summary for a doctor, made from what the server holds. Print it, or save it as a PDF from the print dialog.',
+    'report.periodAria': 'Period',
+    'report.days.30': '30 days',
+    'report.days.90': '3 months',
+    'report.days.180': '6 months',
+    'report.days.365': '1 year',
+    // The file name "Save as PDF" offers — impersonal on purpose (`ReportContent.fileName`).
+    'report.fileName': 'helsa-summary-{day}',
+    'report.print': 'Print or save as PDF',
+    'report.printHint':
+      'The PDF comes from the browser’s print dialog: choose “Save as PDF” as the printer. The server itself does not make PDFs yet.',
+    'report.metrics.title': 'Measurements on the page',
+    'report.metrics.add': 'Add a measurement',
+    'report.metrics.remove': 'Remove {metric}',
+    'report.metrics.reset': 'Back to the default set',
+    'report.metrics.withData': 'Has data',
+    'report.metrics.noData': 'No data yet',
+    'report.metrics.defaultNote':
+      'The default set is a starting point, not a recommendation: what the appointment is about is yours to choose.',
+    'report.metrics.none': 'Choose at least one measurement.',
+    'report.made': 'Made: {when}',
+    'report.period': '{range} · {n} days',
+    'report.changes.title': 'Since the previous period of the same length:',
+    'report.changes.line': '{name}: {from} → {to} ({pct})',
+    'report.changes.lineNoPct': '{name}: {from} → {to}',
+    'report.changes.withheld':
+      'Not compared, because the two periods were measured on very different shares of their days: {list}.',
+    'report.changes.withheldItem': '{name} ({now} / {days} days now, {then} / {days} before)',
+    'report.journal.title': 'What I noted',
+    'report.journal.body':
+      'The journal and the symptom marks stay on the phone: they never reach the server, so this page cannot show them — and their absence here does not mean nothing was noted. The summary made in the phone app carries them.',
+    'report.table.title': 'Measurements',
+    'report.col.measurement': 'Measurement',
+    'report.col.average': 'Daily average',
+    'report.col.extremes': 'Extremes',
+    'report.col.usual': 'Usual range',
+    'report.col.days': 'Measured days',
+    'report.noMeasurement': 'no measurement',
+    'report.usual.none': 'no measurement of my own',
+    'report.usual.little': 'little data ({n} days)',
+    'report.coverage': '{n} / {of} days measured',
+    'report.sub.latest': 'latest reading: {value}',
+    'report.sub.middle': 'usual middle: {value}',
+    'report.sub.total': 'period total: {value}',
+    'report.sub.degraded': 'arrives as a per-sample average, not a daily total',
+    'report.empty': 'No measurement in this period: {list}.',
+    'report.nothing':
+      'There is no recorded measurement and no workout in this period. That is an answer too: you do not have to say it from memory.',
+    'report.baselineFailed':
+      'The usual range could not be read from the last year, so it comes from this period alone, and there is no comparison.',
+    'report.unit.bpm': 'bpm',
+    'report.unit.breaths': 'breaths/min',
+    'report.unit.steps': 'steps',
+    'report.unit.floors': 'floors',
+    'report.unit.mmHg': 'mmHg',
+    'report.unit.minutes': 'minutes',
+    'report.events.title': 'Recorded events',
+    'report.events.body':
+      'Events (a fall, a heart-rate notification, an unusual blood pressure) are put together on the iPhone from its Health data and do not reach the server, so this page can say nothing about them for this period.',
+    'report.workouts.title': 'Workouts',
+    'report.workouts.col.time': 'Time',
+    'report.workouts.col.type': 'Type',
+    'report.workouts.col.duration': 'Duration',
+    'report.workouts.col.distance': 'Distance',
+    'report.workouts.col.pulse': 'Pulse',
+    'report.workouts.count.one': '{n} workout',
+    'report.workouts.count.other': '{n} workouts',
+    'report.workouts.inTotal': '{d} in total',
+    'report.workouts.avgHr': 'avg {n} bpm',
+    'report.workouts.none': 'There is no recorded workout in this period.',
+    'report.workouts.notLoaded': 'The workouts could not be read, so the page can say nothing about them.',
+    'report.workouts.over': '{all} workouts in the period; the most recent {shown} are listed.',
+    'report.prov.made':
+      'Put together by the Helsa web page from my own Apple Health data, which my phone sent to my own server.',
+    'report.prov.self':
+      'Self-recorded data: a wearable, a phone, a home device and my own entries. Not a clinical measurement.',
+    'report.prov.usual':
+      'The “usual range” is the middle 80% of my own daily values (10th–90th percentile) from the last {n} days. Not a medical reference range.',
+    'report.prov.noAssessment':
+      'No assessment, grade, diagnosis or suggestion here: only measured numbers and dates.',
+    'report.prov.gaps':
+      'No measurement means no data: a missing day is not a zero, it is left out of the average. The extremes are the individual measurements for point-in-time types, and the daily totals’ extremes for cumulative ones.',
+    'report.prov.notMedical':
+      'Helsa is not a medical device: nothing on this page is a diagnosis, a warning or an alert.',
+
     // --- The year in numbers + year by year (pages/PeriodSummary, pages/YearByYear) ---
     // The phone's period summary and long view. Wording follows the phone's own
     // catalogue where it has the sentence (`HelsaKit/Resources/Localizable.xcstrings`).
