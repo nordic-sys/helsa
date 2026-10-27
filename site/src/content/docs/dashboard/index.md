@@ -91,8 +91,10 @@ does not.
 
 - **No analytics, no third-party script, nothing measured.** Same rule as this
   documentation site.
-- **No PDF export.** The medical PDF is generated on the phone, where the daily
-  journal it draws on lives — and the journal never leaves the device.
+- **No PDF export.** The raw CSV and JSON export is on
+  [Settings](/dashboard/screens/#settings); the medical PDF is generated on the
+  phone, where the daily journal it draws on lives — and the journal never leaves
+  the device.
 - **No notifications.** The quiet reminder is a local notification on the phone.
 - **No map, unless you ask for one.** A workout route is drawn, not mapped, until you
   choose a tile source — [what each choice sends](/deployment/map-tiles/).

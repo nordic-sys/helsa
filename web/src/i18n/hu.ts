@@ -572,6 +572,52 @@ export const hu = {
     'settings.language.note':
       'A felület nyelve. Csak a böngészőben tárolódik — a szervertől érkező szöveg (insights-mondatok, hibaüzenetek) ettől függetlenül a szerver nyelvén marad.',
 
+    // --- Beállítások · export ------------------------------------------------
+    // Ahol illik, a telefon szerverexport-szövegei (`ExportView.swift`). A web
+    // csak a szerveres felet tudja: nincs HealthKit, amiből olvasna.
+    'settings.export.title': 'Export',
+    'settings.export.intro':
+      'A nyers mintáid a szerverről, soronként egy mérés — minden egyes pulzusmérés, nem napi összesítők. A szerver szinkron módon készíti: a válasz maga a fájl.',
+    'settings.export.format': 'Formátum',
+    'settings.export.format.csvNote':
+      'Soronként egy minta: időpont, típus, érték, mértékegység, forráseszköz. Táblázatkezelőben is megnyílik.',
+    'settings.export.format.jsonNote':
+      'A minták, mellettük az időszak edzései és alvásszakaszai, egyetlen fájlban.',
+    'settings.export.period': 'Időszak',
+    'settings.export.days.one': '{n} nap',
+    'settings.export.days.other': '{n} nap',
+    'settings.export.year': '1 év',
+    'settings.export.custom': 'Dátumok megadása',
+    'settings.export.from': 'Ettől',
+    'settings.export.to': 'Eddig (bezárólag)',
+    'settings.export.periodNote':
+      'A mai nappal bezárólag visszafelé. Minél hosszabb az időszak, annál tovább tart — egy évnyi pulzus önmagában több százezer sor.',
+    'settings.export.customNote':
+      'Naptári napok a szerver időzónájában; az utolsó nap is benne van.',
+    'settings.export.badRange': 'Az első nap nem lehet későbbi az utolsónál.',
+    'settings.export.metrics': 'Metrikák',
+    'settings.export.metrics.all': 'Minden metrika',
+    'settings.export.metrics.some': 'Csak a bejelöltek',
+    'settings.export.metrics.selected.one': '{n} kiválasztva',
+    'settings.export.metrics.selected.other': '{n} kiválasztva',
+    'settings.export.metrics.listing': 'Az adattal rendelkező metrikák listázása…',
+    'settings.export.metrics.none': 'Jelölj be legalább egy metrikát, vagy válaszd mindet.',
+    'settings.export.metrics.note':
+      'Ez csak a mintákat szűkíti. A JSON-fájlban az edzések és az alvásszakaszok mindenképp a teljes időszakra jönnek.',
+    'settings.export.download': 'Letöltés a szerverről',
+    'settings.export.cancel': 'Leállítás',
+    'settings.export.waiting': 'Várjuk, hogy a szerver elkezdje a fájlt…',
+    'settings.export.receiving': 'Érkezik: eddig {size}, {seconds} mp',
+    'settings.export.noTotal':
+      'A szerver úgy küldi a fájlt, hogy előre nem mondja meg a méretét, ezért nincs százalék — csak az látszik, ami már megérkezett.',
+    'settings.export.done': 'Átadva a böngészőnek: {file} ({size}).',
+    'settings.export.cancelled': 'Leállítva. Semmi sem lett elmentve.',
+    'settings.export.failed': 'Az export nem sikerült: {error}',
+    'settings.export.truncated':
+      'A fájl csonkán érkezett: a szerver elkezdte küldeni, aztán abbahagyta. Nem mentettük el — próbáld újra, vagy rövidebb időszakkal.',
+    'settings.export.footer':
+      'A PDF a kontraktusban szerepel, de még nincs megvalósítva — ezért nem kínáljuk fel. Egy félbeszakadt CSV nem különböztethető meg egy teljestől; a JSON-fájlnál mentés előtt ellenőrizzük a záró zárójelet.',
+
     // --- Metric picker -----------------------------------------------------
     'picker.search': 'Keresés {n} metrika közt…',
     'picker.searchAria': 'Metrika keresése',

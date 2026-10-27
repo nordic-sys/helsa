@@ -193,6 +193,99 @@ export const api = {
   /** The monthly step challenge. `month` is `YYYY-MM`; without it, the month the
    * time zone is in right now. */
   challenge: (month?: string, tz?: string) => req<Challenge>(`/challenge${qs({ month, tz })}`),
+
+  /**
+   * `POST /export` — the file itself, streamed. See `exportFile` below.
+   *
+   * ⚠️ Like the redrive above, a POST that writes nothing: it reads the data out.
+   */
+  exportFile: (body: ExportRequest, opts: ExportOptions = {}) => exportFile(body, opts),
+}
+
+/** The body of `POST /export` (openapi.yaml `ExportRequest`). `pdf` is in the
+ * contract but answers 501, so the web's type does not offer it. */
+export type ExportRequest = {
+  format: 'csv' | 'json'
+  /** Empty or absent = every metric. */
+  metrics?: string[]
+  /** Calendar days in the user's time zone; `to` is included. */
+  from?: string
+  to?: string
+}
+
+export type ExportOptions = {
+  signal?: AbortSignal
+  /** Bytes received so far — the only progress there is: the server streams
+   * without a Content-Length, because it does not know the size either. */
+  onProgress?: (bytes: number) => void
+}
+
+export type ExportedFile = {
+  blob: Blob
+  /** The raw `Content-Disposition` header; `lib/exportFile.filenameFrom` reads it. */
+  disposition: string | null
+  bytes: number
+}
+
+/**
+ * The export, read as it arrives.
+ *
+ * A separate path from `req` because the answer is a FILE, not JSON — and
+ * because a large history takes a while, the body is read chunk by chunk so the
+ * page can say how much has arrived. Same auth as every other call: the bearer
+ * token if one is stored, the cookie otherwise.
+ *
+ * ⚠️ A non-200 is a problem+json like everywhere else (400 for a bad window).
+ * But once the server has sent 200 it is streaming and can no longer change the
+ * status: an export that breaks off on the server arrives as a 200 with a short
+ * body. Checking for that is the caller's job (`lib/exportFile.ts`), because only
+ * it knows the format.
+ */
+async function exportFile(body: ExportRequest, opts: ExportOptions): Promise<ExportedFile> {
+  const headers = new Headers({ 'Content-Type': 'application/json' })
+  const token = getToken()
+  if (token) headers.set('Authorization', `Bearer ${token}`)
+  const res = await fetch(`${BASE}/export`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+    credentials: 'include',
+    signal: opts.signal,
+  })
+  if (!res.ok) {
+    let title = `HTTP ${res.status}`
+    let detail: string | undefined
+    try {
+      const p = await res.json()
+      title = p.title ?? title
+      detail = p.detail
+    } catch {
+      /* not JSON — the status stands */
+    }
+    throw new ApiError(res.status, title, detail)
+  }
+
+  const type = res.headers.get('Content-Type') ?? 'application/octet-stream'
+  const disposition = res.headers.get('Content-Disposition')
+  const chunks: BlobPart[] = []
+  let bytes = 0
+  const reader = res.body?.getReader()
+  if (reader) {
+    for (;;) {
+      const { done, value } = await reader.read()
+      if (done) break
+      chunks.push(value)
+      bytes += value.byteLength
+      opts.onProgress?.(bytes)
+    }
+  } else {
+    // No stream to read (an old engine, a test double): the whole body at once.
+    const whole = await res.blob()
+    chunks.push(whole)
+    bytes = whole.size
+    opts.onProgress?.(bytes)
+  }
+  return { blob: new Blob(chunks, { type }), disposition, bytes }
 }
 
 /** The browser's time zone — for the timezone-aware aggregation (docs/03 §6.1). */

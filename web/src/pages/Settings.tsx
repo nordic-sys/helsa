@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, browserTz, clearToken, getToken, setToken } from '../api/client'
+import { ExportCard } from '../components/ExportCard'
 import { LanguageSwitcher } from '../components/LanguageSwitcher'
 import { MapSourceCard } from '../components/MapSourceCard'
 import { Card, ErrorState, Ring } from '../components/ui'
@@ -155,6 +156,10 @@ export default function SettingsPage() {
                 {t('settings.goals.note')}
               </p>
             </Card>
+
+            {/* The export needs the token like every other call, so it waits
+                behind it with the devices and goals. */}
+            <ExportCard />
 
             <Card title={t('settings.system.title')}>
               <div className="table-wrap">

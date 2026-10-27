@@ -284,6 +284,17 @@ be read, the depth is still shown and the rate and estimate are marked **unknown
 The device token, the devices that have one, the goals, the language, the time
 zone — and [the map source](/deployment/map-tiles/).
 
+**Export** downloads your raw samples from the server (`POST /v1/export`): CSV, one
+sample per row, or JSON with the period's workouts and sleep segments as well. The
+period is 30 days, 90 days, a year (each ending today, today included) or two dates
+you choose; the metrics are all of them or the ones you tick from those that have
+data — the choice narrows the samples only. The server streams the file, so the
+page shows how much has **arrived** rather than a percentage it cannot know, and you
+can stop it. Once the server has started sending it cannot change its answer, so an
+export that fails half-way arrives short: a JSON file is checked for its closing
+bracket and is not saved when it is missing; a CSV cannot be checked that way, and
+the page says so. There is no PDF — the server does not make one yet.
+
 There is no sign-in on this page because there is no second user. What it does
 carry is the honest description of the two access layers, which is the thing worth
 understanding before opening a port.
