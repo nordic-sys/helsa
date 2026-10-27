@@ -69,7 +69,18 @@ ca: | $(CADIR)
 # 398 days: Apple's platforms cap the lifetime of server certificates, and 398 days
 # is the value at which the question never even comes up. A once-a-year
 # `make server` plus a proxy reload.
+#
+# ⚠️ It REFUSES to sign the example names. The docs said "set the hostnames before `make server`"
+# in one sentence, and the first person to follow them shipped a certificate for
+# helsa.example.com and 192.168.1.10 (helsa docs/34) — which the phone then rejects with an error
+# that does not mention the name. Edit server.cnf first.
 server: | $(CADIR)
+	@if grep -qE '^(CN|DNS\.[0-9]+) *= *(helsa\.example\.com|api\.helsa\.example\.com)$$|^IP\.[0-9]+ *= *192\.168\.1\.10$$' server.cnf; then \
+		echo "⛔ server.cnf still holds the example names (helsa.example.com / 192.168.1.10)."; \
+		echo "   Put in the name the phone will use — and the public name, if it will come from outside —"; \
+		echo "   plus the server's LAN address, under CN, DNS.n and IP.n. Then run 'make server' again."; \
+		echo "   Current SANs:"; sed -n '/^\[ alt \]/,$$p' server.cnf | grep -E '^(DNS|IP)' | sed 's/^/     /'; \
+		exit 1; fi
 	openssl ecparam -name prime256v1 -genkey -noout -out $(OUT)/server/server.key
 	chmod 600 $(OUT)/server/server.key
 	openssl req -new -key $(OUT)/server/server.key -out $(OUT)/server/server.csr -config server.cnf

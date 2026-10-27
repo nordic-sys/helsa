@@ -83,9 +83,26 @@ make client NAME=iphone       # per device, produces a .p12 bundle
 
 Everything lands under `pki/out/`, which is git-ignored.
 
-Set the hostnames **before** running `make server`: the SAN list lives in
-`server.cnf` and must contain the public name the phone will use, plus any internal
-name and LAN address you want to reach it by.
+:::danger[Edit `server.cnf` BEFORE `make server`]
+The server certificate is only valid for the names written into `deploy/pki/server.cnf`, and the
+file ships with example names. Open it and replace them — `CN`, every `DNS.n` and `IP.n` under
+`[ alt ]` — with **the name the phone will use** (the public name too, if it will connect from
+outside) and the server's LAN address:
+
+```ini
+[ dn ]
+CN = helsa.yourname.example        # the main name
+
+[ alt ]
+DNS.1 = helsa.yourname.example     # the name the phone uses
+DNS.2 = helsa-home.lan             # any internal name you want to reach it by
+IP.1  = 192.168.1.50               # the server's LAN address
+```
+
+`make server` refuses to sign while the example names (`helsa.example.com`, `192.168.1.10`) are
+still there. Change the names later? Edit the file, delete `out/server/`, run `make server` again,
+and install the new pair on the server — the CA, and so the phone, stay as they are.
+:::
 
 :::danger
 **The root key leaves this machine and goes into your password manager.** Copy
