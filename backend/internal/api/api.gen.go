@@ -397,6 +397,78 @@ func (e InsightSeverity) Valid() bool {
 	}
 }
 
+// Defines values for JournalEntryMoodKind.
+const (
+	JournalEntryMoodKindDailyMood        JournalEntryMoodKind = "daily_mood"
+	JournalEntryMoodKindMomentaryEmotion JournalEntryMoodKind = "momentary_emotion"
+)
+
+// Valid indicates whether the value is a known member of the JournalEntryMoodKind enum.
+func (e JournalEntryMoodKind) Valid() bool {
+	switch e {
+	case JournalEntryMoodKindDailyMood:
+		return true
+	case JournalEntryMoodKindMomentaryEmotion:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JournalEntryInFollowUpHours.
+const (
+	N24 JournalEntryInFollowUpHours = 24
+	N48 JournalEntryInFollowUpHours = 48
+)
+
+// Valid indicates whether the value is a known member of the JournalEntryInFollowUpHours enum.
+func (e JournalEntryInFollowUpHours) Valid() bool {
+	switch e {
+	case N24:
+		return true
+	case N48:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JournalEntryInMoodKind.
+const (
+	JournalEntryInMoodKindDailyMood        JournalEntryInMoodKind = "daily_mood"
+	JournalEntryInMoodKindMomentaryEmotion JournalEntryInMoodKind = "momentary_emotion"
+)
+
+// Valid indicates whether the value is a known member of the JournalEntryInMoodKind enum.
+func (e JournalEntryInMoodKind) Valid() bool {
+	switch e {
+	case JournalEntryInMoodKindDailyMood:
+		return true
+	case JournalEntryInMoodKindMomentaryEmotion:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for JournalEntryInSourceDevice.
+const (
+	JournalEntryInSourceDeviceIphone JournalEntryInSourceDevice = "iphone"
+	JournalEntryInSourceDeviceWatch  JournalEntryInSourceDevice = "watch"
+)
+
+// Valid indicates whether the value is a known member of the JournalEntryInSourceDevice enum.
+func (e JournalEntryInSourceDevice) Valid() bool {
+	switch e {
+	case JournalEntryInSourceDeviceIphone:
+		return true
+	case JournalEntryInSourceDeviceWatch:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LatestValueAgg.
 const (
 	LatestValueAggAvg LatestValueAgg = "avg"
@@ -522,16 +594,16 @@ func (e PushRegisterPlatform) Valid() bool {
 
 // Defines values for SampleInSourceDevice.
 const (
-	SampleInSourceDeviceIphone SampleInSourceDevice = "iphone"
-	SampleInSourceDeviceWatch  SampleInSourceDevice = "watch"
+	Iphone SampleInSourceDevice = "iphone"
+	Watch  SampleInSourceDevice = "watch"
 )
 
 // Valid indicates whether the value is a known member of the SampleInSourceDevice enum.
 func (e SampleInSourceDevice) Valid() bool {
 	switch e {
-	case SampleInSourceDeviceIphone:
+	case Iphone:
 		return true
-	case SampleInSourceDeviceWatch:
+	case Watch:
 		return true
 	default:
 		return false
@@ -1224,6 +1296,131 @@ type InsightKind string
 // InsightSeverity defines model for Insight.Severity.
 type InsightSeverity string
 
+// JournalAccepted defines model for JournalAccepted.
+type JournalAccepted struct {
+	// Deleted entries removed by `deletions`
+	Deleted int `json:"deleted"`
+
+	// ServerTime The instant this chunk was written, by the server's clock — a backfill's sweep token.
+	ServerTime time.Time `json:"server_time"`
+
+	// Stored entries written (new or replaced)
+	Stored int `json:"stored"`
+
+	// Swept entries removed by `sweep_before`
+	Swept int `json:"swept"`
+}
+
+// JournalBatch One chunk of the phone's opt-in journal sync (see POST /journal).
+type JournalBatch struct {
+	// Deletions HealthKit UUIDs of journal samples deleted in Health
+	Deletions *[]string         `json:"deletions,omitempty"`
+	Entries   *[]JournalEntryIn `json:"entries,omitempty"`
+
+	// SweepBefore Closes a backfill: every stored entry RECEIVED before this instant is deleted. Always the `server_time` of the backfill's first answer — the server's clock, never the phone's.
+	SweepBefore *time.Time `json:"sweep_before,omitempty"`
+}
+
+// JournalDeleted defines model for JournalDeleted.
+type JournalDeleted struct {
+	Deleted int `json:"deleted"`
+}
+
+// JournalEntry defines model for JournalEntry.
+type JournalEntry struct {
+	Associations      *[]string             `json:"associations,omitempty"`
+	AudioLevelDbaspl  *float64              `json:"audio_level_dbaspl,omitempty"`
+	DataType          string                `json:"data_type"`
+	DayKey            *openapi_types.Date   `json:"day_key,omitempty"`
+	EndedAt           time.Time             `json:"ended_at"`
+	EventKey          *string               `json:"event_key,omitempty"`
+	FollowUpHours     *int                  `json:"follow_up_hours,omitempty"`
+	Labels            *[]string             `json:"labels,omitempty"`
+	MoodKind          *JournalEntryMoodKind `json:"mood_kind,omitempty"`
+	SourceBundle      *string               `json:"source_bundle,omitempty"`
+	SourceDevice      *string               `json:"source_device,omitempty"`
+	SourceUuid        string                `json:"source_uuid"`
+	StartedAt         time.Time             `json:"started_at"`
+	UserEntered       *bool                 `json:"user_entered,omitempty"`
+	Valence           *float64              `json:"valence,omitempty"`
+	Value             *int                  `json:"value,omitempty"`
+	WorkoutSourceUuid *string               `json:"workout_source_uuid,omitempty"`
+}
+
+// JournalEntryMoodKind defines model for JournalEntry.MoodKind.
+type JournalEntryMoodKind string
+
+// JournalEntryIn One HealthKit sample: a category sample (`value` set) or a state of mind (`valence` set) — exactly one of the two.
+type JournalEntryIn struct {
+	// Associations state of mind only: what the mood was about (`work`, `family`…)
+	Associations *[]string `json:"associations,omitempty"`
+
+	// AudioLevelDbaspl a loud-environment event's level, when the watch recorded one
+	AudioLevelDbaspl *float64 `json:"audio_level_dbaspl,omitempty"`
+
+	// DataType The short HealthKit name in lowerCamelCase — a symptom (`headache`, `fever`…), an event (`highHeartRateEvent`, `lowHeartRateEvent`, `irregularHeartRhythmEvent`, `environmentalAudioExposureEvent`, `appleWalkingSteadinessEvent`), or `stateOfMind`. An open string, like `SampleIn.data_type`: a newer phone's type is stored, not refused.
+	DataType string `json:"data_type"`
+
+	// DayKey Helsa's own marking: the journal day this entry was written for
+	DayKey  *openapi_types.Date `json:"day_key,omitempty"`
+	EndedAt time.Time           `json:"ended_at"`
+
+	// EventKey Helsa's own marking: the event this symptom was noted on (`highHeartRate:…`, `selfReported:…`)
+	EventKey *string `json:"event_key,omitempty"`
+
+	// FollowUpHours Helsa's own marking: the follow-up answer this symptom is
+	FollowUpHours *JournalEntryInFollowUpHours `json:"follow_up_hours,omitempty"`
+
+	// Labels state of mind only: HKStateOfMind labels (`happy`, `stressed`…)
+	Labels *[]string `json:"labels,omitempty"`
+
+	// MoodKind state of mind only
+	MoodKind     *JournalEntryInMoodKind     `json:"mood_kind,omitempty"`
+	SourceBundle *string                     `json:"source_bundle,omitempty"`
+	SourceDevice *JournalEntryInSourceDevice `json:"source_device,omitempty"`
+
+	// SourceUuid the HealthKit UUID
+	SourceUuid string    `json:"source_uuid"`
+	StartedAt  time.Time `json:"started_at"`
+
+	// UserEntered HKMetadataKeyWasUserEntered
+	UserEntered *bool `json:"user_entered,omitempty"`
+
+	// Valence state of mind only: −1 (very unpleasant) … 1 (very pleasant)
+	Valence *float64 `json:"valence,omitempty"`
+
+	// Value The raw HKCategoryValue of a category sample. Its meaning depends on the type: severity (0 unspecified, 1 not present, 2 mild, 3 moderate, 4 severe), presence (0 present, 1 not present), appetite (0 unspecified, 1 no change, 2 decreased, 3 increased), walking steadiness (1 initial low, 2 initial very low, 3 repeat low, 4 repeat very low), and 0 on the heart-rate and loud-environment events.
+	Value *int `json:"value,omitempty"`
+
+	// WorkoutSourceUuid Helsa's own marking: the HKWorkout.uuid the user attributed the event to
+	WorkoutSourceUuid *string `json:"workout_source_uuid,omitempty"`
+}
+
+// JournalEntryInFollowUpHours Helsa's own marking: the follow-up answer this symptom is
+type JournalEntryInFollowUpHours int
+
+// JournalEntryInMoodKind state of mind only
+type JournalEntryInMoodKind string
+
+// JournalEntryInSourceDevice defines model for JournalEntryIn.SourceDevice.
+type JournalEntryInSourceDevice string
+
+// JournalResponse defines model for JournalResponse.
+type JournalResponse struct {
+	Entries []JournalEntry     `json:"entries"`
+	From    openapi_types.Date `json:"from"`
+
+	// LastReceivedAt When the phone last sent a journal entry. Absent (or `null`) = never: the switch is off, or the phone predates the feature.
+	LastReceivedAt *time.Time `json:"last_received_at,omitempty"`
+
+	// To the last day, included
+	To openapi_types.Date `json:"to"`
+
+	// Total every entry this server holds, inside the window or not
+	Total int    `json:"total"`
+	Tz    string `json:"tz"`
+}
+
 // JourneySettings The virtual journey the phone is walking. The route catalogue itself is not here — it is part of the app (and of the web's bundle), so only its id and the start day travel; the distance is the walked or cycled distance in `/summary` from `started_on` until today. `route_id` and `started_on` come together or not at all; neither means no journey is running.
 type JourneySettings struct {
 	// RouteId The route's id in the app's catalogue (`balatoni-bringakorut`). Checked for shape, NOT against a list: the catalogue ships with the app, and a phone a version ahead of this server must not have its journey refused. A client that does not know the id says so.
@@ -1595,6 +1792,15 @@ type GetCoverageParams struct {
 	Tz *string `form:"tz,omitempty" json:"tz,omitempty"`
 }
 
+// GetJournalParams defines parameters for GetJournal.
+type GetJournalParams struct {
+	From *openapi_types.Date `form:"from,omitempty" json:"from,omitempty"`
+	To   *openapi_types.Date `form:"to,omitempty" json:"to,omitempty"`
+
+	// Tz IANA tz; if missing, user.time_zone
+	Tz *string `form:"tz,omitempty" json:"tz,omitempty"`
+}
+
 // GetLatestParams defines parameters for GetLatest.
 type GetLatestParams struct {
 	// Metrics a comma-separated list, as for /summary; at most 200 names
@@ -1666,6 +1872,9 @@ type PostIngestJSONRequestBody = IngestBatch
 // PostIngestDeadLetterRedriveJSONRequestBody defines body for PostIngestDeadLetterRedrive for application/json ContentType.
 type PostIngestDeadLetterRedriveJSONRequestBody = IngestRedriveRequest
 
+// PostJournalJSONRequestBody defines body for PostJournal for application/json ContentType.
+type PostJournalJSONRequestBody = JournalBatch
+
 // PutPushPrefsJSONRequestBody defines body for PutPushPrefs for application/json ContentType.
 type PutPushPrefsJSONRequestBody = NotifPrefs
 
@@ -1734,6 +1943,15 @@ type ServerInterface interface {
 	// Rule-based insights / anomalies
 	// (GET /insights)
 	GetInsights(w http.ResponseWriter, r *http.Request)
+	// Delete every journal entry from this server
+	// (DELETE /journal)
+	DeleteJournal(w http.ResponseWriter, r *http.Request)
+	// The phone's journal and events in a window — moods, symptoms, heart-rate and other alerts
+	// (GET /journal)
+	GetJournal(w http.ResponseWriter, r *http.Request, params GetJournalParams)
+	// Journal upload — one chunk of category / state-of-mind samples and their deletions
+	// (POST /journal)
+	PostJournal(w http.ResponseWriter, r *http.Request)
 	// The most recent measurement of each requested type — what it was and when
 	// (GET /latest)
 	GetLatest(w http.ResponseWriter, r *http.Request, params GetLatestParams)
@@ -1893,6 +2111,24 @@ func (_ Unimplemented) GetIngestStatus(w http.ResponseWriter, r *http.Request) {
 // Rule-based insights / anomalies
 // (GET /insights)
 func (_ Unimplemented) GetInsights(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete every journal entry from this server
+// (DELETE /journal)
+func (_ Unimplemented) DeleteJournal(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The phone's journal and events in a window — moods, symptoms, heart-rate and other alerts
+// (GET /journal)
+func (_ Unimplemented) GetJournal(w http.ResponseWriter, r *http.Request, params GetJournalParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Journal upload — one chunk of category / state-of-mind samples and their deletions
+// (POST /journal)
+func (_ Unimplemented) PostJournal(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2566,6 +2802,111 @@ func (siw *ServerInterfaceWrapper) GetInsights(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetInsights(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteJournal operation middleware
+func (siw *ServerInterfaceWrapper) DeleteJournal(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteJournal(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetJournal operation middleware
+func (siw *ServerInterfaceWrapper) GetJournal(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetJournalParams
+
+	// ------------- Optional query parameter "from" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "from", r.URL.Query(), &params.From, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "from"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "from", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "to" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "to", r.URL.Query(), &params.To, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "to"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "to", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "tz" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "tz", r.URL.Query(), &params.Tz, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tz"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tz", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetJournal(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostJournal operation middleware
+func (siw *ServerInterfaceWrapper) PostJournal(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostJournal(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3325,6 +3666,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/insights", wrapper.GetInsights)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/journal", wrapper.DeleteJournal)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/journal", wrapper.GetJournal)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/journal", wrapper.PostJournal)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/latest", wrapper.GetLatest)

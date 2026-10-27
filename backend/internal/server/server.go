@@ -29,6 +29,7 @@ import (
 	"github.com/nordic-sys/helsa/backend/internal/export"
 	"github.com/nordic-sys/helsa/backend/internal/ingest"
 	"github.com/nordic-sys/helsa/backend/internal/insights"
+	"github.com/nordic-sys/helsa/backend/internal/journal"
 	"github.com/nordic-sys/helsa/backend/internal/latest"
 	"github.com/nordic-sys/helsa/backend/internal/pgconv"
 	"github.com/nordic-sys/helsa/backend/internal/queue"
@@ -58,7 +59,10 @@ type Server struct {
 	// latest: the newest measurement per type (GET /v1/latest) — one call for a
 	// whole card grid instead of a /samples walk per metric.
 	latest *latest.Service
-	q      *db.Queries
+	// journal: the phone's opt-in journal and events (/v1/journal) — symptoms,
+	// moods and the heart-rate alerts, mirrored from HealthKit.
+	journal *journal.Store
+	q       *db.Queries
 }
 
 func New(cfg *config.Config, st *store.Store, q *queue.Queue) *Server {
@@ -80,6 +84,7 @@ func New(cfg *config.Config, st *store.Store, q *queue.Queue) *Server {
 		challenge: challenge.New(st.DB),
 		coverage:  coverage.New(st.DB),
 		latest:    latest.New(st.DB),
+		journal:   journal.New(st.DB),
 		q:         db.New(st.DB),
 	}
 }

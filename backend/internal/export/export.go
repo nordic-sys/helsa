@@ -26,6 +26,7 @@ import (
 
 	"github.com/google/uuid"
 
+	"github.com/nordic-sys/helsa/backend/internal/api"
 	"github.com/nordic-sys/helsa/backend/internal/metrics"
 )
 
@@ -86,6 +87,37 @@ type Source interface {
 	Samples(ctx context.Context, userID uuid.UUID, req Request, fn func(SampleRow) error) error
 	Workouts(ctx context.Context, userID uuid.UUID, req Request, fn func(WorkoutRow) error) error
 	Sleep(ctx context.Context, userID uuid.UUID, req Request, fn func(SleepRow) error) error
+	// Journal: the phone's opt-in journal and events (docs/35 item 8), in their
+	// wire shape. Only the JSON export carries them — see IncludesJournal.
+	Journal(ctx context.Context, userID uuid.UUID, req Request, fn func(api.JournalEntry) error) error
+}
+
+// JournalMetric is the name that asks for the journal in a filtered export.
+const JournalMetric = "journal"
+
+// IncludesJournal: the journal goes into an export of EVERYTHING (no metric
+// filter), or one that names it (`journal`).
+//
+// ⚠️ It is personal data like the rest, and an export that is the user's
+// copy of their data (GDPR access / portability) must not leave it out — that
+// is why "everything" includes it. A filtered export ("my steps and my weight")
+// did not ask for it, and slipping symptoms into a file meant for a spreadsheet
+// would be the opposite mistake.
+//
+// The CSV does not carry it: its long format is one numeric sample per row, and
+// a mood with its tags, or a symptom with the event it was marked on, does not
+// fit `ts,data_type,value,unit,source_device` without losing exactly the parts
+// that make it an entry. The JSON export is the complete one.
+func (r Request) IncludesJournal() bool {
+	if len(r.Metrics) == 0 {
+		return true
+	}
+	for _, m := range r.Metrics {
+		if m == JournalMetric {
+			return true
+		}
+	}
+	return false
 }
 
 // Validate checks the request's format and time span.
@@ -314,6 +346,24 @@ func writeJSON(ctx context.Context, w io.Writer, src Source, userID uuid.UUID, r
 	})
 	if err != nil {
 		return err
+	}
+
+	// The key is always there, so a reader can tell "no journal in this export"
+	// (an empty array) from a file written before the journal existed (no key).
+	if _, err := io.WriteString(w, `],"journal":[`); err != nil {
+		return err
+	}
+	if req.IncludesJournal() {
+		first = true
+		err = src.Journal(ctx, userID, req, func(e api.JournalEntry) error {
+			if err := sep(); err != nil {
+				return err
+			}
+			return enc.Encode(e)
+		})
+		if err != nil {
+			return err
+		}
 	}
 	_, err = io.WriteString(w, "]}")
 	return err

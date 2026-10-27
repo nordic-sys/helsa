@@ -8,6 +8,8 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/nordic-sys/helsa/backend/internal/api"
+	"github.com/nordic-sys/helsa/backend/internal/journal"
 	"github.com/nordic-sys/helsa/backend/internal/pgconv"
 )
 
@@ -15,10 +17,18 @@ import (
 // pgx cursor — which is why even a several-hundred-thousand-row export never
 // piles up in memory.
 type DBSource struct {
-	pool *pgxpool.Pool
+	pool    *pgxpool.Pool
+	journal *journal.Store
 }
 
-func NewDBSource(pool *pgxpool.Pool) *DBSource { return &DBSource{pool: pool} }
+func NewDBSource(pool *pgxpool.Pool) *DBSource {
+	return &DBSource{pool: pool, journal: journal.New(pool)}
+}
+
+// Journal streams the journal entries whose start falls in the window.
+func (s *DBSource) Journal(ctx context.Context, userID uuid.UUID, req Request, fn func(api.JournalEntry) error) error {
+	return s.journal.Each(ctx, userID, req.Start, req.End, fn)
+}
 
 const samplesQuery = `
 SELECT ts, data_type, value, unit, source_device, source_uuid

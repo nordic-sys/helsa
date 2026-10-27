@@ -29,6 +29,7 @@ tags:
   - name: insights
   - name: achievements
   - name: challenge
+  - name: journal
   - name: health
 
 paths:
@@ -658,8 +659,14 @@ paths:
 
         **Formats:** `csv` — long format, one sample per row
         (`ts,data_type,value,unit,source_device`). `json` — `{meta, samples, workouts,
-        sleep_segments}`. `pdf` appears in the contract but is **not implemented yet**
+        sleep_segments, journal}`. `pdf` appears in the contract but is **not implemented yet**
         (`501`).
+
+
+        **The journal** (`GET /journal`'s entries — moods, symptoms, heart-rate alerts, only there
+        if the phone's opt-in sync sent them) is in the JSON export whenever `metrics` is empty
+        ("everything", the user's full copy) or names `journal`. The CSV never carries it: a mood
+        with its tags does not fit one number per row.
 
 
         **Time span:** `from`/`to` denote days in the user's time zone, and the `to`
@@ -927,6 +934,96 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/LatestResponse' }
         '400': { $ref: '#/components/responses/Problem' }
+
+  /journal:
+    get:
+      tags: [journal]
+      summary: The phone's journal and events in a window — moods, symptoms, heart-rate and other alerts
+      description: >
+        What the phone sent of its **journal and events**: HealthKit category samples (the symptoms,
+        the high/low/irregular heart-rate events, the loud-environment and walking-steadiness events)
+        and state-of-mind samples (the daily mood and its tags). The phone sends them **only when the
+        user switched "Journal and events" on** (app 1.0 (7) on, off by default) — this is the most
+        sensitive data the product holds.
+
+
+        **An empty `entries` is not "nothing happened".** Read `last_received_at` first: `null` means
+        this server has never received a journal entry at all — the switch is off, or the phone is
+        older than the feature — and a client must say that, not draw an empty timeline as if the
+        person had noted nothing. And even with the sync on, an unmarked day is a day nobody wrote
+        anything on, never a symptom-free day.
+
+
+        `from`/`to` are days in `tz` (the `to` day included); without them, the last 90 days. An entry
+        belongs to the window by its `started_at`. At most 1100 days per request.
+
+
+        An older server answers this path with 404; the client must treat that as version skew.
+      parameters:
+        - { name: from, in: query, required: false, schema: { type: string, format: date } }
+        - { name: to, in: query, required: false, schema: { type: string, format: date } }
+        - { name: tz, in: query, required: false, schema: { type: string }, description: "IANA tz; if missing, user.time_zone" }
+      responses:
+        '200':
+          description: The entries of the window, oldest first
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JournalResponse' }
+        '400': { $ref: '#/components/responses/Problem' }
+    post:
+      tags: [journal]
+      summary: Journal upload — one chunk of category / state-of-mind samples and their deletions
+      description: >
+        The phone's opt-in journal sync. **Synchronous, not queued**: a person writes a handful of
+        these a day, so the chunk is written in the request and the answer is the acknowledgement —
+        the phone moves its anchor only after a `200`. An older server answers `404`, and the phone
+        then keeps its anchor and says "the server is too old" instead of losing the entries.
+
+
+        Idempotent: an entry is keyed by its HealthKit UUID (`source_uuid`) and a re-send replaces
+        it. `deletions` are HealthKit UUIDs deleted in Health; an unknown one is ignored.
+
+
+        **`sweep_before` closes a backfill.** A backfill (the switch turned on, or a full resync)
+        re-reads the whole journal from HealthKit, so whatever the server holds that the backfill did
+        NOT re-send was deleted in Health while the phone was not sending — it must go too. The
+        phone keeps the `server_time` of its backfill's first answer, and sends it as `sweep_before`
+        with the last chunk: every stored entry received before that instant is deleted. The token is
+        the SERVER's clock, so a phone whose clock is off cannot sweep what it just sent.
+
+
+        At most 2000 items (entries + deletions) per chunk; more gives a 413.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/JournalBatch' }
+      responses:
+        '200':
+          description: The chunk is stored
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JournalAccepted' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '413':
+          description: "The chunk is too large"
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    delete:
+      tags: [journal]
+      summary: Delete every journal entry from this server
+      description: >
+        What the phone calls when the user switches the journal sync off and chooses to remove
+        what was sent (and what the web's own button calls). Deletes every stored journal entry of
+        the user. The data in Health on the phone is untouched — this server only ever held a copy.
+        Idempotent: a second call deletes nothing and still answers `200`.
+      responses:
+        '200':
+          description: How many entries were deleted
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/JournalDeleted' }
 
 components:
   securitySchemes:
@@ -1968,3 +2065,112 @@ components:
         day: { type: string, format: date, description: "the local day of `ts` in `tz`" }
         value: { type: number, description: "`avg` types only: the most recent sample's value." }
         day_total: { type: number, description: "`sum` types only: the source-merged total of `day`, the same figure as that day's daily `/summary` bucket." }
+
+    JournalBatch:
+      type: object
+      description: "One chunk of the phone's opt-in journal sync (see POST /journal)."
+      properties:
+        entries:
+          type: array
+          items: { $ref: '#/components/schemas/JournalEntryIn' }
+        deletions:
+          type: array
+          description: "HealthKit UUIDs of journal samples deleted in Health"
+          items: { type: string }
+        sweep_before:
+          type: string
+          format: date-time
+          description: >
+            Closes a backfill: every stored entry RECEIVED before this instant is deleted. Always the
+            `server_time` of the backfill's first answer — the server's clock, never the phone's.
+
+    JournalEntryIn:
+      type: object
+      required: [source_uuid, data_type, started_at, ended_at]
+      description: >
+        One HealthKit sample: a category sample (`value` set) or a state of mind (`valence` set) —
+        exactly one of the two.
+      properties:
+        source_uuid: { type: string, description: "the HealthKit UUID" }
+        data_type:
+          type: string
+          description: >
+            The short HealthKit name in lowerCamelCase — a symptom (`headache`, `fever`…), an event
+            (`highHeartRateEvent`, `lowHeartRateEvent`, `irregularHeartRhythmEvent`,
+            `environmentalAudioExposureEvent`, `appleWalkingSteadinessEvent`), or `stateOfMind`.
+            An open string, like `SampleIn.data_type`: a newer phone's type is stored, not refused.
+        started_at: { type: string, format: date-time }
+        ended_at: { type: string, format: date-time }
+        value:
+          type: integer
+          description: >
+            The raw HKCategoryValue of a category sample. Its meaning depends on the type: severity
+            (0 unspecified, 1 not present, 2 mild, 3 moderate, 4 severe), presence (0 present,
+            1 not present), appetite (0 unspecified, 1 no change, 2 decreased, 3 increased), walking
+            steadiness (1 initial low, 2 initial very low, 3 repeat low, 4 repeat very low), and 0 on
+            the heart-rate and loud-environment events.
+        valence: { type: number, format: double, description: "state of mind only: −1 (very unpleasant) … 1 (very pleasant)" }
+        mood_kind: { type: string, enum: [daily_mood, momentary_emotion], description: "state of mind only" }
+        labels: { type: array, items: { type: string }, description: "state of mind only: HKStateOfMind labels (`happy`, `stressed`…)" }
+        associations: { type: array, items: { type: string }, description: "state of mind only: what the mood was about (`work`, `family`…)" }
+        event_key: { type: string, description: "Helsa's own marking: the event this symptom was noted on (`highHeartRate:…`, `selfReported:…`)" }
+        follow_up_hours: { type: integer, enum: [24, 48], description: "Helsa's own marking: the follow-up answer this symptom is" }
+        workout_source_uuid: { type: string, description: "Helsa's own marking: the HKWorkout.uuid the user attributed the event to" }
+        day_key: { type: string, format: date, description: "Helsa's own marking: the journal day this entry was written for" }
+        audio_level_dbaspl: { type: number, format: double, description: "a loud-environment event's level, when the watch recorded one" }
+        source_bundle: { type: string }
+        source_device: { type: string, enum: [watch, iphone] }
+        user_entered: { type: boolean, description: "HKMetadataKeyWasUserEntered" }
+
+    JournalAccepted:
+      type: object
+      required: [stored, deleted, swept, server_time]
+      properties:
+        stored: { type: integer, description: "entries written (new or replaced)" }
+        deleted: { type: integer, description: "entries removed by `deletions`" }
+        swept: { type: integer, description: "entries removed by `sweep_before`" }
+        server_time:
+          type: string
+          format: date-time
+          description: "The instant this chunk was written, by the server's clock — a backfill's sweep token."
+
+    JournalDeleted:
+      type: object
+      required: [deleted]
+      properties:
+        deleted: { type: integer }
+
+    JournalResponse:
+      type: object
+      required: [tz, from, to, entries, total]
+      properties:
+        tz: { type: string }
+        from: { type: string, format: date }
+        to: { type: string, format: date, description: "the last day, included" }
+        entries:
+          type: array
+          items: { $ref: '#/components/schemas/JournalEntry' }
+        total: { type: integer, description: "every entry this server holds, inside the window or not" }
+        last_received_at: { type: [string, 'null'], format: date-time, description: "When the phone last sent a journal entry. Absent (or `null`) = never: the switch is off, or the phone predates the feature." }
+
+    JournalEntry:
+      type: object
+      required: [source_uuid, data_type, started_at, ended_at]
+      properties:
+        source_uuid: { type: string }
+        data_type: { type: string }
+        started_at: { type: string, format: date-time }
+        ended_at: { type: string, format: date-time }
+        value: { type: integer }
+        valence: { type: number, format: double }
+        mood_kind: { type: string, enum: [daily_mood, momentary_emotion] }
+        labels: { type: array, items: { type: string } }
+        associations: { type: array, items: { type: string } }
+        event_key: { type: string }
+        follow_up_hours: { type: integer }
+        workout_source_uuid: { type: string }
+        day_key: { type: string, format: date }
+        audio_level_dbaspl: { type: number, format: double }
+        source_device: { type: string }
+        source_bundle: { type: string }
+        user_entered: { type: boolean }
