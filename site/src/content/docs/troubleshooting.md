@@ -13,11 +13,11 @@ know which one owns their symptom.
 | What you see | Where the answer is |
 |---|---|
 | There is no "Your own server" in the app's Settings | It is under **Settings ▸ Export**, at the bottom. [First sync](/getting-started/first-sync/#turn-on-sending) |
-| The app acts as if there were no client certificate, though the `.p12` is installed | It went in as a profile — the app cannot see that. Import it in the app. [Installing on the phone](/deployment/tls-mtls/#installing-on-the-phone) |
+| The app acts as if there were no client certificate, though the `.p12` is installed | It went in as a profile — the app cannot see that. Import it in the app. [Installing on the phone](/getting-started/certificates/#installing-on-the-phone) |
 | Syncing only happens while the app is open (iOS 27) | Background App Refresh is off for Helsa. [First sync](/getting-started/first-sync/#then-what) |
 | Saved the server settings, and no device ever registers | ⚠️ **The app has to be restarted** — the connection is built at launch. [First sync](/getting-started/first-sync/#turn-on-sending) |
-| The app reports a network error that is not a network error | The certificate installed but was never **trusted**. [TLS and mutual TLS](/deployment/tls-mtls/#installing-on-the-phone) |
-| It worked, and one day quietly stopped | A certificate expired. [Expiry is a silent failure](/deployment/tls-mtls/#expiry-is-a-silent-failure) |
+| The app reports a network error that is not a network error | The certificate installed but was never **trusted**. [TLS and mutual TLS](/getting-started/certificates/#installing-on-the-phone) |
+| It worked, and one day quietly stopped | A certificate expired. [Expiry is a silent failure](/getting-started/certificates/#expiry-is-a-silent-failure) |
 | The token is refused, and the body says it was revoked | It was. [Revoking](/getting-started/device-token/#revoking) |
 | `503` on every call, with a healthy-looking server | The revocation deny-list is unreachable. [Authentication](/api/authentication/) |
 | Uploads are rejected as too large | Chunking. [Ingest failure modes](/api/ingest/#failure-modes) |

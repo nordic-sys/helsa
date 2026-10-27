@@ -1,8 +1,9 @@
 ---
-title: TLS and mutual TLS
-description: "Create a private CA, issue server and client certificates, install them on the phone, and rotate them without locking yourself out."
+title: Certificates (TLS and mutual TLS)
+description: "Step 3: create a private CA on your own computer, issue server and client certificates, install them on the server and the phone — and rotate them without locking yourself out."
 sidebar:
-  order: 1
+  order: 3
+  label: Certificates
 ---
 :::danger[⛔ Not on the server — on your own computer]
 **Everything under [Issuing](#issuing--on-your-own-computer) runs on your laptop or desktop, not on
@@ -189,6 +190,12 @@ older, weaker ciphers.
 is why step 1 — installing and trusting `ca.crt` — is required at all. What keeps a stranger's
 server out is the client certificate: a server that does not have your CA cannot complete the
 handshake with it.
+
+:::tip[Next: step 4]
+**→ [Step 4: First sync](/getting-started/first-sync/)**
+
+The server has its certificate and the phone trusts your CA and holds its own `.p12` — that was step 3. Everything below this box is reference for later: rotating, revocation, expiry, troubleshooting.
+:::
 
 ## Rotating
 Three scenarios, in increasing order of danger.

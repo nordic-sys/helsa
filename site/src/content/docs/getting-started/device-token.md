@@ -15,7 +15,7 @@ devices? That is answered in two independent layers.
 
 | Layer | Mechanism | Checked by |
 |---|---|---|
-| **Transport** | Mutual TLS. The client presents a certificate signed by *your* private CA. | The reverse proxy, before any HTTP is parsed. See [TLS and mutual TLS](/deployment/tls-mtls/). |
+| **Transport** | Mutual TLS. The client presents a certificate signed by *your* private CA. | The reverse proxy, before any HTTP is parsed. See [TLS and mutual TLS](/getting-started/certificates/). |
 | **Application** | A long-lived bearer token in the `Authorization` header. | The API. |
 
 Both are required on the public interface. The browser dashboard uses only the
@@ -127,7 +127,7 @@ route can only ever end the caller's own session.
 | One device compromised or retired | Revoke its token, then issue a fresh one for the replacement. The other devices are untouched. |
 | You no longer have the token string | You cannot revoke it individually — rotate `HELSA_JWT_SECRET` and reissue for every device. Keep the tokens you issue somewhere you can find them. |
 | `HELSA_JWT_SECRET` leaked | Change the secret and restart the API. **Every existing token stops working**; reissue for each device. |
-| Phone lost | Revoke that phone's token, and rotate the CA — the client certificate went with the phone. See [certificate rotation](/deployment/tls-mtls/#rotating). |
+| Phone lost | Revoke that phone's token, and rotate the CA — the client certificate went with the phone. See [certificate rotation](/getting-started/certificates/#rotating). |
 
 :::caution
 **Revocation lives in Redis, and the check fails closed.** If the API cannot reach
@@ -142,6 +142,8 @@ invalidates everything at once.
 
 ## Next
 
-[Point the app at the server and run a first sync](first-sync/) — which needs the certificates from
-[TLS and mutual TLS](/deployment/tls-mtls/) first. ⛔ **Those are made on your own computer, not on
-this server**: clone the repository there a second time.
+:::tip[Next: step 3]
+**→ [Step 3: Certificates](/getting-started/certificates/)**
+
+⛔ **On your own computer, not on this server** — clone the repository there a second time. The phone cannot connect before this step.
+:::

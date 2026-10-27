@@ -1,23 +1,28 @@
 ---
 title: Getting started
-description: "Bring the stack up locally with Docker Compose, issue a device token, and verify a first sync — with nothing exposed to the internet."
+description: "Four steps, in this order: bring the stack up, issue a device token, make the certificates, run a first sync from the phone — with nothing exposed to the internet."
 sidebar:
   order: 0
 ---
-Get a working Helsa server on your own machine, reachable only from that machine.
+Get a working Helsa server on your own machine, reachable from your home network.
 This section takes you from an empty directory to a running API that has accepted
-real data from your phone. **Nothing here listens on a public interface**, and no
-router configuration is involved. Exposing the server to the internet is a
-separate, deliberate step described in [Deployment](/deployment/).
+real data from your phone, in **four steps, in this order** — each page ends with a link to the
+next one. **Nothing here is opened to the internet**, and no router configuration is involved.
+Exposing the server is a separate, deliberate step afterwards, in [Deployment](/deployment/).
 
 ## The order
 
-1. **[Quick start](quick-start/)** — clone, configure secrets, start the
+1. **[Quick start](quick-start/)** — *on the server.* Clone, configure secrets, start the
    containers, run migrations, confirm the API answers.
-2. **[Device token](device-token/)** — issue the credential the app and the
+2. **[Device token](device-token/)** — *on the server.* Issue the credential the app and the
    dashboard use, and understand what it grants.
-3. **[First sync](first-sync/)** — point the app at the server, upload a
+3. **[Certificates](certificates/)** — *on your own computer* ⛔ **not the server.** Create the
+   CA, the server and the client certificate; install them on the server and on the phone.
+4. **[First sync](first-sync/)** — *on the phone.* Point the app at the server, upload a
    chunk, and check that it landed.
+
+Then, only if the phone should sync from outside your home: **[Deployment](/deployment/)** —
+the router, backups, and the hardening checklist.
 
 ## What you need
 

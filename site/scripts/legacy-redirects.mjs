@@ -35,7 +35,6 @@ const PATHS = [
   'api/ingest',
   'api/reading-data',
   'api/insight-vectors',
-  'deployment/tls-mtls',
   'deployment/reverse-proxy',
   'deployment/backups',
   'deployment/hardening',
@@ -58,10 +57,43 @@ const page = (target) => `<!doctype html>
 </html>
 `;
 
+// Pages that MOVED inside this site, old path → new path. ⚠️ Unlike the list above these redirect
+// the directory URL itself (`/deployment/tls-mtls/`), which is what every existing link uses, and
+// they carry the `#anchor` across — sections like "Installing on the phone" are linked by fragment
+// from other pages and from outside. A meta refresh drops the fragment, hence the script.
+const MOVED = {
+  // 2026-10-27: certificates became step 3 of Getting started. Following the docs on a fresh VM,
+  // the reader hit "First sync" and had to go looking for a page under Deployment (helsa docs/34).
+  'deployment/tls-mtls': 'getting-started/certificates',
+};
+
+const moved = (target) => `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Redirecting…</title>
+<link rel="canonical" href="${target}">
+<meta name="robots" content="noindex">
+<script>location.replace(${JSON.stringify(target)} + location.hash)</script>
+<meta http-equiv="refresh" content="0; url=${target}">
+</head>
+<body>
+<p>This page moved to <a href="${target}">${target}</a>.</p>
+</body>
+</html>
+`;
+
+for (const [from, to] of Object.entries(MOVED)) {
+  for (const file of [join(PUBLIC_DIR, from, 'index.html'), join(PUBLIC_DIR, `${from}.html`)]) {
+    await mkdir(dirname(file), { recursive: true });
+    await writeFile(file, moved(`${BASE}/${to}/`), 'utf8');
+  }
+}
+
 for (const path of PATHS) {
   const file = join(PUBLIC_DIR, `${path}.html`);
   await mkdir(dirname(file), { recursive: true });
   await writeFile(file, page(`${BASE}/${path}/`), 'utf8');
 }
 
-console.log(`wrote ${PATHS.length} legacy redirects into public/`);
+console.log(`wrote ${PATHS.length} legacy and ${Object.keys(MOVED).length} moved-page redirects into public/`);

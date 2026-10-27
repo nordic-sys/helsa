@@ -2,14 +2,14 @@
 title: First sync
 description: "Turn on sending in the app, upload a first chunk, and verify that it landed in the database."
 sidebar:
-  order: 3
+  order: 4
 ---
 ## Before you start
 
 You need a running server ([Quick start](quick-start/)) and a device token
 ([Device token](device-token/)).
 
-You also need the server half of [TLS and mutual TLS](/deployment/tls-mtls/) —
+You also need the server half of [TLS and mutual TLS](/getting-started/certificates/) —
 the CA, the server certificate installed on the server, and `ca.crt` installed **and trusted** on
 the phone. ⚠️ There is no way round this one: the proxy is the only thing that publishes a port,
 and it does not start without its certificate.
@@ -19,7 +19,7 @@ VPN: the LAN interface (`:8443`) does not ask for one, so a first sync against
 `https://<your-host>:8443/v1` works without it. From outside your network the public interface
 (`:443`) rejects a connection without a client certificate at the TLS handshake, before any token
 is examined — import the `.p12` first ([Installing on the
-phone](/deployment/tls-mtls/#installing-on-the-phone)).
+phone](/getting-started/certificates/#installing-on-the-phone)).
 
 ## Turn on sending
 
@@ -131,7 +131,7 @@ app is built on: a missing measurement is never drawn as a measured nought.
 
 | Symptom | Likely cause | Fix |
 |---|---|---|
-| App reports a TLS or "cannot connect" error | The CA certificate is installed on the phone but **not trusted**. Installing a root CA and trusting it are two separate steps on iOS. | Settings → General → About → Certificate Trust Settings, and enable it. See [TLS and mutual TLS](/deployment/tls-mtls/#installing-on-the-phone). |
+| App reports a TLS or "cannot connect" error | The CA certificate is installed on the phone but **not trusted**. Installing a root CA and trusting it are two separate steps on iOS. | Settings → General → About → Certificate Trust Settings, and enable it. See [TLS and mutual TLS](/getting-started/certificates/#installing-on-the-phone). |
 | Connection refused at the TLS handshake, no HTTP status | No client certificate, or one signed by a different CA. | Reimport the `.p12`. Confirm with `openssl verify -CAfile ca.crt client.crt`. |
 | `401` | Token missing, mistyped, revoked, or signed with a different `HELSA_JWT_SECRET`. | Issue a fresh token and paste it again. |
 | `413` | The chunk exceeded the server limit. | The app should shrink its chunk and retry; the `202` body advertises `max_items`. If it persists, the client-side chunk size is too large. |
@@ -140,6 +140,9 @@ app is built on: a missing measurement is never drawn as a measured nought.
 | Steps look roughly doubled | Both the iPhone and the Watch recorded them, and **the server sums everything it received**. | ⚠️ Not a fault, and not something the server can fix: HealthKit's merged statistics exist only on the phone, so the dashboard, the MQTT sensors and the REST answers are all higher than what Health shows you. The `samples` table keeps `source_device`, so you can see which device contributed what. |
 
 ## Then what
+
+That was the last of the four steps: the phone is uploading to your server. What follows is
+optional, in the order worth doing it:
 
 - The phone keeps syncing in the background. ⚠️ **Since iOS 27 only if Background App Refresh is
   on for Helsa** (iPhone Settings ▸ General ▸ Background App Refresh). Without it the system lets

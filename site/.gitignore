@@ -16,6 +16,7 @@ public/api/ingest.html
 public/api/reading-data.html
 public/api/insight-vectors.html
 public/deployment/tls-mtls.html
+public/deployment/tls-mtls/index.html
 public/deployment/reverse-proxy.html
 public/deployment/backups.html
 public/deployment/hardening.html

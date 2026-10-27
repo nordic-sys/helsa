@@ -178,7 +178,7 @@ docker compose -f docker-compose.yml -f docker-compose.prod.yml images
 :::note
 **The proxy wants certificates.** The production overlay expects a private CA and
 a server certificate in `/opt/helsa/pki` — see [TLS and mutual
-TLS](/deployment/tls-mtls/). Until they exist the `proxy` container will not
+TLS](/getting-started/certificates/). Until they exist the `proxy` container will not
 start, while the API, worker and dashboard are unaffected. Bring those up on their
 own with `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d api worker web`.
 :::
@@ -298,3 +298,9 @@ client certificate check, and a database whose only protection is that nothing i
 published beyond loopback. It is fine for trying things out and for development.
 Before you point a phone at it from outside your machine, work through
 [Deployment](/deployment/).
+
+:::tip[Next: step 2]
+**→ [Step 2: Device token](/getting-started/device-token/)**
+
+Still on the server: `make prod-token SUBJECT=iphone`.
+:::
