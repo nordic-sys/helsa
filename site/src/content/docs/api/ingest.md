@@ -106,11 +106,12 @@ Samples reference their workout by `workout_source_uuid` — the HealthKit
 resolves it. If the workout arrives in a **later** chunk than its samples, the link
 is resolved when it does; workout heart-rate aggregates depend on this.
 
-### Routes count against the chunk
+### Routes have their own budget
 
-A long hike's GPS track can be larger than an entire batch of samples. The client
-must count route points toward its chunk budget — otherwise chunking, whose whole
-purpose is avoiding giant requests, is defeated by a single workout.
+A long hike's GPS track can be larger than an entire batch of samples — an hour of running is
+~3,600 points. Route points therefore do not count against the 50,000 items; they have their own
+limit of 200,000 per chunk, and the 32 MB body limit (~140–190 bytes a point) is what really bounds
+them. The client should still count them when sizing a chunk, and halve it on a `413`.
 
 ### Deletions
 
@@ -164,7 +165,7 @@ should just send it again.
 
 | | |
 |---|---|
-| Server maximum | 50,000 items per chunk (samples + workouts + sleep segments + activity summaries + route points + deletions) |
+| Server maximum | 50,000 items per chunk (samples + workouts + sleep segments + activity summaries + deletions) **plus** 200,000 route points, in a request body of at most 32 MB |
 | Recommended client chunk | 2,000–5,000 items |
 | Over the limit | `413`, with a problem document |
 

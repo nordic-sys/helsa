@@ -27,6 +27,15 @@ import (
 const (
 	MaxSamples = 50000
 	MaxItems   = 50000
+	// MaxRoutePoints is the GPS-point budget of one batch, apart from MaxItems.
+	//
+	// ⚠️ Route points used to count against MaxItems, and the first real phone to sync hit it at
+	// once (2026-10-27, helsa docs/34): the client fetches up to 20 workouts per chunk and assumes
+	// ~100 points each, while an hour of running is ~3,600 — twenty real workouts are 60–70k
+	// points, every one of them refused. A point is a small row; what bounds a batch is the bytes:
+	// ~140–190 a point in JSON, under the proxy's 32 MB body limit and RabbitMQ's message cap
+	// (raised to 64 MiB in deploy/rabbitmq/10-helsa.conf — the 16 MiB default is too small).
+	MaxRoutePoints = 200000
 )
 
 // Message is the envelope that goes on the queue: the authenticated user_id
@@ -62,13 +71,14 @@ var ErrTooLarge = errors.New("batch too large")
 
 // Validate checks the batch size (400/413 in the API).
 func Validate(b *api.IngestBatch) error {
-	// Route points count as items too: the track of a single long hike is bigger
-	// than an entire helping of samples, which is why the contract requires the
-	// client to count them against its chunk budget (see routePoints).
-	n := count(b.Samples) + count(b.Workouts) + routePoints(b.Workouts) +
+	// Route points have their own budget (MaxRoutePoints) rather than counting against MaxItems.
+	n := count(b.Samples) + count(b.Workouts) +
 		count(b.SleepSegments) + count(b.ActivitySummaries) + count(b.Deletions)
 	if n == 0 {
 		return fmt.Errorf("empty batch")
+	}
+	if p := routePoints(b.Workouts); p > MaxRoutePoints {
+		return fmt.Errorf("%w: too many route points (%d, max %d)", ErrTooLarge, p, MaxRoutePoints)
 	}
 	if count(b.Samples) > MaxSamples {
 		return fmt.Errorf("%w: too many samples (max %d)", ErrTooLarge, MaxSamples)

@@ -52,6 +52,8 @@ services:
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-helsa_local_dev}
     volumes:
       - helsa_rabbitmqdata:/var/lib/rabbitmq
+      # The 16 MiB default message cap is too small for a batch of real GPS tracks — see the file.
+      - ./rabbitmq/10-helsa.conf:/etc/rabbitmq/conf.d/10-helsa.conf:ro
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
       interval: 10s

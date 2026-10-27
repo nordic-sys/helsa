@@ -3,6 +3,7 @@ package ingest
 import (
 	"context"
 	"errors"
+	"fmt"
 	"os"
 	"strings"
 	"testing"
@@ -111,7 +112,17 @@ func TestValidateCountsRoutePoints(t *testing.T) {
 		t.Errorf("a one-point route is valid: %v", err)
 	}
 
-	huge := make([]api.RoutePoint, MaxItems+1)
+	// A real batch: 20 hour-long runs at ~3,600 points each — over MaxItems, and it must pass.
+	real := make([]api.WorkoutIn, 20)
+	for i := range real {
+		pts := make([]api.RoutePoint, 3600)
+		real[i] = api.WorkoutIn{SourceUuid: fmt.Sprintf("run-%d", i), ActivityType: "running", StartedAt: ts, Route: &pts}
+	}
+	if err := Validate(&api.IngestBatch{Workouts: &real}); err != nil {
+		t.Errorf("20 real runs (72,000 points) must fit: %v", err)
+	}
+
+	huge := make([]api.RoutePoint, MaxRoutePoints+1)
 	over := []api.WorkoutIn{{SourceUuid: "wk-2", ActivityType: "hiking", StartedAt: ts, Route: &huge}}
 	err := Validate(&api.IngestBatch{Workouts: &over})
 	if err == nil {
@@ -123,7 +134,7 @@ func TestValidateCountsRoutePoints(t *testing.T) {
 	if err := Validate(&api.IngestBatch{}); errors.Is(err, ErrTooLarge) {
 		t.Error("an EMPTY batch is a 400, not a 413")
 	}
-	if n := routePoints(&over); n != MaxItems+1 {
+	if n := routePoints(&over); n != MaxRoutePoints+1 {
 		t.Errorf("routePoints=%d", n)
 	}
 	if n := routePoints(nil); n != 0 {
