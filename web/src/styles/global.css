@@ -1237,6 +1237,68 @@ select.field {
   border-radius: 4px;
 }
 
+/* --- The weekday grid (components/DayGrid.tsx) ---
+ *
+ * Seven equal columns, a bar per day scaled to the stretch's own best day, the
+ * exact number under it. ⚠️ `max-width`: across a 1100px card seven columns
+ * would put Monday and Sunday a sweep of the head apart, and the grid's whole
+ * point is reading one week as one row. `minmax(0, 1fr)` so a long number
+ * shrinks its column's text rather than widening the page at 390px. */
+.daygrid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 4px 3px;
+  max-width: 560px;
+}
+.daygrid-head {
+  text-align: center;
+  font-size: var(--fs-caption);
+  color: var(--text-faint);
+}
+.daygrid-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.daygrid-day,
+.daygrid-value {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+}
+.daygrid-day {
+  color: var(--text-faint);
+}
+.daygrid-value {
+  color: var(--text-2);
+}
+.daygrid-none {
+  color: var(--text-faint);
+}
+.daygrid-track {
+  position: relative;
+  width: 100%;
+  height: 34px;
+  border-radius: 3px;
+  background: var(--surface-2);
+}
+.daygrid-bar {
+  position: absolute;
+  inset: auto 0 0 0;
+  border-radius: 3px;
+}
+@media (max-width: 480px) {
+  .daygrid-day,
+  .daygrid-value {
+    font-size: 10px;
+  }
+}
+
 /* --- Note box (not an error, but it needs a caveat) --- */
 .note {
   border: 1px solid var(--warn-border);

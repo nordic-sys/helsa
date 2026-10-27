@@ -165,6 +165,31 @@ export const en: Dict = {
     'trends.standing.above': 'Above your usual',
     'trends.standing.wellAbove': 'Well above your usual',
 
+    // --- Trends · day by day, and the weight trend -----------------------------
+    // The words are the phone's (`DayValueGrid.swift`, `WeightTrend.swift`,
+    // `TrendsView.swift`), so the two say the same thing about the same number.
+    'daygrid.aria': 'Day by day',
+    'daygrid.noData': 'no data',
+    'daygrid.gaps.one': '{n} day brought no measurement — that cell is empty, not zero.',
+    'daygrid.gaps.other': '{n} days brought no measurement — those cells are empty, not zero.',
+    'trends.dayGrid.title': 'Day by day',
+    'trends.weight.title': 'Trend line',
+    'trends.weight.series': 'Trend line',
+    'trends.weight.rate': '{rate} {unit}/week',
+    'trends.weight.rateNoUnit': '{rate}/week',
+    'trends.weight.explanation':
+      'The trend line’s change over the last {days} days. Not the difference between readings: daily variation comes from salt, water and the time of the weigh-in, and that is not you.',
+    'trends.weight.noRate':
+      'The line is there, but a weekly change needs at least {days} days without a break in them.',
+    'trends.weight.yearly':
+      'The yearly view shows monthly averages — a trend line says nothing new about those. Switch to “Month”.',
+    'trends.weight.fewSamples':
+      'The trend line needs at least {min} readings within one unbroken stretch — right now there are {count}. Until then the raw readings are shown, with no invented curve.',
+    'trends.weight.shortSpan':
+      'The readings span {span} days; the trend line needs at least {min}. Over a shorter stretch the curve would still be mostly the first reading, merely dressed as a trend.',
+    'trends.weight.legend':
+      'The dark line is the weighted moving average: it smooths the daily swing. Where more than {days} days are missing it breaks — under that we do not know what happened.',
+
     // --- Workouts ----------------------------------------------------------
     'workouts.title': 'Workouts',
     'workouts.subtitle':

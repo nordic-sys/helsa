@@ -170,6 +170,31 @@ export const hu = {
     'trends.standing.above': 'A szokásod fölött',
     'trends.standing.wellAbove': 'Jóval a szokásod fölött',
 
+    // --- Trendek · napról napra és a testsúly-trend ----------------------------
+    // A szövegek a telefonéi (`DayValueGrid.swift`, `WeightTrend.swift`,
+    // `TrendsView.swift`), hogy a kettő ugyanazt mondja ugyanarról a számról.
+    'daygrid.aria': 'Napról napra',
+    'daygrid.noData': 'nincs adat',
+    'daygrid.gaps.one': '{n} napon nincs mérés — az a mező üres, nem nulla.',
+    'daygrid.gaps.other': '{n} napon nincs mérés — azok a mezők üresek, nem nullák.',
+    'trends.dayGrid.title': 'Napról napra',
+    'trends.weight.title': 'Trendvonal',
+    'trends.weight.series': 'Trendvonal',
+    'trends.weight.rate': '{rate} {unit}/hét',
+    'trends.weight.rateNoUnit': '{rate}/hét',
+    'trends.weight.explanation':
+      'A trendvonal változása az elmúlt {days} napban. Nem a mérések különbsége: a napi ingadozás a sótól, a víztől és a mérés időpontjától jön, nem tőled.',
+    'trends.weight.noRate':
+      'A vonal megvan, de a heti változáshoz legalább {days} napnyi megszakítás nélküli szakasz kell.',
+    'trends.weight.yearly':
+      'Az éves nézet havi átlagokat mutat — azokra a trendvonal már nem mond újat. Válts a „Hónap” nézetre.',
+    'trends.weight.fewSamples':
+      'A trendvonalhoz legalább {min} mérés kell egy megszakítás nélküli szakaszon belül — most {count} van. Addig a nyers mérések látszanak, kitalált görbe nélkül.',
+    'trends.weight.shortSpan':
+      'A mérések {span} napot fognak át; a trendvonalhoz legalább {min} nap kell. Rövidebb szakaszon a görbe még jórészt az első mérés lenne, csak trendnek öltöztetve.',
+    'trends.weight.legend':
+      'A sötét vonal a súlyozott mozgóátlag: a napi ingadozást simítja el. Ahol több mint {days} nap kimarad, ott megszakad — azalatt nem tudjuk, mi történt.',
+
     // --- Workouts ----------------------------------------------------------
     'workouts.title': 'Edzések',
     'workouts.subtitle':

@@ -73,6 +73,27 @@ carried a measurement, and it says over how many. Dividing by the window's lengt
 would count a day the phone did not sync as a day of sitting still. The metric is
 in the address (`/trends?metric=…`), so a chart is a link.
 
+Under the chart, the week and month views add **Day by day**: the window as a
+weekday grid, a column per day with its exact value under it, scaled to the
+window's own best day. It answers what a curve cannot — which weekday each number
+fell on ("every Sunday is empty"). An unmeasured day is an empty cell with a dash,
+never a zero-height bar, and the grid counts how many there are. The week starts on
+the day your region starts it (Monday in Hungary and most of Europe); the weekday
+letters follow the page's language. The day view (hours) and the year view (months)
+have no grid, because their cells are not days.
+
+For **body mass** (and lean body mass) the chart also carries a **trend line** — a
+weighted moving average that smooths the day-to-day swing of salt, water and the
+hour of the weighing — drawn over the weighings, never instead of them. A card
+beside the comparison gives its **change in kg/week** over the last 28 days. Both
+follow the phone's rules exactly: the smoothing decays with the days actually
+elapsed between two weighings, the line breaks across a gap of more than 21 days,
+and below 5 weighings or 14 days in one unbroken stretch there is no line at all —
+the card says why instead. That is also why the week view always explains rather
+than draws: seven days are shorter than the minimum. The year view gets no line,
+because its buckets are already monthly averages. No colour and no verdict: losing
+weight is not automatically good, and the page does not know what you are after.
+
 ## Observations
 
 :::danger
