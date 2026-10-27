@@ -129,6 +129,38 @@ export type Settings = {
   time_zone?: string
   locale?: 'hu' | 'en'
   unit_system?: 'metric' | 'imperial'
+  /**
+   * The three blocks below are decisions made ON THE PHONE and uploaded by it
+   * (app 1.0 (7) on). ⚠️ An ABSENT block means "this server has not been told" —
+   * an older phone, an older server, or no phone at all — and a page must say so
+   * rather than show a default as if it were the user's.
+   */
+  challenge?: ChallengeSettings
+  hydration?: HydrationSettings
+  journey?: JourneySettings
+}
+
+export type ChallengeSettings = {
+  /** Absent: the phone is on its factory row. Empty: every milestone deleted. */
+  thresholds?: number[]
+  /** The chosen rest days, as `YYYY-MM-DD` day keys. */
+  rest_days?: string[]
+  /** When the phone last sent this block. */
+  updated_at?: string
+}
+
+export type HydrationSettings = {
+  /** The goal the user CHOSE. Absent inside a sent block: none of their own —
+   * the phone then offers a body-mass suggestion it never stores or sends. */
+  goal_ml?: number
+  updated_at?: string
+}
+
+export type JourneySettings = {
+  /** Both or neither; neither = no journey running. */
+  route_id?: string
+  started_on?: string
+  updated_at?: string
 }
 
 // --- Data completeness (GET /v1/coverage) ---------------------------------
@@ -331,7 +363,10 @@ export type ChallengeDay = {
 }
 
 export type ChallengeStreakBreak = {
-  reason: 'missed' | 'no_data' | 'start_of_history'
+  /** `rest_over_budget`: a day marked as a rest day after the weekly allowance
+   * (two in any seven days) was spent. Only from servers that read the phone's
+   * rest days. */
+  reason: 'missed' | 'no_data' | 'rest_over_budget' | 'start_of_history'
   day?: string
 }
 
@@ -344,11 +379,18 @@ export type ChallengeStreak = {
   window_from: string
   window_to: string
   /**
-   * What the server cannot see: `illness_days` and `chosen_rest_days`. Both make
-   * a day neutral on the phone, so this streak is a LOWER BOUND on the one in the
-   * app — which the page has to say out loud.
+   * What the server cannot see: `illness_days` always (the journal stays on the
+   * phone), `chosen_rest_days` until the phone has uploaded them. Whatever is
+   * listed makes this streak a LOWER BOUND on the one in the app — which the page
+   * has to say out loud.
    */
   missing_inputs: string[]
+  /** Chosen rest days inside the current run. ⚠️ Optional HERE although the
+   * contract requires it: a server older than the field does not send it, and
+   * the page must not read its absence as "you took none". */
+  chosen_rest_days?: number
+  /** The chosen rest days of the current run, newest first. Same caveat. */
+  rest_days?: string[]
 }
 
 export type Challenge = {
@@ -368,8 +410,9 @@ export type Challenge = {
   next_threshold?: number
   steps_to_next_threshold?: number
   thresholds: ChallengeMilestone[]
-  /** Where the milestones came from — the user's own phone, or our factory row. */
-  thresholds_source: 'request' | 'achievement' | 'default'
+  /** Where the milestones came from: the request, the phone's uploaded settings,
+   * a badge's snapshot, or our factory row. */
+  thresholds_source: 'request' | 'settings' | 'achievement' | 'default'
   days: ChallengeDay[]
   streak: ChallengeStreak
 }

@@ -1,10 +1,10 @@
 ---
 title: The screens
-description: "What each of the eighteen pages shows, and the rules behind the numbers on it."
+description: "What each of the nineteen pages shows, and the rules behind the numbers on it."
 sidebar:
   order: 1
 ---
-Sixteen pages in the sidebar, plus two that open from a listing: a workout and a month's medal.
+Seventeen pages in the sidebar, plus two that open from a listing: a workout and a month's medal.
 
 ## Today
 
@@ -223,8 +223,39 @@ Three rules worth knowing, all of them visible on the page:
   today. This matters because the elapsed count is the denominator of the daily
   average.
 - **The streak is a lower bound.** The phone knows days that do not break a streak
-  — an illness day from the journal, a rest day you chose — and neither reaches
-  the server. This streak can be shorter than the phone's, never longer.
+  — an illness day from the journal, a rest day you chose. The rest days reach the
+  server once the phone has sent its settings (app 1.0 (7) on), and then count here
+  exactly as on the phone: neutral, at most two in any seven days, a third one
+  breaking the streak; the page lists the rest days of the current run. Illness
+  days never reach the server. So this streak can be shorter than the phone's,
+  never longer, and the note under it says which input is missing.
+
+**Whose milestones.** From app 1.0 (7) the phone uploads its milestones, and the
+page says *your own milestones, as your phone last sent them* with the date. Before
+that it shows the milestones of the most recent badge, called *our best guess*, or
+the factory row, and says so.
+
+## Virtual journey
+
+The route you are walking on the phone, and how far the distance has carried you:
+covered, the share of the route, what is left, the next milestone, the milestone
+table and the route drawn with the covered stretch highlighted (with the same
+optional map underneath as a workout). It exists because the phone, from app 1.0
+(7), uploads **which route and from which day** — nothing else. The routes are a
+generated copy of the app's catalogue; the distance is the server's own total of
+the route's movement (walked and run, or cycled) from the start day to today.
+
+- **No measurement is not zero kilometres**, and nothing counts as reached without
+  one.
+- **The percentage divides by the published length**, never by the drawn line's;
+  a route without an imported track is drawn as a sketch between approximate
+  stage points, and says so.
+- **The source note carries the OpenStreetMap credit** (ODbL) for every route
+  drawn from OpenStreetMap data.
+- Three states are told apart: *your phone has not sent its journey yet* (an
+  older app or server), *no journey is running*, and *a route this dashboard does
+  not know* (the app is newer than the server — nothing is drawn rather than
+  something wrong).
 
 ## Workouts
 
@@ -311,6 +342,14 @@ Energy consumed, macros and micronutrients. A meal-logging app writes these into
 Health and the dashboard only reads them — ⚠️ with one exception, and it is on this
 page: **water**. That is the one nutrition value Helsa writes, from the phone, when
 you log a glass.
+
+**Water against your goal.** The goal is the one you set on the phone, uploaded
+from app 1.0 (7). Today shows the amount against it; a week or 30 days shows on how
+many of the days with water logged it was reached. With no goal of your own the
+page shows the phone's suggestion from your latest body mass (33 ml per kilogram,
+rounded to 100 ml) and labels it a suggestion, not medical advice; with no body
+mass there is no suggestion. If the phone has not sent its settings, the card says
+that instead of pretending you have no goal.
 
 ## Measurements
 

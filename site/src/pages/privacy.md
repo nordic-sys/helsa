@@ -69,8 +69,9 @@ By default, **nothing**.
 | Map tiles (the app) | When you look at a map or share a route on one | Apple, through MapKit — Apple's own privacy policy applies |
 | Map tiles (the web dashboard) | Only if you switch a map on; it is off by default | Whatever tile source you chose, reached **through your own server**, never from the browser. [What each choice sends](/deployment/map-tiles/) |
 | Settings | If you have iCloud on | Your own iCloud account (preferences only — never health data) |
+| A few settings | Only if you turn on uploading and enter an address | The same server as your health data: the monthly challenge's milestones and rest days, the water goal you set, and the virtual journey's route and start day — so the web dashboard shows the same. Never the screen layout, the switches or the Spotlight settings |
 
-There is no fourth row. In particular there is no telemetry, no "anonymous
+There is no sixth row. In particular there is no telemetry, no "anonymous
 usage statistics", and no error reporting: the app contains no third-party
 software development kit of any kind, and its package manifest has an empty
 dependency list.

@@ -31,6 +31,13 @@ import { useFormat } from '../lib/format'
  *     turned "we did not measure this" into "you did nothing" (`ui.test.tsx`).
  *  2. **No score, no grade, no verdict.** Milestones and counts. The page never
  *     tells the reader whether their month was good.
+ *
+ * And one it has to be honest about: **whose milestones these are.** From app
+ * 1.0 (7) on the phone uploads its settings, and the server then answers
+ * `thresholds_source: settings` — the user's own row, as of the phone's last
+ * sync. Before that it guesses (a badge's snapshot) or falls back to the factory
+ * row, and the page says which, because "your milestones" and "our guess at your
+ * milestones" are different sentences.
  */
 
 /** `YYYY-MM` for the browser's current month. */
@@ -229,6 +236,14 @@ function ChallengeBody({ c }: { c: ChallengeData }) {
 function Milestones({ c }: { c: ChallengeData }) {
   const { t } = useI18n()
   const f = useFormat()
+  // Only for the date in the "your milestones" line. Same key as the Settings
+  // page, so the two share one request; a failure simply drops the date.
+  const settings = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => api.settings(),
+    enabled: c.thresholds_source === 'settings',
+  })
+  const sentAt = settings.data?.challenge?.updated_at
 
   if (c.thresholds.length === 0) {
     return (
@@ -306,6 +321,13 @@ function Milestones({ c }: { c: ChallengeData }) {
           {t('challenge.source.achievement')}
         </p>
       )}
+      {c.thresholds_source === 'settings' && (
+        <p className="subtle" style={{ margin: '10px 0 0' }}>
+          {sentAt
+            ? t('challenge.source.settings', { date: f.date(sentAt.slice(0, 10)) })
+            : t('challenge.source.settingsUndated')}
+        </p>
+      )}
     </>
   )
 }
@@ -322,7 +344,15 @@ function Streak({ c }: { c: ChallengeData }) {
         ? t('challenge.streak.broken.missed', { date: f.date(s.broken_by.day) })
         : s.broken_by.reason === 'no_data'
           ? t('challenge.streak.broken.noData', { date: f.date(s.broken_by.day) })
-          : t('challenge.streak.broken.startOfHistory')
+          : s.broken_by.reason === 'rest_over_budget'
+            ? t('challenge.streak.broken.restOverBudget', { date: f.date(s.broken_by.day) })
+            : t('challenge.streak.broken.startOfHistory')
+
+  // ⚠️ Whether the rest days reached the server is read off `missing_inputs`,
+  // never off `chosen_rest_days`: a 0 there from a server that has not been told
+  // is not "you took none", and an older server sends no count at all.
+  const restKnown = !s.missing_inputs.includes('chosen_rest_days')
+  const restInRun = restKnown ? (s.chosen_rest_days ?? 0) : 0
 
   // No margin of its own: it is a cell of the `.flow` it now sits in.
   return (
@@ -354,6 +384,20 @@ function Streak({ c }: { c: ChallengeData }) {
               color="var(--helsa-move)"
             />
           </div>
+          {/* The breakdown, the phone's `composition`: a run with rest days in it
+              is said to have them, never shown as that many walked days. */}
+          {s.length > 0 && restInRun > 0 && (
+            <p className="subtle" style={{ margin: '0 0 6px' }}>
+              {tp('challenge.streak.active', s.active_days)} · {tp('challenge.streak.rest', restInRun)}
+            </p>
+          )}
+          {s.length > 0 && restInRun > 0 && s.rest_days && s.rest_days.length > 0 && (
+            <p className="subtle" style={{ margin: '0 0 6px' }}>
+              {t('challenge.streak.restDays', {
+                days: s.rest_days.map((d) => f.date(d)).join(', '),
+              })}
+            </p>
+          )}
           {broken && (
             <p className="subtle" style={{ margin: '0 0 6px' }}>
               {broken}
@@ -374,7 +418,9 @@ function Streak({ c }: { c: ChallengeData }) {
       {s.missing_inputs.length > 0 && (
         <div style={{ marginTop: 14 }}>
           <Note title={t('challenge.streak.lowerBound.title')}>
-            {t('challenge.streak.lowerBound.body')}
+            {restKnown
+              ? t('challenge.streak.lowerBound.illnessOnly')
+              : t('challenge.streak.lowerBound.body')}
           </Note>
         </div>
       )}

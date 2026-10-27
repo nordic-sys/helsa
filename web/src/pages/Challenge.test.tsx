@@ -6,9 +6,13 @@ import { I18nProvider } from '../i18n'
 import type { Challenge as ChallengeData } from '../api/types'
 
 const mockChallenge = vi.fn()
+const mockSettings = vi.fn()
 
 vi.mock('../api/client', () => ({
-  api: { challenge: (...args: unknown[]) => mockChallenge(...args) },
+  api: {
+    challenge: (...args: unknown[]) => mockChallenge(...args),
+    settings: (...args: unknown[]) => mockSettings(...args),
+  },
   browserTz: () => 'UTC',
   // `ui.tsx` imports this to recognise a 401; the mock has to carry it too.
   ApiError: class ApiError extends Error {
@@ -86,6 +90,8 @@ function show(node: ReactNode) {
 // en-US. The assertions below are English on purpose.
 beforeEach(() => {
   mockChallenge.mockReset()
+  mockSettings.mockReset()
+  mockSettings.mockResolvedValue({})
 })
 
 describe('the monthly challenge page', () => {
@@ -165,5 +171,69 @@ describe('the monthly challenge page', () => {
     show(<ChallengePage />)
 
     expect(await screen.findByText(/This month has not begun yet/)).toBeInTheDocument()
+  })
+
+  /**
+   * From app 1.0 (7) on the phone uploads its settings, and the server reads the
+   * milestones from there. The page then says "your own" — and when — rather
+   * than "our best guess".
+   */
+  it('names the phone as the source of the milestones once it has sent them', async () => {
+    mockChallenge.mockResolvedValue(fixture({ thresholds_source: 'settings' }))
+    mockSettings.mockResolvedValue({ challenge: { thresholds: [100_000], updated_at: '2026-10-27T09:00:00Z' } })
+    show(<ChallengePage />)
+
+    expect(await screen.findByText(/Your own milestones, as your phone last sent them \(Oct 27, 2026\)/)).toBeInTheDocument()
+    expect(screen.queryByText(/Our best guess/)).not.toBeInTheDocument()
+  })
+
+  it('still calls a badge snapshot a guess', async () => {
+    mockChallenge.mockResolvedValue(fixture())
+    show(<ChallengePage />)
+
+    expect(await screen.findByText(/Our best guess/)).toBeInTheDocument()
+  })
+
+  /**
+   * With the rest days uploaded, a run that has them in it says so — never as
+   * that many walked days — and the caveat narrows to the illness days alone.
+   */
+  it('shows the rest days of the run, and narrows the caveat to illness', async () => {
+    mockChallenge.mockResolvedValue(
+      fixture({
+        streak: {
+          daily_goal: 6_667,
+          length: 10,
+          active_days: 8,
+          chosen_rest_days: 2,
+          rest_days: ['2026-09-08', '2026-09-03'],
+          longest: 12,
+          broken_by: { reason: 'rest_over_budget', day: '2026-08-31' },
+          window_from: '2026-06-13',
+          window_to: '2026-09-10',
+          missing_inputs: ['illness_days'],
+        },
+      }),
+    )
+    show(<ChallengePage />)
+
+    expect(await screen.findByText('10-day streak')).toBeInTheDocument()
+    expect(screen.getByText(/8 active days · 2 rest days/)).toBeInTheDocument()
+    expect(screen.getByText(/Sep 8, 2026, Sep 3, 2026/)).toBeInTheDocument()
+    expect(screen.getByText(/weekly allowance \(two days\) had run out/)).toBeInTheDocument()
+    expect(screen.getByText(/Sick days are not/)).toBeInTheDocument()
+  })
+
+  /**
+   * An older server sends no count at all, and a server that has not been told
+   * sends a 0 — neither is "you took no rest days", and neither is shown as one.
+   */
+  it('does not read a missing rest-day count as none taken', async () => {
+    mockChallenge.mockResolvedValue(fixture())
+    show(<ChallengePage />)
+
+    expect(await screen.findByText('8-day streak')).toBeInTheDocument()
+    expect(screen.queryByText(/rest days?$/)).not.toBeInTheDocument()
+    expect(screen.getByText(/your phone has not sent its rest days yet/)).toBeInTheDocument()
   })
 })

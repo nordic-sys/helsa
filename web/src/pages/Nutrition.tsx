@@ -17,6 +17,7 @@ import {
 } from 'recharts'
 import { api, browserTz } from '../api/client'
 import type { Range } from '../api/types'
+import { daysAtGoal, resolveWaterGoal, toKg, toMl } from '../lib/hydration'
 import { Card, Empty, ErrorState, Legend, Loading, Note, Stat } from '../components/ui'
 import { useI18n } from '../i18n'
 import type { UiKey } from '../i18n'
@@ -166,7 +167,12 @@ export default function Nutrition() {
       )}
 
       {withData.length === 0 ? (
-        <Empty title={t('nutrition.empty.title')} hint={t('nutrition.empty.hint')} />
+        <>
+          <Empty title={t('nutrition.empty.title')} hint={t('nutrition.empty.hint')} />
+          {/* The goal is still the user's when nothing was logged — and "nothing
+              logged against a 2 l goal" is worth saying. */}
+          <WaterGoalCard water={of(WATER)} range={range} tz={tz} />
+        </>
       ) : (
         <>
           <div className="grid grid-stats" style={{ marginBottom: 18 }}>
@@ -201,6 +207,8 @@ export default function Nutrition() {
               color={WATER.color}
             />
           </div>
+
+          <WaterGoalCard water={of(WATER)} range={range} tz={tz} />
 
           {kcalTotal > 0 && (
             <div style={{ marginBottom: 16 }}>
@@ -379,5 +387,109 @@ function NutrientTable({
         </table>
       </div>
     </Card>
+  )
+}
+
+/**
+ * Water against the goal set on the phone — the web's half of the phone's water
+ * card (the moss is the phone's; the number it measures against is the same).
+ *
+ * The goal comes from `/v1/settings` → `hydration`, resolved by the phone's own
+ * rules (`lib/hydration.ts`): the chosen goal, else a body-mass suggestion that
+ * says it is one, else nothing. ⚠️ A block the phone never sent is said as such
+ * — "no goal" would be a claim about the user, and it is really a claim about an
+ * older app or server.
+ */
+function WaterGoalCard({ water, range, tz }: { water: ReadSeries; range: Range; tz: string }) {
+  const { t } = useI18n()
+  const f = useFormat()
+
+  const settings = useQuery({ queryKey: ['settings'], queryFn: () => api.settings() })
+  const block = settings.data?.hydration
+  // The latest body mass, only when a suggestion is the question. A failure (an
+  // older server without /latest) is "no body mass", which means no suggestion —
+  // never an invented one.
+  const latest = useQuery({
+    queryKey: ['latest', 'bodyMass', tz],
+    queryFn: () => api.latest(['bodyMass'], tz),
+    enabled: block != null && block.goal_ml == null,
+    retry: false,
+  })
+  if (settings.isPending) return null
+  if (settings.isError) return null
+
+  const mass = latest.data?.metrics.bodyMass
+  const goal = resolveWaterGoal(block, toKg(mass?.value, mass?.unit))
+
+  const body = (() => {
+    if (goal.kind === 'unknown') {
+      return <p className="subtle" style={{ margin: 0 }}>{t('nutrition.water.unknown')}</p>
+    }
+    if (goal.kind === 'none') {
+      if (block != null && block.goal_ml == null && latest.isPending) return null
+      return <p className="subtle" style={{ margin: 0 }}>{t('nutrition.water.none')}</p>
+    }
+    const goalText = `${f.num(goal.ml)} ${f.unit('mL')}`
+    // A per-sample average cannot be compared with a daily amount, and a unit we
+    // cannot convert cannot be compared at all — both are said, not guessed.
+    const comparable = !water.degraded && (!water.hasData || toMl(1, water.unit) != null)
+
+    let reading: React.ReactNode = null
+    if (!comparable) {
+      reading = <p className="subtle" style={{ margin: 0 }}>{t('nutrition.water.notComparable')}</p>
+    } else if (range === 'day') {
+      const today = toMl(water.total, water.unit)
+      reading =
+        today == null ? (
+          <p className="subtle" style={{ margin: 0 }}>{t('nutrition.water.nothingToday')}</p>
+        ) : (
+          <>
+            <p style={{ margin: '0 0 8px' }}>
+              {t('nutrition.water.today', { amount: `${f.num(today)} ${f.unit('mL')}`, goal: goalText })}
+            </p>
+            <div
+              className="split-bar"
+              role="img"
+              aria-label={f.percent(Math.min(today / goal.ml, 1), 0)}
+            >
+              <div
+                style={{ width: `${Math.min(today / goal.ml, 1) * 100}%`, background: 'var(--helsa-fjord)' }}
+              />
+            </div>
+          </>
+        )
+    } else {
+      const days = water.points.map((p) => toMl(p.value, water.unit))
+      const { met, measured } = daysAtGoal(days, goal.ml)
+      reading =
+        measured === 0 ? (
+          <p className="subtle" style={{ margin: 0 }}>{t('nutrition.water.nothingInPeriod')}</p>
+        ) : (
+          <p style={{ margin: 0 }}>{t('nutrition.water.days', { met, measured })}</p>
+        )
+    }
+
+    return (
+      <>
+        <p className="subtle" style={{ marginTop: 0 }}>
+          {goal.kind === 'chosen'
+            ? t('nutrition.water.goal.chosen', { goal: goalText })
+            : t('nutrition.water.goal.suggested', { goal: goalText })}
+        </p>
+        {reading}
+        {goal.kind === 'suggested' && (
+          <p className="subtle" style={{ margin: '10px 0 0' }}>
+            {t('nutrition.water.suggestionNotice')}
+          </p>
+        )}
+      </>
+    )
+  })()
+
+  if (body == null) return null
+  return (
+    <div style={{ marginBottom: 16 }}>
+      <Card title={t('nutrition.water.title')}>{body}</Card>
+    </div>
   )
 }

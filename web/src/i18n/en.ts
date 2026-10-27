@@ -17,6 +17,7 @@ export const en: Dict = {
     'nav.sleep': 'Sleep',
     'nav.nutrition': 'Nutrition',
     'nav.challenge': 'Monthly challenge',
+    'nav.journey': 'Virtual journey',
     'nav.coverage': 'Completeness',
     'nav.ingest': 'Sync queue',
     'nav.settings': 'Settings',
@@ -428,6 +429,67 @@ export const en: Dict = {
     'sleep.raw.other': 'Raw segments ({n})',
 
     // --- Nutrition ---------------------------------------------------------
+    // --- Virtual journey ---------------------------------------------------
+    'journey.title':
+      'Virtual journey',
+    'journey.subtitle':
+      'The route you are walking on the phone, and how far the distance you covered has carried you along it.',
+    'journey.unknown.title':
+      'Your phone has not sent its journey yet',
+    'journey.unknown.hint':
+      'The app sends which route you walk and from which day from version 1.0 (7) on, after its next sync. Until then this server does not know whether a journey is running.',
+    'journey.none.title':
+      'No virtual journey is running on your phone',
+    'journey.none.hint':
+      'Start one in the app (Today ▸ Virtual journey); it shows up here after the next sync.',
+    'journey.unknownRoute.title':
+      'A route this dashboard does not know',
+    'journey.unknownRoute.body':
+      'Your phone is walking “{id}”, which is not in this dashboard’s route list — the app is newer than the server. Nothing is drawn rather than something wrong; updating the server brings the route.',
+    'journey.since':
+      'Counted from {date} · {movement} distance',
+    'journey.movement.walking':
+      'walked and run',
+    'journey.movement.cycling':
+      'cycled',
+    'journey.travelled':
+      'Covered',
+    'journey.ofRoute':
+      'Of the route',
+    'journey.remaining':
+      'Remaining',
+    'journey.length':
+      'Length (published)',
+    'journey.notStarted':
+      'The journey starts on {date}.',
+    'journey.noData.title':
+      'No distance has arrived for this journey yet',
+    'journey.noData.hint':
+      'That is not zero kilometres: nothing has been measured since the start day, or it has not been synced yet.',
+    'journey.complete':
+      'You have reached the finish.',
+    'journey.overshoot':
+      '{km} past it.',
+    'journey.next':
+      'Next: {name}, {km} away.',
+    'journey.milestones':
+      'Milestones',
+    'journey.reached':
+      'reached',
+    'journey.map':
+      'The route',
+    'journey.mapAria':
+      'The route, with the stretch already covered highlighted',
+    'journey.here':
+      'You are here',
+    'journey.sketchNote':
+      'The route drawing is a sketch: the milestones are joined by straight sections at approximate coordinates — not the real track. The distances, however, come from the published section lengths.',
+    'journey.trackNote':
+      'The drawing is the real track, simplified. Your progress, however, is measured against the published length, not the drawn line’s.',
+    'journey.openSource':
+      'Open source',
+    'journey.serverNote':
+      'The distance is what this server has received, merged by source. The phone reads Health directly, so its figure can differ slightly.',
     'nutrition.title': 'Nutrition',
     'nutrition.subtitle':
       'Energy consumed, macros and micronutrients. A meal-logging app writes these into Health; Helsa only reads them.',
@@ -444,6 +506,28 @@ export const en: Dict = {
     'nutrition.headline.todayTotal': 'Total today',
     'nutrition.headline.dailyAverage': 'Daily average',
     'nutrition.stat': '{metric} — {headline}',
+    'nutrition.water.title':
+      'Water against your goal',
+    'nutrition.water.unknown':
+      'Your phone has not sent a water goal to this server yet. The app does from version 1.0 (7) on, after its next sync — until then there is nothing here to measure against.',
+    'nutrition.water.none':
+      'No water goal is set on the phone, and there is no body mass here to suggest one from.',
+    'nutrition.water.goal.chosen':
+      'Your daily goal, as set on the phone: {goal}.',
+    'nutrition.water.goal.suggested':
+      'Suggested daily amount: {goal} — worked out from your body mass, not a goal you set.',
+    'nutrition.water.suggestionNotice':
+      'This is not medical advice — just a commonly used starting point (about 33 ml per kilogram of body mass). The phone shows the same suggestion until you set your own.',
+    'nutrition.water.today':
+      '{amount} of {goal} today.',
+    'nutrition.water.nothingToday':
+      'Nothing logged today.',
+    'nutrition.water.days':
+      'The goal was reached on {met} of the {measured} days with water logged.',
+    'nutrition.water.nothingInPeriod':
+      'No water logged in this period.',
+    'nutrition.water.notComparable':
+      'The water here cannot be set against the goal: the server did not send it as daily amounts in a unit we can read.',
     'nutrition.macroSplit.title': 'Macro split (by energy)',
     'nutrition.macroSplit.aria': 'Macro share by energy',
     'nutrition.macroSplit.note':
@@ -484,9 +568,11 @@ export const en: Dict = {
     'challenge.milestones.next': 'The next one is at {steps} steps — {remaining} to go.',
     'challenge.source.title': 'Where the milestones come from',
     'challenge.source.default':
-      'These are the factory milestones: the phone has never told this server which ones you set. What you see in the app may differ.',
+      'These are the factory milestones: the phone has never told this server which ones you set. The app sends them from version 1.0 (7) on, after its next sync. What you see in the app may differ.',
     'challenge.source.achievement':
-      'From the snapshot on the badge your phone recorded most recently. The milestones live on the phone; nothing syncs them on their own.',
+      'Our best guess: the milestones on the badge your phone recorded most recently. Your phone has not sent its settings yet — the app does from version 1.0 (7) on — so the ones in the app may differ.',
+    'challenge.source.settings': 'Your own milestones, as your phone last sent them ({date}).',
+    'challenge.source.settingsUndated': 'Your own milestones, as your phone last sent them.',
     'challenge.days.title': 'Day by day',
     'challenge.days.empty': 'Not one day of this month has arrived yet.',
     'challenge.days.gaps.one':
@@ -509,9 +595,18 @@ export const en: Dict = {
       '{date} — no step count arrived for this day. Not a missed day, we simply do not know about it.',
     'challenge.streak.broken.startOfHistory':
       'The streak reaches back to the start of the period examined — we say nothing about days older than that.',
+    'challenge.streak.broken.restOverBudget':
+      '{date} — you marked it a rest day, but the weekly allowance (two days) had run out by then, so it broke the streak.',
+    'challenge.streak.active.one': '{n} active day',
+    'challenge.streak.active.other': '{n} active days',
+    'challenge.streak.rest.one': '{n} rest day',
+    'challenge.streak.rest.other': '{n} rest days',
+    'challenge.streak.restDays': 'Rest days in this run, as you marked them on the phone: {days}.',
     'challenge.streak.lowerBound.title': 'The phone knows more than this',
     'challenge.streak.lowerBound.body':
-      'Sick days, and rest days you marked yourself, never break a streak — but neither of them reaches the server: the journal stays on the phone, and a marked rest day is a local setting. So the streak here can be shorter than the one in the app, never longer.',
+      'Sick days, and rest days you marked yourself, never break a streak — but neither has reached this server: the journal stays on the phone, and your phone has not sent its rest days yet (the app does from version 1.0 (7) on). So the streak here can be shorter than the one in the app, never longer.',
+    'challenge.streak.lowerBound.illnessOnly':
+      'The rest days you marked are counted here exactly as on the phone — at most two in any seven days. Sick days are not: the journal stays on the phone, so a day you were ill is a plain missed day here. The streak here can be shorter than the one in the app, never longer.',
 
     // --- Settings ----------------------------------------------------------
     'settings.title': 'Settings',

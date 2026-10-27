@@ -309,9 +309,10 @@ GET  /v1/achievements
 POST /v1/achievements
 ```
 
-The phone evaluates, the server stores. Thresholds live on the client, so
-server-side evaluation would require uploading the settings first — and the phone
-is the only uploader anyway.
+The phone evaluates, the server stores. The thresholds are set on the phone; the
+phone also uploads them as settings (app 1.0 (7) on), but the badges stay the
+phone's evaluation — it is the only uploader, and a badge records the row in force
+when it was earned.
 
 Each row carries the value and thresholds **as they were when earned**. A badge is
 a historical fact: change your monthly step target today and a month you completed
@@ -398,11 +399,20 @@ added up to, which milestones that passed, and how many days are left.
 | `tz` | IANA zone. A month is a span in your calendar, not an instant — 2026-08-31 22:30 UTC is already September in Budapest. |
 | `thresholds` | `20000,35000,70000` — override what the server thinks your milestones are. Cleaned up exactly as the phone cleans the same input: non-positive dropped, duplicates removed, sorted. |
 
-**The milestones are yours, and they live on the phone.** Nothing syncs them, so
-the server takes them in this order: the `thresholds` parameter, then the newest
-threshold snapshot on a recorded badge, then the factory row. `thresholds_source`
-says which happened — "your milestones" and "our guess at your milestones" are
-different statements and should not be told apart by guessing.
+**The milestones are yours, and they are set on the phone.** From app 1.0 (7) the
+phone uploads them (`/v1/settings` → `challenge`), so the server takes them in this
+order: the `thresholds` parameter, then the uploaded settings (`settings` — also
+when the phone is on its factory row), then the newest threshold snapshot on a
+recorded badge (`achievement`), then the factory row (`default`).
+`thresholds_source` says which happened — "your milestones" and "our guess at your
+milestones" are different statements and should not be told apart by guessing.
+
+**The streak uses the uploaded rest days** the way the phone does: a chosen rest
+day is neutral, at most two count in any seven days, a third breaks the streak
+(`broken_by.reason: rest_over_budget`), and a run of rest days alone is no streak.
+`streak.chosen_rest_days` and `streak.rest_days` describe the current run.
+`missing_inputs` always lists `illness_days` (the journal never leaves the phone)
+and lists `chosen_rest_days` too until the phone has sent them.
 
 Three things about the numbers:
 

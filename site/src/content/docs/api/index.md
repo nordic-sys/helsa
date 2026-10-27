@@ -86,7 +86,7 @@ look weird".
 
 | | |
 |---|---|
-| `GET/PUT /v1/settings` | Time zone, locale, unit system, notification preferences. Partial update: omitted fields are left alone. |
+| `GET/PUT /v1/settings` | Time zone, locale, unit system, notification preferences — and three blocks the phone uploads (app 1.0 (7) on): `challenge` (milestones, chosen rest days), `hydration` (the chosen water goal), `journey` (route id, start day). Partial update: omitted fields and blocks are left alone, but a sent block **replaces** the stored one whole (`hydration: {}` clears the goal, `journey: {}` stops the journey). A block the phone never sent is absent on the way out. |
 | `GET/POST /v1/devices` | Device list and heartbeat. `last_seen_at` is always set by the server. |
 | `GET/PUT /v1/goals` | Step and ring targets. |
 | `POST /v1/achievements` | Idempotent upsert. **The phone evaluates, the server stores** — the thresholds live on the client, and a badge is a historical fact that must not "un-earn" itself when you later change a threshold. Never deletes: a reinstalled phone starting from an empty set must not wipe years of history. |

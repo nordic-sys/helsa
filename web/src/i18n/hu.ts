@@ -24,6 +24,7 @@ export const hu = {
     'nav.sleep': 'Alvás',
     'nav.nutrition': 'Táplálkozás',
     'nav.challenge': 'Havi kihívás',
+    'nav.journey': 'Virtuális túra',
     'nav.coverage': 'Adat-teljesség',
     'nav.ingest': 'Feltöltési sor',
     'nav.settings': 'Beállítások',
@@ -431,6 +432,67 @@ export const hu = {
     'sleep.raw.other': 'Nyers szakaszok ({n})',
 
     // --- Nutrition ---------------------------------------------------------
+    // --- Virtual journey ---------------------------------------------------
+    'journey.title':
+      'Virtuális túra',
+    'journey.subtitle':
+      'Az útvonal, amit a telefonon jársz, és hogy a megtett táv meddig vitt el rajta.',
+    'journey.unknown.title':
+      'A telefon még nem küldte el a túrádat',
+    'journey.unknown.hint':
+      'Az app az 1.0 (7) verziótól küldi el, melyik útvonalat járod és melyik naptól, a következő szinkronnál. Addig ez a szerver nem tudja, fut-e túra.',
+    'journey.none.title':
+      'A telefonon nem fut virtuális túra',
+    'journey.none.hint':
+      'Indíts egyet az appban (Ma ▸ Virtuális túra); a következő szinkron után itt is megjelenik.',
+    'journey.unknownRoute.title':
+      'Olyan útvonal, amit ez a felület nem ismer',
+    'journey.unknownRoute.body':
+      'A telefon ezt az útvonalat járja: „{id}”, de ez nincs benne ennek a felületnek az útvonallistájában — az app újabb a szervernél. Inkább nem rajzolunk semmit, mint valami rosszat; a szerver frissítése hozza az útvonalat.',
+    'journey.since':
+      'Ettől a naptól számoljuk: {date} · {movement} táv',
+    'journey.movement.walking':
+      'gyalogolt és futott',
+    'journey.movement.cycling':
+      'kerékpáros',
+    'journey.travelled':
+      'Megtett táv',
+    'journey.ofRoute':
+      'Az útvonalból',
+    'journey.remaining':
+      'Hátralévő',
+    'journey.length':
+      'Hossz (publikált)',
+    'journey.notStarted':
+      'A túra ekkor indul: {date}.',
+    'journey.noData.title':
+      'Ehhez a túrához még nem érkezett táv',
+    'journey.noData.hint':
+      'Ez nem nulla kilométer: a kezdőnap óta nem mértünk semmit, vagy még nem szinkronizálódott.',
+    'journey.complete':
+      'Célba értél.',
+    'journey.overshoot':
+      '{km} túl rajta.',
+    'journey.next':
+      'Következik: {name}, {km} múlva.',
+    'journey.milestones':
+      'Mérföldkövek',
+    'journey.reached':
+      'elérve',
+    'journey.map':
+      'Az útvonal',
+    'journey.mapAria':
+      'Az útvonal, kiemelve a már megtett szakasz',
+    'journey.here':
+      'Itt tartasz',
+    'journey.sketchNote':
+      'Az útvonalrajz vázlatos: a mérföldköveket közelítő koordinátákon egyenes szakaszok kötik össze — ez nem a valódi nyomvonal. A távolságok viszont a publikált szakaszhosszakból jönnek.',
+    'journey.trackNote':
+      'A rajz a valódi nyomvonal, egyszerűsítve. A haladásodat viszont a publikált hosszhoz mérjük, nem a rajzolt vonaléhoz.',
+    'journey.openSource':
+      'Forrás megnyitása',
+    'journey.serverNote':
+      'A táv az, amit ez a szerver megkapott, forrásonként összefésülve. A telefon közvetlenül az Egészség appból olvas, ezért az ott látható szám kicsit eltérhet.',
     'nutrition.title': 'Táplálkozás',
     'nutrition.subtitle':
       'Bevitt energia, makrók és mikrotápanyagok. A Health-be egy étkezés-naplózó app írja őket; a Helsa csak olvassa.',
@@ -447,6 +509,28 @@ export const hu = {
     'nutrition.headline.todayTotal': 'Ma összesen',
     'nutrition.headline.dailyAverage': 'Napi átlag',
     'nutrition.stat': '{metric} — {headline}',
+    'nutrition.water.title':
+      'Víz a célodhoz mérve',
+    'nutrition.water.unknown':
+      'A telefon még nem küldött vízcélt ennek a szervernek. Az app az 1.0 (7) verziótól küldi, a következő szinkronnál — addig itt nincs mihez mérni.',
+    'nutrition.water.none':
+      'A telefonon nincs beállított vízcél, és itt nincs testsúly, amiből javasolni lehetne egyet.',
+    'nutrition.water.goal.chosen':
+      'A napi célod, ahogy a telefonon beállítottad: {goal}.',
+    'nutrition.water.goal.suggested':
+      'Javasolt napi mennyiség: {goal} — a testsúlyodból számolva, nem te állítottad be.',
+    'nutrition.water.suggestionNotice':
+      'Ez nem orvosi tanács — csak egy elterjedt kiindulópont (kb. 33 ml testsúlykilogrammonként). A telefon is ezt a javaslatot mutatja, amíg nem állítasz be sajátot.',
+    'nutrition.water.today':
+      'Ma eddig {amount}, a cél {goal}.',
+    'nutrition.water.nothingToday':
+      'Ma még nincs rögzítve semmi.',
+    'nutrition.water.days':
+      'A cél {met} napon teljesült; vizet {measured} napon rögzítettél.',
+    'nutrition.water.nothingInPeriod':
+      'Ebben az időszakban nincs rögzített víz.',
+    'nutrition.water.notComparable':
+      'Az itteni víz nem mérhető a célhoz: a szerver nem napi mennyiségként, olvasható mértékegységben küldte.',
     'nutrition.macroSplit.title': 'Makró-bontás (energia szerint)',
     'nutrition.macroSplit.aria': 'Makró-arány energia szerint',
     'nutrition.macroSplit.note':
@@ -487,9 +571,11 @@ export const hu = {
     'challenge.milestones.next': 'A következő {steps} lépésnél van — {remaining} lépésre.',
     'challenge.source.title': 'Honnan jönnek a mérföldkövek',
     'challenge.source.default':
-      'A gyári sor látszik: a telefon még nem mondta el ennek a szervernek, milyen mérföldköveket állítottál be. Ami a telefonon látszik, eltérhet ettől.',
+      'A gyári sor látszik: a telefon még nem mondta el ennek a szervernek, milyen mérföldköveket állítottál be. Az app az 1.0 (7) verziótól küldi el őket, a következő szinkronnál. Ami a telefonon látszik, eltérhet ettől.',
     'challenge.source.achievement':
-      'A telefon által legutóbb rögzített érem pillanatképéből. A mérföldkövek a telefonon élnek, külön nem szinkronizálódnak.',
+      'A legjobb becslésünk: a telefon által legutóbb rögzített érem mérföldkövei. A telefon még nem küldte el a beállításait — az app az 1.0 (7) verziótól küldi —, így a telefonon látszók eltérhetnek.',
+    'challenge.source.settings': 'A saját mérföldköveid, ahogy a telefon legutóbb elküldte őket ({date}).',
+    'challenge.source.settingsUndated': 'A saját mérföldköveid, ahogy a telefon legutóbb elküldte őket.',
     'challenge.days.title': 'Napról napra',
     'challenge.days.empty': 'Ebből a hónapból még egyetlen nap sem érkezett meg.',
     'challenge.days.gaps.one':
@@ -511,8 +597,17 @@ export const hu = {
     'challenge.streak.broken.startOfHistory':
       'A sorozat a vizsgált időszak elejéig ér — az annál régebbi napokról nem állítunk semmit.',
     'challenge.streak.lowerBound.title': 'A telefon ennél többet tud',
+    'challenge.streak.broken.restOverBudget':
+      '{date} — pihenőnapnak jelölted, de a heti keret (két nap) addigra elfogyott, így ez megszakította a sorozatot.',
+    'challenge.streak.active.one': '{n} nap mozgással',
+    'challenge.streak.active.other': '{n} nap mozgással',
+    'challenge.streak.rest.one': '{n} pihenőnap',
+    'challenge.streak.rest.other': '{n} pihenőnap',
+    'challenge.streak.restDays': 'Pihenőnapok ebben a sorozatban, ahogy a telefonon jelölted őket: {days}.',
     'challenge.streak.lowerBound.body':
-      'A betegnapok és az általad megjelölt pihenőnapok nem törik meg a sorozatot — de egyik sem jut el a szerverig: a napló a telefonon marad, a pihenőnap pedig helyi beállítás. Az itteni sorozat ezért rövidebb lehet a telefonon látszónál, hosszabb soha.',
+      'A betegnapok és az általad megjelölt pihenőnapok nem törik meg a sorozatot — de egyik sem jutott el ehhez a szerverhez: a napló a telefonon marad, a pihenőnapjaidat pedig a telefon még nem küldte el (az app az 1.0 (7) verziótól küldi). Az itteni sorozat ezért rövidebb lehet a telefonon látszónál, hosszabb soha.',
+    'challenge.streak.lowerBound.illnessOnly':
+      'Az általad jelölt pihenőnapokat itt is pontosan úgy számoljuk, mint a telefon — hét napon belül legfeljebb kettőt. A betegnapokat nem: a napló a telefonon marad, így egy nap, amikor beteg voltál, itt egyszerű kihagyott nap. Az itteni sorozat rövidebb lehet a telefonon látszónál, hosszabb soha.',
 
     // --- Settings ----------------------------------------------------------
     'settings.title': 'Beállítások',

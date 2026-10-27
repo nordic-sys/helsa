@@ -57,6 +57,11 @@ two places here:
    ships is a derivative database rather than only a produced work, and share-alike applies.
    That obligation is met by publishing the derived data: [`data/journey-tracks/`](data/journey-tracks/),
    under ODbL, with the recipe that produced each file.
+3. **The same routes on the web dashboard's Virtual journey page** —
+   [`web/src/data/journey-routes.json`](web/src/data/journey-routes.json) is a generated
+   copy of the app's catalogue (the same simplified tracks, nothing new derived from OSM),
+   and every record carries its attribution, which the page prints with the route. The
+   share-alike answer is the one above: the derived data is already published.
 
 ## The iOS app
 

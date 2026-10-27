@@ -56,6 +56,7 @@ import Achievements from './pages/Achievements'
 import Sleep from './pages/Sleep'
 import Nutrition from './pages/Nutrition'
 import Challenge from './pages/Challenge'
+import Journey from './pages/Journey'
 import Coverage from './pages/Coverage'
 import Ingest from './pages/Ingest'
 import SettingsPage from './pages/Settings'
@@ -113,6 +114,12 @@ export const NAV: NavEntry[] = [
   { path: '/insights', label: 'nav.insights', element: <Insights />, group: 'longView' },
   { path: '/achievements', label: 'nav.achievements', element: <Achievements />, group: 'longView' },
   { path: '/challenge', label: 'nav.challenge', element: <Challenge />, group: 'longView' },
+  // The journey sits right after the challenge, as on the phone, where both are
+  // cards of the `longTerm` band (`DashboardCard.journey`): a distance that never
+  // resets, read against a route — something to look at, not something to touch
+  // today. It exists on the web only because the phone uploads which route and
+  // from which day (app 1.0 (7) on); the routes are a generated copy of the app's.
+  { path: '/journey', label: 'nav.journey', element: <Journey />, group: 'longView' },
 
   { path: '/workouts', label: 'nav.workouts', element: <Workouts />, group: 'areas' },
   // Training progress sits in Areas, right under Workouts, and not in "The long
