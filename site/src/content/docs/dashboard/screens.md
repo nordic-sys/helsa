@@ -1,10 +1,10 @@
 ---
 title: The screens
-description: "What each of the sixteen pages shows, and the rules behind the numbers on it."
+description: "What each of the seventeen pages shows, and the rules behind the numbers on it."
 sidebar:
   order: 1
 ---
-Fourteen pages in the sidebar, plus two that open from a listing: a workout and a month's medal.
+Fifteen pages in the sidebar, plus two that open from a listing: a workout and a month's medal.
 
 ## Today
 
@@ -144,6 +144,40 @@ because reading five years out of HealthKit costs battery; here it is **one requ
 The choice of measurements is kept in **this browser** (the *Recommended* button
 gives the phone's eight). Sleep is not offered: it does not come from the same
 source as the rest and would only ever be an empty row.
+
+## Health summary
+
+The phone's printable report for a doctor, made from what the server holds. Choose
+a period — **30 days, 3 months, 6 months or 1 year**, the phone's four — and the
+measurements (the default is the phone's: blood pressure, resting heart rate, body
+mass, blood oxygen and steps), then **Print**. The PDF comes from the browser's
+print dialog ("Save as PDF"): the server's own export does not make PDFs.
+
+- **What changed comes first**: at most three measurements that moved at least 5%
+  against the previous period of the same length, both numbers printed, no arrow
+  and no colour. The previous period needs seven measured days, and — the web's one
+  rule on top of the phone's — when the two periods were measured on very
+  different shares of their days, the change is **named as not compared** instead
+  of printed.
+- Each row has the daily average, the extremes, **your usual range** and how many
+  days were measured. The usual range is the phone's: the middle 80% of your own
+  daily values over the last year (10th–90th percentile, at least 14 days). It is
+  not a medical reference range, and the page says so.
+- A measurement with no data says *no measurement*, never 0; a range with too
+  little data says *little data (9 days)*, never a blank.
+- **What it cannot show, it says.** The journal and symptom marks never leave the
+  phone, and events (falls, heart-rate notifications) are put together on the
+  phone — both sections are on the page as one sentence each, so their absence
+  does not read as "nothing happened". The source marks the phone prints are not
+  here either.
+- **No chart**, as on the phone: a sparkline invites the eye to find a trend.
+- On paper it is black on white whatever the screen's theme, the header and the
+  honesty block repeat on every sheet, pages are numbered, and a long workout list
+  starts on a sheet of its own. Unlike the phone's single sheet there is no
+  six-measurement cap: the browser paginates.
+
+The period and the measurements are in the address, so next month's printout can
+be the same one.
 
 ## Observations
 
