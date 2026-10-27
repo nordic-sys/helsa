@@ -72,7 +72,8 @@ func newEnv(t *testing.T) *env {
 	// The worker in-process: it consumes from the queue and writes to the database.
 	go func() {
 		_ = q.Consume(ctx, 4, func(ctx context.Context, body []byte) error {
-			return ingest.Process(ctx, st.DB, st.Redis, body)
+			_, err := ingest.Process(ctx, st.DB, st.Redis, body)
+			return err
 		})
 	}()
 
