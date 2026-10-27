@@ -2025,3 +2025,23 @@ a.dup-row:hover {
 .lang-switch button.seg {
   min-width: 44px;
 }
+
+/* A card's title row: the title on the left, a figure or a link on the right. */
+.card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: var(--sp-3);
+}
+.wo-stats .stat-card {
+  padding: var(--sp-4);
+  border-radius: var(--radius);
+}
+.wo-stats .stat-card h2 {
+  font-size: var(--fs-caption);
+}
+.wo-stats .stat {
+  font-size: var(--fs-figure-sm);
+}

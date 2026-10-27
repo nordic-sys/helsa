@@ -44,6 +44,7 @@ import {
 } from 'recharts'
 import { ApiError, api } from '../api/client'
 import type { Sample, Workout } from '../api/types'
+import { ActivityIcon } from '../components/ActivityIcon'
 import { Card, Empty, ErrorState, Loading, Note, Stat } from '../components/ui'
 import { useI18n, type UiKey } from '../i18n'
 import { useFormat, type Formatters } from '../lib/format'
@@ -93,8 +94,42 @@ const HR_BUCKETS = 240
 const ROUTE_W = 900
 const ROUTE_H = 380
 
+/** The page at `/workouts/:id` — the narrow-screen way in, and every bookmark. */
 export default function WorkoutDetail() {
   const { id = '' } = useParams()
+  return (
+    <>
+      <BackLink />
+      <WorkoutDetailView id={id} />
+    </>
+  )
+}
+
+/**
+ * Where a link to ANOTHER recording of this session goes.
+ *
+ * On its own page that is the other recording's page; inside the Workouts
+ * master/detail it is the same list with the other one selected, so the reader
+ * stays where they were.
+ */
+export type RecordingHref = (id: string) => string
+
+const pageHref: RecordingHref = (id) => `/workouts/${encodeURIComponent(id)}`
+
+/**
+ * One session — used both as its own page and as the right-hand half of the
+ * Workouts list on a wide screen. `embedded` changes only the heading level (the
+ * list page owns the `<h1>`) and where links to the other recording point.
+ */
+export function WorkoutDetailView({
+  id,
+  embedded = false,
+  hrefFor = pageHref,
+}: {
+  id: string
+  embedded?: boolean
+  hrefFor?: RecordingHref
+}) {
   const { t } = useI18n()
   const f = useFormat()
 
@@ -111,15 +146,9 @@ export default function WorkoutDetail() {
   if (detail.isLoading) return <Loading rows={2} />
   // ⚠️ A 404 is not an error state. The request worked and the answer was "there
   // is no such session" — a stale bookmark, a link from another server, a
-  // recording deleted in Health. Wording it as a failure sends the reader
-  // looking for a fault that is not there.
+  // recording deleted in Health.
   if ((detail.error as ApiError | undefined)?.status === 404 || (!detail.isError && !w)) {
-    return (
-      <>
-        <BackLink />
-        <Empty title={t('workout.missing.title')} hint={t('workout.missing.hint')} />
-      </>
-    )
+    return <Empty title={t('workout.missing.title')} hint={t('workout.missing.hint')} />
   }
   if (detail.isError) return <ErrorState error={detail.error} />
   if (!w) return <Loading rows={2} />
@@ -129,47 +158,48 @@ export default function WorkoutDetail() {
   const pool = poolLengthM(metadata)
   const laps = lapsFrom(metadata)
   const weather = weatherFrom(metadata)
+  const Heading = embedded ? 'h2' : 'h1'
 
   return (
-    <>
-      <BackLink />
-      <h1>{f.activityName(w.activity_type)}</h1>
-      <p className="subtle">
-        {dateRange(w, f)}
-        {/* ⚠️ Only printed when HealthKit actually said so. A missing flag does
-            NOT mean open sky — it means the recording app never wrote one. */}
-        {indoor !== null && ` · ${t(indoor ? 'workouts.place.indoor' : 'workouts.place.outdoor')}`}
-      </p>
-
-      {/* ⚠️ These cards used to sit flush against one another — no wrapper had a
-          margin, so five bordered boxes shared their edges and read as one. The
-          space is the stack's now.
-
-          What is wide and what flows: the route and the pulse curve are drawings
-          and keep the page's width; the laps are a six-column table and keep it
-          too. The weather and the source are label-and-value lists about ten
-          words long, so they pair up as soon as two fit. */}
-      <div className="sections">
-        <DuplicateSection workout={w} />
-
-        <MetricGrid workout={w} minutes={minutes} pace={pace} poolM={pool} />
-        <RouteSection id={id} distanceM={w.total_distance_m} />
-        <HeartRateSection workout={w} />
-        {laps.length > 0 && <LapsSection laps={laps} />}
-
-        <div className="flow">
-          {weather && <WeatherSection weather={weather} />}
-          <SourceSection workout={w} />
+    <article className="sections" aria-label={embedded ? t('workouts.detailAria') : undefined}>
+      {/* The header names the session and when; ⚠️ no source device — the
+          contract carries none for a workout, and a confident badge here would
+          claim all of it (see the file header). */}
+      <section className="card wo-header">
+        <span className="wo-icon wo-icon-lg">
+          <ActivityIcon type={w.activity_type} size={24} />
+        </span>
+        <div style={{ minWidth: 0 }}>
+          <Heading>{f.activityName(w.activity_type)}</Heading>
+          <p>
+            {dateRange(w, f)}
+            {/* ⚠️ Only printed when HealthKit actually said so. A missing flag
+                does NOT mean open sky. */}
+            {indoor !== null &&
+              ` · ${t(indoor ? 'workouts.place.indoor' : 'workouts.place.outdoor').toLowerCase()}`}
+          </p>
         </div>
+      </section>
+
+      <MetricGrid workout={w} minutes={minutes} pace={pace} poolM={pool} />
+      <HeartRateSection workout={w} />
+      <RouteSection id={id} distanceM={w.total_distance_m} />
+      {laps.length > 0 && <LapsSection laps={laps} />}
+
+      <div className="flow">
+        {weather && <WeatherSection weather={weather} />}
+        <SourceSection workout={w} />
       </div>
-    </>
+
+      <DuplicateSection workout={w} hrefFor={hrefFor} />
+    </article>
   )
 }
 
 function BackLink() {
   const { t } = useI18n()
   return (
-    <p style={{ margin: '0 0 4px' }}>
+    <p style={{ margin: '0 0 12px' }}>
       <Link className="linkish" to="/workouts">
         {t('workout.back')}
       </Link>
@@ -278,7 +308,7 @@ function MetricGrid({
   }
 
   return (
-    <div className="grid grid-stats">
+    <div className="grid grid-3 wo-stats">
       {cards.map((c) => (
         <Stat key={c.key} label={c.label} value={c.value} unit={c.unit} color={c.color} />
       ))}
@@ -343,7 +373,20 @@ function RouteSection({ id, distanceM }: { id: string; distanceM?: number }) {
   }
 
   return (
-    <Card title={t('workout.route.title')}>
+    <section className="card">
+      <div className="card-head">
+        <h2 className="card-title" style={{ margin: 0 }}>
+          {t('workout.route.title')}
+        </h2>
+        {/* The way to the opt-in, where the reader is looking at its absence.
+            ⛔ A link to the setting, never a switch here: the choice and its
+            explanation live on one page. */}
+        {!chosen && (
+          <Link to="/settings" style={{ fontSize: 13, fontWeight: 500 }}>
+            {t('workout.route.toSettings')}
+          </Link>
+        )}
+      </div>
       {/* The map goes BEHIND the drawing, in the same box, at the same scale.
           The frame is what holds the two together: the SVG sets the height (it
           has the viewBox), the map fills the frame absolutely, and the drawing
@@ -453,7 +496,7 @@ function RouteSection({ id, distanceM }: { id: string; distanceM?: number }) {
               : 'workout.route.noTiles',
         )}
       </p>
-    </Card>
+    </section>
   )
 }
 
@@ -541,7 +584,19 @@ function HeartRateSection({ workout }: { workout: Workout }) {
   const end = new Date(to).getTime()
 
   return (
-    <Card title={t('workout.hr.title')}>
+    <section className="card">
+      {/* ⚠️ These three come from the RAW series, never from the drawn one:
+          downsampling averages, so it shaves the real peak off. */}
+      <div className="card-head">
+        <h2 className="card-title" style={{ margin: 0 }}>
+          {t('workout.hr.title')}
+        </h2>
+        <span className="stat-note" style={{ fontVariantNumeric: 'tabular-nums' }}>
+          {t('workout.hr.lowest').toLowerCase()} <strong>{f.num(series.min)}</strong> ·{' '}
+          {t('workout.hr.average').toLowerCase()} <strong>{f.num(series.average)}</strong> ·{' '}
+          {t('workout.hr.highest').toLowerCase()} <strong>{f.num(series.max)}</strong> {t('unit.bpm')}
+        </span>
+      </div>
       <div className="chart-sm">
         <ResponsiveContainer>
           <AreaChart data={data} margin={{ top: 8, right: 12, bottom: 4, left: -8 }}>
@@ -604,24 +659,6 @@ function HeartRateSection({ workout }: { workout: Workout }) {
         </ResponsiveContainer>
       </div>
 
-      {/* ⚠️ These three come from the RAW series, never from the drawn one:
-          downsampling averages, so it shaves the real peak off, and a label that
-          says less than what happened is worse than no label. */}
-      <div className="legend" style={{ marginTop: 8 }}>
-        <span className="legend-item">
-          {t('workout.hr.average')}
-          <strong style={{ color: 'var(--helsa-pulse)' }}>{f.num(series.average)}</strong>
-        </span>
-        <span className="legend-item">
-          {t('workout.hr.peak')}
-          <strong style={{ color: 'var(--helsa-pulse)' }}>{f.num(series.max)}</strong>
-        </span>
-        <span className="legend-item">
-          {t('workout.hr.lowest')}
-          <strong style={{ color: 'var(--helsa-pulse)' }}>{f.num(series.min)}</strong>
-        </span>
-      </div>
-
       {/* ⚠️ Said where it matters: the curve is read out of the session's TIME
           WINDOW, not out of the workout row. When the recording carries no
           heart-rate summary of its own, the numbers under the chart come from
@@ -637,7 +674,7 @@ function HeartRateSection({ workout }: { workout: Workout }) {
           {t('workout.hr.truncated')}
         </p>
       )}
-    </Card>
+    </section>
   )
 }
 
@@ -696,17 +733,17 @@ function WeatherSection({ weather }: { weather: ReturnType<typeof weatherFrom> }
   if (!weather) return null
   return (
     <Card title={t('workout.weather.title')}>
+      {weather.temperatureC != null && (
+        <p className="figure figure-sm" style={{ marginBottom: 8 }}>
+          <span className="sr-only">{t('workout.weather.temperature')}</span>
+          <span>{`${f.num1(weather.temperatureC)} °C`}</span>
+        </p>
+      )}
       <dl className="kv">
         {weather.condition && (
           <>
             <dt>{t('workout.weather.condition')}</dt>
             <dd>{t(`weather.${weather.condition}` as UiKey)}</dd>
-          </>
-        )}
-        {weather.temperatureC != null && (
-          <>
-            <dt>{t('workout.weather.temperature')}</dt>
-            <dd>{`${f.num1(weather.temperatureC)} °C`}</dd>
           </>
         )}
         {/* ⚠️ A humidity over 100 never gets here — `humidityPercent` drops it
@@ -720,6 +757,9 @@ function WeatherSection({ weather }: { weather: ReturnType<typeof weatherFrom> }
           </>
         )}
       </dl>
+      <p className="subtle" style={{ margin: '8px 0 0' }}>
+        {t('workout.weather.note')}
+      </p>
     </Card>
   )
 }
@@ -741,7 +781,7 @@ function WeatherSection({ weather }: { weather: ReturnType<typeof weatherFrom> }
 // about which is right. That is the phone's position (`WorkoutDetailView`), and
 // `ADR-0007` is where its line is drawn.
 
-function DuplicateSection({ workout }: { workout: Workout }) {
+function DuplicateSection({ workout, hrefFor }: { workout: Workout; hrefFor: RecordingHref }) {
   const { t, tp } = useI18n()
 
   // Only as far back as this session needs. Sharing the key with the list means
@@ -779,7 +819,7 @@ function DuplicateSection({ workout }: { workout: Workout }) {
   // The stack above supplies the space; nothing here carries its own.
   return (
     <Card title={t('workout.dup.title')}>
-      <p className="subtle" style={{ marginTop: 0 }}>
+      <p style={{ marginTop: 0, fontSize: 14, color: 'var(--text-2)' }}>
         {tp('workout.dup.body', group.count)}
       </p>
       {/* The sentence that makes the fold safe to open: everything above is
@@ -789,7 +829,12 @@ function DuplicateSection({ workout }: { workout: Workout }) {
 
       <div className="dup-list">
         {others.map((o) => (
-          <OtherRecording key={o.id} workout={o} isListed={o.id === group.primary.id} />
+          <OtherRecording
+            key={o.id}
+            workout={o}
+            isListed={o.id === group.primary.id}
+            href={hrefFor(o.id ?? '')}
+          />
         ))}
       </div>
 
@@ -803,7 +848,15 @@ function DuplicateSection({ workout }: { workout: Workout }) {
   )
 }
 
-function OtherRecording({ workout, isListed }: { workout: Workout; isListed: boolean }) {
+function OtherRecording({
+  workout,
+  isListed,
+  href,
+}: {
+  workout: Workout
+  isListed: boolean
+  href: string
+}) {
   const { t } = useI18n()
   const f = useFormat()
 
@@ -817,19 +870,24 @@ function OtherRecording({ workout, isListed }: { workout: Workout; isListed: boo
   if (workout.total_energy_kcal != null && workout.total_energy_kcal > 0)
     facts.push(`${f.num(workout.total_energy_kcal)} kcal`)
 
+  // The whole row is the link: one target, at least 48px tall, that opens the
+  // other recording — its date, then what it measured.
   return (
-    <div className="dup-row">
-      <Link className="row-link" to={`/workouts/${workout.id ?? ''}`}>
+    <Link className="dup-row" to={href}>
+      <span>
         {f.dateTime(workout.started_at)}
         {workout.ended_at ? `–${f.time(workout.ended_at)}` : ''}
-      </Link>
-      <span className="subtle">
+      </span>
+      <span className="subtle" style={{ margin: 0 }}>
         {/* ⚠️ Not a row of dashes. A recording that measured nothing says so in a
             sentence, because a line of "–" reads as a rendering failure. */}
         {facts.length > 0 ? facts.join(' · ') : t('workout.dup.noMeasurement')}
       </span>
       {isListed && <span className="dup-badge">{t('workout.dup.listed')}</span>}
-    </div>
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" focusable="false">
+        <path d="M9 6l6 6-6 6" />
+      </svg>
+    </Link>
   )
 }
 

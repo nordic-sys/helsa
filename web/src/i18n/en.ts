@@ -798,6 +798,25 @@ export const en: Dict = {
     'picker.searchLabel': 'Search {n} measurements',
     'picker.groupLabel': 'Group',
     'picker.placeholder': 'Steps, heart rate…',
+
+    // --- Workouts: master/detail, filters, rows --------------------------------
+    'workouts.detailAria': 'The selected workout',
+    'workouts.listAria': 'Workout list',
+    'workout.route.toSettings': 'Show a map underneath — Settings',
+    'workout.hr.highest': 'Highest',
+    'workout.weather.note': 'As the recording app wrote it with the session.',
+    'workouts.filter.type': 'Type',
+    'workouts.filter.allTypes': 'All types',
+    'workouts.filter.typesChosen.one': '{n} type',
+    'workouts.filter.typesChosen.other': '{n} types',
+    'workouts.filter.where': 'Where',
+    'workouts.filter.atLeast': 'At least',
+    'workouts.filter.anyLength': 'any length',
+    'workouts.filter.more': 'More filters',
+    'workouts.row.dup.aria': 'Recorded {n} times in Health',
+    'workouts.row.open': 'Open',
+    'workouts.select.hint': 'Choose a workout from the list.',
+    'workouts.row.max': 'max',
   },
 
   // --- Metric group names ---------------------------------------------------

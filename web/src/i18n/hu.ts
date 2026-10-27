@@ -791,6 +791,25 @@ export const hu = {
     'picker.searchLabel': 'Keresés {n} mérés között',
     'picker.groupLabel': 'Csoport',
     'picker.placeholder': 'Lépés, pulzus…',
+
+    // --- Workouts: master/detail, filters, rows --------------------------------
+    'workouts.detailAria': 'A kiválasztott edzés',
+    'workouts.listAria': 'Edzéslista',
+    'workout.route.toSettings': 'Térkép alá — Beállítások',
+    'workout.hr.highest': 'Legmagasabb',
+    'workout.weather.note': 'Ahogy a rögzítő app az edzéshez felírta.',
+    'workouts.filter.type': 'Típus',
+    'workouts.filter.allTypes': 'Minden típus',
+    'workouts.filter.typesChosen.one': '{n} típus',
+    'workouts.filter.typesChosen.other': '{n} típus',
+    'workouts.filter.where': 'Hol',
+    'workouts.filter.atLeast': 'Legalább',
+    'workouts.filter.anyLength': 'bármilyen hosszú',
+    'workouts.filter.more': 'További szűrők',
+    'workouts.row.dup.aria': '{n} felvétel az Egészségben',
+    'workouts.row.open': 'Megnyitás',
+    'workouts.select.hint': 'Válassz egy edzést a listából.',
+    'workouts.row.max': 'max',
   },
 
   // --- Metric group names ---------------------------------------------------

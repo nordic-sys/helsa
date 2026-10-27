@@ -194,15 +194,15 @@ describe('an indoor session with nothing to draw', () => {
 
   it('marks it indoor, because HealthKit said so', async () => {
     open()
-    expect(await screen.findByText(new RegExp(s('workouts.place.indoor')))).toBeInTheDocument()
+    expect(await screen.findByText(new RegExp(s('workouts.place.indoor'), 'i'))).toBeInTheDocument()
   })
 
   it('says nothing about where it happened when nothing said', async () => {
     workout.mockResolvedValue({ ...YOGA, metadata: {} })
     open()
     await screen.findByText(s('workout.metric.time'))
-    expect(screen.queryByText(new RegExp(s('workouts.place.outdoor')))).not.toBeInTheDocument()
-    expect(screen.queryByText(new RegExp(s('workouts.place.indoor')))).not.toBeInTheDocument()
+    expect(screen.queryByText(new RegExp(s('workouts.place.outdoor'), 'i'))).not.toBeInTheDocument()
+    expect(screen.queryByText(new RegExp(s('workouts.place.indoor'), 'i'))).not.toBeInTheDocument()
   })
 })
 
