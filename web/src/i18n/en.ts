@@ -753,6 +753,37 @@ export const en: Dict = {
     'nav.badge.setAside.other': '{n} parts set aside — need a look',
     'nav.badge.unknown': 'The queue cannot be read right now',
     'nav.serverAria': 'This server and the time zone the pages are cut in',
+
+    // --- Today: tiles, the queue pill, the sync card ---------------------------
+    'today.tile.soFar': 'So far today',
+    'today.tile.average': 'Today’s average',
+    'today.tile.notMeasured': 'Not measured today yet',
+    'today.sleep.asleep': 'asleep',
+    'today.sleep.noStages':
+      'This night has no sleep stages — the device recorded only asleep or awake.',
+    'today.challenge.steps': 'steps',
+    'today.challenge.allMilestones': 'all {n} milestones reached',
+    'today.medals.earned.one': 'earned',
+    'today.medals.earned.other': 'earned',
+    'today.pill.upToDate': 'Up to date — everything sent is written',
+    'today.pill.writing': 'Still writing the last upload',
+    'today.pill.writingEta': 'Still writing the last upload · about {duration} left',
+    'today.pill.stalled': 'Parts are waiting and not moving',
+    'today.pill.noConsumer': 'Parts are waiting and nothing is writing them',
+    'today.pill.setAside.one': '{n} part could not be written',
+    'today.pill.setAside.other': '{n} parts could not be written',
+    'today.pill.unknown': 'The queue cannot be read right now',
+    'today.pill.apiOld': 'The server is older than this page',
+    'today.sync.uploaded': '{device} uploaded {when}',
+    'today.sync.writing.one': '{n} part of it is still being written',
+    'today.sync.writing.other': '{n} parts of it are still being written',
+    'today.sync.writingEta.one':
+      '{n} part of it is still being written · about {duration} left',
+    'today.sync.writingEta.other':
+      '{n} parts of it are still being written · about {duration} left',
+    'today.sync.stuck.one': '{n} part is waiting, and nothing is moving',
+    'today.sync.stuck.other': '{n} parts are waiting, and nothing is moving',
+    'today.sync.allWritten': 'Everything it sent is in the database.',
   },
 
   // --- Metric group names ---------------------------------------------------

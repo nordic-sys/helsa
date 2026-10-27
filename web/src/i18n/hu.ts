@@ -747,6 +747,36 @@ export const hu = {
     'nav.badge.unknown': 'A sor most nem olvasható',
     'nav.serverAria':
       'Ez a szerver, és az időzóna, amely szerint az oldalak napokra bontanak',
+
+    // --- Today: tiles, the queue pill, the sync card ---------------------------
+    'today.tile.soFar': 'Eddig ma',
+    'today.tile.average': 'A mai átlag',
+    'today.tile.notMeasured': 'Ma még nem volt mérés',
+    'today.sleep.asleep': 'alvás',
+    'today.sleep.noStages':
+      'Ehhez az éjszakához nincsenek alvásfázisok — az eszköz csak az alvást és az ébrenlétet rögzítette.',
+    'today.challenge.steps': 'lépés',
+    'today.challenge.allMilestones': 'mind a(z) {n} mérföldkő megvan',
+    'today.medals.earned.one': 'megszerzett érem',
+    'today.medals.earned.other': 'megszerzett érem',
+    'today.pill.upToDate': 'Naprakész — minden beküldött adat beírva',
+    'today.pill.writing': 'Még írjuk a legutóbbi feltöltést',
+    'today.pill.writingEta':
+      'Még írjuk a legutóbbi feltöltést · nagyjából {duration} van hátra',
+    'today.pill.stalled': 'Részek várnak, és nem haladnak',
+    'today.pill.noConsumer': 'Részek várnak, és semmi nem írja be őket',
+    'today.pill.setAside.one': '{n} részt nem sikerült beírni',
+    'today.pill.setAside.other': '{n} részt nem sikerült beírni',
+    'today.pill.unknown': 'A sor most nem olvasható',
+    'today.pill.apiOld': 'A szerver régebbi, mint ez az oldal',
+    'today.sync.uploaded': '{device}: utolsó feltöltés {when}',
+    'today.sync.writing.one': '{n} része még íródik',
+    'today.sync.writing.other': '{n} része még íródik',
+    'today.sync.writingEta.one': '{n} része még íródik · nagyjából {duration} van hátra',
+    'today.sync.writingEta.other': '{n} része még íródik · nagyjából {duration} van hátra',
+    'today.sync.stuck.one': '{n} rész vár, és semmi nem halad',
+    'today.sync.stuck.other': '{n} rész vár, és semmi nem halad',
+    'today.sync.allWritten': 'Minden, amit küldött, bekerült az adatbázisba.',
   },
 
   // --- Metric group names ---------------------------------------------------

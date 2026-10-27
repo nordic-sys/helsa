@@ -29,6 +29,7 @@ const mock = {
   achievements: vi.fn(),
   coverage: vi.fn(),
   devices: vi.fn(),
+  ingestStatus: vi.fn(),
 }
 
 vi.mock('../api/client', () => ({
@@ -61,6 +62,14 @@ function show(node: ReactNode) {
   )
 }
 
+const idle = {
+  checked_at: '2026-09-10T12:00:00Z',
+  broker_reachable: true,
+  queue: { name: 'helsa.ingest', ready: 0, consumers: 1 },
+  dead_letter: { name: 'helsa.ingest.dlq', ready: 0 },
+  stats_reachable: true,
+}
+
 /** Every endpoint answers, and every answer is "nothing arrived". */
 function allEmpty() {
   mock.summary.mockResolvedValue({ from: '2026-09-10', tz: 'UTC', metrics: {} })
@@ -71,6 +80,7 @@ function allEmpty() {
   mock.achievements.mockResolvedValue([])
   mock.devices.mockResolvedValue([])
   mock.coverage.mockResolvedValue({ days: 30, types: [] })
+  mock.ingestStatus.mockResolvedValue(idle)
   mock.challenge.mockResolvedValue({
     month: '2026-09',
     tz: 'UTC',
@@ -171,5 +181,85 @@ describe('the bands', () => {
     // the phone can write. A read-only dashboard has nothing to put under that
     // heading, so it must not draw one.
     expect(screen.queryByText(/asks of you|kér tőled/i)).not.toBeInTheDocument()
+  })
+})
+
+/**
+ * The header pill reads the QUEUE, not the phone. The phone reports "synced" the
+ * moment it has handed the data over, while the server may be writing it for
+ * another half hour — so "up to date" may only appear when nothing is waiting.
+ */
+describe('the header pill', () => {
+  const pill = async () => {
+    const el = await screen.findByText(
+      (_, node) => node?.classList?.contains('pill') ?? false,
+    )
+    return el as HTMLElement
+  }
+
+  it('says "up to date" only when the queue is idle, and links to the queue page', async () => {
+    allEmpty()
+    show(<Dashboard />)
+    const p = await pill()
+    expect(p).toHaveAttribute('data-state', 'upToDate')
+    expect(p).toHaveTextContent(dict.ui['today.pill.upToDate'])
+    expect(p).toHaveAttribute('href', '/ingest')
+  })
+
+  it('says batches are waiting, with the estimate, while the worker writes them', async () => {
+    allEmpty()
+    mock.ingestStatus.mockResolvedValue({
+      ...idle,
+      queue: { name: 'helsa.ingest', ready: 1417, consumers: 1 },
+      throughput: { window_seconds: 600, batches: 990, items: 1, failed: 0, batches_per_minute: 99 },
+      eta_seconds: 840,
+    })
+    show(<Dashboard />)
+    const p = await pill()
+    expect(p).toHaveAttribute('data-state', 'writing')
+    expect(p.className).toContain('pill--busy')
+    expect(p).not.toHaveTextContent(dict.ui['today.pill.upToDate'])
+    expect(p.textContent).toMatch(/14 min|14 p/)
+  })
+
+  it('turns red when parts were set aside, even on an empty queue', async () => {
+    allEmpty()
+    mock.ingestStatus.mockResolvedValue({ ...idle, dead_letter: { name: 'dlq', ready: 2 } })
+    show(<Dashboard />)
+    const p = await pill()
+    expect(p).toHaveAttribute('data-state', 'setAside')
+    expect(p.className).toContain('pill--error')
+  })
+
+  it('says it cannot read the queue rather than claiming anything', async () => {
+    allEmpty()
+    mock.ingestStatus.mockResolvedValue({ ...idle, broker_reachable: false, queue: undefined, dead_letter: undefined })
+    show(<Dashboard />)
+    const p = await pill()
+    expect(p).toHaveAttribute('data-state', 'unknown')
+    expect(p.className).toContain('pill--stalled')
+  })
+
+  it('names an older server rather than printing a bare 404', async () => {
+    allEmpty()
+    mock.ingestStatus.mockRejectedValue(Object.assign(new Error('Not Found'), { status: 404 }))
+    show(<Dashboard />)
+    expect(await screen.findByText(dict.ui['today.pill.apiOld'], { selector: '.pill' })).toBeInTheDocument()
+    expect(screen.queryByText(/HTTP 404/)).not.toBeInTheDocument()
+  })
+})
+
+describe('the tiles', () => {
+  it('draws a dimmed dash, not a zero, for a metric with no measurement today', async () => {
+    allEmpty()
+    show(<Dashboard />)
+    const notes = await screen.findAllByText(dict.ui['today.tile.notMeasured'])
+    expect(notes).toHaveLength(4)
+    for (const note of notes) {
+      const tile = note.closest('a') as HTMLElement
+      expect(tile.getAttribute('href')).toMatch(/^\/trends\?metric=/)
+      expect(within(tile).queryByText('0')).not.toBeInTheDocument()
+      expect(tile.querySelector('.stat.is-missing')).not.toBeNull()
+    }
   })
 })
