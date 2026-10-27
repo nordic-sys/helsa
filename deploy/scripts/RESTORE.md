@@ -121,6 +121,10 @@ Every row count matched: `samples` 364, `workouts` 7, `sleep_segments` 84,
 and both continuous aggregates (`samples_daily`, `samples_hourly`) exist in the
 restored database too.
 
+> Since migration `00009` (2026-10-27, docs/25 F9) only `samples_hourly` is a
+> continuous aggregate (per source); `samples_daily` and `samples_weekly` are plain
+> views over it. A later trial should look for one materialisation hypertable, not two.
+
 ⚠️ **One difference that is alarming at first sight but benign:**
 `timescaledb_information.chunks` returns 3 rows in the original and 5 in the
 restored database. The extra two are the **materialisation hypertables** of the
