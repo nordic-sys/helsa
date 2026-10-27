@@ -101,21 +101,28 @@ func (s *Server) Router() http.Handler {
 	r.With(s.auth.Middleware).Get("/v1/tiles/{z}/{x}/{y}", s.GetTile)
 
 	// The ServerInterface routes are served under a /v1 prefix.
-	// Bearer protection is resolved per route (see the public-route list below).
-	apiHandler := api.HandlerWithOptions(s, api.ChiServerOptions{
-		BaseURL:     "/v1",
-		Middlewares: []api.MiddlewareFunc{s.authGate},
-	})
-	r.Mount("/", apiHandler)
+	// Bearer protection is resolved per path (see the public-route list below).
+	//
+	// ⚠️ The gate wraps the WHOLE generated handler, not the per-route
+	// `Middlewares` of ChiServerOptions. The generated wrapper binds and validates
+	// the query parameters first and only then calls those middlewares, so an
+	// unauthenticated `GET /v1/summary?range=day` used to get a 400 naming the
+	// missing `metrics` parameter — the API describing its own shape to a caller
+	// with no token. Outside the generated code, the token is checked first and a
+	// caller without one hears 401 and nothing else.
+	apiHandler := api.HandlerWithOptions(s, api.ChiServerOptions{BaseURL: "/v1"})
+	r.Mount("/", s.authGate(apiHandler))
 	return r
 }
 
-// authGate puts the session middleware on the protected routes, and not on the
-// public ones.
+// authGate puts the session middleware on every /v1 path except the public ones.
+// That includes /v1 paths no route matches: without a token, an unknown endpoint
+// and a known one look the same (401) — which endpoints exist is not for a caller
+// without a token to find out.
 func (s *Server) authGate(next http.Handler) http.Handler {
 	protected := s.auth.Middleware(next)
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if isPublic(r.Method, r.URL.Path) {
+		if isPublic(r.Method, r.URL.Path) || !strings.HasPrefix(r.URL.Path, "/v1/") {
 			next.ServeHTTP(w, r)
 			return
 		}
