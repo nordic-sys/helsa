@@ -64,7 +64,7 @@ export const hu = {
     // --- Dashboard ---------------------------------------------------------
     'dashboard.title': 'Ma',
     'dashboard.tz': 'időzóna: {tz}',
-    'dashboard.lastSync': 'utolsó szinkron: {when}',
+    'dashboard.lastSync': 'eszköz utoljára látva: {when}',
     'dashboard.empty.title': 'Még nincs adat',
     'dashboard.empty.hint':
       'Az iPhone az egyetlen feltöltő — amint szinkronizál, itt megjelenik.',
@@ -669,12 +669,23 @@ export const hu = {
       'A sor most üres, de a következő feltöltést senki nem fogja feldolgozni, amíg a worker nem fut.',
     'ingest.eta': 'Nagyjából {duration} van hátra.',
     'ingest.eta.note':
-      'Ez becslés: a várakozó kötegek osztva az elmúlt percek ütemével. A kötegek nem egyforma méretűek, ezért a szám mozogni fog.',
+      'Becslés a mostani sorra, ha nem érkezik több: a várakozó részek (plusz a legtöbb, ami feldolgozás alatt lehet) osztva az elmúlt percek ütemével. A részek nem egyforma méretűek, és egy új feltöltés úgy növeli a sort, hogy ez a szám csak a következő lekérdezéskor követi.',
     'ingest.stalled.one':
       'Kötegek várnak, de az elmúlt {n} percben egy sem készült el — nincs ütem, amiből becsülni lehetne.',
     'ingest.stalled.other':
       'Kötegek várnak, de az elmúlt {n} percben egy sem készült el — nincs ütem, amiből becsülni lehetne.',
-    'ingest.idle': 'Nincs várakozó köteg: minden, ami megérkezett, már a workernél van vagy be is került.',
+    'ingest.stalled.since':
+      'Részek várnak, és az utolsó {when} készült el — azóta egy sem, így nincs friss ütem, amiből becsülni lehetne.',
+    'ingest.rateUnknown':
+      'Van kapcsolódó worker, de a számlálói nem olvashatók (a Redis nem válaszolt, vagy ez a worker túl régi, hogy jelentsen) — így nem tudni, halad-e a sor. Ez nem ugyanaz, mint hogy „nem halad”.',
+    'ingest.settling':
+      'Semmi nem vár kiosztásra. A worker még dolgozhat legfeljebb ennyi, már felvett részen: {n}. Az oldal akkor mondja, hogy „nincs több beírnivaló”, ha 30 másodpercig semmi nem készült el.',
+    'ingest.settling.noBound':
+      'Semmi nem vár kiosztásra. A worker még dolgozhat a már felvett részeken; az oldal akkor mondja, hogy „nincs több beírnivaló”, ha 30 másodpercig semmi nem készült el.',
+    'ingest.idle':
+      'Nincs több beírnivaló: semmi nem vár, és legalább 30 másodperce semmi nem készült el, tehát a workernél sincs félig beírt rész.',
+    'ingest.idle.noWorker':
+      'Semmi nem vár, és kapcsolódó worker nélkül félig beírt rész sem lehet: amit egy worker felvett, az a kapcsolat bontásakor visszakerül a sorba.',
     'ingest.stat.waiting': 'Várakozik',
     'ingest.stat.inFlight': '+ legfeljebb {n} feldolgozás alatt',
     'ingest.stat.deadLetter': 'Holtlevél-sor',
@@ -755,24 +766,30 @@ export const hu = {
     'today.challenge.allMilestones': 'mind a(z) {n} mérföldkő megvan',
     'today.medals.earned.one': 'megszerzett érem',
     'today.medals.earned.other': 'megszerzett érem',
-    'today.pill.upToDate': 'Naprakész — minden beküldött adat beírva',
-    'today.pill.writing': 'Még írjuk a legutóbbi feltöltést',
-    'today.pill.writingEta':
-      'Még írjuk a legutóbbi feltöltést · nagyjából {duration} van hátra',
-    'today.pill.stalled': 'Részek várnak, és nem haladnak',
+    'today.pill.upToDate': 'Naprakész — nincs több beírnivaló',
+    'today.pill.writing': 'Íródnak a sorban álló részek',
+    'today.pill.writingEta': 'Íródnak a sorban álló részek · a mostani sorra nagyjából {duration}',
+    'today.pill.stalled': 'Részek várnak, és mostanában semmi nem készült el',
     'today.pill.noConsumer': 'Részek várnak, és semmi nem írja be őket',
+    'today.pill.rateUnknown': 'Részek várnak · a haladás nem olvasható',
+    'today.pill.settling': 'Semmi nem vár · a worker még befejezhet legfeljebb ennyit: {n}',
+    'today.pill.settling.noBound': 'Semmi nem vár · a worker még befejezhet valamit',
     'today.pill.setAside.one': '{n} részt nem sikerült beírni',
     'today.pill.setAside.other': '{n} részt nem sikerült beírni',
     'today.pill.unknown': 'A sor most nem olvasható',
     'today.pill.apiOld': 'A szerver régebbi, mint ez az oldal',
-    'today.sync.uploaded': '{device}: utolsó feltöltés {when}',
-    'today.sync.writing.one': '{n} része még íródik',
-    'today.sync.writing.other': '{n} része még íródik',
-    'today.sync.writingEta.one': '{n} része még íródik · nagyjából {duration} van hátra',
-    'today.sync.writingEta.other': '{n} része még íródik · nagyjából {duration} van hátra',
-    'today.sync.stuck.one': '{n} rész vár, és semmi nem halad',
-    'today.sync.stuck.other': '{n} rész vár, és semmi nem halad',
-    'today.sync.allWritten': 'Minden, amit küldött, bekerült az adatbázisba.',
+    'today.sync.lastSeen': 'Eszköz utoljára látva {when}: {device}',
+    'today.sync.writing.one': 'A sorban beírásra vár: {n} rész',
+    'today.sync.writing.other': 'A sorban beírásra vár: {n} rész',
+    'today.sync.writingEta.one':
+      'A sorban beírásra vár: {n} rész · a mostani sorra, ha nem érkezik több, nagyjából {duration}',
+    'today.sync.writingEta.other':
+      'A sorban beírásra vár: {n} rész · a mostani sorra, ha nem érkezik több, nagyjából {duration}',
+    'today.sync.stuck.one': 'A sorban vár {n} rész, és mostanában semmi nem készült el',
+    'today.sync.stuck.other': 'A sorban vár {n} rész, és mostanában semmi nem készült el',
+    'today.sync.rateUnknown.one': 'A sorban vár {n} rész; hogy halad-e, az nem olvasható',
+    'today.sync.rateUnknown.other': 'A sorban vár {n} rész; hogy halad-e, az nem olvasható',
+    'today.sync.allWritten': 'A sorban nincs több beírnivaló.',
 
     // --- Trends: the redesigned chart card -------------------------------------
     'trends.periodAria': 'Időszak',
@@ -818,11 +835,13 @@ export const hu = {
     'ingest.hero.parts.one': 'rész',
     'ingest.hero.parts.other': 'rész',
     'ingest.hero.tech': 'köteg a(z) {name} sorban',
-    'ingest.hero.etaLabel': 'Ezzel az ütemmel — becslés',
+    'ingest.hero.etaLabel': 'A mostani sorra, ha nem érkezik több — becslés',
     'ingest.hero.eta': 'nagyjából {duration}',
     'ingest.hero.nothing': 'Nincs mire várni',
     'ingest.hero.notMoving': 'Nem halad',
     'ingest.hero.noEstimate': 'nincs becslés',
+    'ingest.hero.rateUnknown': 'Az ütem ismeretlen',
+    'ingest.hero.settling': 'Semmi nem vár kiosztásra',
     'ingest.tile.rate': 'Ütem',
     'ingest.tile.rateUnit': 'rész/perc',
     'ingest.tile.itemsRate': '≈ {n} elem percenként',
@@ -831,6 +850,9 @@ export const hu = {
     'ingest.worker.state.working': 'Dolgozik',
     'ingest.worker.state.waiting': 'Vár',
     'ingest.worker.state.none': 'Nincs',
+    'ingest.worker.state.noRecent': 'Mostanában semmi nem készült el',
+    'ingest.worker.state.connected': 'Kapcsolódik',
+    'ingest.worker.state.finishing': 'Talán még befejez valamit',
     'ingest.worker.line.none': 'Egy worker sem kapcsolódik',
     'ingest.worker.line.connected.one': '{n} worker kapcsolódik',
     'ingest.worker.line.connected.other': '{n} worker kapcsolódik',
@@ -849,11 +871,14 @@ export const hu = {
       'Ha az újrapróbálás nem segít, a telefonon a „Teljes újraszinkron” ugyanazt az adatot küldi el újra — a beírás idempotens, így semmi nem tárolódik kétszer.',
     'ingest.redrive.button.one': '{n} félretett rész újrapróbálása',
     'ingest.redrive.button.other': '{n} félretett rész újrapróbálása',
+    'ingest.redrive.buttonCapped': '{max} félretett rész újrapróbálása (összesen {n})',
     'ingest.redrive.confirmAria': 'Az újrapróbálás megerősítése',
     'ingest.redrive.confirm.one':
       'Újrapróbálod a(z) {n} részt? A beírás idempotens: ami már az adatbázisban van, az csak frissül.',
     'ingest.redrive.confirm.other':
       'Újrapróbálod a(z) {n} részt? A beírás idempotens: ami már az adatbázisban van, az csak frissül.',
+    'ingest.redrive.limit':
+      'Egy újrapróbálás legfeljebb {max} részt mozgat. Ha több van félretéve, a maradékhoz nyomd meg újra.',
     'ingest.redrive.confirmYes': 'Újrapróbálás',
     'ingest.redrive.cancel': 'Mégse',
     'ingest.redrive.running': 'Újrapróbálás…',
@@ -862,20 +887,25 @@ export const hu = {
     'ingest.redrive.resultUnknown':
       '{moved} visszakerült a sorba · hogy mennyi van még félretéve, azt nem sikerült kiolvasni',
     'ingest.redrive.stopped':
-      'Félúton megállt: {reason}. Az éppen mozgatott rész visszakerült a helyére; a fenti szám pontos.',
+      'Félúton megállt: {reason}. A fenti szám csak a biztosan átmozgatott részeket számolja. Ha az ok mást nem mond, az éppen mozgatott rész félretéve maradt; ha azt mondja, hogy most mindkét sorban ott van, az a másolat ártalmatlan — a beírás idempotens.',
     'ingest.redrive.repeated.one':
-      'Közülük {n} már 3 vagy több újrapróbálás után is elbukott — amíg az ok nincs javítva, újabb próba aligha segít.',
+      'Közülük {n} már legalább a harmadik újrapróbálásánál tart — a korábbiak nem segítettek, így amíg az ok nincs javítva, ez is aligha fog.',
     'ingest.redrive.repeated.other':
-      'Közülük {n} már 3 vagy több újrapróbálás után is elbukott — amíg az ok nincs javítva, újabb próba aligha segít.',
+      'Közülük {n} már legalább a harmadik újrapróbálásánál tart — a korábbiak nem segítettek, így amíg az ok nincs javítva, ezek is aligha fognak.',
     'ingest.redrive.watch':
-      'A worker másodperceken belül felveszi őket. Ami a tartalma miatt bukik el, hamarosan újra itt lesz — az oldal magától frissül.',
+      'Visszakerültek a sorba, a már várakozók mögé; hogy mikor íródnak be, az a workeren és a fenti soron múlik. Ami a tartalma miatt bukik el, újra itt lesz — az oldal magától frissül.',
     'ingest.redrive.busy':
       'Már fut egy újrapróbálás. Várd meg a végét, aztán nézz rá újra.',
     'ingest.redrive.brokerDown': 'A RabbitMQ nem volt elérhető, így semmi nem mozdult.',
-    'ingest.redrive.failed': 'Az újrapróbálás nem futott le: {reason}',
+    'ingest.redrive.failed':
+      'A szerver elutasította az újrapróbálást, így semmi nem mozdult: {reason}',
+    'ingest.redrive.unknown':
+      'Nem jött válasz, így nem tudni, lefutott-e az újrapróbálás ({reason}). A félretett részek számát újra lekérdezzük — mielőtt újra megnyomod, nézd meg.',
     'ingest.redrive.tooOld':
       'Az innen indított újrapróbáláshoz újabb szerver-API kell. Frissítsd a szervert ({cmd}), aztán töltsd újra az oldalt.',
-    'ingest.reasons.title': 'Miért kerültek félre',
+    'ingest.reasons.title': 'Legutóbbi hibák — napló, nem a sor tartalma',
+    'ingest.reasons.hint':
+      'A worker feljegyzése a mostanában félretett részekről, a legfrissebb elöl. Egy bejegyzés akkor is megmarad, ha a részét már újrapróbálták, és egy régebbi worker által félretett résznek nincs bejegyzése — így ebből nem derül ki, mely részek vannak most félretéve.',
     'ingest.reason.transient':
       'Abban a pillanatban nem volt elérhető az adatbázis vagy a hálózat — az újrapróbálás általában sikerül.',
     'ingest.reason.rejected':
@@ -894,16 +924,10 @@ export const hu = {
     'ingest.reason.activity.other': '{n} aktivitás-összesítő',
     'ingest.reason.deletions.one': '{n} törlés',
     'ingest.reason.deletions.other': '{n} törlés',
-    'ingest.reason.repeated': '{n} újrapróbálás után is elbukott',
+    'ingest.reason.repeated': 'Újra elbukott, ennyi újrapróbálás után: {n}',
     'ingest.reason.raw': 'A worker üzenete',
     'ingest.reason.batch': 'Köteg: {id}',
-    'ingest.reason.notRecorded.one': '{n} rész: az ok nincs feljegyezve',
-    'ingest.reason.notRecorded.other': '{n} rész: az ok nincs feljegyezve',
-    'ingest.reason.notRecordedHint':
-      'Még azelőtt került félre, hogy a szerver feljegyezte volna az okot, vagy a feljegyzés nem olvasható. A lenti worker-naplóban a hiba megvan.',
-    'ingest.reason.lastRedrive': 'Legutóbbi újrapróbálás: {when}, {moved} került vissza.',
-    'ingest.reason.movedBack.one': 'A naplóban {n} korábbi hibát az vitt vissza.',
-    'ingest.reason.movedBack.other': 'A naplóban {n} korábbi hibát az vitt vissza.',
+    'ingest.reason.lastRedrive': 'Legutóbbi újrapróbálás vége: {when}, visszakerült: {moved}.',
   },
 
   // --- Metric group names ---------------------------------------------------

@@ -37,14 +37,16 @@ import { Alert, Card, ErrorState, Loading, PageHead } from '../components/ui'
 import { useI18n } from '../i18n'
 import { useFormat } from '../lib/format'
 import {
+  REDRIVE_MAX_PER_CALL,
   REPEATED_REDRIVES,
-  deadLetterReasons,
   deadLetters,
   etaMinutes,
   failureKind,
+  failureLog,
   isApiTooOld,
   phase,
   rateDigits,
+  redriveErrorKind,
 } from '../lib/ingest'
 import { INGEST_STATUS_KEY, useIngestStatus } from '../lib/useIngestStatus'
 
@@ -74,7 +76,7 @@ function ApiTooOld() {
   )
 }
 
-function Status({ s, lastGood }: { s: IngestStatus; lastGood?: string }) {
+function Status({ s, lastGood, redrive }: { s: IngestStatus; lastGood?: string; redrive: RedriveState }) {
   const { t, tp, tx, locale } = useI18n()
   const f = useFormat()
   const p = phase(s)
@@ -87,7 +89,14 @@ function Status({ s, lastGood }: { s: IngestStatus; lastGood?: string }) {
   const clock = (iso: string) =>
     new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' })
 
-  // The worker's state in one word, from what the snapshot actually says.
+  // The worker's state in one word, from what the snapshot actually says —
+  // "working" only with a recent completion behind it (see `phase`).
+  const connectedWord: Record<string, string> = {
+    draining: t('ingest.worker.state.working'),
+    stalled: t('ingest.worker.state.noRecent'),
+    rateUnknown: t('ingest.worker.state.connected'),
+    settling: t('ingest.worker.state.finishing'),
+  }
   const workerState: { word: string; dot: string; line: string } | null = q
     ? q.consumers === 0
       ? {
@@ -96,8 +105,8 @@ function Status({ s, lastGood }: { s: IngestStatus; lastGood?: string }) {
           line: t('ingest.worker.line.none'),
         }
       : {
-          word: p === 'draining' ? t('ingest.worker.state.working') : t('ingest.worker.state.waiting'),
-          dot: 'var(--helsa-move)',
+          word: connectedWord[p] ?? t('ingest.worker.state.waiting'),
+          dot: p === 'stalled' ? 'var(--helsa-ember)' : 'var(--helsa-move)',
           line: tp('ingest.worker.line.connected', q.consumers),
         }
     : null
@@ -114,7 +123,11 @@ function Status({ s, lastGood }: { s: IngestStatus; lastGood?: string }) {
           )}
         </Alert>
       )}
-      {dlq != null && dlq > 0 && <DeadLetterAlert s={s} count={dlq} />}
+      {dlq != null && dlq > 0 && <DeadLetterAlert s={s} count={dlq} redrive={redrive} />}
+      {/* ⚠️ Outside the alert, and always mounted: a retry that empties the
+          dead-letter queue unmounts the alert, and must not take its own result
+          and its announcement with it. */}
+      <RedriveResultRegion outcome={redrive.outcome} />
       {p === 'noConsumer' && (
         <Alert tone="warn" title={t('ingest.noConsumer.title')}>
           <p>
@@ -162,9 +175,11 @@ function Status({ s, lastGood }: { s: IngestStatus; lastGood?: string }) {
                     {t('ingest.hero.eta', { duration: f.duration(eta) })}
                   </span>
                 </>
-              ) : p === 'idle' ? (
+              ) : p === 'idle' || p === 'settling' ? (
                 <>
-                  <span className="queue-label">{t('ingest.hero.nothing')}</span>
+                  <span className="queue-label">
+                    {p === 'idle' ? t('ingest.hero.nothing') : t('ingest.hero.settling')}
+                  </span>
                   <span className="figure">–</span>
                 </>
               ) : (
@@ -172,7 +187,9 @@ function Status({ s, lastGood }: { s: IngestStatus; lastGood?: string }) {
                   <span className="queue-label">
                     {p === 'noConsumer' || p === 'stalled'
                       ? t('ingest.hero.notMoving')
-                      : t('ingest.hero.etaLabel')}
+                      : p === 'rateUnknown'
+                        ? t('ingest.hero.rateUnknown')
+                        : t('ingest.hero.etaLabel')}
                   </span>
                   <span className="figure">{t('ingest.hero.noEstimate')}</span>
                 </>
@@ -183,11 +200,21 @@ function Status({ s, lastGood }: { s: IngestStatus; lastGood?: string }) {
           <p className="stat-note" style={{ maxWidth: '78ch' }}>
             {p === 'draining' && eta != null
               ? t('ingest.eta.note')
-              : p === 'stalled' && tput && windowMin != null
-                ? tp('ingest.stalled', windowMin)
-                : p === 'idle'
-                  ? t('ingest.idle')
-                  : null}
+              : p === 'stalled' && s.worker?.last_batch_at && tput?.batches
+                ? t('ingest.stalled.since', { when: f.relative(s.worker.last_batch_at) })
+                : p === 'stalled' && windowMin != null
+                  ? tp('ingest.stalled', windowMin)
+                  : p === 'rateUnknown'
+                    ? t('ingest.rateUnknown')
+                    : p === 'settling'
+                      ? q.in_flight_max
+                        ? t('ingest.settling', { n: f.num(q.in_flight_max) })
+                        : t('ingest.settling.noBound')
+                      : p === 'idle'
+                        ? q.consumers === 0
+                          ? t('ingest.idle.noWorker')
+                          : t('ingest.idle')
+                        : null}
           </p>
         </section>
       )}
@@ -288,44 +315,39 @@ function Status({ s, lastGood }: { s: IngestStatus; lastGood?: string }) {
 
 // --- Set aside: the alert, the reasons, and the retry ------------------------
 
-function DeadLetterAlert({ s, count }: { s: IngestStatus; count: number }) {
+function DeadLetterAlert({ s, count, redrive }: { s: IngestStatus; count: number; redrive: RedriveState }) {
   const { t, tp, tx } = useI18n()
   const f = useFormat()
-  const reasons = deadLetterReasons(s)
+  const log = failureLog(s)
   const last = s.dead_letter?.last_redrive
 
   return (
     <Alert tone="error" title={tp('ingest.dlq.title', count, { n: f.num(count) })}>
       <p>{t('ingest.dlq.body')}</p>
 
-      <Redrive count={count} />
+      <RedriveControls count={count} redrive={redrive} />
 
-      {(reasons.current.length > 0 || reasons.unrecorded > 0) && (
+      {/* ⚠️ A LOG, said as one: nothing in the snapshot says which of these is
+          still in the queue (see `failureLog`), so nothing here claims it. */}
+      {log.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 4 }}>
-          <h3 className="alert-title" style={{ fontSize: 15 }}>
+          <h3 className="alert-title" style={{ fontSize: 'var(--fs-body)' }}>
             {t('ingest.reasons.title')}
           </h3>
+          <p className="subtle" style={{ margin: 0 }}>
+            {t('ingest.reasons.hint')}
+          </p>
           <ul className="failure-list">
-            {reasons.current.map((fl, i) => (
+            {log.map((fl, i) => (
               <FailureRow key={fl.batch_id ?? `${fl.failed_at}-${i}`} failure={fl} />
             ))}
-            {reasons.unrecorded > 0 && (
-              <li>
-                <strong>{tp('ingest.reason.notRecorded', reasons.unrecorded, { n: f.num(reasons.unrecorded) })}</strong>
-                <p className="subtle">{t('ingest.reason.notRecordedHint')}</p>
-              </li>
-            )}
           </ul>
         </div>
       )}
 
-      {/* The log outlives the batches: say when the last retry ran, so an entry
-          from before it is not read as still in the queue. */}
       {last && (
         <p className="alert-tech">
           {t('ingest.reason.lastRedrive', { when: f.dateTime(last.at), moved: f.num(last.moved) })}
-          {reasons.movedBack.length > 0 &&
-            ` ${tp('ingest.reason.movedBack', reasons.movedBack.length)}`}
         </p>
       )}
 
@@ -381,62 +403,93 @@ type RedriveOutcome =
   | { kind: 'busy' }
   | { kind: 'brokerDown' }
   | { kind: 'tooOld' }
-  | { kind: 'failed'; reason: string }
+  | { kind: 'rejected'; reason: string }
+  | { kind: 'unknown'; reason: string }
+
+type RedriveState = {
+  outcome: RedriveOutcome | null
+  pending: boolean
+  start: () => void
+}
 
 /**
- * "Retry set-aside parts": confirm, run, report, refresh.
+ * "Retry set-aside parts": run, report, refresh.
  *
- * ⚠️ Nothing on this page retries anything by itself — only this button, only
- * when pressed. The confirmation says why pressing is safe (the writes are
- * idempotent upserts), the button is dead while the call runs, and the answer is
- * reported as the server gave it: `moved` exactly, `remaining` only when the
- * server could read it, and a run that stopped part-way as the partial success
- * it is. The status is re-read straight after, because the worker may park a
- * bad part again within seconds.
+ * ⚠️ Nothing on this page retries anything by itself — only the button, only
+ * when pressed. The answer is reported as the server gave it: `moved` exactly,
+ * `remaining` only when the server could read it, and a run that stopped
+ * part-way as the partial success it is. A request whose answer never arrived is
+ * reported as UNKNOWN, not as "did not run" (see `redriveErrorKind`). The status
+ * is re-read straight after either way.
+ *
+ * The state lives in the page, not in the alert: the alert is drawn only while
+ * the dead-letter queue holds something, and a retry that empties it would
+ * otherwise erase its own result.
  */
-function Redrive({ count }: { count: number }) {
-  const { t, tp } = useI18n()
-  const f = useFormat()
+function useRedrive(): RedriveState {
+  const { t } = useI18n()
   const qc = useQueryClient()
-  const [confirming, setConfirming] = useState(false)
   const [outcome, setOutcome] = useState<RedriveOutcome | null>(null)
-
   const run = useMutation({
     mutationFn: () => api.redriveDeadLetters(),
     onSuccess: (result) => setOutcome({ kind: 'done', result }),
     onError: (err) => {
       const e = err as ApiError
-      if (e?.status === 409) setOutcome({ kind: 'busy' })
-      else if (e?.status === 503) setOutcome({ kind: 'brokerDown' })
-      else if (isApiTooOld(e)) setOutcome({ kind: 'tooOld' })
-      else setOutcome({ kind: 'failed', reason: e?.detail ?? e?.message ?? t('error.generic.title') })
+      const reason = e?.detail ?? e?.message ?? t('error.generic.title')
+      const kind = redriveErrorKind(e)
+      if (kind === 'rejected' || kind === 'unknown') setOutcome({ kind, reason })
+      else setOutcome({ kind })
     },
     onSettled: () => qc.invalidateQueries({ queryKey: INGEST_STATUS_KEY }),
   })
+  return {
+    outcome,
+    pending: run.isPending,
+    start: () => {
+      setOutcome(null)
+      run.mutate()
+    },
+  }
+}
+
+function RedriveControls({ count, redrive }: { count: number; redrive: RedriveState }) {
+  const { t, tp } = useI18n()
+  const f = useFormat()
+  const [confirming, setConfirming] = useState(false)
+  const trigger = useRef<HTMLButtonElement>(null)
+  // One call moves at most this many; the button says so rather than offering all.
+  const capped = count > REDRIVE_MAX_PER_CALL
+  const max = f.num(REDRIVE_MAX_PER_CALL)
 
   // An older server has no such endpoint: the button goes, and says why.
-  if (outcome?.kind === 'tooOld') {
+  if (redrive.outcome?.kind === 'tooOld') {
     return <p className="alert-tech">{t('ingest.redrive.tooOld', { cmd: UPDATE_COMMAND })}</p>
+  }
+
+  const close = () => {
+    setConfirming(false)
+    // Back to the button that opened the question, for keyboard users.
+    requestAnimationFrame(() => trigger.current?.focus())
   }
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, margin: '4px 0' }}>
       {confirming ? (
         <div className="confirm" role="group" aria-label={t('ingest.redrive.confirmAria')}>
-          <p style={{ margin: 0 }}>{tp('ingest.redrive.confirm', count, { n: f.num(count) })}</p>
+          <p style={{ margin: 0 }}>{tp('ingest.redrive.confirm', Math.min(count, REDRIVE_MAX_PER_CALL), { n: f.num(Math.min(count, REDRIVE_MAX_PER_CALL)) })}</p>
+          <p style={{ margin: 0 }}>{t('ingest.redrive.limit', { max })}</p>
           <div className="btn-row">
             <button
               type="button"
               className="btn btn-primary"
               onClick={() => {
-                setConfirming(false)
-                setOutcome(null)
-                run.mutate()
+                close()
+                redrive.start()
               }}
             >
               {t('ingest.redrive.confirmYes')}
             </button>
-            <button type="button" className="btn" onClick={() => setConfirming(false)}>
+            <button type="button" className="btn" onClick={close}>
               {t('ingest.redrive.cancel')}
             </button>
           </div>
@@ -444,20 +497,34 @@ function Redrive({ count }: { count: number }) {
       ) : (
         <div className="btn-row">
           <button
+            ref={trigger}
             type="button"
             className="btn btn-primary"
-            disabled={run.isPending}
-            aria-busy={run.isPending || undefined}
+            disabled={redrive.pending}
+            aria-busy={redrive.pending || undefined}
             onClick={() => setConfirming(true)}
           >
-            {run.isPending
+            {redrive.pending
               ? t('ingest.redrive.running')
-              : tp('ingest.redrive.button', count, { n: f.num(count) })}
+              : capped
+                ? t('ingest.redrive.buttonCapped', { max, n: f.num(count) })
+                : tp('ingest.redrive.button', count, { n: f.num(count) })}
           </button>
         </div>
       )}
+    </div>
+  )
+}
 
-      <div aria-live="polite">{outcome && <OutcomeText outcome={outcome} />}</div>
+/** The retry's answer — always mounted, so it is announced and it stays. */
+function RedriveResultRegion({ outcome }: { outcome: RedriveOutcome | null }) {
+  return (
+    <div aria-live="polite" data-testid="redrive-region">
+      {outcome && outcome.kind !== 'tooOld' && (
+        <div className="card card-sm">
+          <OutcomeText outcome={outcome} />
+        </div>
+      )}
     </div>
   )
 }
@@ -473,8 +540,10 @@ function OutcomeText({ outcome }: { outcome: RedriveOutcome }) {
       return line(t('ingest.redrive.busy'))
     case 'brokerDown':
       return line(t('ingest.redrive.brokerDown'))
-    case 'failed':
+    case 'rejected':
       return line(t('ingest.redrive.failed', { reason: outcome.reason }))
+    case 'unknown':
+      return line(t('ingest.redrive.unknown', { reason: outcome.reason }))
     case 'tooOld':
       return null
     case 'done': {
@@ -503,6 +572,7 @@ export default function Ingest() {
   const clock = (iso: string) =>
     new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   const q = useIngestStatus(POLL_MS)
+  const redrive = useRedrive()
 
   // The last reading in which the broker answered — so "no numbers" can say how
   // old the last real ones are. Kept in a ref: it is a memory of this page's
@@ -546,7 +616,7 @@ export default function Ingest() {
               </Alert>
             </div>
           )}
-          <Status s={q.data} lastGood={lastGood.current} />
+          <Status s={q.data} lastGood={lastGood.current} redrive={redrive} />
         </Fragment>
       ) : null}
     </>

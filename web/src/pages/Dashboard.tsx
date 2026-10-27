@@ -304,6 +304,12 @@ export function SyncPill({ query }: { query: UseQueryResult<import('../api/types
         : t('today.pill.writing'),
     stalled: t('today.pill.stalled'),
     noConsumer: t('today.pill.noConsumer'),
+    rateUnknown: t('today.pill.rateUnknown'),
+    // ⚠️ Nothing waiting is not everything written: up to `in_flight_max`
+    // parts may still be with the worker (see `QUIET_MS`).
+    settling: s.queue?.in_flight_max
+      ? t('today.pill.settling', { n: f.num(s.queue.in_flight_max) })
+      : t('today.pill.settling.noBound'),
     setAside: tp('today.pill.setAside', s.dead_letter?.ready ?? 0),
     unknown: t('today.pill.unknown'),
   }
@@ -715,12 +721,13 @@ function MedalsCard() {
 // --- Band 3: status --------------------------------------------------------
 
 /**
- * Sync — the phone's last upload AND what the server still has to write of it.
+ * Sync — when a device was last seen AND what the server's queue still holds.
  *
- * ⚠️ These are two halves of one question and the card used to answer only the
- * first: "the iPhone uploaded four minutes ago" reads as "everything is in" while
- * the worker has an hour of it still to write. So the card leads to the queue
- * page, and its last line is the queue's state.
+ * ⚠️ Two facts that are deliberately NOT joined into one sentence. A device's
+ * `last_seen_at` is a heartbeat — registration touches it too, and it may be an
+ * iPad rather than the phone — and nothing in the API ties it to the batches in
+ * the queue (there is no upload id). So the first line says "last seen", never
+ * "uploaded", and the queue line speaks of the whole queue, never "parts of it".
  */
 function SyncCard({
   devicesQuery,
@@ -752,6 +759,11 @@ function SyncCard({
         : tp('today.sync.writing', waiting, { n: f.num(waiting) })
   else if (state === 'stalled' || state === 'noConsumer')
     queueLine = tp('today.sync.stuck', waiting, { n: f.num(waiting) })
+  else if (state === 'rateUnknown') queueLine = tp('today.sync.rateUnknown', waiting, { n: f.num(waiting) })
+  else if (state === 'settling')
+    queueLine = s?.queue?.in_flight_max
+      ? t('today.pill.settling', { n: f.num(s.queue.in_flight_max) })
+      : t('today.pill.settling.noBound')
   else if (state === 'setAside') queueLine = tp('today.pill.setAside', s?.dead_letter?.ready ?? 0)
   else if (state === 'unknown') queueLine = t('today.pill.unknown')
   else if (state === 'upToDate') queueLine = t('today.sync.allWritten')
@@ -765,7 +777,7 @@ function SyncCard({
       >
         {newest && (
           <p className="card-lead">
-            {t('today.sync.uploaded', { device: name(newest), when: f.relative(newest.last_seen_at) })}
+            {t('today.sync.lastSeen', { device: name(newest), when: f.relative(newest.last_seen_at) })}
           </p>
         )}
         {queueLine && (

@@ -18,9 +18,16 @@ a zero), the three rings, the most recent workout and last night with its stages
 
 The pill at the top reads the **sync queue**, not the phone. The phone counts an
 upload as done the moment it has handed it over, while the server may still be
-writing it for half an hour — so the pill says *up to date* only when nothing is
-waiting and nothing is set aside, and otherwise how much is still being written
-(with the server's estimate) and links to the queue.
+writing it for half an hour — so the pill says *up to date — nothing left to write*
+only when nothing is waiting, nothing is set aside **and** nothing has finished for
+30 seconds (see [the sync queue](#sync-queue) for why an empty queue is not enough),
+and otherwise what the queue holds (with the server's estimate) and links to the
+queue.
+
+The **Sync** card says when a device was **last seen** — a heartbeat, which
+registering a device also touches — and, separately, what the whole queue holds.
+Nothing in the API ties a device's last contact to the batches in the queue, so the
+card does not call it an upload or say the backlog is "part of it".
 
 ## Trends
 
@@ -149,11 +156,11 @@ It refreshes itself every five seconds.
 
 | On the page | What it means |
 |---|---|
-| **Waiting to be written** | Batches in the queue not yet handed to a worker. Exact. The "+ up to N in progress" beside it is an upper bound on the batches a worker is holding (its prefetch × the workers connected); plain AMQP cannot count those exactly. |
+| **Waiting to be written** | Batches in the queue not yet handed to a worker. Exact. The "+ up to N in progress" beside it is an upper bound on the batches a worker is holding (its prefetch × the workers connected); plain AMQP cannot count those exactly. ⚠️ So **zero waiting is "nothing waiting for delivery", not "everything written"**: the page says *the worker may still be finishing up to N*, and says *nothing left to write* only once no batch has finished for 30 seconds — the one piece of completion evidence the status carries. With no worker connected an empty queue is final (a batch a worker held goes back to the queue when it disconnects). |
 | **Set aside** | The dead-letter queue: batches the worker gave up on, why it gave up on the most recent ones, and a button that sends them back for another try. See below. |
-| **Worker** | Consumers on the queue. Batches waiting and **zero** workers is the failure that looks like slowness — the page says so in an alert, because the queue will not go down at all. |
+| **Worker** | Consumers on the queue, in one word: *Working* only when a batch finished in the last two minutes; *Nothing finished recently* when the worker reports and nothing has; *Connected* when its counters cannot be read (Redis down, or a worker too old to report) — whether it moves is then **unknown**, which is not the same as not moving. Batches waiting and **zero** workers is the failure that looks like slowness — the page says so in an alert, because the queue will not go down at all. |
 | **Rate** (parts and items a minute) | Finished over the last ten minutes, or since the worker started if that is more recent. An item is a sample, workout, sleep segment, activity summary or deletion. |
-| **About N left** | The waiting batches divided by the recent batch rate. **An estimate**: batches differ in size, so it moves. It is left out whenever it would be invented — nothing waiting, no worker, or nothing finished in the window. |
+| **About N** | **For the current backlog, if nothing more arrives**: the waiting batches (plus the in-progress bound) divided by the recent batch rate. **An estimate**: batches differ in size, and the status has no arrival rate, so a queue still growing from a new upload looks the same. It is left out whenever it would be invented — nothing waiting, no worker, no recent completion, or a rate that could not be read. |
 | **Worker** | When the worker started, when it last finished a batch, and its totals since the start (they restart from zero with the worker). |
 
 :::danger[A non-empty dead-letter queue is data that is not on the server]
@@ -162,32 +169,42 @@ it on its own** — every processing error ends there, including a database that
 restarting at the wrong moment. The page puts this above everything else.
 :::
 
-**Why it failed.** Under the count the page lists the worker's reasons for its most
-recent failures (up to 20, kept for 30 days): when, which batch, how many items it
-held, and the error. The error is the worker's own message with every number and
+**Recent failures.** Under the count the page lists the worker's log of its most
+recent failures (up to 20, kept for 30 days) — headed as a log, not the queue: when,
+which batch, how many items it held, and the error. The error is the worker's own message with every number and
 quoted string blanked out (`#`, `"…"`), so no measured value can reach the page
 through a database error; what identifies — a `source_uuid`, a `SQLSTATE` code, a
 host address — is kept. Two things this list is **not**:
 
 - **Not a listing of the dead-letter queue.** RabbitMQ cannot show what is in a queue
-  without taking it out. An entry stays after its batch has been sent back, which is
-  why the page also shows when the last retry ran.
+  without taking it out. An entry stays after its batch has been sent back, and a
+  retry can move only some batches (it is capped, and it can stop part-way), so the
+  page does not guess which entries are still set aside; it shows when the last
+  retry finished and how many it moved.
 - **Not complete for old batches.** A batch dead-lettered before the server recorded
-  reasons has none — the page says *reason not recorded*. The full error is still in
-  the worker log (`docker compose logs worker`, the `process batch` lines).
+  reasons has no entry. The full error is still in the worker log
+  (`docker compose logs worker`, the `process batch` lines).
 
 **Retry.** The button moves the dead-lettered batches back onto `helsa.ingest`, and
 the worker processes them again. It is safe to press: the writes are idempotent
 upserts keyed on `source_uuid`, so a batch written twice stores nothing twice, and a
 batch is removed from the dead-letter queue only after RabbitMQ has confirmed the copy
 on the main queue — a batch is never lost on the way, at worst it is briefly in both.
-One press moves at most 1000; press again for the rest.
+One press moves at most 1,000 — the button and the confirmation say so — press
+again for the rest.
+
+The answer stays on the page after the dead-letter queue empties, and it says only
+what is known: how many moved, how many remain if that could be read, and a run that
+stopped part-way with the server's reason. A request whose answer never arrived (a
+dropped connection, a proxy timeout) is reported as **unknown** — it may have run —
+never as "did not run".
 
 Fix the cause first. A batch that failed because the database was restarting will go
-through; one that fails on its content will be back in the dead-letter queue within
-seconds. Every retry is counted on the batch, and from the third one the page says so
-— *this one has failed N times after retries* — because pressing again is then
-unlikely to help. Nothing is ever retried automatically.
+through; one that fails on its content will be back in the dead-letter queue once the
+worker reaches it — behind whatever was already waiting. Every retry is counted on the
+batch: an entry in the log says *failed again after N retries* from the third, and
+the retry's answer counts the batches now on their **third retry or later**, because
+pressing again is then unlikely to help. Nothing is ever retried automatically.
 
 There is no progress bar and no per-minute chart: the status names neither the size
 of an upload nor a history of minutes, and a bar against an invented total would be
@@ -198,7 +215,8 @@ an unknown depth is not an empty queue. When the server answers 404 to the page'
 request while the rest of the API works, the server is **older than the web page**
 (the web image was updated first); the page says so and gives the command,
 `make prod-pull && make prod-up`. When the worker's counters (in Redis) cannot
-be read, the depth is still shown and the rate and estimate are marked unknown.
+be read, the depth is still shown and the rate and estimate are marked **unknown**
+— not "not moving".
 
 ## Settings
 

@@ -65,9 +65,11 @@ function show(node: ReactNode) {
 const idle = {
   checked_at: '2026-09-10T12:00:00Z',
   broker_reachable: true,
-  queue: { name: 'helsa.ingest', ready: 0, consumers: 1 },
+  queue: { name: 'helsa.ingest', ready: 0, consumers: 1, in_flight_max: 8 },
   dead_letter: { name: 'helsa.ingest.dlq', ready: 0 },
   stats_reachable: true,
+  // Nothing finished for minutes: the quiet period that lets "up to date" be said.
+  worker: { started_at: '2026-09-10T08:00:00Z', last_batch_at: '2026-09-10T11:50:00Z' },
 }
 
 /** Every endpoint answers, and every answer is "nothing arrived". */
@@ -211,6 +213,7 @@ describe('the header pill', () => {
     mock.ingestStatus.mockResolvedValue({
       ...idle,
       queue: { name: 'helsa.ingest', ready: 1417, consumers: 1 },
+      worker: { started_at: '2026-09-10T08:00:00Z', last_batch_at: '2026-09-10T11:59:58Z' },
       throughput: { window_seconds: 600, batches: 990, items: 1, failed: 0, batches_per_minute: 99 },
       eta_seconds: 840,
     })
@@ -220,6 +223,19 @@ describe('the header pill', () => {
     expect(p.className).toContain('pill--busy')
     expect(p).not.toHaveTextContent(dict.ui['today.pill.upToDate'])
     expect(p.textContent).toMatch(/14 min|14 p/)
+  })
+
+  it('says "nothing waiting", not "up to date", while the worker may still be finishing', async () => {
+    allEmpty()
+    mock.ingestStatus.mockResolvedValue({
+      ...idle,
+      worker: { started_at: '2026-09-10T08:00:00Z', last_batch_at: '2026-09-10T11:59:55Z' },
+    })
+    show(<Dashboard />)
+    const p = await pill()
+    expect(p).toHaveAttribute('data-state', 'settling')
+    expect(p).not.toHaveTextContent(dict.ui['today.pill.upToDate'])
+    expect(p).toHaveTextContent(dict.ui['today.pill.settling'].replace('{n}', '8'))
   })
 
   it('turns red when parts were set aside, even on an empty queue', async () => {
@@ -246,6 +262,30 @@ describe('the header pill', () => {
     show(<Dashboard />)
     expect(await screen.findByText(dict.ui['today.pill.apiOld'], { selector: '.pill' })).toBeInTheDocument()
     expect(screen.queryByText(/HTTP 404/)).not.toBeInTheDocument()
+  })
+})
+
+/**
+ * A device heartbeat is not an upload, and nothing ties it to the queue: the
+ * card says "last seen", and the backlog is the whole queue's, not "parts of it".
+ */
+describe('the sync card', () => {
+  it('says when a device was last seen, and speaks of the queue as a whole', async () => {
+    allEmpty()
+    mock.devices.mockResolvedValue([{ id: 'd1', name: 'iPhone', platform: 'ios', last_seen_at: new Date().toISOString() }])
+    mock.ingestStatus.mockResolvedValue({
+      ...idle,
+      queue: { name: 'helsa.ingest', ready: 1417, consumers: 1 },
+      worker: { started_at: '2026-09-10T08:00:00Z', last_batch_at: '2026-09-10T11:59:58Z' },
+      throughput: { window_seconds: 600, batches: 990, items: 1, failed: 0, batches_per_minute: 99 },
+      eta_seconds: 840,
+    })
+    show(<Dashboard />)
+    const card = (await screen.findByRole('heading', { name: dict.ui['today.sync.title'] })).closest('a')!
+    const lead = dict.ui['today.sync.lastSeen'].split('{when}')[0]
+    expect(await within(card).findByText((t) => t.startsWith(lead))).toBeInTheDocument()
+    expect(card.textContent).not.toMatch(/uploaded|feltöltés/)
+    expect(card.textContent).toMatch(/if nothing more arrives|ha nem érkezik több/)
   })
 })
 

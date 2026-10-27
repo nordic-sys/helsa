@@ -59,7 +59,7 @@ export const en: Dict = {
     // --- Dashboard ---------------------------------------------------------
     'dashboard.title': 'Today',
     'dashboard.tz': 'time zone: {tz}',
-    'dashboard.lastSync': 'last sync: {when}',
+    'dashboard.lastSync': 'a device last seen {when}',
     'dashboard.empty.title': 'No data yet',
     'dashboard.empty.hint':
       'The iPhone is the only uploader — as soon as it syncs, the data shows up here.',
@@ -676,12 +676,23 @@ export const en: Dict = {
       'The queue is empty right now, but nothing will process the next upload until the worker runs.',
     'ingest.eta': 'About {duration} left.',
     'ingest.eta.note':
-      'This is an estimate: the waiting batches divided by the rate of the last few minutes. Batches are not the same size, so it will move.',
+      'An estimate for the current backlog, if nothing more arrives: the waiting parts (plus the most that can be in progress) divided by the rate of the last few minutes. Parts are not the same size, and a new upload adds to the queue without changing this figure until it is read again.',
     'ingest.stalled.one':
       'Batches are waiting, but none finished in the last {n} minute — there is no rate to estimate from.',
     'ingest.stalled.other':
       'Batches are waiting, but none finished in the last {n} minutes — there is no rate to estimate from.',
-    'ingest.idle': 'Nothing is waiting: everything that arrived is with the worker or already written.',
+    'ingest.stalled.since':
+      'Parts are waiting, and the last one finished {when} — nothing has finished since, so there is no current rate to estimate from.',
+    'ingest.rateUnknown':
+      'A worker is connected, but its counters cannot be read (Redis did not answer, or this worker is too old to report them) — so whether the queue is moving is not known. That is not the same as “not moving”.',
+    'ingest.settling':
+      'Nothing is waiting for delivery. The worker may still be finishing up to {n} parts it has already taken; this page says “nothing left to write” once nothing has finished for 30 seconds.',
+    'ingest.settling.noBound':
+      'Nothing is waiting for delivery. The worker may still be finishing parts it has already taken; this page says “nothing left to write” once nothing has finished for 30 seconds.',
+    'ingest.idle':
+      'Nothing left to write: nothing is waiting, and nothing has finished for at least 30 seconds, so the worker is not holding a part.',
+    'ingest.idle.noWorker':
+      'Nothing is waiting, and with no worker connected nothing can be half-written: a part a worker held goes back to the queue when it disconnects.',
     'ingest.stat.waiting': 'Waiting',
     'ingest.stat.inFlight': '+ up to {n} in progress',
     'ingest.stat.deadLetter': 'Dead-letter queue',
@@ -761,25 +772,31 @@ export const en: Dict = {
     'today.challenge.allMilestones': 'all {n} milestones reached',
     'today.medals.earned.one': 'earned',
     'today.medals.earned.other': 'earned',
-    'today.pill.upToDate': 'Up to date — everything sent is written',
-    'today.pill.writing': 'Still writing the last upload',
-    'today.pill.writingEta': 'Still writing the last upload · about {duration} left',
-    'today.pill.stalled': 'Parts are waiting and not moving',
+    'today.pill.upToDate': 'Up to date — nothing left to write',
+    'today.pill.writing': 'Writing queued parts',
+    'today.pill.writingEta': 'Writing queued parts · about {duration} for the current backlog',
+    'today.pill.stalled': 'Parts are waiting and nothing finished recently',
     'today.pill.noConsumer': 'Parts are waiting and nothing is writing them',
+    'today.pill.rateUnknown': 'Parts are waiting · progress cannot be read',
+    'today.pill.settling': 'Nothing waiting · the worker may still be finishing up to {n}',
+    'today.pill.settling.noBound': 'Nothing waiting · the worker may still be finishing up',
     'today.pill.setAside.one': '{n} part could not be written',
     'today.pill.setAside.other': '{n} parts could not be written',
     'today.pill.unknown': 'The queue cannot be read right now',
     'today.pill.apiOld': 'The server is older than this page',
-    'today.sync.uploaded': '{device} uploaded {when}',
-    'today.sync.writing.one': '{n} part of it is still being written',
-    'today.sync.writing.other': '{n} parts of it are still being written',
+    'today.sync.lastSeen': 'Device last seen {when}: {device}',
+    'today.sync.writing.one': 'The queue holds {n} part waiting to be written',
+    'today.sync.writing.other': 'The queue holds {n} parts waiting to be written',
     'today.sync.writingEta.one':
-      '{n} part of it is still being written · about {duration} left',
+      'The queue holds {n} part waiting to be written · about {duration} for the current backlog, if nothing more arrives',
     'today.sync.writingEta.other':
-      '{n} parts of it are still being written · about {duration} left',
-    'today.sync.stuck.one': '{n} part is waiting, and nothing is moving',
-    'today.sync.stuck.other': '{n} parts are waiting, and nothing is moving',
-    'today.sync.allWritten': 'Everything it sent is in the database.',
+      'The queue holds {n} parts waiting to be written · about {duration} for the current backlog, if nothing more arrives',
+    'today.sync.stuck.one': 'The queue holds {n} part, and nothing has finished recently',
+    'today.sync.stuck.other': 'The queue holds {n} parts, and nothing has finished recently',
+    'today.sync.rateUnknown.one': 'The queue holds {n} part; whether it is moving cannot be read',
+    'today.sync.rateUnknown.other':
+      'The queue holds {n} parts; whether they are moving cannot be read',
+    'today.sync.allWritten': 'Nothing left to write in the queue.',
 
     // --- Trends: the redesigned chart card -------------------------------------
     'trends.periodAria': 'Period',
@@ -825,11 +842,13 @@ export const en: Dict = {
     'ingest.hero.parts.one': 'part',
     'ingest.hero.parts.other': 'parts',
     'ingest.hero.tech': 'batches in {name}',
-    'ingest.hero.etaLabel': 'At this rate — an estimate',
+    'ingest.hero.etaLabel': 'For the current backlog, if nothing more arrives — an estimate',
     'ingest.hero.eta': 'about {duration}',
     'ingest.hero.nothing': 'Nothing to wait for',
     'ingest.hero.notMoving': 'Not moving',
     'ingest.hero.noEstimate': 'no estimate',
+    'ingest.hero.rateUnknown': 'Rate unknown',
+    'ingest.hero.settling': 'Nothing waiting for delivery',
     'ingest.tile.rate': 'Rate',
     'ingest.tile.rateUnit': 'parts/min',
     'ingest.tile.itemsRate': '≈ {n} items a minute',
@@ -838,6 +857,9 @@ export const en: Dict = {
     'ingest.worker.state.working': 'Working',
     'ingest.worker.state.waiting': 'Waiting',
     'ingest.worker.state.none': 'None',
+    'ingest.worker.state.noRecent': 'Nothing finished recently',
+    'ingest.worker.state.connected': 'Connected',
+    'ingest.worker.state.finishing': 'May be finishing up',
     'ingest.worker.line.none': 'No worker is connected',
     'ingest.worker.line.connected.one': '{n} worker connected',
     'ingest.worker.line.connected.other': '{n} workers connected',
@@ -856,11 +878,14 @@ export const en: Dict = {
       'If retrying does not help, a “Full resync” on the phone sends the same data again — the writes are idempotent, so nothing is stored twice.',
     'ingest.redrive.button.one': 'Retry {n} set-aside part',
     'ingest.redrive.button.other': 'Retry {n} set-aside parts',
+    'ingest.redrive.buttonCapped': 'Retry {max} of {n} set-aside parts',
     'ingest.redrive.confirmAria': 'Confirm the retry',
     'ingest.redrive.confirm.one':
       'Retry {n} part? Writing is idempotent: anything already in the database is only updated.',
     'ingest.redrive.confirm.other':
       'Retry {n} parts? Writing is idempotent: anything already in the database is only updated.',
+    'ingest.redrive.limit':
+      'One retry moves at most {max} parts. If more are set aside, press again for the rest.',
     'ingest.redrive.confirmYes': 'Retry',
     'ingest.redrive.cancel': 'Cancel',
     'ingest.redrive.running': 'Retrying…',
@@ -869,20 +894,24 @@ export const en: Dict = {
     'ingest.redrive.resultUnknown':
       'Moved {moved} back to the queue · how many are still set aside could not be read',
     'ingest.redrive.stopped':
-      'It stopped part-way: {reason}. The part being moved at that moment went back where it was; the count above is exact.',
+      'It stopped part-way: {reason}. The count above includes only the parts confirmed moved. Unless the reason says otherwise, the part being moved at that moment stayed set aside; if it says the part is now in both queues, that copy is harmless — writing is idempotent.',
     'ingest.redrive.repeated.one':
-      '{n} of them had already failed after 3 or more retries — pressing again is unlikely to help until the cause is fixed.',
+      '{n} of them is now on its third retry or later — the earlier retries did not help, so this one is unlikely to either until the cause is fixed.',
     'ingest.redrive.repeated.other':
-      '{n} of them had already failed after 3 or more retries — pressing again is unlikely to help until the cause is fixed.',
+      '{n} of them are now on their third retry or later — the earlier retries did not help, so this one is unlikely to either until the cause is fixed.',
     'ingest.redrive.watch':
-      'The worker picks them up within seconds. A part that fails on its content will be back here soon — this page refreshes itself.',
+      'They are back in the queue, behind whatever was already waiting; when they are written depends on the worker and the backlog above. A part that fails on its content will come back here — this page refreshes itself.',
     'ingest.redrive.busy':
       'A retry is already running. Wait for it to finish, then look again.',
     'ingest.redrive.brokerDown': 'RabbitMQ could not be reached, so nothing was moved.',
-    'ingest.redrive.failed': 'The retry did not run: {reason}',
+    'ingest.redrive.failed': 'The server refused the retry, so nothing was moved: {reason}',
+    'ingest.redrive.unknown':
+      'No answer arrived, so whether the retry ran is not known ({reason}). The set-aside count is being read again — check it before pressing again.',
     'ingest.redrive.tooOld':
       'Retrying from this page needs a newer server API. Update the server ({cmd}) and reload.',
-    'ingest.reasons.title': 'Why they were set aside',
+    'ingest.reasons.title': 'Recent failures — a log, not the queue',
+    'ingest.reasons.hint':
+      'The worker’s record of the parts it set aside lately, newest first. An entry stays after its part was retried, and a part set aside by an older worker has no entry — so this does not say which parts are set aside now.',
     'ingest.reason.transient':
       'The database or the network was not available at that moment — a retry usually goes through.',
     'ingest.reason.rejected':
@@ -901,17 +930,10 @@ export const en: Dict = {
     'ingest.reason.activity.other': '{n} activity summaries',
     'ingest.reason.deletions.one': '{n} deletion',
     'ingest.reason.deletions.other': '{n} deletions',
-    'ingest.reason.repeated': 'Failed {n} times after retries',
+    'ingest.reason.repeated': 'Failed again after {n} retries',
     'ingest.reason.raw': 'The worker’s message',
     'ingest.reason.batch': 'Batch {id}',
-    'ingest.reason.notRecorded.one': '{n} part: reason not recorded',
-    'ingest.reason.notRecorded.other': '{n} parts: reason not recorded',
-    'ingest.reason.notRecordedHint':
-      'Set aside before the server kept reasons, or the record could not be read. The worker’s log below still has the error.',
-    'ingest.reason.lastRedrive': 'Last retry: {when}, {moved} moved back.',
-    'ingest.reason.movedBack.one': '{n} earlier failure in the log was moved back by it.',
-    'ingest.reason.movedBack.other':
-      '{n} earlier failures in the log were moved back by it.',
+    'ingest.reason.lastRedrive': 'Last retry finished {when}: {moved} moved back.',
   },
 
   // --- Metric group names ---------------------------------------------------
