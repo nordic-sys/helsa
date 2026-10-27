@@ -1505,6 +1505,11 @@ select.field {
   gap: var(--sp-3);
   min-width: 0;
 }
+/* The sticky list has a fixed height and scrolls; without this the month
+ * cards (overflow: hidden, so min-height 0) shrink to stripes instead. */
+.wo-list > * {
+  flex-shrink: 0;
+}
 
 /* --- A month of workouts --- */
 .card.month {
