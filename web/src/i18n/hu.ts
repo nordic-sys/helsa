@@ -405,8 +405,17 @@ export const hu = {
     'sleep.night.latest': 'Múlt éjjel · {date} — alvás {duration}',
     'sleep.night.title.notRecorded': '{date} — az alvás hossza nincs rögzítve',
     'sleep.night.latest.notRecorded': 'Múlt éjjel · {date} — az alvás hossza nincs rögzítve',
+    'sleep.night.newest': 'Legutóbbi alvás · {date} — alvás {duration}',
+    'sleep.night.newest.notRecorded': 'Legutóbbi alvás · {date} — az alvás hossza nincs rögzítve',
     'sleep.nights.title.one': 'Az időszak éjszakája',
     'sleep.nights.title.other': 'Az időszak {n} éjszakája',
+    'sleep.nap': 'Szunyókálás',
+    'sleep.naps.count.one': '{n} szunyókálás',
+    'sleep.naps.count.other': '{n} szunyókálás',
+    'sleep.naps.note.one':
+      'Ezen felül {n} szunyókálás, alvás {duration} — a fenti éjszakai számokban nincs benne.',
+    'sleep.naps.note.other':
+      'Ezen felül {n} szunyókálás, összesen {duration} alvás — a fenti éjszakai számokban nincs benne.',
     'sleep.nights.hint':
       'Válassz egy éjszakát, és fent kinyílik. A sáv az adott éjszaka szakaszainak aránya; az utolsó két oszlop a hatékonyság és a felébredések száma.',
     'sleep.stagesChart.hint': 'Kattints egy oszlopra, és az az éjszaka nyílik meg fent.',

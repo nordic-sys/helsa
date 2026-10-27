@@ -33,7 +33,7 @@
 // What the phone has that the web leaves out: effort ratings (they live in
 // HealthKit and do not reach the server) and the share card.
 
-import { useMemo, useRef, useState, type CSSProperties } from 'react'
+import { useMemo, useState, type CSSProperties } from 'react'
 import { keepPreviousData, useQuery, type UseQueryResult } from '@tanstack/react-query'
 import {
   Bar,
@@ -404,8 +404,7 @@ export function WeekGrid({ weeks }: { weeks: TrainingWeek[] }) {
   const { t, locale } = useI18n()
   const f = useFormat()
   const text = useWeekText()
-  const ref = useRef<HTMLDivElement>(null)
-  const width = useElementWidth(ref)
+  const [ref, width] = useElementWidth()
   const n = weeks.length
   // ⚠️ `0` is "not measured yet" (and always in jsdom): draw one row rather
   // than flash the folded layout first.

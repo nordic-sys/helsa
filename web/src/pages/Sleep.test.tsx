@@ -86,6 +86,61 @@ describe('one night in full, the rest as rows', () => {
   })
 })
 
+/** A daytime nap after last night is its own session — and it is not last night. */
+describe('a nap after last night', () => {
+  /** Two nights and a 50-minute nap at 14:00 after the newer one. Before 15:00 the
+   * fixture shifts a day back — the nap must have ended already — which makes
+   * the newer night yesterday's: still "last night" until tonight's sleep. */
+  function napAfter(withNights: boolean): SleepSegment[] {
+    const early = new Date().getHours() < 15
+    const d = new Date()
+    d.setHours(14, 0, 0, 0)
+    if (early) d.setDate(d.getDate() - 1)
+    const nap: SleepSegment = {
+      started_at: d.toISOString(),
+      ended_at: new Date(d.getTime() + 50 * 60000).toISOString(),
+      stage: 'core',
+    }
+    if (!withNights) return [nap]
+    const shift = early ? 1 : 0
+    return [...night(shift), ...night(shift + 1), nap]
+  }
+
+  it('opens on the night, still titled "last night"', async () => {
+    sleep.mockResolvedValue(napAfter(true))
+    show()
+    expect(await screen.findByText(/^last night/i)).toBeInTheDocument()
+    expect(screen.getAllByText(/50 min/).length).toBeGreaterThan(0) // the nap's row in the list
+  })
+
+  it('titles the nap "latest sleep" when it is chosen, never "last night"', async () => {
+    sleep.mockResolvedValue(napAfter(true))
+    show()
+    await screen.findByText(/^last night/i)
+    const rows = screen.getAllByRole('button').filter((b) => b.className.includes('night-row'))
+    await userEvent.click(rows[0])
+    expect(screen.getByText(/^latest sleep/i)).toBeInTheDocument()
+    expect(screen.queryByText(/^last night/i)).not.toBeInTheDocument()
+  })
+
+  it('keeps the nap out of the nightly figures and names it separately', async () => {
+    sleep.mockResolvedValue(napAfter(true))
+    show()
+    // Two nights of 7 h 40 min asleep; the 50-minute nap is not a third night.
+    expect(await screen.findByText(/average sleep — 2 nights/i)).toBeInTheDocument()
+    expect(screen.getByText(/plus 1 nap, 50 min asleep/i)).toBeInTheDocument()
+    expect(screen.getByText(/the 2 nights in this period · 1 nap/i)).toBeInTheDocument()
+    expect(screen.getByText(/^nap$/i)).toBeInTheDocument() // the tag on its row
+  })
+
+  it('calls a lone nap the latest sleep', async () => {
+    sleep.mockResolvedValue(napAfter(false))
+    show()
+    expect(await screen.findByText(/^latest sleep/i)).toBeInTheDocument()
+    expect(screen.queryByText(/last night/i)).not.toBeInTheDocument()
+  })
+})
+
 describe('walking back through the history', () => {
   it('asks the server for the stretch before this one', async () => {
     show()

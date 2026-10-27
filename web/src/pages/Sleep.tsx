@@ -38,10 +38,21 @@ import { api, browserTz } from '../api/client'
 import type { Range } from '../api/types'
 import { PeriodStepper } from '../components/PeriodStepper'
 import { Card, Empty, ErrorState, Legend, Loading, Stat } from '../components/ui'
-import { useI18n } from '../i18n'
+import { useI18n, type UiKey } from '../i18n'
 import { STAGE_CHART, STAGE_COLOR, STAGE_ORDER, useFormat } from '../lib/format'
 import { metricDef, pickSeries, readSeries } from '../lib/metrics'
-import { averages, groupByNight, segmentMinutes, sliceMinutes, type Night } from '../lib/sleep'
+import {
+  averages,
+  groupByNight,
+  isOvernight,
+  lastNight,
+  nightTitle,
+  segmentMinutes,
+  sliceMinutes,
+  type Night,
+  type NightTitle,
+} from '../lib/sleep'
+import { useToday } from '../lib/useToday'
 import { rollingWindow } from '../lib/window'
 
 /** The two window lengths, in the vocabulary the window code already speaks:
@@ -72,6 +83,7 @@ export default function Sleep() {
   const [chosen, setChosen] = useState<string | null>(null)
   const { t, tp, tx, tMetric } = useI18n()
   const f = useFormat()
+  const today = useToday()
 
   const win = useMemo(() => rollingWindow(range, offset, new Date()), [range, offset])
   const nightCount = WINDOWS.find((w) => w.range === range)?.nights ?? 7
@@ -101,15 +113,25 @@ export default function Sleep() {
   if (q.isLoading) return <Loading rows={2} />
   if (q.isError) return <ErrorState error={q.error} />
 
-  const avg = averages(nights)
+  // ⚠️ The nightly figures are over NIGHTS only. A 50-minute nap averaged in
+  // as a "night" dragged the average sleep down by an hour and inflated the
+  // night count; naps get their own line under the figures instead.
+  const overnight = nights.filter(isOvernight)
+  const naps = nights.filter((n) => !isOvernight(n))
+  const napMin = naps.reduce((sum, n) => sum + (n.asleepMin ?? 0), 0)
+  const avg = averages(overnight)
   // ⚠️ Resolved here rather than stored, so a stale key simply falls back to the
   // newest night. Storing the resolution would mean a window step could leave
   // the card pointing at a night that is no longer in the list.
-  const selected = nights.find((n) => n.startedAt === chosen) ?? nights[0]
+  // ⚠️ The default is the newest OVERNIGHT session, not simply the newest: a
+  // nap after last night is its own session (see `groupByNight`), and opening on
+  // it put "Last night" over a 14:00 doze. The nap stays in the list below.
+  const selected =
+    nights.find((n) => n.startedAt === chosen) ?? lastNight(nights)?.night ?? nights[0]
 
   // Only the stages that actually occur make it onto the chart.
   const presentStages = STAGE_ORDER.filter((s) => nights.some((n) => (n.stages[s] ?? 0) > 0))
-  const chart = [...nights].reverse().map((n) => ({
+  const chart = [...overnight].reverse().map((n) => ({
     startedAt: n.startedAt,
     key: n.key,
     ...Object.fromEntries(presentStages.map((s) => [s, n.stages[s] ?? 0])),
@@ -182,15 +204,33 @@ export default function Sleep() {
               color="var(--helsa-nordlys)"
             />
           </div>
+          {naps.length > 0 && (
+            <p className="subtle" style={{ marginTop: -8, marginBottom: 18 }}>
+              {tp('sleep.naps.note', naps.length, { duration: f.duration(napMin) })}
+            </p>
+          )}
 
-          {selected && <NightCard night={selected} isLatest={selected === nights[0]} />}
+          {selected && (
+            <NightCard
+              night={selected}
+              title={nightTitle(selected, nights, { current: offset === 0, today })}
+            />
+          )}
 
           {/* The rest of the period. One row a night, newest first — and the
               rows are buttons, because a row that changes what the card above
               shows is a control, whatever it looks like. */}
           {nights.length > 1 && (
             <div style={{ marginBottom: 16 }}>
-              <Card title={tp('sleep.nights.title', nights.length)}>
+              <Card
+                title={
+                  naps.length === 0
+                    ? tp('sleep.nights.title', overnight.length)
+                    : overnight.length === 0
+                      ? tp('sleep.naps.count', naps.length)
+                      : `${tp('sleep.nights.title', overnight.length)} · ${tp('sleep.naps.count', naps.length)}`
+                }
+              >
                 <div className="night-list">
                   {nights.map((n) => (
                     <NightRow
@@ -303,8 +343,8 @@ export default function Sleep() {
               </Card>
             </div>
           )}
-          {nights.length < nightCount && (
-            <p className="subtle">{tp('sleep.gap', nightCount, { nights: nights.length })}</p>
+          {overnight.length < nightCount && (
+            <p className="subtle">{tp('sleep.gap', nightCount, { nights: overnight.length })}</p>
           )}
         </>
       )}
@@ -368,7 +408,10 @@ function NightRow({
   const { t } = useI18n()
   return (
     <button type="button" className="night-row" aria-pressed={selected} onClick={onSelect}>
-      <span className="night-date">{f.date(night.key)}</span>
+      <span className="night-date">
+        {f.date(night.key)}
+        {!isOvernight(night) && <span className="night-tag">{t('sleep.nap')}</span>}
+      </span>
       <span className="night-length num">{f.duration(night.asleepMin)}</span>
       <Hypnogram night={night} height={14} />
       <span className="night-eff num subtle">{f.percent(night.efficiency, 0)}</span>
@@ -379,7 +422,15 @@ function NightRow({
   )
 }
 
-function NightCard({ night, isLatest }: { night: Night; isLatest: boolean }) {
+/** The card title's i18n key per `NightTitle` — sentence with a duration, and
+ * the one for a session that never recorded sleep. */
+const TITLE_KEYS: Record<NightTitle, [UiKey, UiKey]> = {
+  lastNight: ['sleep.night.latest', 'sleep.night.latest.notRecorded'],
+  latest: ['sleep.night.newest', 'sleep.night.newest.notRecorded'],
+  plain: ['sleep.night.title', 'sleep.night.title.notRecorded'],
+}
+
+function NightCard({ night, title }: { night: Night; title: NightTitle }) {
   const { t, tp } = useI18n()
   const f = useFormat()
   const stages = STAGE_ORDER.filter((s) => (night.stages[s] ?? 0) > 0)
@@ -392,12 +443,8 @@ function NightCard({ night, isLatest }: { night: Night; isLatest: boolean }) {
           // ⚠️ A night with no sleep segment never measured sleep: it says so
           // rather than "– asleep".
           night.asleepMin == null
-            ? isLatest
-              ? t('sleep.night.latest.notRecorded', { date: day })
-              : t('sleep.night.title.notRecorded', { date: day })
-            : isLatest
-              ? t('sleep.night.latest', { date: day, duration: f.duration(night.asleepMin) })
-              : t('sleep.night.title', { date: day, duration: f.duration(night.asleepMin) })
+            ? t(TITLE_KEYS[title][1], { date: day })
+            : t(TITLE_KEYS[title][0], { date: day, duration: f.duration(night.asleepMin) })
         }
       >
         <Hypnogram night={night} />
@@ -418,7 +465,7 @@ function NightCard({ night, isLatest }: { night: Night; isLatest: boolean }) {
             bar squeezed to half a card stops being readable. */}
         <div className="flow" style={{ marginTop: 12, marginBottom: 12 }}>
         <div className="table-wrap">
-          <table>
+          <table className="figure-pairs">
             <tbody>
               <tr>
                 <td>{t('sleep.inBed')}</td>

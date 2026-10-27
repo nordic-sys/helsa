@@ -1816,6 +1816,33 @@ select.field {
   }
 }
 
+/* A nap among the nights: named, so it does not pass for a short night. On its
+ * own line under the date — beside it, it widened the date column of that one
+ * row and pushed its bar out of line with the others. */
+.night-tag {
+  display: block;
+  width: fit-content;
+  margin-top: 2px;
+  padding: 1px 6px;
+  border-radius: var(--radius-sm);
+  background: var(--surface-2);
+  color: var(--text-dim);
+  font-size: 0.85em;
+}
+
+/* The night card's figures: two label/value pairs a row. ⚠️ At 390 px the four
+ * columns needed ~380 px and the card has ~300, so the right pair hid behind a
+ * horizontal scroll. Below 560 each row folds into two: one pair a line. */
+@media (max-width: 560px) {
+  .figure-pairs tr {
+    display: grid;
+    grid-template-columns: 1fr auto;
+  }
+  .figure-pairs td.num {
+    text-align: right;
+  }
+}
+
 /* The proportional stage bar, shared by the night card, the rows and Today. */
 .hypnogram {
   display: flex;

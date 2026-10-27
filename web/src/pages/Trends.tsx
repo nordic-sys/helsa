@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import {
@@ -30,7 +30,7 @@ import { useFormat, type Formatters } from '../lib/format'
 import { METRIC_LIST, metricDef, pickSeries, readSeries } from '../lib/metrics'
 import { useAvailability } from '../lib/useAvailability'
 import { useToday } from '../lib/useToday'
-import { labelPx, useElementWidth } from '../lib/useElementWidth'
+import { axisLabelPx, labelPx, useElementWidth } from '../lib/useElementWidth'
 import {
   bucketKey,
   bucketStarts,
@@ -317,8 +317,7 @@ export default function Trends() {
   }, [data, band, drawnDef.digits, f])
 
   // The chart's real width, for the label decisions below. `0` = not measured.
-  const chartRef = useRef<HTMLDivElement>(null)
-  const chartWidth = useElementWidth(chartRef)
+  const [chartRef, chartWidth] = useElementWidth()
   /** The plot area: the chart minus the y axis and the margins. `null` = unknown. */
   const plotWidth = chartWidth > 0 ? Math.max(0, chartWidth - yAxisWidth - 4) : null
 
@@ -337,17 +336,42 @@ export default function Trends() {
    * The app selects its ticks the same way and for the same reason
    * (`TrendFormat.tickDates`).
    *
+   * ⚠️ The STEP is what has to fit, not a label count: neighbouring labels sit
+   * `step` buckets apart, so the rule is step × bucket ≥ label + gap. Dividing
+   * the plot by (label + gap) rounded down twice and left the Hungarian year
+   * axis ("2026. febr.") at two labels at 390 px where three fit. The plot
+   * width here leaves out the chart's default right margin, which the old
+   * figure counted as room.
+   *
    * `undefined` when they all fit: then every bucket gets its own label.
    */
   const xTicks = useMemo(() => {
-    const widest = Math.max(1, ...data.map((d) => tickLabel(d.t, drawnRange, f).length))
-    const max =
-      plotWidth == null ? 7 : Math.max(2, Math.min(7, Math.floor(plotWidth / (labelPx(widest) + 12))))
-    if (data.length <= max) return undefined
-    const step = Math.ceil(data.length / max)
+    if (data.length === 0) return undefined
+    const widest = Math.max(1, ...data.map((d) => axisLabelPx(tickLabel(d.t, drawnRange, f))))
+    // At most seven labels, at least two — the first rule the axis always had.
+    let step = Math.ceil(data.length / 7)
+    if (plotWidth != null) {
+      const bucket = Math.max(1, plotWidth - 12) / data.length
+      step = Math.max(step, Math.ceil((widest + 8) / bucket))
+    }
+    step = Math.min(step, Math.max(1, data.length - 1))
+    if (step <= 1) return undefined
     const chosen: string[] = []
     for (let i = data.length - 1; i >= 0; i -= step) chosen.push(data[i].t)
     return chosen.reverse()
+  }, [data, drawnRange, f, plotWidth])
+
+  /**
+   * Room on the right for the LAST label, which `xTicks` always keeps. It is
+   * centred on the last bucket, and at 390 px a bucket is ~10 px wide, so half
+   * of "2026. okt." or "11:00 PM" hung past the plot and the SVG cut it off.
+   * On a desktop the bucket is wider than the label and this stays at 12.
+   */
+  const rightMargin = useMemo(() => {
+    const last = data.at(-1)
+    if (!last || plotWidth == null || data.length === 0) return 12
+    const half = axisLabelPx(tickLabel(last.t, drawnRange, f)) / 2
+    return Math.max(12, Math.ceil(half - plotWidth / data.length / 2))
   }, [data, drawnRange, f, plotWidth])
 
   // Off while the chart on screen is a placeholder for a window still loading.
@@ -581,7 +605,7 @@ export default function Trends() {
                       title={`${label}${unit ? ` (${unit})` : ''}`}
                       desc={t('trends.chartDesc', { period: windowDates(drawnWin, drawnRange, locale) })}
                       data={chartData}
-                      margin={{ top: labelBars ? 22 : 8, right: 12, bottom: 4, left: -8 }}
+                      margin={{ top: labelBars ? 22 : 8, right: rightMargin, bottom: 4, left: -8 }}
                       onClick={
                         canDrill
                           ? (state: unknown) => {
