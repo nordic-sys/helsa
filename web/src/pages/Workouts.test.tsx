@@ -347,6 +347,14 @@ describe('master and detail on a wide screen', () => {
     expect(workout).toHaveBeenCalledWith('id-2')
   })
 
+  it('opens the session page for a selection in the URL on a narrow screen', async () => {
+    // The Today card links `/workouts?w=…`; below 1100px there is no panel.
+    workouts.mockResolvedValue({ items: two() })
+    show('/workouts?w=id-2')
+    expect(await screen.findByText('detail page')).toBeInTheDocument()
+    expect(screen.getByTestId('location').textContent).toBe('/workouts/id-2')
+  })
+
   it('keeps rows as links to the session page on a narrow screen', async () => {
     workouts.mockResolvedValue({ items: two() })
     show()

@@ -65,6 +65,7 @@ import { gaps, tally } from '../lib/coverage'
 import { groupByNight } from '../lib/sleep'
 import { etaMinutes, syncState, toneOf, isApiTooOld, type SyncState } from '../lib/ingest'
 import { useIngestStatus } from '../lib/useIngestStatus'
+import { useToday } from '../lib/useToday'
 import { durationMin, isIndoor } from '../lib/workouts'
 
 /**
@@ -93,9 +94,12 @@ export default function Dashboard() {
   const tz = browserTz()
   const { t } = useI18n()
   const f = useFormat()
+  // ⚠️ In every date-dependent key below, so a page left open overnight asks
+  // for the new day by itself (see `useToday`).
+  const today = useToday()
 
   const summary = useQuery({
-    queryKey: ['summary', 'day', tz],
+    queryKey: ['summary', 'day', tz, today],
     queryFn: () => api.summary('day', TODAY_WIRE, tz),
   })
 
@@ -143,15 +147,15 @@ export default function Dashboard() {
           ))}
         </div>
         <div className="grid grid-3">
-          <RingsCard tz={tz} />
+          <RingsCard tz={tz} today={today} />
           <LatestWorkoutCard />
-          <LastNightCard tz={tz} />
+          <LastNightCard tz={tz} today={today} />
         </div>
       </Band>
 
       <Band id="band-long" title={t('nav.group.longView')} hint={t('today.band.longView.hint')}>
         <div className="grid grid-3">
-          <ChallengeCard tz={tz} />
+          <ChallengeCard tz={tz} today={today} />
           <ObservationsCard />
           <MedalsCard />
         </div>
@@ -160,7 +164,7 @@ export default function Dashboard() {
       <Band id="band-status" title={t('nav.group.status')} hint={t('today.band.status.hint')}>
         <div className="grid grid-2">
           <SyncCard devicesQuery={devices} ingest={ingest} />
-          <CoverageCard tz={tz} />
+          <CoverageCard tz={tz} today={today} />
         </div>
       </Band>
     </>
@@ -368,11 +372,11 @@ function TodayTile({
   )
 }
 
-function RingsCard({ tz }: { tz: string }) {
+function RingsCard({ tz, today }: { tz: string; today: string }) {
   const { t } = useI18n()
   const f = useFormat()
   const q = useQuery({
-    queryKey: ['activity', 'today', tz],
+    queryKey: ['activity', 'today', tz, today],
     queryFn: () => api.activity(undefined, undefined, tz),
   })
 
@@ -473,13 +477,13 @@ function LatestWorkoutCard() {
   )
 }
 
-function LastNightCard({ tz }: { tz: string }) {
+function LastNightCard({ tz, today }: { tz: string; today: string }) {
   const { t, tStage } = useI18n()
   const f = useFormat()
   // Two days back, not one: a night is identified by the morning it ends on, and
   // asking only for today would miss every segment written before midnight.
   const q = useQuery({
-    queryKey: ['sleep', 'lastNight', tz],
+    queryKey: ['sleep', 'lastNight', tz, today],
     queryFn: () => api.sleep(isoDaysAgo(2), isoDaysAgo(0), tz),
   })
   // `groupByNight` returns the sessions newest first.
@@ -535,11 +539,11 @@ function LastNightCard({ tz }: { tz: string }) {
 
 // --- Band 2: the long view -------------------------------------------------
 
-function ChallengeCard({ tz }: { tz: string }) {
+function ChallengeCard({ tz, today }: { tz: string; today: string }) {
   const { t } = useI18n()
   const f = useFormat()
   const q = useQuery({
-    queryKey: ['challenge', 'current', tz],
+    queryKey: ['challenge', 'current', tz, today],
     queryFn: () => api.challenge(undefined, tz),
   })
   const c = q.data
@@ -804,10 +808,12 @@ function SyncCard({
   )
 }
 
-function CoverageCard({ tz }: { tz: string }) {
+function CoverageCard({ tz, today }: { tz: string; today: string }) {
   const { t, tp, tMetric } = useI18n()
+  // `today` is the end of the window; reading it here ties the window to the
+  // clock tick rather than to whenever this card happened to re-render.
   const from = isoDaysAgo(COVERAGE_DAYS - 1)
-  const to = isoDaysAgo(0)
+  const to = today
   // The same key shape the Completeness page uses, so arriving there from here
   // costs no second request.
   const q = useQuery({

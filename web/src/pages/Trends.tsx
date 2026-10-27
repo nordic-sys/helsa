@@ -26,6 +26,7 @@ import { STANDING_ARROW, bandOf, pickBaseline } from '../lib/baseline'
 import { useFormat, type Formatters } from '../lib/format'
 import { METRIC_LIST, metricDef, pickSeries, readSeries } from '../lib/metrics'
 import { useAvailability } from '../lib/useAvailability'
+import { useToday } from '../lib/useToday'
 import {
   bucketKey,
   bucketStarts,
@@ -141,9 +142,12 @@ export default function Trends() {
   const firstDay = useMemo(() => firstWeekday(), [])
 
   const def = metricDef(metric)
+  // ⚠️ The clock is a dependency: without it a page left open past midnight kept
+  // drawing the window that ended yesterday (see `useToday`).
+  const today = useToday()
   const win = useMemo(
     () => windowFor(range, kind, offset, new Date(), firstDay),
-    [range, kind, offset, firstDay],
+    [range, kind, offset, firstDay, today],
   )
 
   /**
@@ -211,9 +215,17 @@ export default function Trends() {
     setKind('rolling')
   }
 
-  /** One step finer, anchored on the tapped bucket — year → month → week → day. */
+  /**
+   * One step finer, anchored on the tapped bucket — year → month → week → day.
+   *
+   * ⚠️ From the range ON SCREEN, not the selected one. With `keepPreviousData`
+   * the chart can still be last selection's while the next one loads: tapping a
+   * day of the visible week after choosing Year used to drill from Year — to a
+   * month. And while a replacement is loading, drilling is off altogether
+   * (`canDrill`), so the tap cannot land in a chart that is about to change.
+   */
   function drillDown(day: Date) {
-    const next = finer(range)
+    const next = finer(drawnRange)
     if (!next) return
     // Drilling always lands on a CALENDAR period: the point of tapping September
     // is to get September, not the thirty days that happen to end near it.
@@ -320,7 +332,9 @@ export default function Trends() {
     return chosen.reverse()
   }, [data])
 
-  const canDrill = finer(drawnRange) !== null
+  // Off while the chart on screen is a placeholder for a window still loading.
+  const replacing = q.isPlaceholderData
+  const canDrill = finer(drawnRange) !== null && !replacing
   const drillHint = DRILL_HINT[drawnRange]
 
   const delta = r.total != null && previous.total != null ? r.total - previous.total : null

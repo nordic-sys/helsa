@@ -37,7 +37,7 @@
 // squeezed beside a list on a phone is two unreadable halves.
 
 import { useEffect, useId, useMemo, useRef, useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
+import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { ActivityIcon, PlaceIcon } from '../components/ActivityIcon'
 import { Empty, ErrorState, Loading, Note, PageHead } from '../components/ui'
 import { useI18n } from '../i18n'
@@ -128,6 +128,15 @@ export default function Workouts() {
       },
       { replace: false },
     )
+
+  // ⚠️ A selection in the URL below the master/detail width — the Today card's
+  // link, a bookmark, a window narrowed after choosing — opens the session's
+  // own page. The narrow layout has no panel to show it in, and ignoring the
+  // `?w=` would leave the reader on the list, one click short of what they asked
+  // for. `replace`, so Back does not bounce them here again.
+  if (!wide && selectedParam) {
+    return <Navigate to={`/workouts/${encodeURIComponent(selectedParam)}`} replace />
+  }
 
   if (isLoading) return <Loading rows={1} />
   if (isError) return <ErrorState error={error} />

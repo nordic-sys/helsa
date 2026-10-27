@@ -6,6 +6,7 @@ import { useI18n } from './i18n'
 import { useFormat } from './lib/format'
 import { queueBadge, type QueueBadge } from './lib/ingest'
 import { useIngestStatus } from './lib/useIngestStatus'
+import { useRefreshOnIngest } from './lib/useRefreshOnIngest'
 import { DETAILS, LANDING, NAV, NAV_GROUPS, entriesIn, type NavEntry } from './nav'
 
 /** The path whose link carries the queue badge. */
@@ -41,6 +42,9 @@ export default function App() {
   // said it could not reach its queue, which is a different fact.
   const ingest = useIngestStatus(BADGE_POLL_MS)
   const badge = queueBadge(ingest.isError ? undefined : ingest.data)
+  // The frame polls the queue on every page, so it is the one place that sees
+  // the worker's written count advance — and refreshes the health data then.
+  useRefreshOnIngest(ingest.data)
 
   return (
     <div className="app">

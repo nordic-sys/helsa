@@ -16,6 +16,10 @@ a zero), the three rings, the most recent workout and last night with its stages
 **The long view**: the monthly challenge, the observations and the medals.
 **Status**: sync and completeness.
 
+The page keeps itself current: while the worker writes, the cards reload (at most
+once a minute, whenever the worker's count of written batches has moved), and a page
+left open past midnight moves on to the new day by itself. The same holds for Trends.
+
 The pill at the top reads the **sync queue**, not the phone. The phone counts an
 upload as done the moment it has handed it over, while the server may still be
 writing it for half an hour — so the pill says *up to date — nothing left to write*
@@ -100,7 +104,8 @@ count it twice.
 
 On a wide screen the list and the opened session sit side by side: a row selects
 the session into the right-hand half, and the choice is kept in the address
-(`/workouts?w=…`). On a narrow one a row opens the session's own page. The filter
+(`/workouts?w=…`). On a narrow one a row opens the session's own page, and so
+does a `?w=` address — a bookmark, or the latest-workout link on Today. The filter
 takes the type (several at once), indoor or outdoor and a minimum length in one
 row; distance, energy and heart-rate limits are under *More filters*.
 
