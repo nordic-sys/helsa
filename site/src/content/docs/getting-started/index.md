@@ -24,8 +24,8 @@ separate, deliberate step described in [Deployment](/deployment/).
 | | |
 |---|---|
 | **A Linux host** | A small VM or box that stays on. 2 vCPU / 4 GB RAM / 20 GB disk is comfortable. Running it on a laptop is fine for trying it out. |
-| **Docker and Compose v2** | Everything runs in containers. `docker compose version` should print v2.x. |
-| **`git`, `make`, `openssl`, `jq`** | Every step below is a `make` target, and the checks use `jq`. A fresh Debian or Ubuntu cloud image has neither: `sudo apt install make jq`. |
+| **Docker and Compose v2** | Everything runs in containers. `docker compose version` should print v2.x. Install it from Docker's own repository, following the official guide for your distribution: [Debian](https://docs.docker.com/engine/install/debian/) · [Ubuntu](https://docs.docker.com/engine/install/ubuntu/) · [others](https://docs.docker.com/engine/install/) — the distribution's own `docker.io` package is often too old for Compose v2. Then `sudo usermod -aG docker $USER` and log in again, so `docker` works without `sudo`. |
+| **`git`, `make`, `openssl`, `jq`** | Every step below is a `make` target, and the checks use `jq`. A fresh Debian or Ubuntu cloud image has none of `git`, `make` or `jq`: `sudo apt install git make jq openssl`. |
 | **An iPhone with the Helsa app** | The app is the only thing that can upload HealthKit data. Without it, the server has an empty database and a working API. |
 | **About 30 minutes** | Longer if you go on to real deployment — certificates are the slow part. |
 
