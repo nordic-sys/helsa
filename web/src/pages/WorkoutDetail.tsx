@@ -929,7 +929,9 @@ function SourceSection({ workout }: { workout: Workout }) {
         {workout.source_uuid && (
           <>
             <dt>{t('workout.source.uuid')}</dt>
-            <dd>
+            {/* `kv-id`: a 36-character id is wider than a 390px card can hold
+                beside its label; it wraps instead of overflowing. */}
+            <dd className="kv-id">
               <code>{workout.source_uuid}</code>
             </dd>
           </>

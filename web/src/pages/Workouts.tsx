@@ -378,6 +378,7 @@ function TypePicker({
   const f = useFormat()
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
+  const trigger = useRef<HTMLButtonElement>(null)
   const panelId = useId()
 
   useEffect(() => {
@@ -401,11 +402,17 @@ function TypePicker({
       className="multi filter-inline"
       ref={ref}
       onKeyDown={(e) => {
-        if (e.key === 'Escape') setOpen(false)
+        // ⚠️ Focus goes back to the button: the checkbox that held it is about
+        // to be removed, and focus on a removed element lands on <body>.
+        if (e.key === 'Escape' && open) {
+          setOpen(false)
+          trigger.current?.focus()
+        }
       }}
     >
       <span aria-hidden="true">{t('workouts.filter.type')}</span>
       <button
+        ref={trigger}
         type="button"
         className="multi-btn"
         aria-expanded={open}
@@ -515,13 +522,10 @@ function MonthSection({
 
   return (
     <div className="card month">
-      <button
-        type="button"
-        className="month-head"
-        aria-expanded={open}
-        onClick={onToggle}
-        aria-label={`${title}, ${tp('workouts.month.count', month.count)}`}
-      >
+      {/* No `aria-label`: the button's visible text — the month, the count,
+          the hours, and the "no end time, outside the total" caveat — IS its
+          name. An override with only month and count hid the other two. */}
+      <button type="button" className="month-head" aria-expanded={open} onClick={onToggle}>
         <Chevron open={open} />
         <strong>{title}</strong>
         {/* The count and the total, so a CLOSED month still says something. */}

@@ -371,3 +371,36 @@ describe('master and detail on a wide screen', () => {
     expect(screen.queryByRole('article', { name: /selected workout/i })).not.toBeInTheDocument()
   })
 })
+
+describe('keyboard and screen reader', () => {
+  it('returns focus to the type button when Escape closes the list', async () => {
+    workouts.mockResolvedValue({
+      items: [
+        w({ activity_type: 'running', started_at: iso(2026, 8, 5, 18), ended_at: iso(2026, 8, 5, 19) }),
+        w({ activity_type: 'yoga', started_at: iso(2026, 8, 3, 18), ended_at: iso(2026, 8, 3, 18, 40) }),
+      ],
+    })
+    show()
+    const button = await screen.findByRole('button', { name: /^Type:|^Típus:/ })
+    await userEvent.click(button)
+    const box = screen.getAllByRole('checkbox')[0]
+    box.focus()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('checkbox')).not.toBeInTheDocument()
+    expect(button).toHaveFocus()
+  })
+
+  it('names a month by everything it shows — the hours and the caveat included', async () => {
+    workouts.mockResolvedValue({
+      items: [
+        w({ started_at: iso(2026, 8, 5, 18), ended_at: iso(2026, 8, 5, 19) }),
+        w({ started_at: iso(2026, 8, 7, 18) }), // no end time
+      ],
+    })
+    show()
+    const month = await screen.findByRole('button', { name: /august 2026|2026\. augusztus/i })
+    expect(month).not.toHaveAttribute('aria-label')
+    expect(month).toHaveAccessibleName(/1 h|1 ó/)
+    expect(month).toHaveAccessibleName(/no end time, outside the total|befejezés/i)
+  })
+})

@@ -200,7 +200,18 @@ export function routeCamera(
 
 // --- The style ---------------------------------------------------------------
 
-/** The two palettes. Muted on purpose: `--helsa-fjord` has to read on top. */
+/**
+ * The two palettes. Muted on purpose: `--helsa-fjord` has to read on top.
+ *
+ * ⚠️ **A separate palette from `styles/tokens.css`, deliberately.** These colours
+ * go into a MapLibre style object, which is evaluated by WebGL and cannot read
+ * CSS custom properties — so they cannot be `var(--…)`. They are not UI colours
+ * either: they are the GROUND the route line is drawn on, tuned against
+ * `--helsa-fjord` in each theme (light against the light card, dark against the
+ * dark one). Change a surface token and these may need re-tuning by eye; they are
+ * kept here, next to the style that uses them, rather than pretending to be part
+ * of the token set.
+ */
 type Palette = {
   background: string
   water: string

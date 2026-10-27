@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import { browserTz } from './api/client'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
@@ -34,9 +34,18 @@ const BADGE_POLL_MS = 30_000
 export default function App() {
   const { t } = useI18n()
   const [menuOpen, setMenuOpen] = useState(false)
+  const toggleRef = useRef<HTMLButtonElement>(null)
   // Following a link closes it — otherwise the panel stands over the page it was
   // just asked for. Escape does the same, from anywhere inside the bar.
   const close = () => setMenuOpen(false)
+  /** Escape: close, and put focus back on the button that opened the panel —
+   * the focused link is about to be hidden, and focus on a hidden element is
+   * focus nowhere. Only while it is open: at rail width nothing is opened. */
+  const dismiss = () => {
+    if (!menuOpen) return
+    setMenuOpen(false)
+    toggleRef.current?.focus()
+  }
   // ⚠️ A failed request is NOT a reading: a missing token or an older server
   // draws no badge rather than a "?" — the "?" means the server answered and
   // said it could not reach its queue, which is a different fact.
@@ -52,13 +61,34 @@ export default function App() {
         className="sidebar"
         aria-label={t('nav.aria')}
         onKeyDown={(e) => {
-          if (e.key === 'Escape') close()
+          if (e.key === 'Escape') dismiss()
         }}
       >
         <div className="brand">
           <BrandMark />
           <span>Helsa</span>
         </div>
+
+        {/* Drawn only in the bar layout. `aria-expanded` carries the state, so
+            the label does not have to change between "Menu" and "Close".
+            ⚠️ BEFORE the groups in the markup, because it is before them on
+            screen: opening the menu and pressing Tab has to reach the links it
+            just revealed, not skip to the page. At rail width it is not drawn
+            (`display: none`), so it takes no part in the column there. */}
+        <button
+          ref={toggleRef}
+          type="button"
+          className="nav-toggle"
+          aria-expanded={menuOpen}
+          aria-controls="nav-groups"
+          onClick={() => setMenuOpen((v) => !v)}
+        >
+          {t('nav.menu')}
+          {/* The badge rides on the button while the panel is shut — otherwise a
+              phone would hide the one thing in the menu that needs a person. */}
+          {badge && !menuOpen && <Badge badge={badge} />}
+          <Chevron open={menuOpen} />
+        </button>
 
         <div className="nav-groups" id="nav-groups" data-open={menuOpen}>
           {/* The landing page, above the headings and not under one. */}
@@ -90,11 +120,12 @@ export default function App() {
           ))}
         </div>
 
-        {/* ⚠️ Both of these come AFTER the groups in the markup, and the bar
-            reorders them with `order` rather than the markup being written for
-            it. The rail is a column with `margin-top: auto` on the switcher —
-            put anything above the groups and that auto pushes the LINKS to the
-            bottom of the screen with it. Which is exactly what happened. */}
+        {/* ⚠️ AFTER the groups in the markup, and on screen in both layouts:
+            in the rail it sits at the bottom (`margin-top: auto` — put it above
+            the groups and that auto pushes the LINKS to the bottom with it,
+            which is exactly what happened once); in the bar it follows the Menu
+            button, and drops under the panel while the panel is open, so the
+            order you see is the order Tab takes. */}
         <div className="sidebar-foot">
           <LanguageSwitcher />
           <span className="sidebar-host" aria-label={t('nav.serverAria')}>
@@ -102,21 +133,6 @@ export default function App() {
           </span>
         </div>
 
-        {/* Drawn only in the bar layout. `aria-expanded` carries the state, so
-            the label does not have to change between "Menu" and "Close". */}
-        <button
-          type="button"
-          className="nav-toggle"
-          aria-expanded={menuOpen}
-          aria-controls="nav-groups"
-          onClick={() => setMenuOpen((v) => !v)}
-        >
-          {t('nav.menu')}
-          {/* The badge rides on the button while the panel is shut — otherwise a
-              phone would hide the one thing in the menu that needs a person. */}
-          {badge && !menuOpen && <Badge badge={badge} />}
-          <Chevron open={menuOpen} />
-        </button>
       </nav>
 
       <main className="main">

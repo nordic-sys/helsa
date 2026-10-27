@@ -88,7 +88,7 @@ code {
   gap: 10px;
   padding: 0 10px;
   font-weight: 700;
-  font-size: 20px;
+  font-size: var(--fs-brand);
   letter-spacing: -0.01em;
   color: var(--text);
 }
@@ -270,13 +270,15 @@ code {
     margin-right: auto;
   }
 
+  /* ⚠️ No `order` here: the markup is already in the order things appear —
+     brand, Menu, the panel, then the language switcher — so Tab follows the eye.
+     The panel takes a full row, so while it is open the switcher drops under
+     it; while it is shut the switcher sits beside the button. */
   .nav-toggle {
     display: inline-flex;
-    order: 3;
   }
 
   .sidebar-foot {
-    order: 2;
     margin: 0;
     padding: 0;
     border: 0;
@@ -291,7 +293,6 @@ code {
   /* The panel: its own row under the bar, scrollable rather than taller than the
      screen — a menu you cannot see the bottom of has a hidden last item. */
   .nav-groups {
-    order: 4;
     flex: 1 0 100%;
     gap: var(--sp-3);
     padding: 6px 0 4px;
@@ -546,7 +547,7 @@ a.card:focus-visible {
 }
 /* A sentence that leads a card instead of a number. */
 .card-lead {
-  font-size: 16px;
+  font-size: var(--fs-card-lead);
   font-weight: 600;
   margin: 0 0 6px;
   line-height: 1.35;
@@ -570,6 +571,18 @@ a.card:focus-visible {
   text-align: right;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+/* An identifier (a UUID) is one unbreakable "word" wider than a phone's card
+   can hold beside its label — and with `dt { min-width: 0 }` the label is what
+   got squeezed, under the id. So it goes on its own line under the label, and
+   may still break anywhere on the narrowest screens. */
+.kv dd.kv-id {
+  grid-column: 1 / -1;
+  margin-top: -2px;
+  text-align: left;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  min-width: 0;
 }
 
 .card-list {
@@ -878,7 +891,7 @@ button.seg[aria-pressed='true'] {
   flex-wrap: wrap;
   gap: 4px;
   padding: 4px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: var(--surface-3);
   margin: 0;
 }
@@ -886,7 +899,7 @@ button.seg[aria-pressed='true'] {
   min-width: 64px;
   min-height: 36px;
   border: 0;
-  border-radius: 9px;
+  border-radius: var(--radius-segment);
   background: transparent;
   color: var(--text-2);
 }
@@ -1014,16 +1027,19 @@ a.linkish {
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 2px;
-  min-height: 24px;
+  /* A standalone control: the product's 44px hit area, centred on the text. */
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--touch);
 }
 
 .field {
   flex: 1 1 220px;
   min-width: 0;
-  min-height: 40px;
+  min-height: var(--touch);
   padding: 0 12px;
   border-radius: var(--radius-sm);
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--field-border);
   background: var(--surface);
   color: var(--text);
   font: inherit;
@@ -1267,7 +1283,7 @@ select.field {
   border-radius: 5px;
   border: 1px solid var(--border-strong);
   color: var(--text-dim);
-  font-size: 11px;
+  font-size: var(--fs-tag);
   font-weight: 500;
   white-space: nowrap;
 }
@@ -1390,10 +1406,10 @@ select.field {
   display: inline-flex;
   align-items: center;
   gap: var(--sp-2);
-  min-height: 40px;
+  min-height: var(--touch);
   max-width: 280px;
   padding: 0 12px;
-  border: 1px solid var(--border-strong);
+  border: 1px solid var(--field-border);
   border-radius: var(--radius-sm);
   background: var(--surface);
   color: var(--text);
@@ -1574,7 +1590,7 @@ select.field {
   width: 40px;
   height: 40px;
   flex: 0 0 40px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: var(--accent-tint);
   color: var(--helsa-fjord);
   display: flex;
@@ -1596,7 +1612,7 @@ select.field {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 16px;
+  font-size: var(--fs-row-title);
   font-weight: 600;
 }
 .wo-name svg {
@@ -1745,7 +1761,7 @@ select.field {
 .wo-header h1,
 .wo-header h2 {
   margin: 0;
-  font-size: 26px;
+  font-size: var(--fs-title-sm);
   font-weight: 700;
   color: var(--text);
   letter-spacing: -0.01em;
@@ -1837,7 +1853,7 @@ select.field {
   border-top-left-radius: var(--radius-sm);
   background: color-mix(in srgb, var(--surface) 78%, transparent);
   color: var(--text-dim);
-  font-size: 11px;
+  font-size: var(--fs-tag);
   line-height: 1.5;
 }
 .route-scale {
@@ -1860,7 +1876,7 @@ select.field {
   gap: 4px 12px;
   min-height: 48px;
   padding: 8px 14px;
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   background: var(--surface-2);
   color: var(--text);
   font-size: var(--fs-small);
@@ -1951,7 +1967,7 @@ a.dup-row:hover {
   flex-wrap: wrap;
 }
 .figure-sm {
-  font-size: 22px;
+  font-size: var(--fs-figure-xs);
 }
 .failure-list {
   list-style: none;
@@ -1978,12 +1994,14 @@ a.dup-row:hover {
   cursor: pointer;
   font-size: var(--fs-caption);
   color: var(--accent-text);
-  min-height: 24px;
+  /* 44px tall without `display: flex`, which would drop the disclosure marker. */
+  line-height: 20px;
+  padding-block: 12px;
 }
 .failure-list pre {
   margin: 6px 0 0;
   padding: 8px 10px;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   background: var(--surface-2);
   font-size: var(--fs-micro);
   white-space: pre-wrap;

@@ -21,6 +21,10 @@
  *  - **Semantic alert colours** — `ok`, `info`, `warn`, `error` — each a
  *    background, a border, a strong foreground (title) and a body foreground.
  *  - **A type scale and a spacing scale**, so a page stops choosing its own 13.5s.
+ *    The intentional exceptions (a 22px figure, a 16px card lead, a 9px segment)
+ *    are named tokens too, so an exception is a decision made once.
+ *  - **The map has its own palette** (`lib/routeMap.ts`): MapLibre styles are
+ *    evaluated in WebGL and cannot read these properties.
  *
  * ⚠️ No web font. The mockups were drawn in Inter, but fetching a font from a
  * third party on a page of health data is exactly the request this project does
@@ -49,7 +53,12 @@
   --surface-3: #e4e5e8; /* the track of a segmented control */
   --border: #e4e5e8;
   --card-border: transparent; /* on the light ground a card needs no outline */
-  --border-strong: #d4d5da; /* inputs */
+  --border-strong: #d4d5da; /* decorative outlines: chips, pills, quiet buttons */
+  /* The boundary that IDENTIFIES a form control (a select, the type picker).
+     WCAG 1.4.11 asks 3:1 against the adjacent colour: 3.58:1 on the card,
+     3.22:1 on the ground. `--border-strong` was 1.47:1 — fine for decoration,
+     not for "this is where you type". */
+  --field-border: #86878e;
   --line: #edeef0; /* hairlines between rows inside a card */
   --text: #1c1c1e;
   --text-2: #3a3a3f; /* secondary body copy */
@@ -94,6 +103,12 @@
   --fs-figure: 28px; /* a card's headline figure */
   --fs-figure-sm: 24px; /* a tile inside a page section */
   --fs-lead: 17px;
+  --fs-card-lead: 16px; /* a sentence that leads a card in place of a number */
+  --fs-brand: 20px; /* the wordmark beside the brand mark */
+  --fs-figure-xs: 22px; /* a figure in a dense row of three (sync queue totals) */
+  --fs-title-sm: 26px; /* a detail page's heading inside its own card */
+  --fs-row-title: 16px; /* the name on a list row (a workout) */
+  --fs-tag: 11px; /* an uppercase chip: a coverage flag, a map label */
   --fs-body: 15px;
   --fs-small: 14px;
   --fs-caption: 13px;
@@ -113,6 +128,12 @@
   --radius-card: 20px;
   --radius: 16px; /* a small tile */
   --radius-sm: 10px; /* a button, an input, a row */
+  /* The small exceptions, named so they stop being chosen one at a time. */
+  --radius-md: 12px; /* an icon tile, a panel, the track of a segmented control */
+  --radius-segment: 9px; /* a segment inside that track: 12px − its 3px inset */
+  --radius-xs: 8px; /* a code block or a chip inside a card */
+  /* Radii under 8px — the focus ring, stage swatches, bar ends — scale with the
+     tiny element they round and stay literal where they are used. */
   --radius-pill: 999px;
   --gap: 16px;
 
@@ -141,6 +162,7 @@
     --border: #2a333b;
     --card-border: #20282f; /* the dark ground is too close to the card to carry it alone */
     --border-strong: #3a454f;
+    --field-border: #66737f; /* 3.57:1 on the card, 3.19:1 on the inset */
     --line: #232b32;
     --text: #eef2f5;
     --text-2: #cfd7de;
@@ -191,6 +213,7 @@
   --border: #2a333b;
   --card-border: #20282f;
   --border-strong: #3a454f;
+  --field-border: #66737f;
   --line: #232b32;
   --text: #eef2f5;
   --text-2: #cfd7de;

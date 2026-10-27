@@ -135,3 +135,32 @@ describe('the queue badge', () => {
     expect(screen.getByText(/Europe\/Budapest/)).toBeInTheDocument()
   })
 })
+
+/**
+ * The bar layout's menu, by keyboard. The CSS hides the panel only below 900px
+ * (jsdom applies no media queries), so what is pinned is the markup order and
+ * where focus goes — the two things a stylesheet cannot fix.
+ */
+describe('the menu button', () => {
+  it('comes before the links it reveals, so Tab reaches them next', async () => {
+    ingestStatus.mockResolvedValue(status())
+    show()
+    const toggle = screen.getByRole('button', { name: /^Menu/ })
+    const firstLink = within(screen.getByRole('navigation')).getAllByRole('link')[0]
+    expect(toggle.compareDocumentPosition(firstLink) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  })
+
+  it('returns focus to itself when Escape closes the panel', async () => {
+    const userEvent = (await import('@testing-library/user-event')).default
+    ingestStatus.mockResolvedValue(status())
+    show()
+    const toggle = screen.getByRole('button', { name: /^Menu/ })
+    await userEvent.click(toggle)
+    expect(toggle).toHaveAttribute('aria-expanded', 'true')
+    const link = within(screen.getByRole('navigation')).getByRole('link', { name: /^Trends/ })
+    link.focus()
+    await userEvent.keyboard('{Escape}')
+    expect(toggle).toHaveAttribute('aria-expanded', 'false')
+    expect(toggle).toHaveFocus()
+  })
+})
