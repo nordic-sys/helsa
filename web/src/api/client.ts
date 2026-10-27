@@ -7,6 +7,7 @@ import type {
   CoverageResponse,
   Device,
   Goal,
+  IngestRedriveResult,
   IngestStatus,
   Insight,
   Range,
@@ -155,6 +156,22 @@ export const api = {
 
   /** The ingest queue: backlog, dead letters, drain rate. The page polls it. */
   ingestStatus: () => req<IngestStatus>('/ingest/status'),
+  /**
+   * Moves dead-lettered batches back onto the ingest queue.
+   *
+   * ⚠️ The web's one write, and it is not a write of health data: it asks the
+   * server to put batches the phone ALREADY sent back in line. Nothing here
+   * creates, edits or deletes a measurement — the read-only rule (docs/06) is
+   * about the data, and the data is untouched. Without `max` the server moves
+   * every batch waiting when the call starts, at most 1000.
+   */
+  redriveDeadLetters: (max?: number) =>
+    req<IngestRedriveResult>('/ingest/dead-letter/redrive', {
+      method: 'POST',
+      ...(max != null
+        ? { body: JSON.stringify({ max }), headers: { 'Content-Type': 'application/json' } }
+        : {}),
+    }),
 
   goals: () => req<Goal[]>('/goals'),
 

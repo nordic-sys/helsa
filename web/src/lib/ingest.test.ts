@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { IngestStatus } from '../api/types'
 import {
+  deadLetterReasons,
   deadLetters,
+  failureKind,
   etaMinutes,
   isApiTooOld,
   phase,
@@ -130,5 +132,50 @@ describe('version skew', () => {
     expect(isApiTooOld({ status: 404 })).toBe(true)
     expect(isApiTooOld({ status: 500 })).toBe(false)
     expect(isApiTooOld(undefined)).toBe(false)
+  })
+})
+
+const fail = (over = {}) => ({
+  failed_at: '2026-10-27T12:20:00Z',
+  error: 'boom',
+  items: 10,
+  samples: 10,
+  workouts: 0,
+  sleep_segments: 0,
+  activity_summaries: 0,
+  deletions: 0,
+  redriven: 0,
+  ...over,
+})
+
+describe('the reasons for set-aside parts', () => {
+  it('reads the log as a log: entries before the last redrive were moved back', () => {
+    const r = deadLetterReasons(
+      base({
+        dead_letter: {
+          name: 'dlq',
+          ready: 2,
+          recent_failures: [fail({ failed_at: '2026-10-27T12:30:00Z' }), fail({ failed_at: '2026-10-27T11:00:00Z' })],
+          last_redrive: { at: '2026-10-27T12:00:00Z', moved: 1 },
+        },
+      }),
+    )
+    expect(r.current).toHaveLength(1)
+    expect(r.movedBack).toHaveLength(1)
+    expect(r.unrecorded).toBe(1)
+  })
+  it('never lists more current reasons than the queue holds', () => {
+    const r = deadLetterReasons(
+      base({ dead_letter: { name: 'dlq', ready: 1, recent_failures: [fail(), fail()] } }),
+    )
+    expect(r.current).toHaveLength(1)
+    expect(r.unrecorded).toBe(0)
+  })
+  it('classifies only what the error says in words', () => {
+    expect(failureKind(fail({ items: 0 }))).toBe('undecodable')
+    expect(failureKind(fail({ error: 'dial tcp: connection refused' }))).toBe('transient')
+    expect(failureKind(fail({ error: 'FATAL: the database system is starting up (SQLSTATE 57P03)' }))).toBe('transient')
+    expect(failureKind(fail({ error: 'ERROR: value too long (SQLSTATE 22001)' }))).toBe('rejected')
+    expect(failureKind(fail({ error: 'something else' }))).toBe('other')
   })
 })

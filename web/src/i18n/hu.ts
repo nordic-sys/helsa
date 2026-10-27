@@ -652,22 +652,18 @@ export const hu = {
     // ⚠️ A számok mögé sehol nem kerül toldalék (lásd `coverage.headline`):
     // a mondatok úgy vannak fogalmazva, hogy a szám a végén vagy zárójelben álljon.
     'ingest.title': 'Feltöltési sor',
-    'ingest.subtitle':
-      'A telefon gyorsabban tölt fel, mint ahogy a szerver beírja az adatbázisba. Itt látszik, mennyi vár még, és milyen ütemben fogy.',
+    'ingest.subtitle': 'Amit a telefon már átadott, de a szerver még nem írt be az adatbázisba. Amint a telefon átad egy részt, az ő dolga kész — ez az oldal az utána következő szakaszt mutatja.',
     'ingest.checkedAt': 'Frissítve: {time} · ötmásodpercenként frissül magától',
     'ingest.stale.title': 'Nem sikerült frissíteni',
     'ingest.stale.body': 'Ami lent látszik, az az utolsó sikeres lekérdezés (frissítve: {time}).',
-    'ingest.unreachable.title': 'A RabbitMQ nem érhető el',
-    'ingest.unreachable.body':
-      'Az API nem tudta megkérdezni a sort, ezért a várakozó kötegek száma ismeretlen — nem nulla. Amíg így marad, a szerver a feltöltéseket is visszautasítja.',
+    'ingest.unreachable.title': 'A sor most nem olvasható',
+    'ingest.unreachable.body': 'A szerver nem éri el a sorát (RabbitMQ), így nincs mit mutatni — nem nulla, hanem semmi. Amíg ez tart, a szerver a feltöltéseket is elutasítja.',
     'ingest.unreachable.detail': 'A hiba: {error}',
-    'ingest.dlq.title.one': '{n} köteg nem került be az adatbázisba',
-    'ingest.dlq.title.other': '{n} köteg nem került be az adatbázisba',
-    'ingest.dlq.body':
-      'Ezeket a worker feladta, és a holtlevél-sorba ({name}) kerültek. Magától semmi nem próbálja újra őket: amíg valaki nem foglalkozik velük, ez az adat hiányzik a szerverről. A dokumentáció leírja, mit lehet tenni.',
-    'ingest.noConsumer.title': 'Senki nem dolgozza fel a sort',
-    'ingest.noConsumer.body':
-      'Kötegek várnak, de egyetlen worker sem kapcsolódik. Ez nem lassúság: amíg nem fut worker, a sor nem fogy. Nézd meg a worker konténert.',
+    'ingest.dlq.title.one': '{n} részt nem sikerült beírni, ezért félre van téve',
+    'ingest.dlq.title.other': '{n} részt nem sikerült beírni, ezért félre vannak téve',
+    'ingest.dlq.body': 'Magától semmi nem próbálja újra őket, és a telefon már továbblépett, így ez az adat még nincs az adatbázisban.',
+    'ingest.noConsumer.title': 'Részek várnak, és semmi nem írja be őket',
+    'ingest.noConsumer.body': 'Lassúságnak tűnik, de nem az: amíg nem fut worker, a sor egyáltalán nem fogy. Nézd meg a worker konténert ({ps}, {logs}).',
     'ingest.noWorkerIdle.title': 'Nincs kapcsolódó worker',
     'ingest.noWorkerIdle.body':
       'A sor most üres, de a következő feltöltést senki nem fogja feldolgozni, amíg a worker nem fut.',
@@ -810,6 +806,104 @@ export const hu = {
     'workouts.row.open': 'Megnyitás',
     'workouts.select.hint': 'Válassz egy edzést a listából.',
     'workouts.row.max': 'max',
+
+    // --- Sync queue: the redesigned page, set-aside reasons and the retry ------
+    'ingest.unreachable.lastGood': 'Utolsó sikeres lekérdezés: {time}.',
+    'ingest.apiOld.title': 'A szerver API-ja régebbi, mint ez a weboldal',
+    'ingest.apiOld.body':
+      'Az oldal olyasmit kért a szervertől, amit az még nem ismer. Ez akkor történik, ha a web image előbb frissül, mint a backend image. Frissítsd a szervert, aztán töltsd újra az oldalt:',
+    'ingest.apiOld.tech':
+      'Technikailag: az API 404-et adott egy útvonalra, amire az oldal épít, miközben a többi része működik.',
+    'ingest.hero.waiting': 'Beírásra vár',
+    'ingest.hero.parts.one': 'rész',
+    'ingest.hero.parts.other': 'rész',
+    'ingest.hero.tech': 'köteg a(z) {name} sorban',
+    'ingest.hero.etaLabel': 'Ezzel az ütemmel — becslés',
+    'ingest.hero.eta': 'nagyjából {duration}',
+    'ingest.hero.nothing': 'Nincs mire várni',
+    'ingest.hero.notMoving': 'Nem halad',
+    'ingest.hero.noEstimate': 'nincs becslés',
+    'ingest.tile.rate': 'Ütem',
+    'ingest.tile.rateUnit': 'rész/perc',
+    'ingest.tile.itemsRate': '≈ {n} elem percenként',
+    'ingest.tile.noRate': 'Az időablakban semmi nem készült el',
+    'ingest.tile.worker': 'Worker',
+    'ingest.worker.state.working': 'Dolgozik',
+    'ingest.worker.state.waiting': 'Vár',
+    'ingest.worker.state.none': 'Nincs',
+    'ingest.worker.line.none': 'Egy worker sem kapcsolódik',
+    'ingest.worker.line.connected.one': '{n} worker kapcsolódik',
+    'ingest.worker.line.connected.other': '{n} worker kapcsolódik',
+    'ingest.tile.last': 'Utoljára beírva',
+    'ingest.tile.lastNone': 'A worker indulása óta semmi nem íródott be',
+    'ingest.tile.setAside': 'Félretéve',
+    'ingest.tile.setAsideNote': 'Nem sikerült beírni; magától nem próbálja újra',
+    'ingest.tile.setAsideTech': 'a holtlevél-sor',
+    'ingest.since.title': 'Beírva a worker indulása óta · {when}',
+    'ingest.since.parts': 'rész',
+    'ingest.since.items': 'elem',
+    'ingest.since.setAside': 'félretéve',
+    'ingest.dlq.tech':
+      'Technikailag: a RabbitMQ holtlevél-sora, {name}. Minden rész teljes hibaüzenete a worker naplójában van:',
+    'ingest.dlq.resync':
+      'Ha az újrapróbálás nem segít, a telefonon a „Teljes újraszinkron” ugyanazt az adatot küldi el újra — a beírás idempotens, így semmi nem tárolódik kétszer.',
+    'ingest.redrive.button.one': '{n} félretett rész újrapróbálása',
+    'ingest.redrive.button.other': '{n} félretett rész újrapróbálása',
+    'ingest.redrive.confirmAria': 'Az újrapróbálás megerősítése',
+    'ingest.redrive.confirm.one':
+      'Újrapróbálod a(z) {n} részt? A beírás idempotens: ami már az adatbázisban van, az csak frissül.',
+    'ingest.redrive.confirm.other':
+      'Újrapróbálod a(z) {n} részt? A beírás idempotens: ami már az adatbázisban van, az csak frissül.',
+    'ingest.redrive.confirmYes': 'Újrapróbálás',
+    'ingest.redrive.cancel': 'Mégse',
+    'ingest.redrive.running': 'Újrapróbálás…',
+    'ingest.redrive.result':
+      '{moved} visszakerült a sorba · {remaining} még félre van téve',
+    'ingest.redrive.resultUnknown':
+      '{moved} visszakerült a sorba · hogy mennyi van még félretéve, azt nem sikerült kiolvasni',
+    'ingest.redrive.stopped':
+      'Félúton megállt: {reason}. Az éppen mozgatott rész visszakerült a helyére; a fenti szám pontos.',
+    'ingest.redrive.repeated.one':
+      'Közülük {n} már 3 vagy több újrapróbálás után is elbukott — amíg az ok nincs javítva, újabb próba aligha segít.',
+    'ingest.redrive.repeated.other':
+      'Közülük {n} már 3 vagy több újrapróbálás után is elbukott — amíg az ok nincs javítva, újabb próba aligha segít.',
+    'ingest.redrive.watch':
+      'A worker másodperceken belül felveszi őket. Ami a tartalma miatt bukik el, hamarosan újra itt lesz — az oldal magától frissül.',
+    'ingest.redrive.busy':
+      'Már fut egy újrapróbálás. Várd meg a végét, aztán nézz rá újra.',
+    'ingest.redrive.brokerDown': 'A RabbitMQ nem volt elérhető, így semmi nem mozdult.',
+    'ingest.redrive.failed': 'Az újrapróbálás nem futott le: {reason}',
+    'ingest.redrive.tooOld':
+      'Az innen indított újrapróbáláshoz újabb szerver-API kell. Frissítsd a szervert ({cmd}), aztán töltsd újra az oldalt.',
+    'ingest.reasons.title': 'Miért kerültek félre',
+    'ingest.reason.transient':
+      'Abban a pillanatban nem volt elérhető az adatbázis vagy a hálózat — az újrapróbálás általában sikerül.',
+    'ingest.reason.rejected':
+      'Az adatbázis visszautasította a tartalmát — amíg az ok nincs javítva, ugyanez a rész újra el fog bukni.',
+    'ingest.reason.undecodable': 'A worker egyáltalán nem tudta kiolvasni ezt a részt.',
+    'ingest.reason.other': 'A worker nem tudta beírni.',
+    'ingest.reason.items.one': '{n} elem',
+    'ingest.reason.items.other': '{n} elem',
+    'ingest.reason.samples.one': '{n} minta',
+    'ingest.reason.samples.other': '{n} minta',
+    'ingest.reason.workouts.one': '{n} edzés',
+    'ingest.reason.workouts.other': '{n} edzés',
+    'ingest.reason.sleep.one': '{n} alvás-szakasz',
+    'ingest.reason.sleep.other': '{n} alvás-szakasz',
+    'ingest.reason.activity.one': '{n} aktivitás-összesítő',
+    'ingest.reason.activity.other': '{n} aktivitás-összesítő',
+    'ingest.reason.deletions.one': '{n} törlés',
+    'ingest.reason.deletions.other': '{n} törlés',
+    'ingest.reason.repeated': '{n} újrapróbálás után is elbukott',
+    'ingest.reason.raw': 'A worker üzenete',
+    'ingest.reason.batch': 'Köteg: {id}',
+    'ingest.reason.notRecorded.one': '{n} rész: az ok nincs feljegyezve',
+    'ingest.reason.notRecorded.other': '{n} rész: az ok nincs feljegyezve',
+    'ingest.reason.notRecordedHint':
+      'Még azelőtt került félre, hogy a szerver feljegyezte volna az okot, vagy a feljegyzés nem olvasható. A lenti worker-naplóban a hiba megvan.',
+    'ingest.reason.lastRedrive': 'Legutóbbi újrapróbálás: {when}, {moved} került vissza.',
+    'ingest.reason.movedBack.one': 'A naplóban {n} korábbi hibát az vitt vissza.',
+    'ingest.reason.movedBack.other': 'A naplóban {n} korábbi hibát az vitt vissza.',
   },
 
   // --- Metric group names ---------------------------------------------------

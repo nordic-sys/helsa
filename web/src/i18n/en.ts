@@ -658,23 +658,19 @@ export const en: Dict = {
       'Not one of the catalogue’s types has reached this server. If the phone is uploading, the first sync may still be running.',
 
     // --- Ingest queue ------------------------------------------------------
-    'ingest.title': 'Ingest queue',
-    'ingest.subtitle':
-      'The phone uploads faster than the server writes to the database. This is how much is still waiting, and how fast it is going down.',
+    'ingest.title': 'Sync queue',
+    'ingest.subtitle': 'What the phone has already handed over and the server has not written into the database yet. Once the phone hands a part over, its job is done — this page is the part that happens after.',
     'ingest.checkedAt': 'Updated {time} · refreshes itself every 5 seconds',
     'ingest.stale.title': 'Could not refresh',
     'ingest.stale.body': 'What is shown below is the last successful reading (updated {time}).',
-    'ingest.unreachable.title': 'RabbitMQ cannot be reached',
-    'ingest.unreachable.body':
-      'The API could not ask the queue, so the number of waiting batches is unknown — not zero. While this lasts, the server refuses uploads too.',
+    'ingest.unreachable.title': 'The queue cannot be read right now',
+    'ingest.unreachable.body': 'The server could not reach its queue (RabbitMQ), so there are no numbers to show — not zero, none. While this lasts, the server refuses uploads too.',
     'ingest.unreachable.detail': 'The error: {error}',
-    'ingest.dlq.title.one': '{n} batch was not written to the database',
-    'ingest.dlq.title.other': '{n} batches were not written to the database',
-    'ingest.dlq.body':
-      'The worker gave up on these and they went to the dead-letter queue ({name}). Nothing retries them on its own: until someone acts, this data is missing from the server. The documentation says what can be done.',
-    'ingest.noConsumer.title': 'Nobody is consuming the queue',
-    'ingest.noConsumer.body':
-      'Batches are waiting and no worker is connected. This is not slowness: until a worker runs, the queue does not go down. Check the worker container.',
+    'ingest.dlq.title.one': '{n} part could not be written and is set aside',
+    'ingest.dlq.title.other': '{n} parts could not be written and are set aside',
+    'ingest.dlq.body': 'Nothing retries them on its own, and the phone has already moved on, so this data is not in the database yet.',
+    'ingest.noConsumer.title': 'Parts are waiting and nothing is writing them',
+    'ingest.noConsumer.body': 'This looks like slowness and is not: the queue will not shrink at all until a worker runs. Check the worker container ({ps}, {logs}).',
     'ingest.noWorkerIdle.title': 'No worker connected',
     'ingest.noWorkerIdle.body':
       'The queue is empty right now, but nothing will process the next upload until the worker runs.',
@@ -817,6 +813,105 @@ export const en: Dict = {
     'workouts.row.open': 'Open',
     'workouts.select.hint': 'Choose a workout from the list.',
     'workouts.row.max': 'max',
+
+    // --- Sync queue: the redesigned page, set-aside reasons and the retry ------
+    'ingest.unreachable.lastGood': 'Last successful reading: {time}.',
+    'ingest.apiOld.title': 'This server’s API is older than this web page',
+    'ingest.apiOld.body':
+      'The page asked the server for something it does not know yet. That happens when the web image is updated before the backend image. Update the server, then reload this page:',
+    'ingest.apiOld.tech':
+      'Technically: the API answered 404 to a route this page relies on, while the rest of it works.',
+    'ingest.hero.waiting': 'Waiting to be written',
+    'ingest.hero.parts.one': 'part',
+    'ingest.hero.parts.other': 'parts',
+    'ingest.hero.tech': 'batches in {name}',
+    'ingest.hero.etaLabel': 'At this rate — an estimate',
+    'ingest.hero.eta': 'about {duration}',
+    'ingest.hero.nothing': 'Nothing to wait for',
+    'ingest.hero.notMoving': 'Not moving',
+    'ingest.hero.noEstimate': 'no estimate',
+    'ingest.tile.rate': 'Rate',
+    'ingest.tile.rateUnit': 'parts/min',
+    'ingest.tile.itemsRate': '≈ {n} items a minute',
+    'ingest.tile.noRate': 'Nothing finished in the window',
+    'ingest.tile.worker': 'Worker',
+    'ingest.worker.state.working': 'Working',
+    'ingest.worker.state.waiting': 'Waiting',
+    'ingest.worker.state.none': 'None',
+    'ingest.worker.line.none': 'No worker is connected',
+    'ingest.worker.line.connected.one': '{n} worker connected',
+    'ingest.worker.line.connected.other': '{n} workers connected',
+    'ingest.tile.last': 'Last written',
+    'ingest.tile.lastNone': 'Nothing written since the worker started',
+    'ingest.tile.setAside': 'Set aside',
+    'ingest.tile.setAsideNote': 'Could not be written; not retried by itself',
+    'ingest.tile.setAsideTech': 'the dead-letter queue',
+    'ingest.since.title': 'Written since the worker started · {when}',
+    'ingest.since.parts': 'parts',
+    'ingest.since.items': 'items',
+    'ingest.since.setAside': 'set aside',
+    'ingest.dlq.tech':
+      'Technically: RabbitMQ’s dead-letter queue, {name}. The full error of each part is in the worker’s log:',
+    'ingest.dlq.resync':
+      'If retrying does not help, a “Full resync” on the phone sends the same data again — the writes are idempotent, so nothing is stored twice.',
+    'ingest.redrive.button.one': 'Retry {n} set-aside part',
+    'ingest.redrive.button.other': 'Retry {n} set-aside parts',
+    'ingest.redrive.confirmAria': 'Confirm the retry',
+    'ingest.redrive.confirm.one':
+      'Retry {n} part? Writing is idempotent: anything already in the database is only updated.',
+    'ingest.redrive.confirm.other':
+      'Retry {n} parts? Writing is idempotent: anything already in the database is only updated.',
+    'ingest.redrive.confirmYes': 'Retry',
+    'ingest.redrive.cancel': 'Cancel',
+    'ingest.redrive.running': 'Retrying…',
+    'ingest.redrive.result':
+      'Moved {moved} back to the queue · {remaining} still set aside',
+    'ingest.redrive.resultUnknown':
+      'Moved {moved} back to the queue · how many are still set aside could not be read',
+    'ingest.redrive.stopped':
+      'It stopped part-way: {reason}. The part being moved at that moment went back where it was; the count above is exact.',
+    'ingest.redrive.repeated.one':
+      '{n} of them had already failed after 3 or more retries — pressing again is unlikely to help until the cause is fixed.',
+    'ingest.redrive.repeated.other':
+      '{n} of them had already failed after 3 or more retries — pressing again is unlikely to help until the cause is fixed.',
+    'ingest.redrive.watch':
+      'The worker picks them up within seconds. A part that fails on its content will be back here soon — this page refreshes itself.',
+    'ingest.redrive.busy':
+      'A retry is already running. Wait for it to finish, then look again.',
+    'ingest.redrive.brokerDown': 'RabbitMQ could not be reached, so nothing was moved.',
+    'ingest.redrive.failed': 'The retry did not run: {reason}',
+    'ingest.redrive.tooOld':
+      'Retrying from this page needs a newer server API. Update the server ({cmd}) and reload.',
+    'ingest.reasons.title': 'Why they were set aside',
+    'ingest.reason.transient':
+      'The database or the network was not available at that moment — a retry usually goes through.',
+    'ingest.reason.rejected':
+      'The database refused what was in it — retrying the same part will fail again until the cause is fixed.',
+    'ingest.reason.undecodable': 'The worker could not read this part at all.',
+    'ingest.reason.other': 'The worker could not write it.',
+    'ingest.reason.items.one': '{n} item',
+    'ingest.reason.items.other': '{n} items',
+    'ingest.reason.samples.one': '{n} sample',
+    'ingest.reason.samples.other': '{n} samples',
+    'ingest.reason.workouts.one': '{n} workout',
+    'ingest.reason.workouts.other': '{n} workouts',
+    'ingest.reason.sleep.one': '{n} sleep segment',
+    'ingest.reason.sleep.other': '{n} sleep segments',
+    'ingest.reason.activity.one': '{n} activity summary',
+    'ingest.reason.activity.other': '{n} activity summaries',
+    'ingest.reason.deletions.one': '{n} deletion',
+    'ingest.reason.deletions.other': '{n} deletions',
+    'ingest.reason.repeated': 'Failed {n} times after retries',
+    'ingest.reason.raw': 'The worker’s message',
+    'ingest.reason.batch': 'Batch {id}',
+    'ingest.reason.notRecorded.one': '{n} part: reason not recorded',
+    'ingest.reason.notRecorded.other': '{n} parts: reason not recorded',
+    'ingest.reason.notRecordedHint':
+      'Set aside before the server kept reasons, or the record could not be read. The worker’s log below still has the error.',
+    'ingest.reason.lastRedrive': 'Last retry: {when}, {moved} moved back.',
+    'ingest.reason.movedBack.one': '{n} earlier failure in the log was moved back by it.',
+    'ingest.reason.movedBack.other':
+      '{n} earlier failures in the log were moved back by it.',
   },
 
   // --- Metric group names ---------------------------------------------------

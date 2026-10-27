@@ -389,7 +389,51 @@ export type IngestQueueDepth = {
   in_flight_max?: number
 }
 
-export type IngestDeadLetter = { name: string; ready: number }
+/**
+ * One dead-lettered batch, as the worker logged it. Counts and a sanitised error
+ * only — never a value from the batch.
+ *
+ * ⚠️ A LOG, not the queue's contents: an entry outlives its batch's redrive, and
+ * a batch parked by an older worker has no entry at all.
+ */
+export type IngestFailure = {
+  batch_id?: string
+  failed_at: string
+  /** ≤ 300 chars; numbers and quoted strings blanked to `#` and `"…"`. */
+  error: string
+  items: number
+  samples: number
+  workouts: number
+  sleep_segments: number
+  activity_summaries: number
+  deletions: number
+  /** How many times the batch had been redriven before this failure. */
+  redriven: number
+}
+
+/** The most recent redrive that moved at least one batch (kept 30 days). */
+export type IngestLastRedrive = { at: string; moved: number }
+
+export type IngestDeadLetter = {
+  name: string
+  ready: number
+  /** Newest first, ≤ 20, 30 days. Absent when none or unreadable. */
+  recent_failures?: IngestFailure[]
+  last_redrive?: IngestLastRedrive
+}
+
+/** The answer of `POST /ingest/dead-letter/redrive`. */
+export type IngestRedriveResult = {
+  /** Exact: confirmed on the main queue and gone from the dead-letter queue. */
+  moved: number
+  /** The dead-letter depth afterwards — ABSENT if it could not be read, never 0 by default. */
+  remaining?: number
+  max_redriven: number
+  /** Moved batches now redriven 3+ times: they failed again after earlier retries. */
+  repeated: number
+  /** Set when the run stopped before its count: why. A partial success. */
+  stopped_early?: string
+}
 
 export type IngestWorkerStats = {
   started_at?: string

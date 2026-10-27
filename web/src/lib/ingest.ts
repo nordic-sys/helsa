@@ -3,7 +3,7 @@
 // Kept apart from the page so each state is a plain unit test: the page is a
 // handful of tiles, but which sentence goes above them is the whole point of it.
 
-import type { IngestStatus } from '../api/types'
+import type { IngestFailure, IngestStatus } from '../api/types'
 
 /**
  * The one headline state of the pipeline.
@@ -133,4 +133,68 @@ export function queueBadge(s: IngestStatus | undefined): QueueBadge | null {
  */
 export function isApiTooOld(error: unknown): boolean {
   return (error as { status?: number } | null)?.status === 404
+}
+
+// --- Why something was set aside -------------------------------------------
+
+/**
+ * The dead-letter queue's reasons, read honestly out of a LOG.
+ *
+ * `recent_failures` is the worker's log of failures, not a listing of the queue:
+ * an entry stays after its batch was redriven, and a batch parked by a worker
+ * older than the log has no entry at all. So:
+ *
+ *  - `current` — entries newer than the last redrive: these batches can still be
+ *    in the queue. Capped at the queue's depth (newest first).
+ *  - `movedBack` — entries at or before the last redrive: that redrive moved
+ *    them back, whatever happened to them since.
+ *  - `unrecorded` — how many of the queued batches have no entry. Said as
+ *    "reason not recorded", never guessed.
+ */
+export type DeadLetterReasons = {
+  current: IngestFailure[]
+  movedBack: IngestFailure[]
+  unrecorded: number
+}
+
+export function deadLetterReasons(s: IngestStatus): DeadLetterReasons {
+  const ready = deadLetters(s) ?? 0
+  const log = s.dead_letter?.recent_failures ?? []
+  const cut = s.dead_letter?.last_redrive?.at
+  const cutMs = cut ? new Date(cut).getTime() : Number.NEGATIVE_INFINITY
+  const after = log.filter((f) => new Date(f.failed_at).getTime() > cutMs)
+  const movedBack = log.filter((f) => new Date(f.failed_at).getTime() <= cutMs)
+  const current = after.slice(0, ready)
+  return { current, movedBack, unrecorded: Math.max(0, ready - current.length) }
+}
+
+/** From this many redrives on, retrying has not helped so far (the contract's 3). */
+export const REPEATED_REDRIVES = 3
+
+/**
+ * A plain-language reading of a worker error, for the line above the raw one.
+ *
+ * Deliberately coarse, and only where the error says so in words a database or
+ * a network uses — anything else is `other`, and the raw message (always shown,
+ * in a disclosure) is the authority.
+ *
+ *  - `undecodable` — the batch held nothing the worker could read (0 items).
+ *  - `transient` — the database or the network was not there at that moment;
+ *    a retry after it is back usually goes through.
+ *  - `rejected` — the database refused the content; retrying the same batch
+ *    will fail the same way until the cause is fixed.
+ */
+export type FailureKind = 'undecodable' | 'transient' | 'rejected' | 'other'
+
+export function failureKind(f: IngestFailure): FailureKind {
+  if (f.items === 0) return 'undecodable'
+  const e = f.error
+  if (
+    /SQLSTATE 57P0\d|SQLSTATE 08\w{3}|connection refused|starting up|shutting down|no such host|i\/o timeout|broken pipe|unexpected EOF|context deadline exceeded/i.test(
+      e,
+    )
+  )
+    return 'transient'
+  if (/SQLSTATE 2[23]\w{3}|violates|invalid input/i.test(e)) return 'rejected'
+  return 'other'
 }

@@ -15,8 +15,10 @@ const qc = new QueryClient({
       refetchOnWindowFocus: false,
       retry: (count, err) => {
         // On a 401/403 there is no point retrying — the token is missing or wrong.
+        // Nor on a 404: every route the web calls is in the contract, so a 404
+        // is an older server (or a deleted record), and asking again is the same.
         const status = (err as { status?: number })?.status
-        if (status === 401 || status === 403) return false
+        if (status === 401 || status === 403 || status === 404) return false
         return count < 2
       },
     },

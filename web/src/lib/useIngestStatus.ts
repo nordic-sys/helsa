@@ -16,12 +16,7 @@ export function useIngestStatus(pollMs: number) {
     queryKey: INGEST_STATUS_KEY,
     queryFn: () => api.ingestStatus(),
     refetchInterval: pollMs,
-    // A 404 is version skew and will not fix itself on retry; anything else gets
-    // the app's default retry policy.
-    retry: (count, err) => {
-      const status = (err as { status?: number })?.status
-      if (status === 404 || status === 401 || status === 403) return false
-      return count < 2
-    },
+    // Retries follow the app's policy (main.tsx), which gives up at once on a
+    // 401/403/404 — a 404 here is version skew and does not fix itself.
   })
 }
