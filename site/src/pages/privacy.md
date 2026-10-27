@@ -2,7 +2,7 @@
 title: Privacy
 description: "What the Helsa app reads, what it writes, and what leaves your device — which by default is nothing."
 layout: ../layouts/ProseLayout.astro
-lede: "Last updated: 25 August 2026"
+lede: "Last updated: 27 October 2026"
 ---
 
 This page covers the **Helsa iOS app**. The server in this repository is
@@ -47,11 +47,13 @@ outcome the app is built to handle. It reads nothing you have not allowed.
 
 ## What the app writes
 
-Three things, all into Apple Health, all entered by you:
+Four things, all into Apple Health, all entered by you:
 
 - your daily journal — mood, symptoms, tags;
 - the symptoms you write on an event;
-- the water you log.
+- the water you log;
+- how hard a workout felt, when you rate it (attached to that workout; the
+  workout itself is not changed).
 
 Everything else it only reads. It keeps no database of its own: what you write
 goes into Apple Health, where other apps can reach it and where you can delete
