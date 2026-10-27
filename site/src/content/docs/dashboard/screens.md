@@ -53,8 +53,16 @@ Two things it does that a plain chart does not:
 Behind it sits [your usual range](/api/reading-data/#your-usual-range): the
 middle of your own last 60 days, and five levels for where the period stands
 against it. Below 14 measured days there is no band at all — not a wider one, not
-a guess. The dashed line in the band is your **average** (the API sends a mean,
+a guess — and the page says so; when the reference has enough days but every one
+carried the same value, it says *that* instead, because "not enough data" would then
+be false. The dashed line in the band is your **average** (the API sends a mean,
 not a median).
+
+A day nothing was measured on is a **gap in the line**, not a slope drawn across it,
+and a measured day with no measured neighbour is a dot. The comparison with the
+previous period shows on how many days each was measured; when the two differ a lot
+(less than half the share), a summed total is not compared at all — one measured day
+against seven is a sync gap, not a fall — and an average is shown with that caveat.
 
 Beside the total, a summed metric shows **a day** — the average of the days that
 carried a measurement, and it says over how many. Dividing by the window's length

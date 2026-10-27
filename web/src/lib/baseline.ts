@@ -75,3 +75,26 @@ export function bandOf(baseline?: MetricBaseline): Band | null {
   if (!Number.isFinite(low) || !Number.isFinite(high) || high <= low) return null
   return { low, high }
 }
+
+/**
+ * Why there is no band, when there is none.
+ *
+ * ⚠️ The contract leaves the band out for TWO reasons, and they are opposite
+ * statements: too few measured days ("we do not know your usual yet") and a
+ * reference that never varied ("we know it exactly: it is always this").
+ * Calling the second "not enough days" with 60 of 14 on screen is plainly false.
+ *
+ *  - `notEnough` — fewer measured days than the server's minimum.
+ *  - `noVariation` — enough days, and every one carried the same value (the
+ *    server sends the mean, and an `sd` of 0 or no `low`/`high`).
+ *  - `unknown` — enough days and no band, for a reason the answer does not give.
+ */
+export type NoBandReason = 'notEnough' | 'noVariation' | 'unknown'
+
+export function noBandReason(baseline: MetricBaseline | undefined, minDays: number): NoBandReason {
+  const days = baseline?.day_count ?? 0
+  if (days < minDays) return 'notEnough'
+  if (baseline?.mean != null && (baseline.sd === 0 || baseline.low == null || baseline.low === baseline.high))
+    return 'noVariation'
+  return 'unknown'
+}

@@ -124,6 +124,18 @@ export const hu = {
       'Az előző időszakban nem volt mérés, tehát nincs mihez hasonlítani. Ez nem nullára esés — ez hiány.',
     'trends.compare.clipped':
       'Ez az időszak még tart, ezért csak az eltelt {days} napot hasonlítjuk össze — az előző időszak ugyanazon {days} napjával, nem az egészével. Huszonhét nap harmincegy mellett zuhanásnak látszana.',
+    'trends.compare.coverage.day':
+      'Mért órák: {a} / {total}; az előző időszakban {b} / {prevTotal}.',
+    'trends.compare.coverage.week':
+      'Mért napok: {a} / {total}; az előző időszakban {b} / {prevTotal}.',
+    'trends.compare.coverage.month':
+      'Mért napok: {a} / {total}; az előző időszakban {b} / {prevTotal}.',
+    'trends.compare.coverage.year':
+      'Mért hónapok: {a} / {total}; az előző időszakban {b} / {prevTotal}.',
+    'trends.compare.uneven':
+      'Nincs összevetés: a két időszakban nagyon eltérő arányban volt mérés, és kevesebb mért nap összege már ettől is kisebb. Az előző időszak ({dates}): {value}.',
+    'trends.compare.unevenAvg':
+      'A két átlag nagyon eltérő számú mérésre támaszkodik, ezért a különbséget lazán érdemes olvasni.',
 
     // --- Trends · a szokásos tartomány --------------------------------------
     // ⚠️ „Szokásos”, soha nem „normális”: a normálisnak orvosi csengése van, amit
@@ -138,6 +150,10 @@ export const hu = {
       'A széles sáv a szokásos tartományod: az utolsó {days} mért nap közepe, annyi szórással, amennyi ezekben a napokban volt.',
     'trends.usual.pending':
       'Még nincs elég mért nap a szokásos tartományhoz ({days}/{min}). Addig nem rajzolunk sávot — egy kevesebb napra támaszkodó sáv nem szűkebb állítás lenne, hanem ugyanolyan magabiztos.',
+    'trends.usual.flat':
+      'Nincs rajzolható szokásos tartomány: a viszonyítási időszak mind a(z) {days} mért napján ugyanaz volt az érték ({value}), így nincs szórás, amiből sáv lenne. Ez nem adathiány.',
+    'trends.usual.unavailable':
+      'A szerver nem küldött szokásos tartományt ehhez a méréshez, pedig mért napból van elég ({days}).',
     'trends.standing.wellBelow': 'Jóval a szokásod alatt',
     'trends.standing.below': 'A szokásod alatt',
     'trends.standing.typical': 'A szokásos tartományodban',

@@ -22,7 +22,8 @@ import { PeriodStepper } from '../components/PeriodStepper'
 import { Card, Empty, ErrorState, Loading, Note, PageHead } from '../components/ui'
 import { useI18n } from '../i18n'
 import type { UiKey } from '../i18n'
-import { STANDING_ARROW, bandOf, pickBaseline } from '../lib/baseline'
+import { STANDING_ARROW, bandOf, noBandReason, pickBaseline } from '../lib/baseline'
+import { coverageVerdict } from '../lib/compare'
 import { useFormat, type Formatters } from '../lib/format'
 import { METRIC_LIST, metricDef, pickSeries, readSeries } from '../lib/metrics'
 import { useAvailability } from '../lib/useAvailability'
@@ -335,10 +336,26 @@ export default function Trends() {
   // Off while the chart on screen is a placeholder for a window still loading.
   const replacing = q.isPlaceholderData
   const canDrill = finer(drawnRange) !== null && !replacing
+
+  // Measured buckets with no measured neighbour: the broken line cannot show
+  // them, so they are drawn as dots (see the `<Line>`).
+  const isolated = useMemo(() => isolatedIndices(data.map((d) => d.value)), [data])
   const drillHint = DRILL_HINT[drawnRange]
 
   const delta = r.total != null && previous.total != null ? r.total - previous.total : null
   const ratio = delta != null && previous.total ? delta / previous.total : null
+
+  /**
+   * How much of each period was MEASURED — shown under the comparison, and the
+   * reason a summed delta can be withheld (see `lib/compare`). Buckets, in the
+   * range's own unit: hours of a day, days of a week or month, months of a year.
+   */
+  const prevBuckets = drawn ? bucketStarts(drawn.prev, drawnRange).length : 0
+  const prevMeasured = previous.points.filter((p) => p.value != null).length
+  const curCoverage = { measured: data.filter((d) => d.value != null).length, total: data.length }
+  const prevCoverage = { measured: prevMeasured, total: prevBuckets }
+  const uneven = coverageVerdict(curCoverage, prevCoverage) === 'uneven'
+  const withheld = uneven && r.effectiveAgg === 'sum'
 
   /**
    * The second headline figure beside the total.
@@ -568,7 +585,6 @@ export default function Trends() {
                           fill={drawnDef.color}
                           fillOpacity={0.13}
                           isAnimationActive={false}
-                          connectNulls
                         />
                       )}
                       {r.effectiveAgg === 'sum' ? (
@@ -603,10 +619,27 @@ export default function Trends() {
                           name={label}
                           stroke={drawnDef.color}
                           strokeWidth={2}
-                          dot={false}
+                          // ⚠️ No `connectNulls`: a missing day breaks the line
+                          // instead of being bridged by a slope nobody measured.
+                          // A measured bucket with no measured neighbour would
+                          // then be a line of zero length — invisible — so it
+                          // gets a dot of its own.
+                          dot={(props: { index?: number; cx?: number; cy?: number }) =>
+                            props.index != null && isolated.has(props.index) && props.cx != null && props.cy != null ? (
+                              <circle
+                                key={`iso-${props.index}`}
+                                cx={props.cx}
+                                cy={props.cy}
+                                r={3.5}
+                                fill={drawnDef.color}
+                                data-testid="isolated-point"
+                              />
+                            ) : (
+                              <g key={`no-${props.index}`} />
+                            )
+                          }
                           activeDot={{ r: 4 }}
                           isAnimationActive={false}
-                          connectNulls
                         />
                       )}
                     </ComposedChart>
@@ -658,11 +691,19 @@ export default function Trends() {
                 {/* ⚠️ When there is not enough yet, SAY so. A band that quietly
                     fails to appear looks like a band that does not exist. */}
                 {drawn?.usual && !band && drawn.baseline?.min_days != null && (
-                  <p className="subtle" style={{ margin: '8px 0 0' }}>
-                    {t('trends.usual.pending', {
-                      days: usual?.day_count ?? 0,
-                      min: drawn.baseline.min_days,
-                    })}
+                  <p className="subtle" style={{ margin: '8px 0 0' }} data-testid="usual-none">
+                    {(() => {
+                      const why = noBandReason(usual, drawn.baseline.min_days)
+                      const days = usual?.day_count ?? 0
+                      return why === 'notEnough'
+                        ? t('trends.usual.pending', { days, min: drawn.baseline.min_days })
+                        : why === 'noVariation'
+                          ? t('trends.usual.flat', {
+                              days,
+                              value: `${f.fmt(usual?.mean, drawnDef.digits)} ${unit}`.trim(),
+                            })
+                          : t('trends.usual.unavailable', { days })
+                    })()}
                   </p>
                 )}
 
@@ -686,6 +727,15 @@ export default function Trends() {
                   <p className="subtle" style={{ margin: 0 }}>
                     {t('trends.compare.none')}
                   </p>
+                ) : withheld ? (
+                  // ⚠️ One measured day beside seven reads as a collapse, and
+                  // it is only a phone that did not sync: no delta at all.
+                  <p style={{ margin: 0, fontSize: 'var(--fs-small)', color: 'var(--text-2)' }} data-testid="compare-withheld">
+                    {t('trends.compare.uneven', {
+                      dates: windowDates(drawn.prev, drawn.range, locale),
+                      value: `${f.fmt(previous.total, drawnDef.digits)} ${unit}`.trim(),
+                    })}
+                  </p>
                 ) : (
                   <>
                     <p className="figure" style={{ margin: '0 0 6px' }}>
@@ -702,6 +752,17 @@ export default function Trends() {
                       })}
                     </p>
                   </>
+                )}
+                {delta != null && (
+                  <p className="subtle" style={{ margin: '6px 0 0' }} data-testid="compare-coverage">
+                    {t(`trends.compare.coverage.${drawnRange}` as UiKey, {
+                      a: curCoverage.measured,
+                      total: curCoverage.total,
+                      b: prevCoverage.measured,
+                      prevTotal: prevCoverage.total,
+                    })}
+                    {uneven && !withheld && ` ${t('trends.compare.unevenAvg')}`}
+                  </p>
                 )}
                 {/* ⚠️ The bill a calendar period comes with: this month on the
                     3rd is three days, beside last month's whole one. */}
@@ -729,6 +790,15 @@ export default function Trends() {
       </div>
     </>
   )
+}
+
+/** Indices of non-null values whose neighbours are both null (or absent). */
+export function isolatedIndices(values: (number | null)[]): Set<number> {
+  const out = new Set<number>()
+  values.forEach((v, i) => {
+    if (v != null && values[i - 1] == null && values[i + 1] == null) out.add(i)
+  })
+  return out
 }
 
 /** The direction of a change, drawn; the sign in the number says it too. */

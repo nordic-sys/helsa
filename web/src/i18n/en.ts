@@ -119,6 +119,18 @@ export const en: Dict = {
       'Nothing was measured in the previous period, so there is nothing to compare against. That is not a fall to zero — it is a gap.',
     'trends.compare.clipped':
       'This period is still running, so only the {days} days that have happened are compared — against the same {days} days of the previous period, not against all of it. Twenty-seven days beside thirty-one would read as a collapse.',
+    'trends.compare.coverage.day':
+      'Measured in {a} of {total} hours; the previous period in {b} of {prevTotal}.',
+    'trends.compare.coverage.week':
+      'Measured on {a} of {total} days; the previous period on {b} of {prevTotal}.',
+    'trends.compare.coverage.month':
+      'Measured on {a} of {total} days; the previous period on {b} of {prevTotal}.',
+    'trends.compare.coverage.year':
+      'Measured in {a} of {total} months; the previous period in {b} of {prevTotal}.',
+    'trends.compare.uneven':
+      'Not compared: the two periods were measured on very different shares of their days, and a total over fewer measured days is smaller for that reason alone. The previous period ({dates}): {value}.',
+    'trends.compare.unevenAvg':
+      'The two averages rest on very different numbers of measurements, so read the difference loosely.',
 
     // --- Trends · your usual range ------------------------------------------
     // ⚠️ "Usual", never "normal": normal has a medical ring to it that this number
@@ -134,6 +146,10 @@ export const en: Dict = {
       'The wide band is your usual range: the middle of the last {days} days measured, give or take how much they scattered.',
     'trends.usual.pending':
       'Not enough measured days yet for a usual range ({days}/{min}). Until then no band is drawn — one resting on fewer days would not be a narrower claim, just an equally confident one.',
+    'trends.usual.flat':
+      'No usual range to draw: all {days} measured days of the reference carried the same value ({value}), so there is no spread to make a band from. That is not a shortage of data.',
+    'trends.usual.unavailable':
+      'The server sent no usual range for this metric, although {days} days were measured.',
     'trends.standing.wellBelow': 'Well below your usual',
     'trends.standing.below': 'Below your usual',
     'trends.standing.typical': 'Your usual',

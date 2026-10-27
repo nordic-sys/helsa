@@ -21,15 +21,23 @@ const calls: SummaryArgs[] = []
 /** What one day of a window holds — a test can make two windows differ. */
 let dayValue: (from?: string) => number = () => 10_000
 
+/** Which days of a window carry a measurement — a test can leave gaps. */
+let measuredDay: (from: string | undefined, index: number) => boolean = () => true
+
+/** What the usual-range endpoint answers. */
+let baselineAnswer: BaselineResponse = { min_days: 14, metrics: {} }
+
 /** A bucket a day across whatever window was asked for, so the page has data. */
 function fakeSummary(from?: string, to?: string): SummaryResponse {
   const buckets: { t: string; v: number }[] = []
   if (from && to) {
     const day = new Date(`${from}T00:00:00`)
     const end = new Date(`${to}T00:00:00`)
+    let i = 0
     while (day <= end) {
-      buckets.push({ t: new Date(day).toISOString(), v: dayValue(from) })
+      if (measuredDay(from, i)) buckets.push({ t: new Date(day).toISOString(), v: dayValue(from) })
       day.setDate(day.getDate() + 1)
+      i += 1
     }
   }
   return {
@@ -45,7 +53,7 @@ vi.mock('../api/client', () => ({
       calls.push(args)
       return Promise.resolve(fakeSummary(args[3], args[4]))
     },
-    baseline: (): Promise<BaselineResponse> => Promise.resolve({ min_days: 14, metrics: {} }),
+    baseline: (): Promise<BaselineResponse> => Promise.resolve(baselineAnswer),
   },
   browserTz: () => 'Europe/Budapest',
 }))
@@ -74,6 +82,8 @@ function chartWindows(range: string) {
 beforeEach(() => {
   calls.length = 0
   dayValue = () => 10_000
+  measuredDay = () => true
+  baselineAnswer = { min_days: 14, metrics: {} }
   vi.useFakeTimers({ shouldAdvanceTime: true })
   // A Thursday, so the rolling week and the calendar week are visibly different.
   vi.setSystemTime(new Date(2026, 8, 10, 12, 0, 0))
@@ -199,5 +209,45 @@ describe('the redesigned chart card', () => {
     show()
     const group = await screen.findByRole('group', { name: 'Period' })
     expect(group.querySelector('[aria-pressed="true"]')).toHaveTextContent('Week')
+  })
+})
+
+/**
+ * ⛔ A comparison of totals is a comparison of behaviour only when both periods
+ * were measured alike. One measured day against seven is a sync gap, not a fall.
+ */
+describe('the comparison and measurement coverage', () => {
+  it('shows how many days each period was measured on', async () => {
+    show()
+    expect(await screen.findByTestId('compare-coverage')).toHaveTextContent(
+      'Measured on 7 of 7 days; the previous period on 7 of 7.',
+    )
+  })
+
+  it('withholds a summed delta when the coverage differs a lot', async () => {
+    // This week fully measured; the week before only on its first day.
+    measuredDay = (from, i) => from !== '2026-08-28' || i === 0
+    show()
+    expect(await screen.findByTestId('compare-withheld')).toHaveTextContent(/Not compared/)
+    expect(screen.getByTestId('compare-coverage')).toHaveTextContent('the previous period on 1 of 7')
+    expect(screen.queryByText('+60,000')).not.toBeInTheDocument()
+    expect(screen.queryByText(/^[+−]\d+% · /)).not.toBeInTheDocument()
+  })
+})
+
+/** Two reasons for no band, and they are opposite statements. */
+describe('no usual range', () => {
+  it('says "not enough measured days" only when there are not enough', async () => {
+    baselineAnswer = { min_days: 14, metrics: { stepCount: { day_count: 9 } } }
+    show()
+    expect(await screen.findByTestId('usual-none')).toHaveTextContent('Not enough measured days yet for a usual range (9/14)')
+  })
+
+  it('says the reference never varied when 60 days carried one value', async () => {
+    baselineAnswer = { min_days: 14, metrics: { stepCount: { day_count: 60, mean: 5000, sd: 0 } } }
+    show()
+    const note = await screen.findByTestId('usual-none')
+    expect(note).toHaveTextContent(/all 60 measured days of the reference carried the same value \(5,000\)/)
+    expect(note).not.toHaveTextContent(/Not enough/)
   })
 })
