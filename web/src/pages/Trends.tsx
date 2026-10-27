@@ -30,7 +30,7 @@ import { useFormat, type Formatters } from '../lib/format'
 import { METRIC_LIST, metricDef, pickSeries, readSeries } from '../lib/metrics'
 import { useAvailability } from '../lib/useAvailability'
 import { useToday } from '../lib/useToday'
-import { labelPx, useElementWidth } from '../lib/useElementWidth'
+import { axisLabelPx, labelPx, useElementWidth } from '../lib/useElementWidth'
 import {
   bucketKey,
   bucketStarts,
@@ -336,14 +336,26 @@ export default function Trends() {
    * The app selects its ticks the same way and for the same reason
    * (`TrendFormat.tickDates`).
    *
+   * ⚠️ The STEP is what has to fit, not a label count: neighbouring labels sit
+   * `step` buckets apart, so the rule is step × bucket ≥ label + gap. Dividing
+   * the plot by (label + gap) rounded down twice and left the Hungarian year
+   * axis ("2026. febr.") at two labels at 390 px where three fit. The plot
+   * width here leaves out the chart's default right margin, which the old
+   * figure counted as room.
+   *
    * `undefined` when they all fit: then every bucket gets its own label.
    */
   const xTicks = useMemo(() => {
-    const widest = Math.max(1, ...data.map((d) => tickLabel(d.t, drawnRange, f).length))
-    const max =
-      plotWidth == null ? 7 : Math.max(2, Math.min(7, Math.floor(plotWidth / (labelPx(widest) + 12))))
-    if (data.length <= max) return undefined
-    const step = Math.ceil(data.length / max)
+    if (data.length === 0) return undefined
+    const widest = Math.max(1, ...data.map((d) => axisLabelPx(tickLabel(d.t, drawnRange, f))))
+    // At most seven labels, at least two — the first rule the axis always had.
+    let step = Math.ceil(data.length / 7)
+    if (plotWidth != null) {
+      const bucket = Math.max(1, plotWidth - 12) / data.length
+      step = Math.max(step, Math.ceil((widest + 8) / bucket))
+    }
+    step = Math.min(step, Math.max(1, data.length - 1))
+    if (step <= 1) return undefined
     const chosen: string[] = []
     for (let i = data.length - 1; i >= 0; i -= step) chosen.push(data[i].t)
     return chosen.reverse()
@@ -358,7 +370,7 @@ export default function Trends() {
   const rightMargin = useMemo(() => {
     const last = data.at(-1)
     if (!last || plotWidth == null || data.length === 0) return 12
-    const half = labelPx(tickLabel(last.t, drawnRange, f).length) / 2
+    const half = axisLabelPx(tickLabel(last.t, drawnRange, f)) / 2
     return Math.max(12, Math.ceil(half - plotWidth / data.length / 2))
   }, [data, drawnRange, f, plotWidth])
 
