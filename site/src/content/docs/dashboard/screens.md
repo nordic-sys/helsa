@@ -8,9 +8,19 @@ Eleven pages in the sidebar, plus one that opens from a listing.
 
 ## Today
 
-The landing page: the day as it stands. Rings, the day's numbers, the most recent
-workout, hydration, the journal prompt and the observations — the same cards the
-phone's Today tab carries, in the same four bands.
+The landing page: the day as it stands, in three of the phone's four bands — the
+fourth, "what today asks of you", is all writes into Health, which only the phone
+can make. **Today, about you**: steps, active energy, resting heart rate and HRV
+(each opens Trends on that metric; a metric not measured yet today is a dash, not
+a zero), the three rings, the most recent workout and last night with its stages.
+**The long view**: the monthly challenge, the observations and the medals.
+**Status**: sync and completeness.
+
+The pill at the top reads the **sync queue**, not the phone. The phone counts an
+upload as done the moment it has handed it over, while the server may still be
+writing it for half an hour — so the pill says *up to date* only when nothing is
+waiting and nothing is set aside, and otherwise how much is still being written
+(with the server's estimate) and links to the queue.
 
 ## Trends
 
@@ -28,7 +38,13 @@ Two things it does that a plain chart does not:
 Behind it sits [your usual range](/api/reading-data/#your-usual-range): the
 middle of your own last 60 days, and five levels for where the period stands
 against it. Below 14 measured days there is no band at all — not a wider one, not
-a guess.
+a guess. The dashed line in the band is your **average** (the API sends a mean,
+not a median).
+
+Beside the total, a summed metric shows **a day** — the average of the days that
+carried a measurement, and it says over how many. Dividing by the window's length
+would count a day the phone did not sync as a day of sitting still. The metric is
+in the address (`/trends?metric=…`), so a chart is a link.
 
 ## Observations
 
@@ -71,9 +87,15 @@ Three rules worth knowing, all of them visible on the page:
 ## Workouts
 
 Sessions grouped by the month you trained in, newest first. A closed month is one
-line until you open it, and **a session two devices recorded is one row** — a
-watch and a phone recording the same run must not make the month's total count it
-twice.
+line until you open it, and **a session two devices recorded is one row** (marked
+×2) — a watch and a phone recording the same run must not make the month's total
+count it twice.
+
+On a wide screen the list and the opened session sit side by side: a row selects
+the session into the right-hand half, and the choice is kept in the address
+(`/workouts?w=…`). On a narrow one a row opens the session's own page. The filter
+takes the type (several at once), indoor or outdoor and a minimum length in one
+row; distance, energy and heart-rate limits are under *More filters*.
 
 ## Workout detail
 
@@ -114,7 +136,10 @@ as an absence — so every state on this page is a statement about *what reached
 this server*, never about what your phone was asked.
 :::
 
-## Ingest queue
+## Sync queue
+
+The page at `/ingest` (it was called *Ingest queue*). The page says *parts*, *set
+aside* and *worker*; the table below gives RabbitMQ's own words, which the logs use.
 
 What the phone sent and the server has not yet written. The phone uploads much
 faster than the worker writes: on a first install, years of history can arrive in
@@ -124,10 +149,10 @@ It refreshes itself every five seconds.
 
 | On the page | What it means |
 |---|---|
-| **Waiting** | Batches in the queue not yet handed to a worker. Exact. The "+ up to N in progress" beside it is an upper bound on the batches a worker is holding (its prefetch × the workers connected); plain AMQP cannot count those exactly. |
-| **Dead-letter queue** | Batches the worker gave up on, why it gave up on the most recent ones, and a button that sends them back for another try. See below. |
-| **Workers connected** | Consumers on the queue. Batches waiting and **zero** workers is the failure that looks like slowness — the page says so in red, because the queue will not go down at all. |
-| **Batches / min**, **Items / min** | Finished over the last ten minutes, or since the worker started if that is more recent. An item is a sample, workout, sleep segment, activity summary or deletion. |
+| **Waiting to be written** | Batches in the queue not yet handed to a worker. Exact. The "+ up to N in progress" beside it is an upper bound on the batches a worker is holding (its prefetch × the workers connected); plain AMQP cannot count those exactly. |
+| **Set aside** | The dead-letter queue: batches the worker gave up on, why it gave up on the most recent ones, and a button that sends them back for another try. See below. |
+| **Worker** | Consumers on the queue. Batches waiting and **zero** workers is the failure that looks like slowness — the page says so in an alert, because the queue will not go down at all. |
+| **Rate** (parts and items a minute) | Finished over the last ten minutes, or since the worker started if that is more recent. An item is a sample, workout, sleep segment, activity summary or deletion. |
 | **About N left** | The waiting batches divided by the recent batch rate. **An estimate**: batches differ in size, so it moves. It is left out whenever it would be invented — nothing waiting, no worker, or nothing finished in the window. |
 | **Worker** | When the worker started, when it last finished a batch, and its totals since the start (they restart from zero with the worker). |
 
@@ -164,8 +189,15 @@ seconds. Every retry is counted on the batch, and from the third one the page sa
 — *this one has failed N times after retries* — because pressing again is then
 unlikely to help. Nothing is ever retried automatically.
 
+There is no progress bar and no per-minute chart: the status names neither the size
+of an upload nor a history of minutes, and a bar against an invented total would be
+the most confident-looking wrong thing on the page.
+
 When the API cannot reach RabbitMQ the page says so and shows **no** queue figures —
-an unknown depth is not an empty queue. When the worker's counters (in Redis) cannot
+an unknown depth is not an empty queue. When the server answers 404 to the page's
+request while the rest of the API works, the server is **older than the web page**
+(the web image was updated first); the page says so and gives the command,
+`make prod-pull && make prod-up`. When the worker's counters (in Redis) cannot
 be read, the depth is still shown and the rate and estimate are marked unknown.
 
 ## Settings
