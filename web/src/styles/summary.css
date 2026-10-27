@@ -1,0 +1,265 @@
+/* The two long-view pages that summarise rather than chart: the year in numbers
+ * (`pages/PeriodSummary.tsx`) and year by year (`pages/YearByYear.tsx`).
+ *
+ * ⚠️ A file of its own, imported by those two pages, rather than another block at
+ * the bottom of `global.css`: nothing here is shared with any other page, and
+ * every rule is under a prefix (`period-`, `years-`) so it cannot reach one.
+ * Only tokens from `tokens.css` — dark mode comes with them for free. */
+
+/* --- The year in numbers --- */
+.period-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3) var(--sp-6);
+  margin-bottom: var(--sp-4);
+}
+.period-extent {
+  margin: 0;
+  max-width: 70ch;
+}
+/* The strip of the period's buckets under each total. Short on purpose: it is
+ * the coverage made visible, not a second Trends chart. */
+.period-strip {
+  height: 64px;
+  margin-top: var(--sp-2);
+}
+.period-metric {
+  gap: 4px;
+}
+/* ⚠️ Found by screenshot: two-up at 390 broke "2,720,924" over two lines. A
+ * year's total is seven digits plus grouping — one card per row on a phone. */
+@media (max-width: 640px) {
+  /* Two classes: `.grid-4`'s own rule may load after this file. */
+  .grid.period-totals {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.period-compare {
+  margin-top: var(--sp-2);
+  padding-top: var(--sp-2);
+  border-top: 1px solid var(--border);
+}
+.period-compare .stat-note + .stat-note {
+  margin-top: 4px;
+}
+.period-activities,
+.period-medals,
+.period-peaks {
+  list-style: none;
+  margin: var(--sp-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: var(--fs-small);
+}
+.period-peaks {
+  margin-top: 0;
+}
+.period-activities li,
+.period-medals li {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+}
+.period-activities li .num,
+.period-medals li .num {
+  font-variant-numeric: tabular-nums;
+}
+/* A peak: what it is and when on the left, the figure on the right. */
+.period-peaks li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    'label value'
+    'when value';
+  gap: 0 12px;
+}
+.period-peak-label {
+  grid-area: label;
+  color: var(--text);
+}
+.period-peak-when {
+  grid-area: when;
+  font-size: var(--fs-caption);
+  margin: 0;
+}
+.period-peak-value {
+  grid-area: value;
+  align-self: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-align: right;
+}
+.period-medals li {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: baseline;
+}
+
+/* --- Year by year --- */
+.years-span {
+  margin: 0;
+  font-size: var(--fs-lead);
+  font-weight: 600;
+  color: var(--text);
+}
+.years-table th[scope='col'] {
+  vertical-align: bottom;
+  white-space: nowrap;
+}
+.years-table th[scope='row'] {
+  font-weight: 400;
+  min-width: 150px;
+}
+.years-table td {
+  vertical-align: top;
+  min-width: 100px;
+}
+/* "so far" under the running year's heading: it is never a full year. */
+.years-sofar {
+  display: block;
+  font-size: var(--fs-micro);
+  font-weight: 400;
+  color: var(--text-dim);
+}
+.years-metric {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-2);
+  color: var(--text);
+}
+.years-kind {
+  display: block;
+  margin-left: 17px;
+  font-size: var(--fs-micro);
+  color: var(--text-dim);
+}
+.years-value {
+  display: block;
+  font-family: var(--font-num);
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--text);
+}
+.years-value small {
+  font-family: var(--font);
+  font-weight: 500;
+  color: var(--text-dim);
+}
+/* One metric's years against each other — never against another metric. */
+.years-bar {
+  display: block;
+  height: 5px;
+  margin: 5px 0 4px auto;
+  max-width: 96px;
+  border-radius: var(--radius-pill);
+  background: var(--surface-3);
+  overflow: hidden;
+}
+.years-bar > span {
+  display: block;
+  height: 100%;
+  margin-left: auto;
+  border-radius: var(--radius-pill);
+}
+.years-months {
+  display: block;
+  font-size: var(--fs-micro);
+  color: var(--text-dim);
+  white-space: nowrap;
+}
+.years-flag {
+  display: block;
+  font-size: var(--fs-micro);
+  font-weight: 400;
+  color: var(--text-dim);
+  white-space: normal;
+}
+
+/* The picker: three actions, then one row per group. */
+.years-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+}
+.years-picker-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 0 6px;
+}
+.years-picker-actions .btn {
+  padding: 0 12px;
+}
+.years-picker-actions .btn[aria-pressed='true'] {
+  background: var(--accent-tint);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  color: var(--accent-text);
+}
+.years-picker-note {
+  margin: 0;
+  padding: 0 6px;
+  font-size: var(--fs-caption);
+}
+.years-group {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0 8px;
+  padding: 0 6px;
+  border-top: 1px solid var(--border);
+}
+.years-group > input {
+  margin-top: 14px;
+  width: 18px;
+  height: 18px;
+}
+.years-group summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  min-height: var(--touch);
+  cursor: pointer;
+  font-size: var(--fs-small);
+  color: var(--text);
+}
+.years-group-count {
+  font-size: var(--fs-caption);
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+}
+.years-group ul {
+  list-style: none;
+  margin: 0 0 var(--sp-2);
+  padding: 0;
+}
+.years-group label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  font-size: var(--fs-small);
+  cursor: pointer;
+}
+.years-group label.dim {
+  color: var(--text-dim);
+}
+
+/* On a phone the years scroll sideways inside the card; the measurement's name
+ * stays put, or a column of numbers would lose what it is a column of. */
+.years-table th[scope='row'],
+.years-table thead th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  background: var(--surface);
+}
+@media (max-width: 640px) {
+  .years-table th[scope='row'] {
+    min-width: 128px;
+  }
+}

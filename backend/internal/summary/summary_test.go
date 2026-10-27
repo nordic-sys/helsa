@@ -137,6 +137,30 @@ func TestWindowHonoursExplicitFromTo(t *testing.T) {
 	}
 }
 
+// The web's year-by-year page (`web/src/lib/longView.ts`) asks for five calendar
+// years in ONE request: `range=year` for monthly buckets, and a `from`/`to` that
+// spans the years. That only works because `range` sets the bucket WIDTH and
+// nothing else — no clamp to twelve months, no cap on the span. If somebody adds
+// one, the page silently loses its older years; this is what will say so.
+func TestWindowYearRangeStretchesAcrossYears(t *testing.T) {
+	loc, err := time.LoadLocation("Europe/Budapest")
+	if err != nil {
+		t.Skip("no tzdata:", err)
+	}
+	from := time.Date(2022, 1, 1, 0, 0, 0, 0, time.UTC)
+	to := time.Date(2026, 10, 27, 0, 0, 0, 0, time.UTC)
+	bucket, start, end := window(Request{Range: "year", TZ: "Europe/Budapest", From: &from, To: &to}, loc)
+	if bucket != "1 month" {
+		t.Errorf("bucket = %q, expected monthly buckets", bucket)
+	}
+	if want := time.Date(2022, 1, 1, 0, 0, 0, 0, loc); !start.Equal(want) {
+		t.Errorf("start = %v, expected %v (local midnight of January 1st)", start, want)
+	}
+	if want := time.Date(2026, 10, 28, 0, 0, 0, 0, loc); !end.Equal(want) {
+		t.Errorf("end = %v, expected %v", end, want)
+	}
+}
+
 func close32(got float32, want float64) bool {
 	d := float64(got) - want
 	if d < 0 {

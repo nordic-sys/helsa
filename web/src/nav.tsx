@@ -62,6 +62,8 @@ import SettingsPage from './pages/Settings'
 import WorkoutDetail from './pages/WorkoutDetail'
 import Training from './pages/Training'
 import MonthMedal from './pages/MonthMedal'
+import PeriodSummary from './pages/PeriodSummary'
+import YearByYear from './pages/YearByYear'
 
 export type NavGroupKey = 'longView' | 'areas' | 'status'
 
@@ -86,6 +88,15 @@ export const NAV: NavEntry[] = [
   { path: '/', label: 'nav.today', element: <Dashboard />, end: true },
 
   { path: '/trends', label: 'nav.trends', element: <Trends />, group: 'longView' },
+  // The year in numbers and year by year sit right under Trends because they
+  // are the same question asked over a longer reach — weeks, then a named
+  // period, then the years beside each other. On the phone the first is a card
+  // and the second a screen under it (`PeriodSummaryView`, `RetrospectiveView`);
+  // both are the `longTerm` band's question, "something to look at", not
+  // something to touch today. The second is not called "The long view", as the
+  // phone's screen is, because that is already the heading it stands under.
+  { path: '/period', label: 'nav.period', element: <PeriodSummary />, group: 'longView' },
+  { path: '/years', label: 'nav.years', element: <YearByYear />, group: 'longView' },
   { path: '/insights', label: 'nav.insights', element: <Insights />, group: 'longView' },
   { path: '/achievements', label: 'nav.achievements', element: <Achievements />, group: 'longView' },
   { path: '/challenge', label: 'nav.challenge', element: <Challenge />, group: 'longView' },
