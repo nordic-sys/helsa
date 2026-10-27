@@ -127,7 +127,7 @@ export default function Sleep() {
         {tx('sleep.subtitle', { derived: <strong>{t('sleep.subtitle.derived')}</strong> })}
       </p>
 
-      <div className="controls">
+      <div className="controls segmented" role="group" aria-label={t('trends.periodAria')}>
         {WINDOWS.map((w) => (
           <button
             key={w.range}

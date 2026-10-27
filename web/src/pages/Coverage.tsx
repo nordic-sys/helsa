@@ -173,7 +173,7 @@ export default function Coverage() {
       <h1>{t('coverage.title')}</h1>
       <p className="subtle">{t('coverage.subtitle')}</p>
 
-      <div className="controls" role="group" aria-label={t('coverage.window.aria')}>
+      <div className="controls segmented" role="group" aria-label={t('coverage.window.aria')}>
         {WINDOWS.map((w) => (
           <button
             key={w.days}

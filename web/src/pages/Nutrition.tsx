@@ -146,7 +146,7 @@ export default function Nutrition() {
       <h1>{t('nutrition.title')}</h1>
       <p className="subtle">{t('nutrition.subtitle')}</p>
 
-      <div className="controls">
+      <div className="controls segmented" role="group" aria-label={t('trends.periodAria')}>
         {RANGES.map((x) => (
           <button
             key={x.key}

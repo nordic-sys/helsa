@@ -573,8 +573,8 @@ function SessionRow({
     facts.push(`${f.num(w.total_energy_kcal)} kcal`)
   if (w.avg_heart_rate != null && w.avg_heart_rate > 0)
     facts.push(`${f.num(w.avg_heart_rate)} ${t('unit.bpm')}`)
-  if (w.max_heart_rate != null && w.max_heart_rate > 0)
-    facts.push(`${t('workouts.row.max')} ${f.num(w.max_heart_rate)}`)
+  // The maximum stays in the detail: the row is one line of what a session
+  // was, and the peak is a property of how it went.
 
   // The fold, said rather than hidden — and which of the two things happened,
   // because "the numbers differ" and "they are identical" are different facts.
@@ -603,7 +603,9 @@ function SessionRow({
           {f.dateTime(w.started_at)}
           {w.ended_at ? `–${f.time(w.ended_at)}` : ''}
         </span>
-        {foldText && <span className="wo-date">{foldText}</span>}
+        {/* The ×2 chip says it to the eye; this says it — and which of the two
+            facts it is — to a screen reader. */}
+        {foldText && <span className="sr-only">{foldText}</span>}
       </span>
       {group.count > 1 && (
         <span className="dup-chip" title={foldText ?? undefined} aria-hidden="true">

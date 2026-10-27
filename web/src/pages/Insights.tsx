@@ -1,7 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { api } from '../api/client'
 import type { Insight, InsightSeverity } from '../api/types'
-import { Card, Empty, ErrorState, Loading } from '../components/ui'
+import { Card, Empty, ErrorState, Loading, textColor } from '../components/ui'
 import { useI18n } from '../i18n'
 import type { UiKey } from '../i18n'
 import { useFormat } from '../lib/format'
@@ -143,7 +143,7 @@ function Observation({ insight, first }: { insight: Insight; first: boolean }) {
           <p className="subtle" style={{ margin: '8px 0 0', fontSize: 13 }}>
             {insight.metric && (
               <>
-                <strong style={{ color, fontWeight: 600 }}>{tMetric(insight.metric)}</strong>
+                <strong style={{ color: textColor(color), fontWeight: 600 }}>{tMetric(insight.metric)}</strong>
                 {' · '}
               </>
             )}

@@ -199,9 +199,11 @@ function Status({ s, lastGood }: { s: IngestStatus; lastGood?: string }) {
               <h2 className="card-title">{t('ingest.tile.rate')}</h2>
               <p className="figure">
                 {rate(tput.batches_per_minute)}
+                {tput.batches_per_minute != null && (
                 <small style={{ fontSize: 15, fontWeight: 500, color: 'var(--text-dim)' }}>
                   {t('ingest.tile.rateUnit')}
                 </small>
+                )}
               </p>
               <p className="stat-note">
                 {tput.items_per_minute != null
