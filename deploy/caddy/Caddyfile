@@ -40,10 +40,24 @@ https://:443 {
 	}
 
 	# This is how the backend knows which device is speaking (docs/08 §4).
+	#
+	# Every header the backend may ever trust is SET here, never passed through:
+	# `header_up Name value` replaces whatever the client sent under that name.
+	#   - X-Client-Cert-*: from the TLS handshake, not from the request.
+	#   - X-Helsa-Listener: which door the request came through. A cookie does not
+	#     know ports (RFC 6265 §8.5), so the backend needs this to accept a web
+	#     session only from the web door (docs/36 §9, C10).
+	#   - X-Real-IP: the client's address as Caddy saw it. The backend's RealIP
+	#     reads True-Client-IP first, then X-Real-IP — so the first is removed and
+	#     the second set, or any caller could choose the address a rate limit
+	#     counts against (docs/36 §9, C8).
 	handle /v1/* {
 		reverse_proxy api:8080 {
 			header_up X-Client-Cert-Subject {http.request.tls.client.subject}
 			header_up X-Client-Cert-Serial {http.request.tls.client.serial}
+			header_up X-Helsa-Listener device
+			header_up -True-Client-IP
+			header_up X-Real-IP {client_ip}
 		}
 	}
 
@@ -76,8 +90,19 @@ https://:8443 {
 
 	handle @allowed {
 		# The web reads the same API, just not through mTLS.
+		#
+		# ⛔ There is no client certificate on this port, so the certificate headers
+		# are REMOVED, not left to whatever the browser — or anybody on the LAN —
+		# sends: until 2026-10 they were passed through untouched (docs/36 §1.2/4).
+		# The rest as on :443.
 		handle /v1/* {
-			reverse_proxy api:8080
+			reverse_proxy api:8080 {
+				header_up -X-Client-Cert-Subject
+				header_up -X-Client-Cert-Serial
+				header_up X-Helsa-Listener web
+				header_up -True-Client-IP
+				header_up X-Real-IP {client_ip}
+			}
 		}
 		handle {
 			reverse_proxy web:80
