@@ -101,7 +101,9 @@ IP.1  = 192.168.1.50               # the server's LAN address
 ```
 
 `make server` refuses to sign while the example names (`helsa.example.com`, `192.168.1.10`) are
-still there. Change the names later? Edit the file, delete `out/server/`, run `make server` again,
+still there. Change the names later? **Keep the name the phone uses today in the list** until the
+phone has been switched to the new one — otherwise it drops off the moment the new certificate is
+installed. Edit the file, delete `out/server/`, run `make server` again,
 and install the new pair on the server — the CA, and so the phone, stay as they are.
 :::
 

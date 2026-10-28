@@ -19,8 +19,14 @@ any change to the proxy or the network.
 - [ ] Router firewall input rules are scoped to the LAN interface, not to "any".
       An open DNS resolver or management port on a WAN interface is the classic
       home-network mistake and gets abused within days.
-- [ ] The host running Helsa cannot reach the rest of your LAN, or is on its own
-      segment, if that is easy for you to arrange.
+- [ ] The host running Helsa cannot open connections into the rest of your LAN, or
+      is on its own segment. ⚠️ On a flat home network **the router cannot enforce
+      this** — hosts on one subnet talk without passing its firewall. Do it where the
+      VM's network card is: the hypervisor's firewall, or a separate VLAN.
+      [A Proxmox example](/deployment/example-homelab/#2-isolation-belongs-to-the-hypervisor-not-the-router).
+- [ ] The host has a **fixed address**: a static DHCP lease (on a MikroTik, by MAC
+      only — a lease that also matches the client-id breaks at the next OS upgrade)
+      or a static IP. Port forwards and DNS records point at it.
 
 ## Containers
 
@@ -30,7 +36,8 @@ any change to the proxy or the network.
       development overlay, which publishes database ports to the host.
 - [ ] Containers use `restart: unless-stopped`, so the stack returns after a
       reboot or a power cut.
-- [ ] The host starts the stack on boot.
+- [ ] The host starts the stack on boot — and a VM starts with its hypervisor
+      (Proxmox: *Start at boot*, off by default).
 - [ ] Images are rebuilt and pulled occasionally. A container that has been up for
       a year is running a year-old TLS stack.
 
@@ -86,7 +93,8 @@ own death. See [Home Assistant](/integrations/home-assistant/#the-alert-that-mat
 - [ ] Host OS security updates applied, unattended upgrades on if the distribution
       makes it easy.
 - [ ] `docker compose pull && docker compose up -d` occasionally, so Caddy, Redis,
-      and PostgreSQL do not drift years behind.
+      and PostgreSQL do not drift years behind. Then `docker image prune -f`: every
+      pull leaves the previous images on the disk, and they add up.
 - [ ] `govulncheck ./...` in `backend/` and `npm audit` in `web/` from time to
       time. There is no CI here; the check happens because you run it.
 - [ ] Certificate expiry dates are in your calendar. `make expiry` prints them.

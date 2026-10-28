@@ -30,6 +30,12 @@ meet them.
 | 4 · First sync | Saving and expecting it to work at once | No device ever registers | Restart the app — the connection is built at launch |
 | 4 · First sync | Expecting background sync on iOS 27 | Data goes up only while the app is open | iPhone Settings → General → Background App Refresh → Helsa on |
 | Deployment | Adding Helsa to the reverse proxy that already runs the home network (Nginx Proxy Manager, Traefik) as an ordinary proxy host | TLS fails on the phone, or the server presents the wildcard certificate instead of yours | The phone must reach Helsa's Caddy without anything decrypting in between: a dedicated port straight to the Helsa host, or TCP passthrough — [A reverse proxy already runs on your network](/deployment/reverse-proxy/#a-reverse-proxy-already-runs-on-your-network) |
+| Deployment | Cloudflare record left on the orange cloud (proxied) | The phone cannot connect from outside; from inside it works | *DNS only* (grey cloud) — Cloudflare would terminate TLS — [Reverse proxy](/deployment/reverse-proxy/#a-reverse-proxy-already-runs-on-your-network) |
+| Deployment | An NPM stream on a new port that nobody published | The port is closed although the stream exists | Add the port to NPM's Compose file and recreate the container — [Worked example](/deployment/example-homelab/#4-nginx-proxy-manager-the-dashboard-as-a-proxy-host-the-api-as-a-stream) |
+| Deployment | A high external port, but only on the router | Works on mobile data, fails on home Wi-Fi | The same port must answer inside too — [Same address at home and away](/deployment/reverse-proxy/#a-reverse-proxy-already-runs-on-your-network) |
+| Deployment | A new certificate without the name the phone still uses | The phone drops off right after the install | Keep the old name in `server.cnf` until the phone is switched — [Issuing](/getting-started/certificates/#issuing--on-your-own-computer) |
+| Deployment | The dashboard moved to a new address | "No valid device token" although it worked yesterday | The token is stored per address: paste it again — [The web dashboard](/dashboard/#how-to-reach-it) |
+| Deployment | A Proxmox VM without *Start at boot* | After a power cut everything is down until you start the VM | VM → Options → Start at boot |
 | Tokens | One `SUBJECT` per person instead of per device (tool before 2026-10-27) | The dashboard is empty while the phone uploads | Since then every token binds to the one user; on an old install use `TOKEN_USER` — [Device token](/getting-started/device-token/) |
 
 ## Nothing arrives from the phone

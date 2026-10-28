@@ -92,6 +92,10 @@ rule, so that neither alone is a single point of failure.
 
 Only after step 4 should the router forward anything.
 
+**If you already run a reverse proxy, a VM host and a router of your own,** the
+[worked example](/deployment/example-homelab/) does all of the above on one real network —
+MikroTik, Nginx Proxy Manager, Proxmox — with the commands and the traps.
+
 **Optionally, step 5:** the dashboard can draw a basemap under a workout route. It is
 off by default and nothing depends on it — [map tiles](/deployment/map-tiles/) covers
 what each source sends and how to run your own.

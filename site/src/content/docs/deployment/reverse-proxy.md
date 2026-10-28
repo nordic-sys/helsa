@@ -215,7 +215,18 @@ Two ways:
    Traefik's TCP router with `tls.passthrough: true`, nginx's `stream` module with
    `ssl_preread`, HAProxy in `mode tcp` with an SNI rule. ⚠️ Nginx Proxy Manager's
    *Streams* forward a whole port and cannot choose by name, so on 443 they would take the
-   port away from every other service — for NPM use option 1.
+   port away from every other service. On a port of its own a stream is fine — but NPM runs
+   in Docker, and the stream port must also be published by the NPM container.
+
+**The dashboard is different.** It has no client certificate to protect, so the existing proxy
+*may* terminate it: an ordinary proxy host forwarding to `https://<helsa-host>:8443`, with the
+proxy's own (for example Let's Encrypt wildcard) certificate — then no laptop needs your private
+CA. The proxy becomes the dashboard's gate, so it must not be reachable from the internet.
+
+**Same address at home and away.** The phone's endpoint carries the port
+(`https://helsa.example.net:8444/v1`), so that port has to answer **inside** the network too, not
+only on the router's outside. Either point the name at the Helsa host and publish the same port
+there, or let the existing proxy forward it as a stream.
 
 Whichever you choose:
 
@@ -224,6 +235,8 @@ Whichever you choose:
   address; the specific name wins over the wildcard, so the same name works at home and
   away. From outside, the name must resolve to your public address (a CNAME to your
   dynamic-DNS name is enough).
+- **Cloudflare (or any DNS with a proxy feature): DNS only.** With Cloudflare's orange cloud,
+  Cloudflare terminates TLS and the client certificate ends there — the record must be *DNS only*.
 - **The certificate.** `server.cnf` needs the name, plus the LAN address if anything uses
   it — the port plays no part in a certificate: [Issuing](/getting-started/certificates/#issuing--on-your-own-computer).
 - **The test.** From outside, a request without a client certificate must fail at the
@@ -236,6 +249,9 @@ Whichever you choose:
 
   The issuer has to be your own CA. If it names Let's Encrypt or the proxy, the traffic is
   still going through the proxy.
+
+A complete walk-through of one such network — MikroTik, Nginx Proxy Manager, Proxmox,
+Cloudflare: [Worked example](/deployment/example-homelab/).
 
 ## Dynamic DNS is now load-bearing
 
