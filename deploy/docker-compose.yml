@@ -14,6 +14,11 @@ services:
   timescaledb:
     image: timescale/timescaledb-ha:pg18   # PG18 in the -ha image (Ubuntu + Toolkit + PostGIS + Patroni); the "most complete" Timescale. Pin to a concrete tag before production.
     container_name: helsa-timescaledb
+    # ⚠️ TimescaleDB phones home by default: a daily "telemetry" job sends usage
+    # data to Timescale (seen succeeding on a real install, 2026-10-28). The
+    # project promises no phone-home, so it is switched off here, for every
+    # install. The entrypoint passes these arguments on to postgres.
+    command: ["postgres", "-c", "timescaledb.telemetry_level=off"]
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-helsa}
       POSTGRES_USER: ${POSTGRES_USER:-helsa}       # locally the helsa superuser; in production a scoped helsa role
