@@ -87,6 +87,12 @@ The expected directory layout is documented at the top of
 - **The migration is a separate, deliberate step** (`make prod-migrate`), never a
   start-up side effect. On a live database, "migrate on start-up" is hard to reverse
   after a bad deploy.
+- **The application is not the database owner.** The migrations run as the owner
+  (`POSTGRES_USER`, a superuser); the api, the worker and the token tool connect as
+  `helsa_app`, which may read and write rows and nothing else
+  (`init/timescaledb/03-app-role.sql`). A fresh database creates the role on its
+  first start from `HELSA_APP_DB_PASSWORD`; an older install gets it with
+  `make prod-app-role`. `make prod-migrate` re-applies its grants after migrating.
 - **The signing material lives outside the checkout** (`/opt/helsa/pki`), so it can
   neither end up in the repository nor be swept away by a `git clean`.
 
@@ -258,5 +264,6 @@ route re-opened is not a second round of requests.
 | `caddy/` | the reverse proxy — the only component facing outwards |
 | `pki/` | the private CA and the certificates ([README](pki/README.md)) |
 | `migrate/` | the goose runner image (built locally; not published) |
+| `init/timescaledb/` | runs once, on the database's first start: the extensions, and the application role `helsa_app` (`03-app-role.sql`, which `make prod-app-role` also runs) |
 | `mosquitto/` | a throwaway MQTT broker for testing the Home Assistant publisher (`make mqtt-up`; behind a compose profile, never started by `make up`) |
 | `scripts/` | database backup, the restore procedure, the sync-freshness heartbeat, and the map-region build/install pair |

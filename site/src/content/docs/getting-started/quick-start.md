@@ -71,19 +71,27 @@ openssl rand -hex 32      # → REDIS_PASSWORD=…
 openssl rand -hex 32      # → RABBITMQ_PASSWORD=…
 ```
 
-**b) Three more lines are NOT in `.env` — add them at the end.** `HELSA_JWT_SECRET`,
-`LAN_SUBNET` and `WG_SUBNET` are not in `.env.example` (only commented reminders at its end), so
-there is nothing to edit; you append them:
+**b) Four more lines are NOT in `.env` — add them at the end.** `HELSA_JWT_SECRET`,
+`HELSA_APP_DB_PASSWORD`, `LAN_SUBNET` and `WG_SUBNET` are not in `.env.example` (only commented
+reminders at its end), so there is nothing to edit; you append them:
 
 ```bash title="On the server"
 cd ~/helsa/deploy                      # wherever your clone lives
 echo "" >> .env
 echo "HELSA_JWT_SECRET=$(openssl rand -base64 48)" >> .env
+echo "HELSA_APP_DB_PASSWORD=$(openssl rand -hex 32)" >> .env   # the application's database login
 echo "LAN_SUBNET=192.168.1.0/24" >> .env   # your home network
 echo "WG_SUBNET=10.100.0.0/24" >> .env     # your WireGuard range (the addresses the VPN hands out)
 chmod 600 .env
-grep -cE "^(HELSA_JWT_SECRET|LAN_SUBNET|WG_SUBNET)=" .env   # must print 3
+grep -cE "^(HELSA_JWT_SECRET|HELSA_APP_DB_PASSWORD|LAN_SUBNET|WG_SUBNET)=" .env   # must print 4
 ```
+
+**`HELSA_APP_DB_PASSWORD` is the application's own database login.** The api, the worker and the
+token tool connect as `helsa_app`, a role that can read and write rows in Helsa's tables and nothing
+else; `POSTGRES_USER` stays the owner, which only the migrations use. The database creates
+`helsa_app` on its first start from this value — so, like the others, set it **before** step 3. A
+production stack without it refuses to start, with a message naming it. (Upgrading an install from
+before `helsa_app` existed: [the steps are below](#upgrading-an-install-from-before-helsa_app).)
 
 `LAN_SUBNET` and `WG_SUBNET` are the two ranges the dashboard on `:8443` answers; everything else
 gets a `403` ([Reverse proxy](/deployment/reverse-proxy/)). Put your own ranges in — the values
@@ -94,7 +102,7 @@ above are examples. No VPN? Give `WG_SUBNET` your LAN range a second time.
 dashboard that answers `403` from your own sofa, and nothing says why; if one of those example
 ranges happens to be somebody else's network you can route to, it is let in. Set both.
 
-⚠️ **Hex for the three passwords, on purpose.** They end up inside connection strings. The
+⚠️ **Hex for the passwords, on purpose.** They end up inside connection strings. The
 backend repairs a base64 password (`/`, `+`, `=`) in its own URLs, but hex has nothing to repair,
 and a password containing `'` or `\` breaks the migration tool's connection string either way.
 
@@ -109,7 +117,8 @@ with a message naming it (the compose files read it as `$${HELSA_JWT_SECRET:?…
 
 | Variable | What it is | If you get it wrong |
 |---|---|---|
-| `POSTGRES_PASSWORD` | Database password. | The API cannot start. |
+| `POSTGRES_PASSWORD` | The database owner's password — the migrations and backups use it. | Migrations and backups cannot log in. |
+| `HELSA_APP_DB_PASSWORD` | The application role `helsa_app`'s password — the API, the worker and the token tool log in with it. | Missing: the production stack refuses to start. Changed in `.env` only: the API cannot log in until `make prod-app-role` sets it in the database too. |
 | `REDIS_PASSWORD` | Cache password. | Readiness check fails. |
 | `RABBITMQ_PASSWORD` | Queue password. | Uploads are accepted but never processed. |
 | `HELSA_JWT_SECRET` | Signs device tokens. | **Anyone who knows it can mint a token for your data.** Treat it like a private key. |
@@ -151,6 +160,17 @@ Verify:
 docker compose exec timescaledb \
   psql -U helsa -d helsa -c '\dt'
 ```
+
+And that the application has its own, unprivileged login:
+
+```bash title="On the server"
+docker compose exec timescaledb \
+  psql -U helsa -d helsa -c '\du helsa_app'
+```
+
+One row, `helsa_app`, with no attributes beside it — no *Superuser*, no *Create role*, no *Create
+DB*. `make prod-migrate` ends by refreshing that role's grants (`helsa_app: role and grants are in
+place.`), so the tables the migration just created are covered.
 
 You should see `users`, `devices`, `workouts`, `workout_route_points`,
 `sleep_segments`, `activity_summary`, `goals`, `sync_state`, `achievements`,
@@ -282,6 +302,36 @@ make prod-pull      # the images
 make prod-migrate   # only if the pull brought new migrations — read them first
 make prod-up
 ```
+
+### Upgrading an install from before `helsa_app`
+
+Until 2026-10-28 the api and the worker connected as the database owner, a superuser. The Compose
+files now connect them as `helsa_app` and refuse to start without its password. An install with
+data does not get the role by itself — the database creates it only on its very first start — so
+add it once, in this order:
+
+```bash title="On the server"
+cd ~/helsa/deploy                      # wherever your clone lives
+git pull                                                        # 1. the Compose files and the role script
+echo "HELSA_APP_DB_PASSWORD=$(openssl rand -hex 32)" >> .env    # 2. the new key (once; never echoed)
+make prod-app-role                                              # 3. creates helsa_app, sets its password, grants
+make prod-pull                                                  # 4. the images
+make prod-migrate                                               # 5. any new migrations, then the grants again
+make prod-up                                                    # 6. api, worker and token now log in as helsa_app
+```
+
+Step 3 is idempotent: run it again whenever you like — after a restore, after changing
+`HELSA_APP_DB_PASSWORD` (it is how the database learns the new value), or if a check below fails.
+Then confirm the application is no longer the superuser:
+
+```bash title="On the server"
+make prod-exec-api CMD="wget -qO- http://127.0.0.1:8080/readyz"   # {"status":"ready"}
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec timescaledb \
+  psql -U helsa -d helsa -c "SELECT a.usename, r.rolsuper, count(*) FROM pg_stat_activity a JOIN pg_roles r ON r.oid = a.usesysid WHERE a.datname = 'helsa' AND a.backend_type = 'client backend' GROUP BY 1, 2;"
+```
+
+The api's and the worker's connections are the `helsa_app | f` row. The single `helsa | t` row is
+the `psql` you just ran; if it counts more than one, something still logs in as the owner.
 
 :::danger
 **Pull the migrations before the images, and read them.** The default tag is `main`,
