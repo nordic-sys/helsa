@@ -68,6 +68,7 @@ import { useIngestStatus } from '../lib/useIngestStatus'
 import { useToday } from '../lib/useToday'
 import { useInsightText } from '../lib/insightText'
 import { durationMin, isIndoor } from '../lib/workouts'
+import { liveTokens } from '../lib/household'
 
 /**
  * The four tiles, in the mockup's order.
@@ -137,7 +138,7 @@ export default function Dashboard() {
 
       {!hasAny && (
         <div style={{ marginBottom: 24 }}>
-          <Empty title={t('dashboard.empty.title')} hint={t('dashboard.empty.hint')} />
+          <FirstSteps />
         </div>
       )}
 
@@ -239,6 +240,33 @@ function Rows({ items }: { items: { label: string; value: ReactNode }[] }) {
  * whole page (see the file header), so anything reaching here is one endpoint
  * having a bad day.
  */
+/**
+ * Nothing measured yet. For somebody who has never connected a phone — a new
+ * household member, signed in on the web with a code before the phone joined —
+ * "as soon as it syncs" would describe a phone that does not exist, so they are
+ * told where to connect one instead (docs/36 §9, A19).
+ *
+ * ⚠️ Only when the device list SAYS there is no phone, and only on a page with
+ * no data at all. Tokens issued before the household are not listed (docs/36
+ * §5.3), so the list alone would tell somebody with a working pre-household
+ * phone that it is missing; with data on the page this card is never drawn, and
+ * a failed read falls back to the old sentence.
+ */
+function FirstSteps() {
+  const { t, tx } = useI18n()
+  const tokens = useQuery({ queryKey: ['me', 'tokens'], queryFn: () => api.myTokens() })
+  const noPhone = tokens.isSuccess && !liveTokens(tokens.data).some((tok) => tok.kind === 'device')
+  if (!noPhone) return <Empty title={t('dashboard.empty.title')} hint={t('dashboard.empty.hint')} />
+  return (
+    <div className="state">
+      <strong>{t('dashboard.empty.title')}</strong>
+      <span>
+        {tx('dashboard.empty.noPhone', { link: <Link to="/account">{t('nav.account')}</Link> })}
+      </span>
+    </div>
+  )
+}
+
 function CardState({
   query,
   isEmpty,

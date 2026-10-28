@@ -1955,7 +1955,10 @@ export const en: Dict = {
     'member.log.title': 'Log (also shown to {name})',
 
     // --- Elsewhere -------------------------------------------------------------
+    'ingest.redrive.memberNote': "The server's owner can retry them, from this page.",
     'settings.export.moved': 'Export has moved to {link}, next to deleting the account.',
+    'dashboard.empty.noPhone':
+      'You have no phone connected yet. Ask for a connection code on {link} — once the phone syncs, everything shows up here.',
   },
 
   // --- Metric group names ---------------------------------------------------

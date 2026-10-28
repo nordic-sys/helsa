@@ -1954,7 +1954,10 @@ export const hu = {
     'member.log.title': 'Napló ({name} is látja)',
 
     // --- Elsewhere -------------------------------------------------------------
+    'ingest.redrive.memberNote': 'Újrapróbálni a szerver gazdája tudja, erről az oldalról.',
     'settings.export.moved': 'Az export átkerült a {link} oldalra, a fiók törlése mellé.',
+    'dashboard.empty.noPhone':
+      'Még nincs csatlakoztatott telefonod. A {link} oldalon kérhetsz csatlakozási kódot — amint a telefon szinkronizál, itt megjelenik minden.',
   },
 
   // --- Metric group names ---------------------------------------------------
