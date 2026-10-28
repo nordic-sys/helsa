@@ -25,10 +25,10 @@ export const hu = {
     'nav.nutrition': 'Táplálkozás',
     'nav.challenge': 'Havi kihívás',
     'nav.journey': 'Virtuális túra',
-    'nav.coverage': 'Adat-teljesség',
+    'nav.coverage': 'Adatteljesség',
     'nav.ingest': 'Feltöltési sor',
     'nav.settings': 'Beállítások',
-    'lang.aria': 'Nyelv megválasztása',
+    'lang.aria': 'Nyelvválasztás',
     'lang.hu': 'Magyar',
     'lang.en': 'Angol',
 
@@ -65,24 +65,24 @@ export const hu = {
     // --- Dashboard ---------------------------------------------------------
     'dashboard.title': 'Ma',
     'dashboard.tz': 'időzóna: {tz}',
-    'dashboard.lastSync': 'eszköz utoljára látva: {when}',
+    'dashboard.lastSync': 'eszköz utolsó jelentkezése: {when}',
     'dashboard.empty.title': 'Még nincs adat',
     'dashboard.empty.hint':
       'Az iPhone az egyetlen feltöltő — amint szinkronizál, itt megjelenik.',
-    'dashboard.rings.title': 'Aktivitás-gyűrűk',
+    'dashboard.rings.title': 'Aktivitásgyűrűk',
     'dashboard.rings.move': 'Mozgás',
     'dashboard.rings.exercise': 'Edzés',
     'dashboard.rings.stand': 'Állás',
-    'dashboard.rings.empty.title': 'Nincs gyűrű-adat',
-    'dashboard.rings.empty.hint': 'A HealthKit napi activity-summaryja még nem érkezett meg.',
+    'dashboard.rings.empty.title': 'Nincs gyűrűadat',
+    'dashboard.rings.empty.hint': 'A HealthKit napi aktivitás-összesítője még nem érkezett meg.',
 
     // --- Trends ------------------------------------------------------------
     'trends.title': 'Trendek',
-    'trends.subtitle': 'Hosszabb távú alakulás, a saját időzónád szerint bucketelve.',
+    'trends.subtitle': 'Hosszabb távú alakulás, a saját időzónád szerint szakaszokra bontva.',
     'trends.metric': 'Metrika',
     'trends.degraded.title': 'Ez a típus mintánkénti átlagként érkezik, nem napi összegként',
     'trends.degraded.body':
-      'A {metric} összegzendő metrika, de a szerver csak azt az öt típust ismeri név szerint, aminek beégetett aggregációja van — a többire átlagot, minimumot és maximumot ad vissza, darabszámot nem. Napi összeget ebből nem lehet visszaállítani, ezért itt az egy mintára jutó átlag látszik. A javítás helye a backend {file} metricMeta táblája.',
+      '{metric}: ezt összegezni kellene, de a szerver név szerint csak azt az öt típust ismeri, amelyeknek rögzített összesítési módja van — a többire átlagot, minimumot és maximumot ad vissza, darabszámot nem. Ebből napi összeget nem lehet visszaállítani, ezért itt az egy mintára jutó átlag látszik. A javítás helye a backend {file} fájljának metricMeta táblája.',
     'trends.empty.title': 'Nincs adat ebben az időszakban: {metric}',
     'trends.empty.hintElsewhere':
       'Erre a típusra van adat, csak nem ebben az ablakban — válts időtávot.',
@@ -91,7 +91,7 @@ export const hu = {
     'trends.extremes': 'Szélsőértékek',
     'trends.periodAverage': 'Átlag az időszakban',
     'trends.periodTotal': 'Összesen az időszakban',
-    'trends.bandNote': '· a halvány sáv a bucketen belüli minimum–maximum',
+    'trends.bandNote': '· a halvány sáv a szakaszon belüli minimum–maximum',
 
     // --- Trendek · lépkedés az időszakok között ------------------------------
     // Ahogy a GÖRDÜLŐ ablakot hívjuk. Saját neve nincs — a múlt péntektől a
@@ -109,10 +109,10 @@ export const hu = {
     // ⚠️ A lefúrás-súgó szintenként ki van írva, nem egy időtáv-névből áll
     // össze, mert a hónap → hét lépés az, ami meglepi az embert: a hónap
     // oszlopai napok, egy koppintás mégis a körülötte lévő hetet nyitja meg.
-    'trends.drill.toMonth': 'Koppints a grafikonra: megnyílik az a hónap.',
+    'trends.drill.toMonth': 'Koppints a grafikonra: megnyílik a hónap, amelyikbe az a pont esik.',
     'trends.drill.toWeek':
-      'Koppints a grafikonra: megnyílik a köré eső hét — az oszlopok napok, de a hét az a szint, amire általában gondolunk.',
-    'trends.drill.toDay': 'Koppints a grafikonra: megnyílik az a nap, óránként.',
+      'Koppints a grafikonra: megnyílik a kiválasztott naphoz tartozó hét — az oszlopok napokat mutatnak, de többnyire hetekben gondolkodunk.',
+    'trends.drill.toDay': 'Koppints a grafikonra: megnyílik az adott nap, óránkénti bontásban.',
     'trends.table.hint':
       'Billentyűzettel a grafikon alatti táblázat ugyanezeket az időszakokat nyitja meg.',
     'trends.table.summary': 'A grafikon számai',
@@ -122,7 +122,7 @@ export const hu = {
     'trends.table.open': 'Megnyitás: {period}',
     'trends.loading': 'Az új időszak töltődik…',
     'trends.chartDesc':
-      'Bucketenként egy oszlop vagy pont, {period}. Az üres bucketekben nem volt mérés. A grafikon alatti táblázat ugyanezeket a számokat sorolja fel.',
+      'Szakaszonként egy oszlop vagy pont, {period}. Az üres szakaszokban nem volt mérés. A grafikon alatti táblázat ugyanezeket a számokat sorolja fel.',
 
     // --- Trendek · az előző időszakhoz képest --------------------------------
     // ⚠️ Se szín, se ítélet. Egy növekedés hol öröm (lépés), hol figyelmeztetés
@@ -146,7 +146,7 @@ export const hu = {
     'trends.compare.uneven':
       'Nincs összevetés: a két időszakban nagyon eltérő arányban volt mérés, és kevesebb mért nap összege már ettől is kisebb. Az előző időszak ({dates}): {value}.',
     'trends.compare.unevenAvg':
-      'A két átlag nagyon eltérő számú mérésre támaszkodik, ezért a különbséget lazán érdemes olvasni.',
+      'A két átlag nagyon eltérő számú mérésen alapul, ezért a különbséget fenntartással kezeld.',
 
     // --- Trends · a szokásos tartomány --------------------------------------
     // ⚠️ „Szokásos”, soha nem „normális”: a normálisnak orvosi csengése van, amit
@@ -158,16 +158,16 @@ export const hu = {
     // kérdésre felel — mi az a halvány téglalap —, és a napok számának kimondása a
     // lényege. Egy 14 napon és egy 60 napon nyugvó sáv nem egyformán erős állítás.
     'trends.usual.band':
-      'A széles sáv a szokásos tartományod: az utolsó {days} mért nap közepe, annyi szórással, amennyi ezekben a napokban volt.',
+      'A széles sáv a szokásos sávod: az utolsó {days} mért nap közepe, plusz-mínusz az ezeken a napokon mért szórás.',
     'trends.usual.pending':
-      'Még nincs elég mért nap a szokásos tartományhoz ({days}/{min}). Addig nem rajzolunk sávot — egy kevesebb napra támaszkodó sáv nem szűkebb állítás lenne, hanem ugyanolyan magabiztos.',
+      'Még nincs elég mért nap a szokásos sávhoz ({days}/{min}). Addig nem rajzolunk sávot: kevesebb nap alapján sem tűnne óvatosabb becslésnek, hanem pont ugyanolyan biztosnak látszana.',
     'trends.usual.flat':
-      'Nincs rajzolható szokásos tartomány: a viszonyítási időszak mind a(z) {days} mért napján ugyanaz volt az érték ({value}), így nincs szórás, amiből sáv lenne. Ez nem adathiány.',
+      'Nincs mit sávként rajzolni: a viszonyítási időszak mindegyik mért napján ugyanaz volt az érték ({value}), összesen {days} napon, így nincs szórás, amiből sáv lenne. Ez nem adathiány.',
     'trends.usual.unavailable':
-      'A szerver nem küldött szokásos tartományt ehhez a méréshez, pedig mért napból van elég ({days}).',
+      'A szerver nem küldött szokásos sávot ehhez a mutatóhoz, pedig {days} napon volt mérés.',
     'trends.standing.wellBelow': 'Jóval a szokásod alatt',
     'trends.standing.below': 'A szokásod alatt',
-    'trends.standing.typical': 'A szokásos tartományodban',
+    'trends.standing.typical': 'A szokásos sávodban',
     'trends.standing.above': 'A szokásod fölött',
     'trends.standing.wellAbove': 'Jóval a szokásod fölött',
 
@@ -199,7 +199,7 @@ export const hu = {
     // --- Workouts ----------------------------------------------------------
     'workouts.title': 'Edzések',
     'workouts.subtitle':
-      'Az edzések hónapokba rendezve, a legfrissebbel kezdve. Egy becsukott hónap egyetlen sor, és egy két készülékkel rögzített edzés is egyetlen sor.',
+      'Az edzések hónapokba rendezve, a legfrissebbel kezdve. Egy összecsukott hónap egyetlen sor, és egy két készülékkel rögzített edzés is egyetlen sor.',
     'workouts.empty.title': 'Még nincs edzés',
     'workouts.empty.hint':
       'A Watch edzései a párosított iPhone HealthKitjébe kerülnek, onnan töltődnek fel.',
@@ -208,20 +208,20 @@ export const hu = {
     'workouts.col.duration': 'Időtartam',
     'workouts.col.energy': 'Energia',
     'workouts.col.distance': 'Táv',
-    'workouts.col.avgHr': 'Átlag pulzus',
-    'workouts.col.maxHr': 'Max pulzus',
+    'workouts.col.avgHr': 'Átlagpulzus',
+    'workouts.col.maxHr': 'Max. pulzus',
     'workouts.hrNote':
-      'Üres pulzus-oszlop: a minták csak a HealthKit {field}-ját ismerik, a szerver-oldali edzés-azonosítóhoz kötés az ingest workerben történik.',
+      'Üres pulzusoszlop: a HealthKit-mintákban csak a(z) {field} mező szerepel, a szerveroldali edzésazonosítóhoz pedig a feldolgozó (ingest worker) köti őket.',
     'workouts.filter.title': 'Szűrő',
     'workouts.filter.place': 'Helyszín',
     'workouts.place.any': 'Bárhol',
-    'workouts.place.indoor': 'Fedett',
+    'workouts.place.indoor': 'Beltéri',
     'workouts.place.outdoor': 'Szabadtéri',
     'workouts.filter.minDuration': 'Legalább ennyi ideig',
     'workouts.filter.minDistance': 'Legalább ennyi táv',
     'workouts.filter.minEnergy': 'Legalább ennyi energia',
-    'workouts.filter.minHr': 'Átlagpulzus ettől',
-    'workouts.filter.maxHr': 'Átlagpulzus eddig',
+    'workouts.filter.minHr': 'Átlagpulzus legalább',
+    'workouts.filter.maxHr': 'Átlagpulzus legfeljebb',
     'workouts.filter.noLimit': 'Nincs korlát',
     'workouts.filter.clear': 'Szűrő törlése',
     'workouts.filter.count.one': '{n} edzésből {shown} látszik',
@@ -230,7 +230,7 @@ export const hu = {
     'workouts.filter.none.hint.one': '{n} edzés van a listában — próbáld tágítani a szűrőt.',
     'workouts.filter.none.hint.other': '{n} edzés van a listában — próbáld tágítani a szűrőt.',
     'workouts.filter.missingNote':
-      'Amelyik edzés nem tud válaszolni egy szűrőre, azt a szűrő nem rejti el. Egy erősítő edzésnek nincs távja, így a „legalább 5 km” bent hagyja ahelyett, hogy a hiányzó távot nullának olvasná.',
+      'Ha egy edzésnél hiányzik az az adat, amelyre szűrsz, a szűrő nem rejti el. Egy erősítő edzésnek nincs távja, ezért a „legalább 5 km” bent hagyja, és nem veszi nullának a hiányzó távot.',
     'workouts.month.count.one': '{n} edzés',
     'workouts.month.count.other': '{n} edzés',
     'workouts.month.open.one': '{n} lezáratlan, az összegen kívül',
@@ -244,21 +244,21 @@ export const hu = {
     'workouts.fold.differ.other':
       '{n} lehetséges egyező felvétel erről az edzésről — az időtartam, a táv vagy az energia eltér.',
     'workouts.dupNote':
-      '{sessions} edzés úgy fest, mintha egynél többször érkezett volna meg a Healthbe: azonos tevékenység, átfedő időben (a közös időtartamuk legalább 70%-a, vagy legfeljebb 5 perc eltérés a kezdésben). A Health nem köti össze az ilyen felvételeket, így ez következtetés. A lista mindegyikről egyetlen sort mutat, így a havi összegek nem duplázódnak; további {extra} felvétel áll ezek mögött.',
-    'workouts.loading.title': 'A történet még töltődik',
+      '{sessions} edzés úgy fest, mintha egynél többször érkezett volna meg az Egészség appba: azonos tevékenység, átfedő időben (az átfedés legalább az együttes időtartamuk 70%-a, vagy legfeljebb 5 perc eltéréssel kezdődtek). Az Egészség app nem köti össze az ilyen felvételeket, így ez következtetés. A lista mindegyikről egyetlen sort mutat, így a havi összegek nem duplázódnak; további {extra} felvétel áll ezek mögött.',
+    'workouts.loading.title': 'Még töltődnek a korábbi edzések',
     'workouts.loading.body.one':
       'Eddig {n} felvétel. A régebbi hónapok még érkeznek, az összegük tehát még nem végleges.',
     'workouts.loading.body.other':
       'Eddig {n} felvétel. A régebbi hónapok még érkeznek, az összegük tehát még nem végleges.',
-    'workouts.truncated.title': 'Itt megáll a történet',
+    'workouts.truncated.title': 'Itt véget ér a lista',
     'workouts.truncated.body':
-      'A régebbi edzések nincsenek ebben a listában: a lapozás elérte a korlátját. Ami fölötte van, az teljes — alatta van még.',
+      'A régebbi edzések nincsenek ebben a listában: a lapozás elérte a korlátját. Ami efölött látható, az teljes — innen lefelé viszont van még.',
 
     // --- One workout, opened -----------------------------------------------
     'workout.back': '← Vissza az edzésekhez',
     'workout.missing.title': 'Nincs ilyen edzés',
     'workout.missing.hint':
-      'A hivatkozás olyan alkalomra mutat, ami ezen a szerveren nincs meg. Vagy törölték az Egészség appban, vagy egy másik szerver linkje.',
+      'A hivatkozás olyan edzésre mutat, amely ezen a szerveren nincs meg. Lehet, hogy törölted az Egészség appban, vagy a link egy másik szerverről való.',
 
     'workout.metric.time': 'Idő',
     'workout.metric.distance': 'Táv',
@@ -270,14 +270,14 @@ export const hu = {
     'workout.metric.pool': 'Medence',
     'workout.metric.none.title': 'Ehhez az edzéshez nem érkezett mérés',
     'workout.metric.none.hint':
-      'Az alkalmat rögzítették, de egyetlen szám sem jött vele. Ez a felvételről szóló tény, nem nulla.',
+      'Az edzést rögzítették, de egyetlen számadat sem érkezett vele. Ez a felvétel hiányossága, nem nulla érték.',
 
     'workout.route.title': 'Útvonal',
     'workout.route.loading': 'Töltődik az útvonal…',
     'workout.route.none': 'Ehhez az edzéshez nincs útvonal.',
     'workout.route.failed.title': 'Az útvonalat nem sikerült betölteni',
     'workout.route.failed.body':
-      'Ez elbukott kérés, nem hiányzó útvonal — az edzéshez tartozhat útvonal.',
+      'Ez sikertelen lekérés, nem hiányzó útvonal — az edzésnek nagyon is lehet útvonala.',
     'workout.route.start': 'Rajt',
     'workout.route.finish': 'Cél',
     'workout.route.startFinish': 'Rajt / Cél',
@@ -287,9 +287,9 @@ export const hu = {
     // ⚠️ Négy állapot, és pontosan egy igaz belőlük egyszerre. A „nincs térkép"
     // az ALAPÉRTELMEZETT, és aki soha nem nyitja meg a beállítást, ebben marad.
     'workout.route.noTiles':
-      'Csak a rögzített koordinátákból rajzolva: térkép nincs alatta, mert nincs bekapcsolva. A Beállításokban választhatsz forrást — és ott az is ott áll, hogy melyik mit ad tudtára kinek.',
+      'Csak a rögzített koordinátákból rajzolva: térkép nincs alatta, mert nincs bekapcsolva. A Beállításokban választhatsz forrást — ott az is olvasható, melyik forrás kinek mit árul el.',
     'workout.route.viaOwn':
-      'A térkép a saját csempeszervereidről jön, a Helsa szerverén keresztül. A böngésződ csak a Helsa szerverével beszél, és a csempéket kérő gép is a tiéd.',
+      'A térkép a saját csempeszerveredről jön, a Helsa szerverén keresztül. A böngésződ csak a Helsa szerverével beszél, és a csempéket kiszolgáló gép is a tiéd.',
     'workout.route.viaPublic':
       'A térkép egy nyilvános szolgáltatótól jön, a Helsa szerverén keresztül. A böngésződ csak a Helsa szerverével beszél — a szolgáltató a Helsa szerverének címét és azt látja, melyik területet nézed.',
     'workout.route.mapUndrawable':
@@ -305,34 +305,34 @@ export const hu = {
     'workout.hr.loading': 'Töltődnek a pulzusmérések…',
     'workout.hr.none': 'Ehhez az edzéshez nincs pulzusmérés.',
     'workout.hr.single':
-      'Egyetlen pulzusmérés esik ebbe az alkalomba — kevés ahhoz, hogy görbe legyen belőle, és ahhoz is, hogy átlagot mondjunk.',
+      'Ebbe az edzésbe egyetlen pulzusmérés esik — ebből se görbét, se átlagot nem lehet számolni.',
     'workout.hr.noWindow':
-      'Ennek a felvételnek nincs záró ideje, így nincs időablak, amin a pulzust végigolvashatnánk.',
+      'Ennek a felvételnek nincs befejezési ideje, így nincs időablak, amelyből a pulzust ki lehetne olvasni.',
     'workout.hr.failed.title': 'A pulzusmérések nem tölthetők be',
-    'workout.hr.failed.body': 'Elbukott kérés, nem hiányzó mérés.',
+    'workout.hr.failed.body': 'Sikertelen lekérés, nem hiányzó mérés.',
     'workout.hr.average': 'Átlag',
     'workout.hr.peak': 'Csúcs',
     'workout.hr.lowest': 'Legalacsonyabb',
     'workout.hr.fromWindow':
       'A görbe és a fölötte álló három szám minden olyan pulzusmérés, amit az alkalom időablakában bármelyik készülék vagy app rögzített. Egy mérés nincs felvételhez kötve, így egy másik készülék ugyanazon percekből származó mérései is benne vannak.',
     'workout.hr.truncated':
-      'A görbe félbemarad: ebben az alkalomban több mérés van, mint amennyit a beolvasás követ.',
+      'A görbe félbemarad: ebben az edzésben több mérés van, mint amennyit egy lekérés beolvas.',
 
-    'workout.laps.title': 'Etapok',
+    'workout.laps.title': 'Részidők',
     'workout.laps.col.index': '#',
     'workout.laps.note':
-      'Az etapok a rögzítő alkalmazástól jönnek. Az egyetlen szakaszból álló alkalomnál nem jelenik meg semmi — egy etap a rendszer saját alakja, nem általad csinált szakasz.',
+      'A részidőket a rögzítő alkalmazás adja meg. Ha az edzés egyetlen részből áll, nem jelenik meg semmi: ez csak a rendszer alapegysége, nem te osztottad részekre.',
 
     'workout.weather.title': 'Időjárás',
     'workout.weather.condition': 'Állapot',
     'workout.weather.temperature': 'Hőmérséklet',
     'workout.weather.humidity': 'Páratartalom',
 
-    'workout.dup.title': 'Valószínűleg ugyanez az alkalom, máshol is rögzítve',
+    'workout.dup.title': 'Talán ugyanez az edzés, máshol is rögzítve',
     'workout.dup.body.one':
-      'Ez az alkalom úgy fest, mintha {n} alkalommal szerepelne az Egészségben.',
+      'Ez az edzés úgy fest, mintha {n} alkalommal szerepelne az Egészség appban.',
     'workout.dup.body.other':
-      'Ez az alkalom úgy fest, mintha {n} alkalommal szerepelne az Egészségben: azonos tevékenység felvételei átfedő időben — órától és apptól, vagy két apptól. A Health nem köti össze őket, így ez következtetés. A lista egy sort mutat belőle; itt vannak a többiek, pontosan úgy, ahogy rögzítették őket.',
+      'Ez az edzés úgy fest, mintha {n} alkalommal szerepelne az Egészség appban: azonos tevékenység felvételei átfedő időben — egy órától és egy apptól, vagy két apptól. Az Egészség app nem köti össze őket, így ez következtetés. A lista egy sort mutat belőle; itt vannak a többiek, pontosan úgy, ahogy rögzítették őket.',
     'workout.dup.thisOnly':
       'A fenti összesítő számok ennek az egy felvételnek a számai, és ez az oldal nem átlagolja össze a felvételeket: két készülék ugyanarra a fél órára mást mér, és nem a mi dolgunk eldönteni, melyiknek higgy. A pulzusgörbe a kivétel — abban az alkalom időablakának minden mérése benne van, bármelyik készülék rögzítette.',
     'workout.dup.secondary': 'A listában ennek az alkalomnak a másik felvétele látszik, nem ez.',
@@ -345,7 +345,7 @@ export const hu = {
     'workout.source.title': 'Honnan jött',
     'workout.source.uuid': 'HealthKit-azonosító',
     'workout.source.gap':
-      'A dróton csak a mintákhoz tartozik forráskészülék, így ez csak azt mondja meg, ki írta a pulzust, mást nem. Hogy melyik app rögzítette magát az alkalmat, és melyik írta az útvonalat, az a telefonon, a HealthKitben van — a szerver nem tudja meg.',
+      'Az átvitt adatokban csak a mintákhoz tartozik forráskészülék, így ebből csak az derül ki, melyik eszköz rögzítette a pulzust, más nem. Hogy melyik app rögzítette magát az edzést és az útvonalat, az csak a telefonon, a HealthKitben látszik — a szerverhez nem jut el.',
 
     'device.watch': 'Apple Watch',
     'device.iphone': 'iPhone',
@@ -385,22 +385,22 @@ export const hu = {
     // --- Sleep -------------------------------------------------------------
     'sleep.title': 'Alvás',
     'sleep.subtitle':
-      'Éjszakánként, szakaszokra bontva. A minőség-mutatók — hatékonyság, felébredések, szakasz-arányok — {derived} értékek a szakaszokból; a HealthKitben nincs „alvásminőség” mező. Egy éjszaka a folytonos szakaszok sora: három óránál hosszabb szünet után új tétel kezdődik, így a szunyókálás külön látszik.',
+      'Éjszakánként, szakaszokra bontva. A minőségi mutatók — hatékonyság, felébredések, szakaszarányok — {derived} értékek a szakaszokból; a HealthKitben nincs „alvásminőség” mező. Egy éjszaka a folytonos szakaszok sora: három óránál hosszabb szünet után új tétel kezdődik, így a szunyókálás külön látszik.',
     'sleep.subtitle.derived': 'számított',
     'sleep.window.one': '{n} éjszaka',
     'sleep.window.other': '{n} éjszaka',
-    'sleep.empty.title': 'Még nincs alvás-adat',
+    'sleep.empty.title': 'Még nincs alvásadat',
     'sleep.empty.hint':
-      'Az alvás-szakaszokat a Watch rögzíti, és a párosított iPhone tölti fel.',
+      'Az alvásszakaszokat a Watch rögzíti, és a párosított iPhone tölti fel.',
     'sleep.avgSleep.one': 'Átlagos alvásidő — {n} éjszaka',
     'sleep.avgSleep.other': 'Átlagos alvásidő — {n} éjszaka',
-    'sleep.efficiency': 'Alvás-hatékonyság',
+    'sleep.efficiency': 'Alváshatékonyság',
     'sleep.awakeningsPerNight': 'Felébredések / éjszaka',
     'sleep.deepRemShare': 'Mély + REM arány',
     'sleep.stagesChart': 'Szakaszok éjszakánként (perc)',
     'sleep.physio.title': 'Élettani mutatók az időszakban',
     'sleep.physio.note':
-      'Ezek az egész időszak átlagai, nem kizárólag az alvás-ablakból — a minták alvás-ablakra szűrése a backend {insights} rétegére vár (docs/23 §5).',
+      'Ezek az egész időszak átlagai, nem kizárólag az alvásablakból — a minták alvásablakra szűrése a backend {insights} rétegére vár (docs/23 §5).',
     'sleep.night.title': '{date} — alvás {duration}',
     'sleep.night.latest': 'Múlt éjjel · {date} — alvás {duration}',
     'sleep.night.title.notRecorded': '{date} — az alvás hossza nincs rögzítve',
@@ -413,19 +413,19 @@ export const hu = {
     'sleep.naps.count.one': '{n} szunyókálás',
     'sleep.naps.count.other': '{n} szunyókálás',
     'sleep.naps.note.one':
-      'Ezen felül {n} szunyókálás, alvás {duration} — a fenti éjszakai számokban nincs benne.',
+      'Ezen felül {n} szunyókálás ({duration} alvás) — a fenti éjszakai számokban nincs benne.',
     'sleep.naps.note.other':
       'Ezen felül {n} szunyókálás, összesen {duration} alvás — a fenti éjszakai számokban nincs benne.',
     'sleep.nights.hint':
-      'Válassz egy éjszakát, és fent kinyílik. A sáv az adott éjszaka szakaszainak aránya; az utolsó két oszlop a hatékonyság és a felébredések száma.',
+      'Válassz egy éjszakát, és fent kinyílik. A csík az adott éjszaka szakaszainak aránya; az utolsó két oszlop a hatékonyság és a felébredések száma.',
     'sleep.stagesChart.hint': 'Kattints egy oszlopra, és az az éjszaka nyílik meg fent.',
     'sleep.gap.one':
-      'Az utolsó {n} éjszakából {nights} hordoz alvás-adatot. A többi olyan éjszaka, amiről semmi nem rögzült — nem alvás nélküli éjszaka.',
+      'Az utolsó {n} éjszakából {nights} tartalmaz alvásadatot. A többiről nincs feljegyzés — ezek nem átvirrasztott éjszakák.',
     'sleep.gap.other':
-      'Az utolsó {n} éjszakából {nights} hordoz alvás-adatot. A többi olyan éjszaka, amiről semmi nem rögzült — nem alvás nélküli éjszaka.',
-    'sleep.night.aria': 'Alvás-szakaszok {date}',
+      'Az utolsó {n} éjszakából {nights} tartalmaz alvásadatot. A többiről nincs feljegyzés — ezek nem átvirrasztott éjszakák.',
+    'sleep.night.aria': 'Alvásszakaszok: {date}',
     'sleep.overlap':
-      'A források {duration} átfedést írtak erre az éjszakára; az átfedés egyszer számít, ezért az összesen kevesebb, mint a szakaszok összege.',
+      'A források {duration} átfedéssel rögzítettek adatot erre az éjszakára; az átfedés csak egyszer számít, ezért a teljes alvásidő kevesebb, mint a szakaszok összege.',
     'sleep.inBed': 'Ágyban',
     'sleep.efficiencyShort': 'Hatékonyság',
     'sleep.onset': 'Elalvás',
@@ -457,7 +457,7 @@ export const hu = {
     'journey.unknownRoute.title':
       'Olyan útvonal, amit ez a felület nem ismer',
     'journey.unknownRoute.body':
-      'A telefon ezt az útvonalat járja: „{id}”, de ez nincs benne ennek a felületnek az útvonallistájában — az app újabb a szervernél. Inkább nem rajzolunk semmit, mint valami rosszat; a szerver frissítése hozza az útvonalat.',
+      'A telefon ezt az útvonalat járja: „{id}”, de ez nincs benne ennek a felületnek az útvonallistájában — az app újabb a szervernél. Inkább nem rajzolunk semmit, mint valami rosszat; frissítsd a szervert, és megjelenik az útvonal.',
     'journey.since':
       'Ettől a naptól számoljuk: {date} · {movement} táv',
     'journey.movement.walking':
@@ -477,7 +477,7 @@ export const hu = {
     'journey.noData.title':
       'Ehhez a túrához még nem érkezett táv',
     'journey.noData.hint':
-      'Ez nem nulla kilométer: a kezdőnap óta nem mértünk semmit, vagy még nem szinkronizálódott.',
+      'Ez nem nulla kilométer: a kezdőnap óta nem volt mérés, vagy még nem szinkronizálódott.',
     'journey.complete':
       'Célba értél.',
     'journey.overshoot':
@@ -491,7 +491,7 @@ export const hu = {
     'journey.map':
       'Az útvonal',
     'journey.mapAria':
-      'Az útvonal, kiemelve a már megtett szakasz',
+      'Az útvonal, a már megtett szakasz kiemelésével',
     'journey.here':
       'Itt tartasz',
     'journey.sketchNote':
@@ -504,16 +504,16 @@ export const hu = {
       'A táv az, amit ez a szerver megkapott, forrásonként összefésülve. A telefon közvetlenül az Egészség appból olvas, ezért az ott látható szám kicsit eltérhet.',
     'nutrition.title': 'Táplálkozás',
     'nutrition.subtitle':
-      'Bevitt energia, makrók és mikrotápanyagok. A Health-be egy étkezés-naplózó app írja őket; a Helsa csak olvassa.',
+      'Bevitt energia, makrók és mikrotápanyagok. Az Egészség appba egy étkezésnaplózó app írja őket; a Helsa csak olvassa.',
     'nutrition.range.day': 'Ma',
     'nutrition.range.week': 'Hét',
     'nutrition.range.month': '30 nap',
     'nutrition.degraded.title': 'A napi összegek helyett mintánkénti átlagot mutat a szerver',
     'nutrition.degraded.body':
-      'A táplálkozási típusok mind összegzendők, de a backend csak öt metrika aggregációját ismeri név szerint ({file}), a többire átlagot ad vissza darabszám nélkül. A napi bevitel ebből nem állítható helyre, ezért az itt látszó számok egy-egy bejegyzés átlagát jelentik, nem a napi összeget.',
+      'A táplálkozási adatokat mind összegezni kellene, de a backend csak öt mutató összesítési módját ismeri név szerint ({file}), a többire átlagot ad vissza darabszám nélkül. A napi bevitel ebből nem állítható vissza, ezért az itt látható számok az egy bejegyzésre jutó átlagot jelentik, nem a napi összeget.',
     'nutrition.empty.title': 'Még nincs táplálkozási adat',
     'nutrition.empty.hint':
-      'A HealthKit magától nem gyűjt étkezést — egy naplózó app (pl. kalóriaszámláló) írja a Health-be, és onnan tölti fel az iPhone.',
+      'A HealthKit magától nem gyűjt étkezést — egy naplózó app (pl. kalóriaszámláló) írja az Egészség appba, és onnan tölti fel az iPhone.',
     'nutrition.headline.sampleAverage': 'Mintánkénti átlag',
     'nutrition.headline.todayTotal': 'Ma összesen',
     'nutrition.headline.dailyAverage': 'Napi átlag',
@@ -539,12 +539,12 @@ export const hu = {
     'nutrition.water.nothingInPeriod':
       'Ebben az időszakban nincs rögzített víz.',
     'nutrition.water.notComparable':
-      'Az itteni víz nem mérhető a célhoz: a szerver nem napi mennyiségként, olvasható mértékegységben küldte.',
-    'nutrition.macroSplit.title': 'Makró-bontás (energia szerint)',
-    'nutrition.macroSplit.aria': 'Makró-arány energia szerint',
+      'Az itt látható vízmennyiség nem vethető össze a céllal: a szerver nem napi mennyiségként, olvasható mértékegységben küldte.',
+    'nutrition.macroSplit.title': 'Makróbontás (energia szerint)',
+    'nutrition.macroSplit.aria': 'Makróarány energia szerint',
     'nutrition.macroSplit.note':
-      'A fenti grammokból számolt energia {computed} kcal (4 / 4 / 9 kcal per gramm). A HealthKit külön mért {field} értéke {measured} kcal — a kettő eltérhet, ha a naplózó app nem minden tételhez rögzít makrókat.',
-    'nutrition.chart.perBucket': 'Makrók energiája bucketenként (kcal)',
+      'A fenti grammokból számolt energia {computed} kcal (grammonként 4 / 4 / 9 kcal). A HealthKit külön mért {field} értéke {measured} kcal — a kettő eltérhet, ha a naplózó app nem minden tételhez rögzít makrókat.',
+    'nutrition.chart.perBucket': 'Makrók energiája szakaszonként (kcal)',
     'nutrition.chart.perDay': 'Makrók energiája naponta (kcal)',
     'nutrition.section.macros': 'Makrók részletesen',
     'nutrition.section.minerals': 'Ásványi anyagok',
@@ -577,10 +577,10 @@ export const hu = {
     'challenge.milestones.empty':
       'Egyetlen mérföldkő sincs beállítva, így nincs mihez mérni a hónapot.',
     'challenge.milestones.reached': 'megvan',
-    'challenge.milestones.next': 'A következő {steps} lépésnél van — {remaining} lépésre.',
+    'challenge.milestones.next': 'A következő {steps} lépésnél van — még {remaining} lépés hiányzik.',
     'challenge.source.title': 'Honnan jönnek a mérföldkövek',
     'challenge.source.default':
-      'A gyári sor látszik: a telefon még nem mondta el ennek a szervernek, milyen mérföldköveket állítottál be. Az app az 1.0 (7) verziótól küldi el őket, a következő szinkronnál. Ami a telefonon látszik, eltérhet ettől.',
+      'A gyári mérföldkövek látszanak: a telefon még nem mondta el ennek a szervernek, milyen mérföldköveket állítottál be. Az app az 1.0 (7) verziótól küldi el őket, a következő szinkronnál. Ami a telefonon látszik, eltérhet ettől.',
     'challenge.source.achievement':
       'A legjobb becslésünk: a telefon által legutóbb rögzített érem mérföldkövei. A telefon még nem küldte el a beállításait — az app az 1.0 (7) verziótól küldi —, így a telefonon látszók eltérhetnek.',
     'challenge.source.settings': 'A saját mérföldköveid, ahogy a telefon legutóbb elküldte őket ({date}).',
@@ -594,8 +594,8 @@ export const hu = {
     'challenge.streak.title': 'Napi sorozat',
     'challenge.streak.length.one': '{n} napos sorozat',
     'challenge.streak.length.other': '{n} napos sorozat',
-    'challenge.streak.current': 'A most futó sorozat',
-    'challenge.streak.none': 'Nincs élő sorozat.',
+    'challenge.streak.current': 'Jelenlegi sorozat',
+    'challenge.streak.none': 'Most nincs futó sorozat.',
     'challenge.streak.noGoal': 'Cél nélkül nincs mihez mérni egy napot, így sorozatot sem állítunk.',
     'challenge.streak.dailyGoal': 'Napi cél',
     'challenge.streak.longest': 'A leghosszabb a vizsgált időszakban',
@@ -614,33 +614,33 @@ export const hu = {
     'challenge.streak.rest.other': '{n} pihenőnap',
     'challenge.streak.restDays': 'Pihenőnapok ebben a sorozatban, ahogy a telefonon jelölted őket: {days}.',
     'challenge.streak.lowerBound.body':
-      'A betegnapok és az általad megjelölt pihenőnapok nem törik meg a sorozatot — de egyik sem jutott el ehhez a szerverhez: a napló a telefonon marad, a pihenőnapjaidat pedig a telefon még nem küldte el (az app az 1.0 (7) verziótól küldi). Az itteni sorozat ezért rövidebb lehet a telefonon látszónál, hosszabb soha.',
+      'A betegnapok és az általad megjelölt pihenőnapok nem szakítják meg a sorozatot — de egyik sem jutott el ehhez a szerverhez: a napló a telefonon marad, a pihenőnapjaidat pedig a telefon még nem küldte el (az app az 1.0 (7) verziótól küldi). Az itteni sorozat ezért rövidebb lehet a telefonon látszónál, hosszabb soha.',
     'challenge.streak.lowerBound.illnessOnly':
-      'Az általad jelölt pihenőnapokat itt is pontosan úgy számoljuk, mint a telefon — hét napon belül legfeljebb kettőt. A betegnapokat nem: a napló a telefonon marad, így egy nap, amikor beteg voltál, itt egyszerű kihagyott nap. Az itteni sorozat rövidebb lehet a telefonon látszónál, hosszabb soha.',
+      'Az általad jelölt pihenőnapokat itt is pontosan úgy számoljuk, mint a telefon — hét napon belül legfeljebb kettőt. A betegnapokat nem: a napló a telefonon marad, így ha beteg voltál egy nap, az itt sima kihagyott napnak számít. Az itteni sorozat rövidebb lehet a telefonon látszónál, hosszabb soha.',
 
     // --- Settings ----------------------------------------------------------
     'settings.title': 'Beállítások',
     'settings.subtitle':
-      'Egyfelhasználós rendszer — nincs bejelentkezés. A hozzáférés két rétegű: hálózati (WireGuard) és alkalmazás-szintű (eszköz-token).',
-    'settings.token.title': 'Eszköz-token',
+      'Egyfelhasználós rendszer — nincs bejelentkezés. A hozzáférés kétrétegű: hálózati (WireGuard) és alkalmazásszintű (eszköztoken).',
+    'settings.token.title': 'Eszköztoken',
     'settings.token.present': 'Be van állítva ezen a gépen. Új gépen egyszer kell megadni.',
     'settings.token.clear': 'Token törlése',
     'settings.token.hint': 'Illeszd be a tokent — a böngésző tárolja, a szerver nem kér jelszót.',
     'settings.token.placeholder': 'eszköz-token',
     'settings.token.save': 'Mentés',
-    'settings.devices.title': 'Eszközök és szinkron-frissesség',
+    'settings.devices.title': 'Eszközök és a szinkronizálás frissessége',
     'settings.devices.empty': 'Még nincs regisztrált eszköz.',
     'settings.devices.col.device': 'Eszköz',
     'settings.devices.col.platform': 'Platform',
     'settings.devices.col.lastSync': 'Utolsó szinkron',
     'settings.goals.title': 'Célok',
-    'settings.goals.empty': 'Még nincs cél-adat.',
+    'settings.goals.empty': 'Még nincs céladat.',
     'settings.goals.note':
-      'A három Apple gyűrű célja a HealthKitből jön (csak olvasható); a lépés-cél felhasználó által állított.',
+      'A három Apple-gyűrű célja a HealthKitből jön (csak olvasható); a lépéscélt te állítod be.',
     'settings.system.title': 'Rendszer',
     'settings.system.browserTz': 'Böngésző időzónája',
     'settings.system.serverTz': 'Szerver időzónája',
-    'settings.system.units': 'Mértékegység',
+    'settings.system.units': 'Mértékegységrendszer',
     // --- Beállítások · térképforrás -----------------------------------------
     // ⚠️ A választás egy adatvédelmi alku, és nem a miénk: a csempekérés annak,
     // aki kiszolgálja, elárulja, hogy valaki épp azt a földdarabot nézi. Ezért a
@@ -670,11 +670,11 @@ export const hu = {
     // „csak a Helsa szerverével beszél" NEM azonos azzal, hogy „semmi nem jut ki".
     'settings.map.proxyNote':
       'A csempék mindig a Helsa szerverén keresztül jönnek, sosem közvetlenül a böngésződből: így a böngésződ egyetlen idegen géppel sem beszél. Amit a szolgáltató lát, az ezért a Helsa szerverének címe és a nézett terület — nem a tiéd.',
-    'settings.map.saved': 'Elmentve. Ez a beállítás ebben a böngészőben él.',
+    'settings.map.saved': 'Elmentve. Ez a beállítás csak ebben a böngészőben érvényes.',
 
     'settings.language.title': 'Nyelv',
     'settings.language.note':
-      'A felület nyelve. Csak a böngészőben tárolódik — a szervertől érkező szöveg (insights-mondatok, hibaüzenetek) ettől függetlenül a szerver nyelvén marad.',
+      'A felület nyelve. Csak a böngészőben tárolódik — a szervertől érkező szöveg (a megfigyelések mondatai, hibaüzenetek) ettől függetlenül a szerver nyelvén marad.',
 
     // --- Beállítások · export ------------------------------------------------
     // Ahol illik, a telefon szerverexport-szövegei (`ExportView.swift`). A web
@@ -710,17 +710,17 @@ export const hu = {
       'Ez csak a mintákat szűkíti. A JSON-fájlban az edzések és az alvásszakaszok mindenképp a teljes időszakra jönnek.',
     'settings.export.download': 'Letöltés a szerverről',
     'settings.export.cancel': 'Leállítás',
-    'settings.export.waiting': 'Várjuk, hogy a szerver elkezdje a fájlt…',
+    'settings.export.waiting': 'Várjuk, hogy a szerver elkezdje küldeni a fájlt…',
     'settings.export.receiving': 'Érkezik: eddig {size}, {seconds} mp',
     'settings.export.noTotal':
       'A szerver úgy küldi a fájlt, hogy előre nem mondja meg a méretét, ezért nincs százalék — csak az látszik, ami már megérkezett.',
     'settings.export.done': 'Átadva a böngészőnek: {file} ({size}).',
-    'settings.export.cancelled': 'Leállítva. Semmi sem lett elmentve.',
+    'settings.export.cancelled': 'Leállítva. Nem mentettünk el semmit.',
     'settings.export.failed': 'Az export nem sikerült: {error}',
     'settings.export.truncated':
       'A fájl csonkán érkezett: a szerver elkezdte küldeni, aztán abbahagyta. Nem mentettük el — próbáld újra, vagy rövidebb időszakkal.',
     'settings.export.footer':
-      'A PDF a kontraktusban szerepel, de még nincs megvalósítva — ezért nem kínáljuk fel. Egy félbeszakadt CSV nem különböztethető meg egy teljestől; a JSON-fájlnál mentés előtt ellenőrizzük a záró zárójelet.',
+      'A PDF szerepel az API-szerződésben, de még nincs megvalósítva — ezért nem kínáljuk fel. Egy félbeszakadt CSV nem különböztethető meg egy teljestől; a JSON-fájlnál mentés előtt ellenőrizzük a záró zárójelet.',
 
     // --- Metric picker -----------------------------------------------------
     'picker.search': 'Keresés {n} metrika közt…',
@@ -749,28 +749,28 @@ export const hu = {
       'Az alábbi mondatokat a szerver fogalmazza, és azon a nyelven jelennek meg, amelyen a szerver beszél. A nyelvváltó ezt a felületet állítja, nem őket.',
     'insights.empty.title': 'Most nincs mit jelenteni',
     'insights.empty.hint':
-      'Ez teljes válasz, nem hiba. Minden szabálynak van egy minimum mért napszáma, és amelyik ez alatt van, inkább hallgat, mint hogy kitaláljon valamit.',
+      'Ez teljes válasz, nem hiba. Minden szabálynak kell valamennyi mért nap, és amelyiknek ennyi nincs meg, az inkább hallgat, mint hogy kitaláljon valamit.',
     'insights.kind.anomaly': 'Eltérés a saját alapvonaladtól',
     'insights.kind.anomaly.about':
-      'A közeli napok a saját, hosszabb alapvonal-ablakodhoz mérve.',
+      'Az utóbbi napok a saját, hosszabb viszonyítási időszakodhoz mérve.',
     'insights.kind.trend': 'Változás az előző ablakhoz képest',
     'insights.kind.trend.about': 'Egy ablak összevetve a közvetlenül előtte lévővel.',
-    'insights.kind.correlation': 'Két sor együtt mozog',
+    'insights.kind.correlation': 'Két adatsor együtt mozog',
     'insights.kind.correlation.about':
-      'Együttmozgás egy hosszabb ablakon. Az együttmozgás nem azt jelenti, hogy az egyik okozza a másikat.',
+      'Együttmozgás egy hosszabb időablakban. Az együttmozgás nem azt jelenti, hogy az egyik okozza a másikat.',
     'insights.kind.pattern': 'Az ablak egy tulajdonsága',
     'insights.kind.pattern.about':
       'Nem időbeli változás: mennyire szórnak az értékek, miben tér el a hétvége a hétköznaptól.',
     'insights.kind.other': 'Egyéb megfigyelések',
     'insights.kind.other.about':
-      'A szervernek van egy szabálycsaládja, amit a web ezen builde még nem ismer név szerint.',
+      'A szervernek van egy szabálycsaládja, amelyet a webes felület ezen változata még nem ismer név szerint.',
     'insights.severity.info': 'Tájékoztatás',
     'insights.severity.notice': 'Érdemes ránézni',
     'insights.generatedAt': 'számítva: {when}',
     'insights.unnamed': 'A szerver nem küldött mondatot ehhez a szabályhoz.',
-    'insights.values.summary': 'A szabály által számolt számok',
+    'insights.values.summary': 'A szabály számításai',
     'insights.values.note':
-      'Ezek a megfigyeléssel együtt utaznak, hogy a kliens maga fogalmazhassa meg a mondatot. A szabály saját számításai, nem pontszám.',
+      'Ezek a megfigyeléssel együtt érkeznek, hogy a kliens maga fogalmazhassa meg a mondatot. A szabály saját számításai, nem pontszám.',
     'insights.col.value': 'Érték',
 
     // --- Medals ------------------------------------------------------------
@@ -814,7 +814,7 @@ export const hu = {
     'achievements.month.back': '← Az összes érem',
     'achievements.month.notFound.title': 'Ehhez a hónaphoz nincs havi érem: {period}',
     'achievements.month.notFound.hint':
-      'Az érmeket a telefon számolja ki és tölti fel; az általa küldött listában erre a hónapra nincs.',
+      'Az érmeket a telefon számolja ki és tölti fel; a küldött listában erre a hónapra egy sincs.',
     'achievements.month.total': 'Lépés, a megszerzéskor',
     'achievements.month.perDay': 'Naponta, a teljes hónapra',
     'achievements.month.milestonesReached': 'Elért mérföldkövek',
@@ -825,7 +825,7 @@ export const hu = {
     'achievements.month.days.measured.one': 'Csak a mért {n} napot számolva napi {steps}.',
     'achievements.month.days.measured.other': 'Csak a mért {n} napot számolva napi {steps}.',
     'achievements.month.days.best': 'A legerősebb nap: {day} — {steps} lépés.',
-    'achievements.month.days.goal': 'A telt oszlop olyan nap, ami elérte a napi {steps} lépéses célt.',
+    'achievements.month.days.goal': 'A kitöltött oszlop olyan nap, amelyen elérted a napi {steps} lépéses célt.',
     'achievements.month.days.loading': 'Napok betöltése…',
     'achievements.month.days.error': 'A napi bontás nem töltődött be: {error}',
     'achievements.month.days.empty': 'Ennek a hónapnak egyik napján sem volt lépésmérés.',
@@ -837,20 +837,20 @@ export const hu = {
     'achievements.month.foot.fresh':
       'A napi bontást minden alkalommal frissen olvassuk be: ez az egyetlen dolog, amit az érem nem tárol el.',
     // --- Adat-teljesség ----------------------------------------------------
-    'coverage.title': 'Adat-teljesség',
+    'coverage.title': 'Adatteljesség',
     'coverage.subtitle': 'Melyik mérésed érkezik ide, és ki írja őket.',
     // ⚠️ Szándékosan úgy fogalmazva, hogy egyik szám se kapjon toldalékot: a
     // magyar illeszkedés a számnév UTOLSÓ kimondott tagjához igazodik, tehát
     // nincs egyetlen jó konstans (egy**re**, harminchét**re**, százhúsz**ra**).
     'coverage.headline':
-      'A megnézett {total} típusból {measured} hozott adatot az elmúlt {days} napban.',
+      'A vizsgált {total} típusból {measured} típushoz érkezett adat az elmúlt {days} napban.',
     'coverage.window.30': '30 nap',
     'coverage.window.90': '90 nap',
     'coverage.window.365': 'Egy év',
     'coverage.window.aria': 'A vizsgált időszak hossza',
     'coverage.limits.title': 'Mit mond ez az oldal, és mit nem',
     'coverage.limits.body':
-      'Ez az, ami a szerverre megérkezett. Az engedélyeket nem látja: egy típus, amire sosem adtál engedélyt, egy típus, ami mögött nincs érzékelő, és egy típus, amit a telefon nem tudott feltölteni, innen nézve egyformán néz ki — hiányként. A telefonon lévő app meg tudja különböztetni őket, és típusonként ki is mondja.',
+      'Ez az, ami a szerverre megérkezett. A szerver az engedélyeket nem látja: egy típus, amelyre sosem adtál engedélyt, egy típus, amely mögött nincs érzékelő, és egy típus, amelyet a telefon nem tudott feltölteni, innen nézve mind egyszerű hiánynak látszik. A telefonon lévő app meg tudja különböztetni őket, és típusonként meg is mutatja.',
     'coverage.state.measured': 'Van adat',
     'coverage.state.outside_window': 'Ebben az időszakban semmi',
     'coverage.state.never_arrived': 'Soha nem érkezett',
@@ -860,19 +860,19 @@ export const hu = {
     'coverage.col.samples': 'Minták',
     'coverage.col.last': 'Utoljára',
     'coverage.col.sources': 'Ki írja',
-    'coverage.group.count': '{total} típusból {measured} hoz adatot',
-    'coverage.group.empty': 'Ebből a körből még semmi nem érkezett ide.',
+    'coverage.group.count': '{total} típusból {measured} típusra érkezik adat',
+    'coverage.group.empty': 'Ebből a csoportból még semmi nem érkezett ide.',
     'coverage.notInCatalog': 'nincs a katalógusban',
     'coverage.notInCatalogTitle':
       'Ez a típus megérkezett, de a katalógus nem ismeri — valószínűleg egy újabb iOS-ből jön. Inkább felsoroljuk, mint hogy eldobjuk.',
     'coverage.device.watch': 'óra',
     'coverage.device.iphone': 'telefon',
-    'coverage.device.unknown': 'nem mondta meg, milyen eszköz',
+    'coverage.device.unknown': 'nincs megadva az eszköz',
     'coverage.device.unknownTitle':
       'A feltöltés nem mondta meg, milyen eszközről jött. Ez pontosan ennyit jelent — nem azt, hogy a telefon mérte.',
     'coverage.gaps.title': 'Abbamaradt',
     'coverage.gaps.body':
-      'Ezek eddig ritmusban érkeztek, és a ritmus megtört. Ez megfigyelés, nem hiba — nem tudjuk, miért, és lehet, hogy nincs is miért.',
+      'Ezek eddig ritmusban érkeztek, és a ritmus megtört. Ez megfigyelés, nem hiba — nem tudjuk, miért, és lehet, hogy nincs is olyan oka, amelyet érdemes tudni.',
     'coverage.gaps.silent.one': '{n} napja semmi',
     'coverage.gaps.silent.other': '{n} napja semmi',
     'coverage.gaps.cadence': 'eddig nagyjából {cadence} érkezett',
@@ -889,18 +889,18 @@ export const hu = {
     // ⚠️ A számok mögé sehol nem kerül toldalék (lásd `coverage.headline`):
     // a mondatok úgy vannak fogalmazva, hogy a szám a végén vagy zárójelben álljon.
     'ingest.title': 'Feltöltési sor',
-    'ingest.subtitle': 'Amit a telefon már átadott, de a szerver még nem írt be az adatbázisba. Amint a telefon átad egy részt, az ő dolga kész — ez az oldal az utána következő szakaszt mutatja.',
+    'ingest.subtitle': 'Amit a telefon már átadott, de a szerver még nem írt be az adatbázisba. Amint a telefon átad egy részt, a dolga ezzel véget ér — ez az oldal az utána következő szakaszt mutatja.',
     'ingest.checkedAt': 'Frissítve: {time} · ötmásodpercenként frissül magától',
     'ingest.stale.title': 'Nem sikerült frissíteni',
     'ingest.stale.body': 'Ami lent látszik, az az utolsó sikeres lekérdezés (frissítve: {time}).',
     'ingest.unreachable.title': 'A sor most nem olvasható',
     'ingest.unreachable.body': 'A szerver nem éri el a sorát (RabbitMQ), így nincs mit mutatni — nem nulla, hanem semmi. Amíg ez tart, a szerver a feltöltéseket is elutasítja.',
     'ingest.unreachable.detail': 'A hiba: {error}',
-    'ingest.dlq.title.one': '{n} részt nem sikerült beírni, ezért félre van téve',
-    'ingest.dlq.title.other': '{n} részt nem sikerült beírni, ezért félre vannak téve',
+    'ingest.dlq.title.one': '{n} részt nem sikerült beírni, ezért félretettük',
+    'ingest.dlq.title.other': '{n} részt nem sikerült beírni, ezért félretettük',
     'ingest.dlq.body': 'Magától semmi nem próbálja újra őket, és a telefon már továbblépett, így ez az adat még nincs az adatbázisban.',
     'ingest.noConsumer.title': 'Részek várnak, és semmi nem írja be őket',
-    'ingest.noConsumer.body': 'Lassúságnak tűnik, de nem az: amíg nem fut worker, a sor egyáltalán nem fogy. Nézd meg a worker konténert ({ps}, {logs}).',
+    'ingest.noConsumer.body': 'Lassúságnak tűnik, de nem az: amíg nem fut worker, a sor egyáltalán nem fogy. Nézd meg a worker-konténert ({ps}, {logs}).',
     'ingest.noWorkerIdle.title': 'Nincs kapcsolódó worker',
     'ingest.noWorkerIdle.body':
       'A sor most üres, de a következő feltöltést senki nem fogja feldolgozni, amíg a worker nem fut.',
@@ -914,9 +914,9 @@ export const hu = {
     'ingest.stalled.since':
       'Részek várnak, és az utolsó {when} készült el — azóta egy sem, így nincs friss ütem, amiből becsülni lehetne.',
     'ingest.rateUnknown':
-      'Van kapcsolódó worker, de a számlálói nem olvashatók (a Redis nem válaszolt, vagy ez a worker túl régi, hogy jelentsen) — így nem tudni, halad-e a sor. Ez nem ugyanaz, mint hogy „nem halad”.',
+      'Van kapcsolódó worker, de a számlálói nem olvashatók (a Redis nem válaszolt, vagy ez a worker túl régi ahhoz, hogy jelentse őket) — így nem tudni, halad-e a sor. Ez nem ugyanaz, mint hogy „nem halad”.',
     'ingest.settling':
-      'Semmi nem vár kiosztásra. A worker még dolgozhat legfeljebb ennyi, már felvett részen: {n}. Az oldal akkor mondja, hogy „nincs több beírnivaló”, ha 30 másodpercig semmi nem készült el.',
+      'Semmi nem vár kiosztásra. A worker még befejezheti a már felvett részeket (legfeljebb {n} darabot). Az oldal akkor mondja, hogy „nincs több beírnivaló”, ha 30 másodpercig semmi nem készült el.',
     'ingest.settling.noBound':
       'Semmi nem vár kiosztásra. A worker még dolgozhat a már felvett részeken; az oldal akkor mondja, hogy „nincs több beírnivaló”, ha 30 másodpercig semmi nem készült el.',
     'ingest.idle':
@@ -938,7 +938,7 @@ export const hu = {
     'ingest.worker.items': 'Elemek az indulás óta',
     'ingest.worker.failed': 'Feladott kötegek az indulás óta',
     'ingest.worker.itemsNote':
-      'Egy elem egy minta, edzés, alvás-szakasz, aktivitás-összesítő vagy törlés. Ami megérkezett, nem feltétlenül új: az írás idempotens.',
+      'Egy elem egy minta, edzés, alvásszakasz, aktivitás-összesítő vagy törlés. Ami megérkezett, nem feltétlenül új: az írás idempotens.',
     'ingest.worker.none': 'Ezzel a verzióval még egy worker sem jelentkezett.',
     'ingest.stats.unreachable.title': 'A worker számlálói nem olvashatók',
     'ingest.stats.unreachable.body':
@@ -948,7 +948,7 @@ export const hu = {
     // A címek egy állítást fogalmaznak meg arról, mi tartozik össze — ezért
     // kettő közülük szó szerint az app sávneve (`DashboardBand.title`). Ha a
     // kettő szétcsúszik, ugyanaz a tartalom két nevet kap.
-    'nav.aria': 'Szakaszok',
+    'nav.aria': 'Oldalak',
     'nav.group.longView': 'Hosszú táv',
     'nav.group.areas': 'Területek',
     'nav.group.status': 'Állapot',
@@ -969,7 +969,7 @@ export const hu = {
     'today.workout.empty': 'Még nem érkezett edzés.',
     'today.sleep.title': 'A múlt éjszaka',
     'today.sleep.titleLatest': 'Legutóbbi alvás',
-    'today.sleep.empty': 'Az elmúlt két napra nem érkezett alvás-szakasz.',
+    'today.sleep.empty': 'Az elmúlt két napra nem érkezett alvásszakasz.',
     'today.sync.title': 'Szinkron',
     'today.insights.serverLanguage':
       'A mondatokat a szerver fogalmazza, azon a nyelven, amelyen beszél.',
@@ -999,12 +999,12 @@ export const hu = {
     'today.tile.notMeasured': 'Ma még nem volt mérés',
     'today.sleep.asleep': 'alvás',
     'today.sleep.noStages':
-      'Ehhez az éjszakához nincsenek alvásfázisok — az eszköz csak az alvást és az ébrenlétet rögzítette.',
+      'Ehhez az éjszakához nincsenek alvásszakaszok — az eszköz csak az alvást és az ébrenlétet rögzítette.',
     'today.sleep.notRecorded': 'Az alvás hossza nincs rögzítve',
     'today.sleep.inBedOnly':
-      'Csak az ágyban töltött idő érkezett meg ({duration}), alvás-szakasz nélkül — így nem tudni, mennyit aludtál, és ez nem nulla.',
+      'Csak az ágyban töltött idő érkezett meg ({duration}), alvásszakasz nélkül — így nem tudni, mennyit aludtál, de ez nem nullát jelent.',
     'today.challenge.steps': 'lépés',
-    'today.challenge.allMilestones': 'mind a(z) {n} mérföldkő megvan',
+    'today.challenge.allMilestones': 'minden mérföldkő megvan ({n})',
     'today.medals.earned.one': 'megszerzett érem',
     'today.medals.earned.other': 'megszerzett érem',
     'today.pill.upToDate': 'Naprakész — nincs több beírnivaló',
@@ -1019,7 +1019,7 @@ export const hu = {
     'today.pill.setAside.other': '{n} részt nem sikerült beírni',
     'today.pill.unknown': 'A sor most nem olvasható',
     'today.pill.apiOld': 'A szerver régebbi, mint ez az oldal',
-    'today.sync.lastSeen': 'Eszköz utoljára látva {when}: {device}',
+    'today.sync.lastSeen': 'Utoljára jelentkezett eszköz: {device}, {when}',
     'today.sync.writing.one': 'A sorban beírásra vár: {n} rész',
     'today.sync.writing.other': 'A sorban beírásra vár: {n} rész',
     'today.sync.writingEta.one':
@@ -1037,7 +1037,7 @@ export const hu = {
     'trends.total': 'Összesen',
     'trends.perDay': 'Naponta · {n} mért nap átlaga',
     'trends.perMonth': 'Havonta · {n} mért hónap átlaga',
-    'trends.legend.usualRange': 'a szokásos tartományod',
+    'trends.legend.usualRange': 'a szokásos sávod',
     'trends.legend.average': 'az átlagod',
     'trends.sources.title': 'Honnan jönnek ezek a számok',
     'trends.sources.body':
@@ -1049,7 +1049,7 @@ export const hu = {
     // --- Workouts: master/detail, filters, rows --------------------------------
     'workouts.detailAria': 'A kiválasztott edzés',
     'workouts.listAria': 'Edzéslista',
-    'workout.route.toSettings': 'Térkép alá — Beállítások',
+    'workout.route.toSettings': 'Térkép az útvonal alá — Beállítások',
     'workout.hr.highest': 'Legmagasabb',
     'workout.weather.note': 'Ahogy a rögzítő app az edzéshez felírta.',
     'workouts.filter.type': 'Típus',
@@ -1060,7 +1060,7 @@ export const hu = {
     'workouts.filter.atLeast': 'Legalább',
     'workouts.filter.anyLength': 'bármilyen hosszú',
     'workouts.filter.more': 'További szűrők',
-    'workouts.row.dup.aria': 'Valószínűleg {n} felvétel az Egészségben',
+    'workouts.row.dup.aria': 'Lehet, hogy {n} felvétel is van róla az Egészség appban',
     'workouts.row.open': 'Megnyitás',
     'workouts.select.hint': 'Válassz egy edzést a listából.',
     'workouts.row.max': 'max',
@@ -1075,7 +1075,7 @@ export const hu = {
     'ingest.hero.waiting': 'Beírásra vár',
     'ingest.hero.parts.one': 'rész',
     'ingest.hero.parts.other': 'rész',
-    'ingest.hero.tech': 'köteg a(z) {name} sorban',
+    'ingest.hero.tech': 'köteg ebben a sorban: {name}',
     'ingest.hero.etaLabel': 'A mostani sorra, ha nem érkezik több — becslés',
     'ingest.hero.eta': 'nagyjából {duration}',
     'ingest.hero.nothing': 'Nincs mire várni',
@@ -1092,11 +1092,11 @@ export const hu = {
     'ingest.worker.state.waiting': 'Vár',
     'ingest.worker.state.none': 'Nincs',
     'ingest.worker.state.noRecent': 'Mostanában semmi nem készült el',
-    'ingest.worker.state.connected': 'Kapcsolódik',
+    'ingest.worker.state.connected': 'Kapcsolódva',
     'ingest.worker.state.finishing': 'Talán még befejez valamit',
-    'ingest.worker.line.none': 'Egy worker sem kapcsolódik',
-    'ingest.worker.line.connected.one': '{n} worker kapcsolódik',
-    'ingest.worker.line.connected.other': '{n} worker kapcsolódik',
+    'ingest.worker.line.none': 'Nincs kapcsolódó worker',
+    'ingest.worker.line.connected.one': 'Kapcsolódó worker: {n}',
+    'ingest.worker.line.connected.other': 'Kapcsolódó worker: {n}',
     'ingest.tile.last': 'Utoljára beírva',
     'ingest.tile.lastNone': 'A worker indulása óta semmi nem íródott be',
     'ingest.tile.setAside': 'Félretéve',
@@ -1115,9 +1115,9 @@ export const hu = {
     'ingest.redrive.buttonCapped': '{max} félretett rész újrapróbálása (összesen {n})',
     'ingest.redrive.confirmAria': 'Az újrapróbálás megerősítése',
     'ingest.redrive.confirm.one':
-      'Újrapróbálod a(z) {n} részt? A beírás idempotens: ami már az adatbázisban van, az csak frissül.',
+      'Újrapróbálod a félretett {n} részt? A beírás idempotens: ami már az adatbázisban van, az csak frissül.',
     'ingest.redrive.confirm.other':
-      'Újrapróbálod a(z) {n} részt? A beírás idempotens: ami már az adatbázisban van, az csak frissül.',
+      'Újrapróbálod a félretett {n} részt? A beírás idempotens: ami már az adatbázisban van, az csak frissül.',
     'ingest.redrive.limit':
       'Egy újrapróbálás legfeljebb {max} részt mozgat. Ha több van félretéve, a maradékhoz nyomd meg újra.',
     'ingest.redrive.confirmYes': 'Újrapróbálás',
@@ -1130,9 +1130,9 @@ export const hu = {
     'ingest.redrive.stopped':
       'Félúton megállt: {reason}. A fenti szám csak a biztosan átmozgatott részeket számolja. Ha az ok mást nem mond, az éppen mozgatott rész félretéve maradt; ha azt mondja, hogy most mindkét sorban ott van, az a másolat ártalmatlan — a beírás idempotens.',
     'ingest.redrive.repeated.one':
-      'Közülük {n} már legalább a harmadik újrapróbálásánál tart — a korábbiak nem segítettek, így amíg az ok nincs javítva, ez is aligha fog.',
+      'Közülük {n} már legalább a harmadik újrapróbálásánál tart — a korábbiak nem segítettek, így amíg az ok nincs kijavítva, ez az újrapróbálás is aligha segít.',
     'ingest.redrive.repeated.other':
-      'Közülük {n} már legalább a harmadik újrapróbálásánál tart — a korábbiak nem segítettek, így amíg az ok nincs javítva, ezek is aligha fognak.',
+      'Közülük {n} már legalább a harmadik újrapróbálásánál tart — a korábbiak nem segítettek, így amíg az ok nincs kijavítva, ez az újrapróbálás is aligha segít.',
     'ingest.redrive.watch':
       'Visszakerültek a sorba, a már várakozók mögé; hogy mikor íródnak be, az a workeren és a fenti soron múlik. Ami a tartalma miatt bukik el, újra itt lesz — az oldal magától frissül.',
     'ingest.redrive.busy':
@@ -1159,8 +1159,8 @@ export const hu = {
     'ingest.reason.samples.other': '{n} minta',
     'ingest.reason.workouts.one': '{n} edzés',
     'ingest.reason.workouts.other': '{n} edzés',
-    'ingest.reason.sleep.one': '{n} alvás-szakasz',
-    'ingest.reason.sleep.other': '{n} alvás-szakasz',
+    'ingest.reason.sleep.one': '{n} alvásszakasz',
+    'ingest.reason.sleep.other': '{n} alvásszakasz',
     'ingest.reason.activity.one': '{n} aktivitás-összesítő',
     'ingest.reason.activity.other': '{n} aktivitás-összesítő',
     'ingest.reason.deletions.one': '{n} törlés',
@@ -1185,7 +1185,7 @@ export const hu = {
     'training.span.52': 'Év',
     'training.step.back': 'Előző időszak',
     'training.step.forward': 'Következő időszak',
-    'training.step.now': 'Vissza a mostanihoz',
+    'training.step.now': 'Vissza a mához',
     'training.window.last': 'Az elmúlt {n} hét',
     'training.window.past': '{n} hét',
     'training.empty': 'Ebben az időszakban nem volt edzés.',
@@ -1204,7 +1204,7 @@ export const hu = {
     'training.cell.other': '{date}: {n} alkalom, {time}',
     'training.cell.rest': '{date}: nincs edzés',
     'training.cell.partial': '(a mostani hét, még nem ért véget)',
-    'training.week': 'A {date} kezdetű hét',
+    'training.week': '{date} kezdetű hét',
     'training.table.summary': 'A hetek táblázatként',
     'training.table.week': 'A hét kezdete',
     'training.cat.strength': 'Erősítés',
@@ -1226,7 +1226,7 @@ export const hu = {
     'training.rest.hint': 'Csak a lezárult hetek — a mostani hét még nem szünet.',
     'training.types.title': 'Típus szerint',
     'training.types.row': '{n} × · {time}',
-    'training.types.hint': 'A típust a rögzítő app adta meg. A sáv az edzésidő.',
+    'training.types.hint': 'A típust a rögzítő app adta meg. Az oszlop hossza az edzésidő.',
     'training.zone.title': '3. zóna és fölötte',
     'training.zone.aria': 'Percek a 3. zónában és fölötte, hetente',
     'training.zone.minutes': 'Perc',
@@ -1290,9 +1290,9 @@ export const hu = {
     'report.table.title': 'Mérések',
     'report.col.measurement': 'Mérés',
     'report.col.average': 'Napi átlag',
-    'report.col.extremes': 'Szélső értékek',
-    'report.col.usual': 'Szokásos tartomány',
-    'report.col.days': 'Mérési nap',
+    'report.col.extremes': 'Szélsőértékek',
+    'report.col.usual': 'Szokásos sáv',
+    'report.col.days': 'Mért napok',
     'report.noMeasurement': 'nincs mérés',
     'report.usual.none': 'nincs saját mérés',
     'report.usual.little': 'kevés adat ({n} nap)',
@@ -1304,7 +1304,7 @@ export const hu = {
     'report.empty': 'Ebben az időszakban nincs mérés: {list}.',
     'report.nothing': 'Ebben az időszakban nincs rögzített mérés és edzés. Ez is válasz: nem kell fejből elmondanod.',
     'report.baselineFailed':
-      'A szokásos tartományt nem sikerült az elmúlt évből beolvasni, ezért csak ebből az időszakból számoltuk, és összevetés sincs.',
+      'A szokásos sávot nem sikerült az elmúlt évből beolvasni, ezért csak ebből az időszakból számoltuk, és összevetés sincs.',
     'report.unit.bpm': 'szívverés/perc',
     'report.unit.breaths': 'légzés/perc',
     'report.unit.steps': 'lépés',
@@ -1328,15 +1328,15 @@ export const hu = {
     'report.workouts.notLoaded': 'Az edzéseket nem sikerült beolvasni, ezért erről a lap nem tud mit mondani.',
     'report.workouts.over': 'Az időszakban {all} edzés volt, ebből a legutóbbi {shown} szerepel itt.',
     'report.prov.made':
-      'Ezt az oldalt a Helsa webes felülete állította össze a saját Apple Health adataimból, amelyeket a telefonom a saját szerveremre küldött.',
+      'Ezt az oldalt a Helsa webes felülete állította össze az Egészség appban tárolt saját adataimból, amelyeket a telefonom a saját szerveremre küldött.',
     'report.prov.self':
       'Saját rögzítésű adat: viselhető eszköz, telefon, otthoni mérőeszköz és saját bejegyzések. Ez nem klinikai mérés.',
     'report.prov.usual':
-      'A „szokásos tartomány” a saját napi értékeim középső 80%-a (10–90. percentilis) az utolsó {n} napból. Nem orvosi referenciatartomány.',
+      'A „szokásos sáv” a saját napi értékeim középső 80%-a (10–90. percentilis) az utolsó {n} napból. Nem orvosi referenciatartomány.',
     'report.prov.noAssessment':
       'A lapon nincs értékelés, minősítés, diagnózis vagy javaslat: csak mért számok és dátumok.',
     'report.prov.gaps':
-      'Ahol nincs mérés, ott nincs adat: a hiányzó nap nem nulla, hanem kimarad az átlagból. A szélső értékek a pillanatnyi méréseknél az egyes mérések, a gyűjtő jellegűeknél a napi összegek szélső értékei.',
+      'Ahol nincs mérés, ott nincs adat: a hiányzó nap nem nulla, hanem kimarad az átlagból. A szélsőértékek a pillanatnyi méréseknél az egyes mérések, a gyűjtő jellegűeknél a napi összegek szélsőértékei.',
     'report.prov.notMedical':
       'A Helsa nem orvosi eszköz: ezen a lapon semmi sem diagnózis, figyelmeztetés vagy riasztás.',
 
@@ -1361,13 +1361,13 @@ export const hu = {
     'journal.moods.title': 'Közérzet, napról napra',
     'journal.moods.aria': 'A közérzet az időszak minden napján',
     'journal.moods.cell': '{date}: {mood}',
-    'journal.moods.noNote': 'nincs bejegyzés',
-    'journal.episodes.title': 'Betegség-epizódok',
+    'journal.moods.noNote': 'nincs jelölés',
+    'journal.episodes.title': 'Betegségepizódok',
     'journal.episodes.none':
-      'Ebben az időszakban nincs betegség-epizód. Egy epizód olyan napon kezdődik, amelyen fertőzésre jellemző tünet szerepel (láz, torokfájás, köhögés…); a fáradtság vagy a fejfájás önmagában nem nyit epizódot.',
+      'Ebben az időszakban nincs betegségepizód. Egy epizód olyan napon kezdődik, amelyen fertőzésre jellemző tünet szerepel (láz, torokfájás, köhögés…); a fáradtság vagy a fejfájás önmagában nem nyit epizódot.',
     'journal.episodes.days.one': '{n} nap',
     'journal.episodes.days.other': '{n} nap',
-    'journal.episodes.ongoing': 'tart',
+    'journal.episodes.ongoing': 'még tart',
     'journal.episodes.rule':
       'Egy epizódon belül egy bejegyzés nélküli napot áthidalunk, kettő lezárja — a telefon szabálya szerint. A naplóból számolva, nem diagnózis.',
     'journal.events.title': 'Események',
@@ -1387,7 +1387,7 @@ export const hu = {
     'journal.delete.body':
       'A szerver {n} naplóbejegyzést tárol. A törlés a telefon Egészség appjához nem nyúl; ha a telefon kapcsolója még be van kapcsolva, a következő szinkron újra elküldi őket.',
     'journal.delete.button': 'Napló törlése erről a szerverről',
-    'journal.delete.confirm': 'Törlöd az összes közérzetet, tünetet és jelzést erről a szerverről?',
+    'journal.delete.confirm': 'Törlöd az összes közérzet-, tünet- és jelzésbejegyzést erről a szerverről?',
     'journal.delete.done': '{n} bejegyzés törölve.',
     'report.journal.never':
       'A telefon még nem küldte el a naplóját erre a szerverre (a Napló és események kapcsoló ki van kapcsolva, vagy az app régebbi az 1.0 (7)-esnél), ezért ez a lap nem tudja megmutatni, mit jegyeztél fel — és ez nem jelenti azt, hogy semmit. A telefonos appban készült összefoglalón rajta van.',
@@ -1436,7 +1436,7 @@ export const hu = {
     'period.compare.none':
       '{period} idejéről nincs mért adat, amihez mérni lehetne — ez hiány, nem visszaesés nullára.',
     'period.compare.withheld':
-      'Nincs összevetés ezzel: {period} ({value}). A kettőben nagyon eltérő arányban volt mérés, és kevesebb mért időszak összege már ettől is kisebb.',
+      'Nincs összevetés ezzel: {period} ({value}). A kettőben nagyon eltérő arányban volt mérés, és kevesebb mért szakasz összege már ettől is kisebb.',
     'period.compare.caveat.month': 'Nem azonos a lefedettség: most {now}, akkor {then} hónapról van adat.',
     'period.compare.caveat.day': 'Nem azonos a lefedettség: most {now}, akkor {then} napról van adat.',
     'period.compare.matched':
@@ -1456,7 +1456,7 @@ export const hu = {
     'period.sleep.nights': 'Mért éjszakák',
     'period.sleep.total': 'Összes alvás',
     'period.sleep.overMeasured': 'Az átlag a mért éjszakákra vonatkozik.',
-    'period.sleep.none': 'Ebben az időszakban egyetlen alvás-szakasz sem érkezett.',
+    'period.sleep.none': 'Ebben az időszakban egyetlen alvásszakasz sem érkezett.',
     'period.sleep.notLoaded':
       'Az alvásadat nem tölthető be — ez nem azt jelenti, hogy nem aludtál, hanem hogy nem tudjuk megnézni.',
     'period.sleep.open': 'Minden éjszaka — Alvás',
@@ -1489,7 +1489,7 @@ export const hu = {
       'A kiválasztott mérések, minden naptári év a többi mellett — legfeljebb öt évre visszamenőleg, ameddig van adat.',
     'years.span': 'Mért adat ezekre az évekre van: {span}',
     'years.partial':
-      'Az idei év még tart — minden évet átlagos hónapként hasonlítunk össze, nem összegként, így egy töredék év is odaállhat egy teljes mellé.',
+      'Az idei év még tart — minden évet átlagos hónapként hasonlítunk össze, nem összegként, így egy csonka év is odaállhat egy teljes mellé.',
     'years.none.title': 'Nincs semmi kiválasztva',
     'years.none.hint': 'Válassz legalább egy mérést, vagy nyomd meg az Ajánlottak gombot.',
     'years.empty.title': 'Egyik évben sincs még elég adat',
@@ -1498,9 +1498,9 @@ export const hu = {
     'years.table.aria': 'A kiválasztott mérések évről évre',
     'years.table.metric': 'Mérés',
     'years.table.soFar': 'eddig',
-    'years.table.change': 'Elsőtől az utolsóig',
+    'years.table.change': 'Az elsőtől az utolsóig',
     'years.table.legend':
-      'Az összeadódó mérés átlagos hónapként szerepel, az átlagolt az átlagával — mindkettő csak azokból a hónapokból, amelyekről van adat. Ha egy évben {min} hónapnál kevesebb a mért, az év nem kap számot. A sáv egy mérés éveit veti össze egymással, sosem két mérést.',
+      'Az összeadódó mérés átlagos hónapként szerepel, az átlagolt az átlagával — mindkettő csak azokból a hónapokból, amelyekről van adat. Ha egy évben kevesebb mért hónap van, mint {min}, az év nem kap számot. Az oszlop egy mérés éveit veti össze egymással, sosem két mérést.',
     'years.kind.sum': 'átlagos hónap',
     'years.kind.avg': 'átlag',
     'years.cell.none': 'nincs mérés',
@@ -1510,13 +1510,13 @@ export const hu = {
     'years.cell.months.other': '{n} hónap',
     'years.cell.ofElapsed': '/ {n}',
     'years.change.title': '{from} és {to} között',
-    'years.change.uneven': 'nagyon eltérő lefedettség — lazán érdemes olvasni',
+    'years.change.uneven': 'nagyon eltérő lefedettség — fenntartással kezeld',
     'years.noDataFor': 'Egyik évben sincs adat: {list}.',
     'years.degraded':
       'Legalább egy összeadódó mérés csak mintánkénti átlagként érkezett, ezért az átlagos hónapja itt nem rakható össze.',
     'years.why.title': 'Miért kell a telefonon gombot nyomni, itt pedig nem',
     'years.why.body':
-      'A telefonon a hosszú visszatekintés évről évre végigolvassa az Egészség-előzményeidet, és közben fogyasztja az akkut — ezért megvárja, hogy kérd. Itt a számok már a szerveren vannak, és az egész egyetlen kérdés hozzá.',
+      'A telefonon a hosszú visszatekintés évről évre végigolvassa az Egészség-előzményeidet, és közben fogyasztja az akkut — ezért megvárja, hogy kérd. Itt a számok már a szerveren vannak, és az egész egyetlen lekérdezés.',
     'years.toPeriod': 'Egy év részletesen — Év a számokban',
     'years.picker.title': 'Mire terjed ki',
     'years.picker.count': '({n} kiválasztva)',
@@ -1540,16 +1540,16 @@ export const hu = {
     'meas.span.week': '7 nap',
     'meas.span.month': '30 nap',
     'meas.span.year': '12 hónap',
-    'meas.showAll': 'Az adat nélküli mérések is látszódjanak',
-    'meas.jump.aria': 'Szakaszok',
+    'meas.showAll': 'Adat nélküli mérések megjelenítése',
+    'meas.jump.aria': 'Csoportok',
     'meas.elsewhere': 'Az alvásnak és a táplálkozásnak saját oldala van: {sleep} · {nutrition}.',
     'meas.latestOld':
-      'Amíg nem frissül, minden kártya a legutóbbi mérés helyett az elmúlt 30 nap utolsó mért napját mutatja — az ennél régebbi értéknek itt nincs száma.',
+      'Amíg a szervert nem frissíted, a kártyák a legutóbbi mérés helyett az elmúlt 30 nap utolsó mért napjának értékét mutatják — a 30 napnál régebbi mérésekhez itt nem jelenik meg szám.',
     'meas.foot':
-      'A napokat a te időzónádban vágjuk ({tz}). Ami nem érkezett meg, az hézag, sosem nulla — és egyik kártya sem mondja meg, melyik irány a jó.',
+      'A napokat a te időzónád szerint bontjuk ({tz}). Ami nem érkezett meg, az hézag, sosem nulla — és egyik kártya sem mondja meg, melyik irány a jó.',
     'meas.empty.title': 'Még nincs mérés',
     'meas.empty.hint':
-      'Az alváson és a táplálkozáson kívül semmi sem érkezett meg a szerverre. Kapcsold be „Az adat nélküli mérések is látszódjanak” gombot, hogy lásd, mi jelenhetne meg itt.',
+      'Az alváson és a táplálkozáson kívül semmi sem érkezett meg a szerverre. Kapcsold be az „Adat nélküli mérések megjelenítése” kapcsolót, hogy lásd, mi jelenhetne meg itt.',
     'meas.empty.section': 'Ebben a csoportban nincs mérés',
     'meas.section.count': 'Van adat: {n} / {m}',
     'meas.section.activity': 'Aktivitás',
@@ -1597,11 +1597,11 @@ export const hu = {
     'meas.head.noFigure': 'Utoljára ekkor érkezett: {when}, de annak a napnak az összegét nem sikerült kiolvasni',
     'meas.stale': 'Ebben az időszakban nincs mérés — a legutóbbi: {ago}.',
     'meas.spark.aria': '{metric}, {span}',
-    'meas.usual.band': 'A szokásos: {low}–{high} {unit} (az elmúlt 60 napból {n} mért nap alapján)',
+    'meas.usual.band': 'Szokásos sávod: {low}–{high} {unit} (az elmúlt 60 napból {n} mért nap alapján)',
     'meas.usual.bandSum': 'A szokásos napod: {low}–{high} {unit} (az elmúlt 60 napból {n} mért nap alapján)',
-    'meas.usual.notEnough': 'Még nincs szokásos tartomány: az elmúlt 60 napból {n} napon van mérés, {min} kellene.',
+    'meas.usual.notEnough': 'Még nincs szokásos sáv: az elmúlt 60 napból {n} napon van mérés, {min} kellene.',
     'meas.usual.noVariation': 'Az elmúlt 60 nap minden mért napján ugyanaz volt az érték, így nincs mit sávként rajzolni.',
-    'meas.usual.year': 'A szokásos tartomány napi alapú, ezért csak a 7 és a 30 napos nézeten rajzoljuk meg.',
+    'meas.usual.year': 'A szokásos sáv napi alapú, ezért csak a 7 és a 30 napos nézeten rajzoljuk meg.',
     'meas.degraded': 'A szerver ezt a típust mintánkénti átlagként küldi, így az oszlopok nem napi összegek.',
     'meas.toTrends': 'Teljes grafikon a Trendekben →',
     'meas.bp.title': 'Vérnyomás',
@@ -1662,7 +1662,7 @@ export const hu = {
     'meas.gait.nothing': 'Az elmúlt {n} napban nincs mérés.',
     'meas.gait.notEnough': 'Nincs elég mért nap',
     'meas.gait.notComparable': 'Nincs mihez hasonlítani',
-    'meas.gait.unchanged': 'Együtt mozog a szokásossal',
+    'meas.gait.unchanged': 'A szokásos szinten',
     'meas.gait.moved': '{delta} {direction}, mint a megelőző {n} nap',
     'meas.gait.delta.speed': ' m/s-mal',
     'meas.gait.delta.length': ' méterrel',
@@ -1678,18 +1678,18 @@ export const hu = {
     'meas.gait.band':
       'A saját sávod {low} és {high} között van ({n} nap átlaga ± szórása). Ez nem normálérték, hanem a te eddigi napjaid szórása.',
     'meas.gait.chart.aria': '{metric} az elmúlt {n} napban',
-    'meas.gait.falls.one': '{n} esés az időszakban, pontozott vonallal jelölve.',
-    'meas.gait.falls.other': '{n} esés az időszakban, pontozott vonalakkal jelölve.',
+    'meas.gait.falls.one': '{n} elesés az időszakban, pontozott vonallal jelölve.',
+    'meas.gait.falls.other': '{n} elesés az időszakban, pontozott vonalakkal jelölve.',
     'meas.gait.fallsNote':
       'Ezek ugyanazon az időtengelyen látszanak, mint a görbe. Ez nem jelenti azt, hogy közük van egymáshoz — csak azt, hogy egymás mellett láthatod őket.',
     'meas.gait.noFalls':
-      'Az elmúlt {n} napban nem érkezett esés erre a szerverre. Ez lehet a jó eset — de az is lehet, hogy az esésérzékelés ki van kapcsolva vagy nem olvasható: innen nézve a kettő ugyanúgy fest.',
+      'Az elmúlt {n} napban nem érkezett adat elesésről erre a szerverre. Lehet, hogy egyszerűen nem estél el — de az is lehet, hogy az esésérzékelés ki van kapcsolva vagy nem olvasható: innen nézve a kettő ugyanúgy fest.',
     'meas.gait.steadinessEvents':
-      'Az Apple járásstabilitás-értesítései nincsenek ezen a tengelyen: ezek egy másfajta HealthKit-bejegyzés (kategóriaminta), amit a telefon nem tölt fel — ilyet egyedül az alvásból küld. A telefon a saját járás-képernyőjén rajzolja ki őket.',
+      'Az Apple járásstabilitás-értesítései nincsenek ezen a tengelyen: ezek egy másfajta HealthKit-bejegyzés (kategóriaminta), amelyet a telefon nem tölt fel — ilyet egyedül az alvásból küld. A telefon a saját járásképernyőjén rajzolja ki őket.',
     'meas.gait.apple':
       'A „járásstabilitás” és a szintjei az Apple számítása és az Apple besorolása, nem a miénk. Ezt mindenhol kiírjuk, ahol megjelenik.',
     'meas.gait.description':
-      'Ez leírás, nem diagnózis és nem kockázatbecslés. A járásadatokat a cipő, a terep, a teher és a napszak is elmozdítja.',
+      'Ez leírás, nem diagnózis és nem kockázatbecslés. A járásadatokat a cipő, a terep, a teher és a napszak is befolyásolja.',
   },
 
   // --- Metric group names ---------------------------------------------------
@@ -1699,7 +1699,7 @@ export const hu = {
     respiratory: 'Légzés',
     body: 'Testösszetétel',
     macro: 'Táplálkozás — makrók',
-    mineral: 'Táplálkozás — ásványi',
+    mineral: 'Táplálkozás — ásványi anyagok',
     vitamin: 'Táplálkozás — vitaminok',
     mobility: 'Mobilitás',
     environment: 'Környezet',
@@ -1772,7 +1772,7 @@ export const hu = {
     distanceDownhillSnowSports: 'Lesiklott táv',
     pushCount: 'Tolások',
     swimmingStrokeCount: 'Úszótempók',
-    flightsClimbed: 'Megmászott emelet',
+    flightsClimbed: 'Megmászott emeletek',
     activeEnergy: 'Aktív energia',
     basalEnergyBurned: 'Alapanyagcsere-energia',
     appleExerciseTime: 'Edzésidő',
@@ -1802,15 +1802,15 @@ export const hu = {
     crossCountrySkiingSpeed: 'Sífutás-sebesség',
     paddleSportsSpeed: 'Kajak-kenu sebesség',
     rowingSpeed: 'Evezési sebesség',
-    workoutEffortScore: 'Edzés-megterhelés',
-    estimatedWorkoutEffortScore: 'Becsült edzés-megterhelés',
+    workoutEffortScore: 'Edzésmegterhelés',
+    estimatedWorkoutEffortScore: 'Becsült edzésmegterhelés',
 
     // 3.2 Heart and circulation
     heartRate: 'Pulzus',
     restingHeartRate: 'Nyugalmi pulzus',
     walkingHeartRateAverage: 'Séta közbeni pulzus',
     hrv: 'HRV (SDNN)',
-    heartRateRecoveryOneMinute: 'Pulzus-visszaállás (1 perc)',
+    heartRateRecoveryOneMinute: 'Pulzus-visszatérés (1 perc)',
     atrialFibrillationBurden: 'Pitvarfibrilláció-arány',
     bloodPressureSystolic: 'Vérnyomás — szisztolés',
     bloodPressureDiastolic: 'Vérnyomás — diasztolés',
@@ -1823,11 +1823,11 @@ export const hu = {
     forcedVitalCapacity: 'Erőltetett vitálkapacitás',
     forcedExpiratoryVolume1: 'FEV1',
     peakExpiratoryFlowRate: 'Kilégzési csúcsáramlás',
-    inhalerUsage: 'Inhalátor-használat',
+    inhalerUsage: 'Inhalátorhasználat',
     appleSleepingBreathingDisturbances: 'Alvási légzészavarok',
 
     // 3.4 Body composition
-    bodyMass: 'Testsúly',
+    bodyMass: 'Testtömeg',
     bodyMassIndex: 'BMI',
     bodyFatPercentage: 'Testzsír',
     leanBodyMass: 'Zsírmentes testtömeg',
@@ -1885,15 +1885,15 @@ export const hu = {
     // 3.8 Mobility and gait
     walkingSpeed: 'Gyaloglási sebesség',
     walkingStepLength: 'Lépéshossz',
-    walkingAsymmetryPercentage: 'Járás-aszimmetria',
+    walkingAsymmetryPercentage: 'Járásaszimmetria',
     walkingDoubleSupportPercentage: 'Kettős támaszfázis',
-    sixMinuteWalkTestDistance: '6 perces séta-teszt',
-    stairAscentSpeed: 'Lépcsőn fel — sebesség',
-    stairDescentSpeed: 'Lépcsőn le — sebesség',
+    sixMinuteWalkTestDistance: '6 perces sétateszt',
+    stairAscentSpeed: 'Sebesség lépcsőn felfelé',
+    stairDescentSpeed: 'Sebesség lépcsőn lefelé',
     appleWalkingSteadiness: 'Járásstabilitás',
     runningSpeed: 'Futósebesség',
     runningPower: 'Futóteljesítmény',
-    runningStrideLength: 'Futó lépéshossz',
+    runningStrideLength: 'Lépéshossz futáskor',
     runningVerticalOscillation: 'Függőleges kilengés',
     runningGroundContactTime: 'Talajérintési idő',
 
@@ -1902,12 +1902,12 @@ export const hu = {
     headphoneAudioExposure: 'Fejhallgató-hangterhelés',
     environmentalSoundReduction: 'Zajcsökkentés',
     timeInDaylight: 'Napfényben töltött idő',
-    uvExposure: 'UV-terhelés',
+    uvExposure: 'UV-expozíció',
 
     // 3.10 Other
     bloodGlucose: 'Vércukor',
-    bloodAlcoholContent: 'Véralkohol',
-    insulinDelivery: 'Inzulin-bevitel',
+    bloodAlcoholContent: 'Véralkoholszint',
+    insulinDelivery: 'Inzulinbevitel',
     numberOfTimesFallen: 'Elesések',
     electrodermalActivity: 'Bőrvezetés',
     waterTemperature: 'Vízhőmérséklet',

@@ -67,7 +67,7 @@ export const SYMPTOMS: SymptomDef[] = [
   s('fainting', 'Fainting', 'Ájulás', 'accompanying'),
   s('memoryLapse', 'Memory lapse', 'Memóriakiesés', 'unrelated'),
   s('moodChanges', 'Mood swings', 'Hangulatingadozás', 'unrelated', 'presence'),
-  s('sleepChanges', 'Changed sleep', 'Változott alvás', 'unrelated', 'presence'),
+  s('sleepChanges', 'Changed sleep', 'Megváltozott alvás', 'unrelated', 'presence'),
   s('lossOfSmell', 'Loss of smell', 'Szaglásvesztés', 'marker'),
   s('lossOfTaste', 'Loss of taste', 'Ízlelésvesztés', 'marker'),
   s('soreThroat', 'Sore throat', 'Torokfájás', 'marker'),
