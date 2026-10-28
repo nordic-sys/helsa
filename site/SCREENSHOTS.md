@@ -26,7 +26,8 @@ See `DevTools/MockPlanContextStores.swift`.
 **The web images** (`web/{en,hu}-*.png`, since the 2026-10 site redesign) come from the
 dashboard run with Vite against **`scripts/web-fixture-api.mjs`** — a fixture API with an invented
 person, so no backend and no real data is involved — captured headless at **1440 × 900, light
-theme**, with `helsa.device_token` set in `localStorage` and `helsa.lang` choosing English or
+theme**, signed in (any code on the sign-in page, or the fixture's `/__as?u=bob` knob — the web
+sends no token any more, only the session cookie) and `helsa.lang` choosing English or
 Hungarian. The script's header has the commands and its knobs (`/__lang`, `/__notoday`,
 `/__mode`). ⛔ Never photograph a screen that displays the token, and never photograph the live
 server — that one holds real measurements.

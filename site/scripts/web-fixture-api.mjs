@@ -8,13 +8,20 @@
  *
  *   node site/scripts/web-fixture-api.mjs                     # :18291
  *   cd web && HELSA_API=http://127.0.0.1:18291 npx vite --port 5191
- *   # in the browser: localStorage['helsa.device_token'] = 'demo-token'
+ *   # sign in on the page with any code (e.g. DEMO-0000), or set the knob below
+ *
+ * Signing in (docs/36): the web sends no token any more, only the
+ * `helsa_session` cookie, so this answers 401 until a code is redeemed. A code
+ * beginning with N signs in "Nóri", a member; P "Panni", a member added today
+ * with no phone and no data yet; any other "Bob", the admin. `ZZZZ-ZZZZ` is refused (401), `YYYY-YYYY` is rate-limited (429).
  *
  * Knobs, by request (handy from the capture script):
  *   GET /__lang?l=hu       (kept for older capture scripts; the web words observations itself now)
  *   GET /__fallback?on=1   add an observation whose rule no web build knows (the server-sentence fallback)
  *   GET /__notoday?on=1    nothing for today yet (the first-sync picture)
  *   GET /__mode?m=dlq      the sync queue in another state: idle | noworker | dlq | down
+ *   GET /__as?u=bob        who a request WITHOUT a cookie is (bob | nori | none, the default) —
+ *                          for capture scripts that photograph a page without signing in first
  *
  * The pictures it produced are listed in site/SCREENSHOTS.md.
  */
@@ -118,6 +125,88 @@ function latest(q) {
   for (const n of (q.get('metrics') || '').split(',')) { const b = BASE[n]; if (!b) continue; metrics[n] = { value: b[0], unit: b[1], at: iso(new Date(Date.now() - 3600e3)), day: ymd(now), agg: b[2] } }
   return { tz: 'Europe/Budapest', metrics }
 }
+// --- The household: two people, their tokens and their account logs ----------
+const mins = (n) => iso(new Date(Date.now() - n * 60e3))
+const people = {
+  bob: { id: 'u-bob', handle: 'bob', display_name: 'Bob', role: 'admin', created_at: iso(day(400)), ha_publish: true },
+  nori: { id: 'u-nori', handle: 'nori', display_name: 'Nóri', role: 'member', created_at: iso(day(8)), ha_publish: false },
+  panni: { id: 'u-panni', handle: 'panni', display_name: 'Panni', role: 'member', created_at: iso(day(0)), ha_publish: false },
+}
+const tokens = {
+  'u-bob': [
+    { id: 't-b1', label: 'Bob iPhone', kind: 'device', created_at: iso(day(60)), expires_at: iso(day(-300)), last_used_at: mins(4) },
+    { id: 't-b2', label: 'Chrome on Mac', kind: 'web', created_at: iso(day(2)), expires_at: iso(day(-28)), last_used_at: mins(0) },
+  ],
+  'u-nori': [
+    { id: 't-n1', label: 'Nóri iPhone', kind: 'device', created_at: iso(day(8)), expires_at: iso(day(-357)), last_used_at: mins(120) },
+    { id: 't-n2', label: 'Safari on Mac', kind: 'web', created_at: iso(day(7)), expires_at: iso(day(-23)), last_used_at: mins(60 * 26) },
+  ],
+  'u-panni': [],
+}
+const events = {
+  'u-bob': [
+    { kind: 'code_redeemed', at: iso(day(2)), actor: 'Bob', actor_is_self: true, detail: { purpose: 'web', label: 'Chrome on Mac' } },
+    { kind: 'code_issued', at: iso(day(2)), detail: { purpose: 'web', by: 'operator' } },
+    { kind: 'role_changed', at: iso(day(3)), detail: { to: 'admin', by: 'operator' } },
+  ],
+  'u-nori': [
+    { kind: 'ha_publish', at: iso(day(6)), actor: 'Nóri', actor_is_self: true, detail: { on: false } },
+    { kind: 'code_redeemed', at: iso(day(7)), actor: 'Nóri', actor_is_self: true, detail: { purpose: 'web', label: 'Safari on Mac' } },
+    { kind: 'code_issued', at: iso(day(7)), actor: 'Nóri', actor_is_self: true, detail: { purpose: 'web' } },
+    { kind: 'code_redeemed', at: iso(day(8)), actor: 'Nóri', actor_is_self: true, detail: { purpose: 'device', label: 'Nóri iPhone' } },
+    { kind: 'code_issued', at: iso(day(8)), actor: 'Bob', actor_is_self: false, detail: { purpose: 'device' } },
+    { kind: 'member_added', at: iso(day(8)), actor: 'Bob', actor_is_self: false, detail: { role: 'member' } },
+  ],
+  'u-panni': [{ kind: 'member_added', at: iso(day(0)), actor: 'Bob', actor_is_self: false, detail: { role: 'member' } }],
+}
+const byId = (id) => Object.values(people).find((p) => p.id === id)
+const live = (id) => tokens[id].filter((t) => !t.revoked_at).length
+const member = (p) => ({ ...p, devices: live(p.id), last_upload_at: p.id === 'u-panni' ? undefined : p.id === 'u-bob' ? mins(4) : mins(120) })
+const meOf = (p) => ({ ...p, capabilities: { household: true, can_delete_self: p.role !== 'admin' }, settings: { time_zone: 'Europe/Budapest' } })
+let asDefault = null
+const code = (purpose) => ({ code: purpose === 'web' ? 'H3KD-9QWT' : 'K7QM-4XPA', purpose, expires_at: iso(new Date(Date.now() + (purpose === 'web' ? 10 : 15) * 60e3)) })
+const whoOf = (req) => { const m = /(?:^|;\s*)helsa_session=([a-z]+)/.exec(req.headers.cookie || ''); return people[m?.[1] ?? asDefault] }
+/** The household routes; `undefined` = not one of them. [status, body?, headers?] */
+function household(req, u, bodyText) {
+  const p = u.pathname, me = whoOf(req), body = bodyText ? JSON.parse(bodyText) : {}
+  if (p === '/v1/auth/web/login' && req.method === 'POST') {
+    const c = String(body.code || '').toUpperCase()
+    if (c === 'YYYY-YYYY') return [429, { title: 'Too many attempts', detail: 'wait a quarter of an hour, then ask for a new code' }]
+    if (c === 'ZZZZ-ZZZZ') return [401, { title: 'Code not accepted', detail: 'the code has expired, has been used, or was mistyped — ask for a new one' }]
+    const who = c.startsWith('N') ? 'nori' : c.startsWith('P') ? 'panni' : 'bob'
+    return [204, undefined, { 'set-cookie': `helsa_session=${who}; Path=/v1; HttpOnly; SameSite=Strict` }]
+  }
+  if (!p.startsWith('/v1/')) return undefined
+  if (!me) return [401, { title: 'Unauthorized', detail: 'missing bearer token' }]
+  if (p === '/v1/auth/web/logout') return [204, undefined, { 'set-cookie': 'helsa_session=; Path=/v1; Max-Age=0' }]
+  // Panni has just been added: nothing measured, nothing connected.
+  if (me.handle === 'panni' && p === '/v1/summary') return [200, { range: 'day', tz: 'Europe/Budapest', metrics: {} }]
+  if (me.handle === 'panni' && p === '/v1/devices') return [200, []]
+  if (p === '/v1/me' && req.method === 'GET') return [200, meOf(me)]
+  if (p === '/v1/me' && req.method === 'PATCH') { if ('ha_publish' in body) { me.ha_publish = body.ha_publish; events[me.id].unshift({ kind: 'ha_publish', at: iso(new Date()), actor: me.display_name, actor_is_self: true, detail: { on: body.ha_publish } }) } return [200, meOf(me)] }
+  if (p === '/v1/me/tokens') return [200, tokens[me.id].map((t) => ({ ...t, current: t.kind === 'web' && t === tokens[me.id].find((x) => x.kind === 'web') }))]
+  if (p === '/v1/me/events') return [200, events[me.id]]
+  if (p === '/v1/me/enrolment-codes') return [201, code('device')]
+  if (p === '/v1/me/login-codes') return [201, code('web')]
+  let m
+  if ((m = /^\/v1\/me\/tokens\/([^/]+)$/.exec(p))) { const t = tokens[me.id].find((x) => x.id === m[1]); if (!t) return [404, { title: 'No such device' }]; t.revoked_at = iso(new Date()); return [204] }
+  if (!p.startsWith('/v1/admin/')) return undefined
+  if (me.role !== 'admin') return [403, { title: 'Forbidden' }]
+  if (p === '/v1/admin/users' && req.method === 'GET') return [200, Object.values(people).map(member)]
+  if (p === '/v1/admin/users' && req.method === 'POST') { const np = { id: `u-${body.handle}`, handle: body.handle, display_name: body.display_name, role: 'member', created_at: iso(new Date()), ha_publish: false }; people[body.handle] = np; tokens[np.id] = []; events[np.id] = [{ kind: 'member_added', at: iso(new Date()), actor: me.display_name }]; return [201, member(np)] }
+  if ((m = /^\/v1\/admin\/users\/([^/]+)(?:\/(tokens|events|codes))?(?:\/([^/]+))?$/.exec(p))) {
+    const t = byId(m[1]); if (!t) return [404, { title: 'No such member' }]
+    if (!m[2] && req.method === 'GET') return [200, member(t)]
+    if (!m[2] && req.method === 'PATCH') { if (body.role) t.role = body.role; if ('disabled' in body) t.disabled = body.disabled; return [200, member(t)] }
+    if (!m[2] && req.method === 'DELETE') { t.deleting = true; return [202] }
+    if (m[2] === 'tokens' && !m[3]) return [200, tokens[t.id]]
+    if (m[2] === 'tokens' && m[3]) { const x = tokens[t.id].find((y) => y.id === m[3]); if (x) x.revoked_at = iso(new Date()); return [204] }
+    if (m[2] === 'events') return [200, events[t.id]]
+    if (m[2] === 'codes') return t.id !== me.id && live(t.id) > 0 ? [409, { title: 'The member has a device' }] : [201, code(body.purpose)]
+  }
+  return undefined
+}
+
 const routes = {
   '/v1/journal': journal, '/v1/latest': latest,
   '/v1/summary': (q) => { const r = summary(q); if (noToday && q.get('range') === 'day') for (const k in r.metrics) r.metrics[k].buckets = []; return r }, '/v1/baseline': baseline,
@@ -129,7 +218,6 @@ const routes = {
   '/v1/devices': () => [{ id: 'd1', platform: 'ios', model: 'iPhone', name: 'iPhone', last_seen_at: iso(new Date(Date.now() - 4 * 60e3)) }],
   '/v1/settings': () => ({ time_zone: 'Europe/Budapest', locale: 'en', unit_system: 'metric' }),
   '/v1/goals': () => [{ metric: 'stepCount', target_value: 10000, source: 'healthkit' }],
-  '/v1/me': () => ({ id: 'u1', display_name: 'Demo' }),
   // Real rule ids and the value sets the shared vectors pin: the web words these
   // itself, in its own language. `title`/`detail` are the server's Hungarian
   // fallback, as on the wire. `/__fallback?on=1` adds a rule no web build knows,
@@ -144,8 +232,13 @@ const routes = {
   '/v1/achievements': () => Array.from({ length: 23 }, (_, i) => ({ id: `a${i}`, kind: i % 3 ? 'month' : 'milestone', code: 'challenge', period: i % 3 ? ymd(day(30 * i)).slice(0, 7) : undefined, value: 200000, earned_at: iso(day(30 * i + 1)) })),
   '/v1/challenge': challenge,
 }
-http.createServer((req, res) => {
+http.createServer(async (req, res) => {
   const u = new URL(req.url, 'http://x')
+  if (u.pathname === '/__as') { const v = u.searchParams.get('u'); asDefault = people[v] ? v : null; res.end(String(asDefault)); return }
+  let bodyText = ''
+  for await (const chunk of req) bodyText += chunk
+  const h = household(req, u, bodyText)
+  if (h) { const [status, out, headers = {}] = h; res.writeHead(status, { 'content-type': status < 300 ? 'application/json' : 'application/problem+json', ...headers }); res.end(out === undefined ? '' : JSON.stringify(out)); return }
   if (u.pathname === '/__notoday') { noToday = u.searchParams.get('on') === '1'; mode = noToday ? 'idle' : 'draining'; res.end(String(noToday)); return }
   if (u.pathname === '/__fallback') { fallback = u.searchParams.get('on') === '1'; res.end(String(fallback)); return }
   if (u.pathname === '/__lang') { lang = u.searchParams.get('l'); res.end(lang); return }

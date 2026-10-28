@@ -17,15 +17,26 @@ rather than at runtime.
 
 ## Access
 
-There is **no sign-in screen**. Access is layered (`docs/08-auth-hozzaferes.md`):
+Access is layered (`docs/08-auth-hozzaferes.md`, `docs/36`):
 
-1. **network** — the dashboard is reachable over WireGuard only; the proxy serves it
-   on a port that is deliberately not forwarded on the router;
-2. **application** — a long-lived device token, entered once per machine on the
-   Settings page.
+1. **network** — the dashboard is reachable over WireGuard or the home network only;
+   the proxy serves it on a port that is deliberately not forwarded on the router;
+2. **application** — a **sign-in code** (`XXXX-XXXX`, ten minutes, used once), asked
+   for on the phone (*Your own server ▸ Sign in to the web dashboard*), from an admin,
+   or for the very first sign-in on the server (`make prod-login-code HANDLE=…`). The
+   server answers with the `helsa_session` cookie (httpOnly, `Path=/v1`, 30 days,
+   sliding), and the web sends **nothing else**: no bearer header, no token in
+   `localStorage` — an old one left by an earlier web is deleted on load.
 
-In a single-user system there is nobody to sign in, so a login flow would be
-ceremony without a purpose.
+Several people can share a server (a household), so `src/session.tsx` is a gate:
+nothing that reads data mounts before `/me` has said who this is, and sign-in,
+sign-out and any 401 empty the whole query cache — one person's numbers must never
+be drawn under another person's name in the same browser.
+
+The connection QR on the code dialog points the phone at the **mTLS port**, not the
+port this page is served on. Set `VITE_HELSA_DEVICE_ENDPOINT` at build time
+(e.g. `https://helsa.example.net:48443/v1`); without it the page guesses its own
+host on 443.
 
 ## What is worth knowing about the code
 
