@@ -1841,6 +1841,8 @@ export const hu = {
   metric: {
     // 3.1 Activity and movement
     stepCount: 'Lépés',
+    // Not a HealthKit type: the observations' tag for the nightly sleep total (insights rules).
+    sleepDuration: 'Alvásidő',
     distanceWalkingRunning: 'Gyaloglás/futás táv',
     distanceCycling: 'Kerékpáros táv',
     distanceSwimming: 'Úszott táv',

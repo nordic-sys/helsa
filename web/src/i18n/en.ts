@@ -1837,6 +1837,8 @@ export const en: Dict = {
   metric: {
     // 3.1 Activity and movement
     stepCount: 'Steps',
+    // Not a HealthKit type: the observations' tag for the nightly sleep total (insights rules).
+    sleepDuration: 'Sleep duration',
     distanceWalkingRunning: 'Walking/running distance',
     distanceCycling: 'Cycling distance',
     distanceSwimming: 'Swimming distance',
