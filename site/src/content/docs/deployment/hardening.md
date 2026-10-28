@@ -9,8 +9,11 @@ any change to the proxy or the network.
 
 ## Network
 
-- [ ] **Exactly one forwarded port: TCP 443.** Not the database, not the RabbitMQ
-      console, not the dashboard on 8443, and ideally not SSH.
+- [ ] **Exactly one forwarded port, onto the host's TCP 443.** The number on the
+      router's outside may differ (for example `48443` → `443`). Not the database, not
+      the RabbitMQ console, not the dashboard on 8443, and ideally not SSH. Check it
+      from outside with a public TCP port check: your port answers, `443` and `8443`
+      time out.
 - [ ] The dashboard port `8443` is reachable **only** over LAN or VPN, enforced
       both by the router and by the `remote_ip` rule in the proxy.
 - [ ] Administrative interfaces — RabbitMQ management, pgAdmin, any metrics UI —
