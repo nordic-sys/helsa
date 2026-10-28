@@ -77,8 +77,8 @@ first — some things should not be filed in public.
 
 Two pages answer most of what arrives:
 
-- [**Privacy**](privacy/) — what leaves your device, which by default is nothing.
-- [**Disclaimer**](disclaimer/) — what Helsa is not, and what it must not be used for.
+- [**Privacy**](/privacy/) — what leaves your device, which by default is nothing.
+- [**Disclaimer**](/disclaimer/) — what Helsa is not, and what it must not be used for.
 
 And one thing worth repeating here, because it is the most important sentence on this site:
 **Helsa is not a medical device.** If a number worries you, the person to ask is a doctor, not
