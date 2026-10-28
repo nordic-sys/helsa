@@ -57,6 +57,35 @@ Native clients use their long-lived device token and never refresh it. To
 revoke a token from a device you no longer have, use the CLI — see
 [revoking](/getting-started/device-token/#revoking).
 
+## The browser's session cookie
+
+The dashboard does not send a bearer token. It signs in with a one-time code
+(`POST /v1/auth/web/login {"code": "…"}`) and receives `helsa_session` — httpOnly, Secure,
+SameSite=Strict, host-only, `Path=/v1`, 30 days, renewed while used. The API accepts it only:
+
+- through the **web port** (`:8443`) — the proxy tells the API which door a request came in by,
+  and a cookie arriving on the mutual-TLS port is refused;
+- **never together with** a bearer header (`400`);
+- on a request that changes anything, only with an `Origin` that is the server's own (or listed in
+  `HELSA_WEB_ORIGINS`).
+
+A session token is not accepted as a bearer, nor a device token as a cookie.
+`POST /v1/auth/web/logout` ends the session and clears the cookie.
+
+## Codes and enrolment
+
+| Endpoint | Who | What |
+|---|---|---|
+| `POST /v1/me/enrolment-codes` | any member | a 15-minute code for their next phone |
+| `POST /v1/me/login-codes` | any member | a 10-minute code for a browser |
+| `POST /v1/admin/users/{id}/codes` | admin | the same for a member **with no live device** (otherwise `409`) |
+| `POST /v1/enroll` | no token — the code | `{code, label, platform}` → the device token; mutual-TLS port only |
+| `POST /v1/auth/web/login` | no token — the code | sets the session cookie; web port only |
+
+A code is eight characters of Crockford base32 (`K7QM-4XPA`; case, dashes and the letters `O`,
+`I`, `L` do not matter), stored only as a hash, used once. Every failed redemption is the same
+`401`; too many failures are `429`. See [a household on one server](/getting-started/household/).
+
 ## Client certificate details reaching the application
 
 The proxy forwards the certificate subject and serial as headers so the API can

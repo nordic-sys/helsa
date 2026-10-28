@@ -215,6 +215,20 @@ exists in a new database, so `CREATE EXTENSION` answers *already exists, skippin
 Step 3 matters because the next time you do this, something will have gone wrong
 and you will not be in a mood to work it out from first principles.
 
+## After deleting a member
+
+Deleting a member ([household](/getting-started/household/#leaving)) removes them from the live
+server, not from the backups: the dumps keep them until they rotate out, a VM backup for as long
+as you keep it. Two consequences:
+
+- Say so to the person: their data is gone from the server now, and from the backups when those
+  expire.
+- **Restoring a backup older than the deletion brings the member back.** The deletion command's
+  output names the member (handle and id) — keep that line with your CA material, off the server.
+  After such a restore, delete them again (*Household ▸ Delete*) before anybody else uses the
+  server. And rotate `HELSA_JWT_SECRET` if the backup predates a revocation you care about: a
+  restore brings revoked tokens back to life too.
+
 ## What is not backed up, on purpose
 
 | Not backed up | Why |

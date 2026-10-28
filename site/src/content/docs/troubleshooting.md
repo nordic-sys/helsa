@@ -42,6 +42,11 @@ meet them.
 | Backups | A dump timer without a time zone, on a UTC VM | In summer the dump runs after the VM backup that should carry it | `OnCalendar=… Europe/Budapest` (your zone) — [Logical dumps](/deployment/backups/#logical-dumps) |
 | Backups | Following the cron example on a cloud image | `crontab: command not found` | Use the systemd timer — [Logical dumps](/deployment/backups/#logical-dumps) |
 | Tokens | One `SUBJECT` per person instead of per device (tool before 2026-10-27) | The dashboard is empty while the phone uploads | Since then every token binds to the one user; on an old install use `TOKEN_USER` — [Device token](/getting-started/device-token/) |
+| Joining a phone | Typing an old or used code | "Code not accepted" | The code lives 15 minutes and works once; the server deliberately does not say which went wrong. Ask for a new one. |
+| Joining a phone | Retrying a wrong code again and again | "Too many attempts" (429) | Five failures from one address, or 30 on the whole server, in a quarter of an hour. Wait 15 minutes, then use a new code. |
+| Joining a phone | Scanning the QR before importing the certificate | The scan works, then a TLS error | Import the `.p12` first (*Your own server ▸ Client certificate*). The app asks for it when it is missing. |
+| Signing in a browser | Opening the dashboard under another address than it is served from | "This request's origin is not this server's" | Open it under its own address, or list the other in `HELSA_WEB_ORIGINS`. |
+| A member's phone stops | The account was disabled | "this account has been disabled" | Re-enable it under *Household*; the same phone carries on, nothing has to be re-joined. |
 
 ## Nothing arrives from the phone
 

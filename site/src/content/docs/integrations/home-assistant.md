@@ -86,6 +86,23 @@ whose data belongs on a broker the whole house can read. A single-user install
 never sees this.
 :::
 
+## Several people
+
+On a server with more than one person ([household](/getting-started/household/)), each member
+switches their own publishing on in *My account* — off by default, and an admin cannot do it
+for them: whatever goes on the broker, the whole house can read.
+
+- The **legacy** member — the one `HELSA_MQTT_USER_ID` names, or the only user of a one-person
+  server — keeps exactly the names below (`helsa/daily/steps_today`, `sensor.helsa_steps_today`,
+  the device *Helsa*), so existing automations keep working.
+- Everybody else gets their handle in every name: `helsa/nori/daily/steps_today`,
+  `sensor.helsa_nori_steps_today`, the device *Helsa — Nóri*.
+- `HELSA_MQTT_USER_ID` only decides the naming. Without the member's own switch nothing of theirs
+  is published, not even for the pinned user.
+- Switching off, being disabled or being deleted clears the member's entities: an empty retained
+  message on every discovery and state topic. ⚠️ What Home Assistant already recorded in its own
+  history stays there — that is Home Assistant's database.
+
 ## Topics
 
 ```

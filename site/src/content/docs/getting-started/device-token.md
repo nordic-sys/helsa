@@ -4,27 +4,23 @@ description: "Issue the long-lived bearer token that the app and the dashboard u
 sidebar:
   order: 2
 ---
-## Why there is no login screen
+## Why there is no password
 
-Helsa is a single-user system. There is nobody to distinguish from anybody else,
-so a username-and-password flow would add a login form, a password reset path, and
-a session store without answering any question the system actually has.
-
-What it needs instead is **device authentication**: is this connection one of my
-devices? That is answered in two independent layers.
+Helsa has no passwords. What it needs is **device authentication**: is this connection one
+of the devices of a person on this server? That is answered in two independent layers.
 
 | Layer | Mechanism | Checked by |
 |---|---|---|
 | **Transport** | Mutual TLS. The client presents a certificate signed by *your* private CA. | The reverse proxy, before any HTTP is parsed. See [TLS and mutual TLS](/getting-started/certificates/). |
-| **Application** | A long-lived bearer token in the `Authorization` header. | The API. |
+| **Application** | A long-lived token: a bearer header from the phone, a session cookie in the browser. | The API — on every request, against the token register and the person's account. |
 
-Both are required on the public interface. The browser dashboard uses only the
-token, because it is reachable only over your LAN or VPN, where the network itself
-is the gate.
+A server can hold several people ([a household](/getting-started/household/)); every token
+belongs to exactly one of them and opens only their data.
 
-There is deliberately **no HTTP endpoint that issues tokens** — an endpoint that
-mints credentials is an endpoint anyone can call. Tokens are issued on the server,
-by you, with a command.
+Tokens come from two places: this command, run by you on the server, and a **one-time code** —
+an admin gives one to a new member, a member asks for one for their next phone or their browser.
+The one endpoint that turns a code into a token (`POST /v1/enroll`) answers only on the
+mutual-TLS port, only for a live, unused code, and only for the person the code was made for.
 
 ## Issuing a token
 
