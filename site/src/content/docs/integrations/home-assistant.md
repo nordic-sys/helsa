@@ -35,6 +35,12 @@ would wreck the recorder database for data you would never read there.
   on by default, using the `homeassistant/` prefix.
 - Credentials for the broker, kept in `.env` on the Helsa host and in
   `secrets.yaml` on the Home Assistant side.
+- With the **Mosquitto add-on**, a broker login is simply a Home Assistant user: Settings →
+  People → Add person → *Allow login* → *Create a new username*. Make it **local only and not an
+  administrator**; Helsa needs nothing else from Home Assistant.
+- If the Helsa host is isolated from your LAN ([as it should be](/deployment/hardening/#network)),
+  one exception for the broker's address and port `1883`, above the rule that blocks the LAN —
+  [the Proxmox example](/deployment/example-homelab/#2-isolation-belongs-to-the-hypervisor-not-the-router).
 
 :::danger
 **Keep the broker on your LAN.** If it is reachable from the internet, so is
@@ -132,7 +138,7 @@ them; they are here so you can recognise them in Home Assistant's MQTT debug vie
 {
   "name": "Steps today",
   "unique_id": "helsa_steps",
-  "object_id": "helsa_steps",
+  "default_entity_id": "sensor.helsa_steps",
   "state_topic": "helsa/daily/steps",
   "unit_of_measurement": "steps",
   "state_class": "total_increasing",
@@ -161,6 +167,16 @@ The full set:
 
 Sharing one `device` block groups every entity under a single Helsa device in the
 Home Assistant UI.
+
+:::note
+**The entity IDs in the table come from `default_entity_id`**, the field Home Assistant reads
+since 2025.10. Helsa before 2026-10-28 sent the older `object_id`, which Home Assistant now
+ignores, and the entities were named after the device and the entity name instead —
+`sensor.helsa_steps_today`, `sensor.helsa_sleep_last_night`. The freshness sensor happened to get
+the right ID either way. An entity keeps the ID it was first registered with, so an install that
+already has the long names keeps them after the update: rename them in Settings → Entities, or
+delete the Helsa device under the MQTT integration and restart the worker to register them afresh.
+:::
 
 :::note
 `state_class: total_increasing` suits values that count up within a day and reset

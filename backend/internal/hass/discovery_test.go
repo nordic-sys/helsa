@@ -66,6 +66,16 @@ func TestDiscoveryPayloadRequiredKeys(t *testing.T) {
 		if got["state_topic"] != "helsa/"+e.suffix {
 			t.Errorf("%s: state_topic = %v, want helsa/%s", e.objectID, got["state_topic"], e.suffix)
 		}
+		// The entity ID the documentation and the automations use. Home Assistant
+		// 2025.10+ reads it from default_entity_id and ignores object_id; a real
+		// install (2026.10) named the steps sensor "sensor.helsa_steps_today" while
+		// only object_id was sent.
+		if got["default_entity_id"] != "sensor."+e.objectID {
+			t.Errorf("%s: default_entity_id = %v, want sensor.%s", e.objectID, got["default_entity_id"], e.objectID)
+		}
+		if _, ok := got["object_id"]; ok {
+			t.Errorf("%s: object_id is no longer read by Home Assistant; send default_entity_id", e.objectID)
+		}
 	}
 }
 

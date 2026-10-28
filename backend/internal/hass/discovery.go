@@ -38,9 +38,15 @@ type origin struct {
 // either system says why. The names come from the MQTT sensor documentation
 // (home-assistant.io/integrations/sensor.mqtt/).
 type discoveryPayload struct {
-	Name                string  `json:"name"`
-	UniqueID            string  `json:"unique_id"`
-	ObjectID            string  `json:"object_id,omitempty"`
+	Name     string `json:"name"`
+	UniqueID string `json:"unique_id"`
+	// The entity ID Home Assistant gives the entity when it first sees it,
+	// "sensor.helsa_steps". Since Home Assistant 2025.10 this is the field; the
+	// older `object_id` is ignored, and without either the ID is made from the
+	// device and entity names ("sensor.helsa_steps_today"), which is not what the
+	// documentation and the automations name. It applies on first registration
+	// only: an entity that already exists keeps its ID.
+	DefaultEntityID     string  `json:"default_entity_id,omitempty"`
 	StateTopic          string  `json:"state_topic"`
 	UnitOfMeasurement   string  `json:"unit_of_measurement,omitempty"`
 	DeviceClass         string  `json:"device_class,omitempty"`
@@ -191,7 +197,7 @@ func (t topics) discoveryFor(e entity, expireAfter time.Duration) discoveryPaylo
 	p := discoveryPayload{
 		Name:              e.name,
 		UniqueID:          e.objectID,
-		ObjectID:          e.objectID,
+		DefaultEntityID:   "sensor." + e.objectID,
 		StateTopic:        t.state(e.suffix),
 		UnitOfMeasurement: e.unit,
 		DeviceClass:       e.class,
