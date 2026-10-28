@@ -23,6 +23,13 @@
 //
 // # Words
 //
+// # Who reads it (docs/36 §5.8)
+//
+// The queue is the whole household's. An admin sees it as before; a member gets
+// the same numbers, but only THEIR OWN set-aside parts listed (the server filters
+// `recent_failures`), and no retry button: a retry moves every member's stuck
+// parts, so it is an admin's act (authz.go answers 403 to anyone else anyway).
+//
 // The page speaks to the person who owns the server, not to RabbitMQ: a batch is
 // a "part", the dead-letter queue is "set aside", a consumer is a "worker". The
 // technical name is always there in secondary text, because it is what the logs
@@ -49,6 +56,7 @@ import {
   redriveErrorKind,
 } from '../lib/ingest'
 import { INGEST_STATUS_KEY, useIngestStatus } from '../lib/useIngestStatus'
+import { useSession } from '../session'
 
 /** How often the page asks. A drain is measured in minutes; five seconds is
  * lively enough to watch and one cheap request per tick. */
@@ -76,7 +84,17 @@ function ApiTooOld() {
   )
 }
 
-function Status({ s, lastGood, redrive }: { s: IngestStatus; lastGood?: string; redrive: RedriveState }) {
+function Status({
+  s,
+  lastGood,
+  redrive,
+  canRedrive,
+}: {
+  s: IngestStatus
+  lastGood?: string
+  redrive: RedriveState
+  canRedrive: boolean
+}) {
   const { t, tp, tx, locale } = useI18n()
   const f = useFormat()
   const p = phase(s)
@@ -123,7 +141,7 @@ function Status({ s, lastGood, redrive }: { s: IngestStatus; lastGood?: string; 
           )}
         </Alert>
       )}
-      {dlq != null && dlq > 0 && <DeadLetterAlert s={s} count={dlq} redrive={redrive} />}
+      {dlq != null && dlq > 0 && <DeadLetterAlert s={s} count={dlq} redrive={redrive} canRedrive={canRedrive} />}
       {/* ⚠️ Outside the alert, and always mounted: a retry that empties the
           dead-letter queue unmounts the alert, and must not take its own result
           and its announcement with it. */}
@@ -315,7 +333,17 @@ function Status({ s, lastGood, redrive }: { s: IngestStatus; lastGood?: string; 
 
 // --- Set aside: the alert, the reasons, and the retry ------------------------
 
-function DeadLetterAlert({ s, count, redrive }: { s: IngestStatus; count: number; redrive: RedriveState }) {
+function DeadLetterAlert({
+  s,
+  count,
+  redrive,
+  canRedrive,
+}: {
+  s: IngestStatus
+  count: number
+  redrive: RedriveState
+  canRedrive: boolean
+}) {
   const { t, tp, tx } = useI18n()
   const f = useFormat()
   const log = failureLog(s)
@@ -325,7 +353,11 @@ function DeadLetterAlert({ s, count, redrive }: { s: IngestStatus; count: number
     <Alert tone="error" title={tp('ingest.dlq.title', count, { n: f.num(count) })}>
       <p>{t('ingest.dlq.body')}</p>
 
-      <RedriveControls count={count} redrive={redrive} />
+      {canRedrive ? (
+        <RedriveControls count={count} redrive={redrive} />
+      ) : (
+        <p>{t('ingest.redrive.memberNote')}</p>
+      )}
 
       {/* ⚠️ A LOG, said as one: nothing in the snapshot says which of these is
           still in the queue (see `failureLog`), so nothing here claims it. */}
@@ -573,6 +605,7 @@ export default function Ingest() {
     new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit', second: '2-digit' })
   const q = useIngestStatus(POLL_MS)
   const redrive = useRedrive()
+  const { isAdmin } = useSession()
 
   // The last reading in which the broker answered — so "no numbers" can say how
   // old the last real ones are. Kept in a ref: it is a memory of this page's
@@ -616,7 +649,7 @@ export default function Ingest() {
               </Alert>
             </div>
           )}
-          <Status s={q.data} lastGood={lastGood.current} redrive={redrive} />
+          <Status s={q.data} lastGood={lastGood.current} redrive={redrive} canRedrive={isAdmin} />
         </Fragment>
       ) : null}
     </>

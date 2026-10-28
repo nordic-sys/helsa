@@ -33,8 +33,8 @@
 //   * **Status** — the phone's `status` band, "whether the thing that moves your
 //     data is working". Completeness is exactly that question, and so is the
 //     ingest queue (is what the phone sent still on its way to the database?);
-//     Settings is the rest of the same machinery — the token, the devices, the
-//     goals.
+//     Settings is the rest of the same machinery — the devices, the goals; and
+//     for an admin, the Household: who sends to this server at all.
 //
 // Today stays outside the groups because it is the landing page, not a peer of
 // the pages listed under a heading.
@@ -68,6 +68,9 @@ import YearByYear from './pages/YearByYear'
 import Report from './pages/Report'
 import Measurements from './pages/Measurements'
 import Journal from './pages/Journal'
+import Household from './pages/Household'
+import MemberPage from './pages/Member'
+import Account from './pages/Account'
 
 export type NavGroupKey = 'longView' | 'areas' | 'status'
 
@@ -86,6 +89,11 @@ export type NavEntry = {
   group?: NavGroupKey
   /** `end` for "/", so every other route does not light it up as active. */
   end?: boolean
+  /**
+   * Drawn and routed for an admin only. ⚠️ Hiding is a courtesy, not the
+   * protection: the server answers 403 to a member regardless (authz.go).
+   */
+  adminOnly?: boolean
 }
 
 export const NAV: NavEntry[] = [
@@ -157,6 +165,19 @@ export const NAV: NavEntry[] = [
   { path: '/coverage', label: 'nav.coverage', element: <Coverage />, group: 'status' },
   { path: '/ingest', label: 'nav.ingest', element: <Ingest />, group: 'status' },
   { path: '/settings', label: 'nav.settings', element: <SettingsPage />, group: 'status' },
+  // The household sits in Status, last (docs/36 §5): who uploads to this server
+  // and from which device is the same question as "is the thing that moves the
+  // data working", asked about people. No new group for one admin-only page.
+  { path: '/household', label: 'nav.household', element: <Household />, group: 'status', adminOnly: true },
+]
+
+/**
+ * Pages reached from the user menu (`components/UserMenu.tsx`), not the
+ * sidebar: they are about the person signed in, not about the data. Routed like
+ * the others, and checked in `nav.test.tsx` like the others.
+ */
+export const MENU: { path: string; label: UiKey; element: ReactElement }[] = [
+  { path: '/account', label: 'nav.account', element: <Account /> },
 ]
 
 /**
@@ -183,11 +204,18 @@ export type DetailEntry = {
 export const DETAILS: DetailEntry[] = [
   { path: '/workouts/:id', parent: '/workouts', element: <WorkoutDetail /> },
   { path: '/achievements/:month', parent: '/achievements', element: <MonthMedal /> },
+  { path: '/household/:id', parent: '/household', element: <MemberPage /> },
 ]
 
 /** The landing page — the one entry that stands outside the groups. */
 export const LANDING = NAV.filter((n) => n.group === undefined)
 
-export function entriesIn(group: NavGroupKey): NavEntry[] {
-  return NAV.filter((n) => n.group === group)
+/** A group's entries — without the admin-only ones unless `isAdmin`. */
+export function entriesIn(group: NavGroupKey, isAdmin = true): NavEntry[] {
+  return NAV.filter((n) => n.group === group && (isAdmin || !n.adminOnly))
+}
+
+/** The parent entry of a detail page, so it can inherit `adminOnly`. */
+export function parentOf(detail: DetailEntry): NavEntry | undefined {
+  return NAV.find((n) => n.path === detail.parent)
 }

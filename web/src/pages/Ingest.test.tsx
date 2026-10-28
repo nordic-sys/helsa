@@ -5,6 +5,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import type { IngestRedriveResult, IngestStatus } from '../api/types'
 import { I18nProvider } from '../i18n'
 import Ingest from './Ingest'
+import { MEMBER, TestSession } from '../test/session'
 
 const status = vi.fn<() => Promise<IngestStatus>>()
 const redrive = vi.fn<() => Promise<IngestRedriveResult>>()
@@ -13,14 +14,16 @@ vi.mock('../api/client', () => ({
   api: { ingestStatus: () => status(), redriveDeadLetters: () => redrive() },
 }))
 
-function show() {
+function show(me = undefined as Parameters<typeof TestSession>[0]['me']) {
   // English, so the assertions read the same wherever the test runs.
   localStorage.setItem('helsa.lang', 'en')
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } })
   return render(
     <QueryClientProvider client={client}>
       <I18nProvider>
-        <Ingest />
+        <TestSession me={me}>
+          <Ingest />
+        </TestSession>
       </I18nProvider>
     </QueryClientProvider>,
   )
@@ -166,6 +169,19 @@ describe('the dead-letter queue', () => {
     expect(alert).toHaveTextContent(/Full resync/)
     expect(screen.getByTestId('ingest-dlq')).toHaveTextContent('1')
   })
+
+  /**
+   * A retry moves EVERY member's stuck parts (docs/36 §5.8), so a member sees
+   * the alert and the numbers, but not the button — and is told who can press it.
+   */
+  it('offers the retry to an admin only', async () => {
+    status.mockResolvedValue({ ...draining, dead_letter: { name: 'helsa.ingest.dlq', ready: 2 } })
+    show(MEMBER)
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent(/2 parts could not be written/)
+    expect(within(alert).queryByRole('button')).not.toBeInTheDocument()
+    expect(alert).toHaveTextContent("The server's owner can retry them, from this page.")
+  })
 })
 
 /**
@@ -244,7 +260,9 @@ describe('a server older than the page', () => {
     render(
       <QueryClientProvider client={client}>
         <I18nProvider>
-          <Ingest />
+          <TestSession>
+            <Ingest />
+          </TestSession>
         </I18nProvider>
       </QueryClientProvider>,
     )

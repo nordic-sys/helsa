@@ -45,9 +45,6 @@ export const en: Dict = {
     'relative.now': 'just now',
 
     // --- Error and empty states -------------------------------------------
-    'error.noToken.title': 'No valid device token',
-    'error.noToken.body':
-      'Set one on the Settings page. This is a single-user system — there is no sign-in, just one token to enter once on this machine.',
     'error.generic.title': 'Something went wrong',
     'error.generic.detail': 'The backend did not respond as expected.',
 
@@ -619,14 +616,7 @@ export const en: Dict = {
     // --- Settings ----------------------------------------------------------
     'settings.title': 'Settings',
     'settings.subtitle':
-      'A single-user system — there is no sign-in. Access is layered: network (WireGuard) and application (device token).',
-    'settings.token.title': 'Device token',
-    'settings.token.present': 'Set on this machine. On a new machine it has to be entered once.',
-    'settings.token.clear': 'Clear token',
-    'settings.token.hint':
-      'Paste the token — the browser stores it, the server asks for no password.',
-    'settings.token.placeholder': 'device token',
-    'settings.token.save': 'Save',
+      'Language, map, devices and goals. Your own account — sign-ins, export, deletion — is on My account.',
     'settings.devices.title': 'Devices and sync freshness',
     'settings.devices.empty': 'No device registered yet.',
     'settings.devices.col.device': 'Device',
@@ -1768,6 +1758,207 @@ export const en: Dict = {
       '“Walking steadiness” and its levels are Apple’s calculation and Apple’s classification, not ours. We say so wherever it appears.',
     'meas.gait.description':
       'This is a description, not a diagnosis and not a risk assessment. Walking data is moved by shoes, terrain, what you are carrying and the time of day.',
+
+    // --- The household: signing in, the account, the members (docs/36 §5) ------
+    'nav.household': 'Household',
+    'nav.account': 'My account',
+    'common.cancel': 'Cancel',
+    'common.understood': 'Got it',
+    'role.admin': 'admin',
+    'role.member': 'member',
+    'menu.aria': 'Account menu',
+    'menu.you': '{name} (you)',
+    'menu.signOut': 'Sign out',
+    'menu.signOutFailed': 'Signing out failed: the server could not end the session. Try again.',
+    'error.signedOut.title': 'You are not signed in',
+    'error.signedOut.body': 'Sign in again with a sign-in code.',
+    'error.forbidden.title': 'Not allowed',
+    'error.forbidden.body': "Only this server's admin can see this.",
+
+    // --- Sign-in page ----------------------------------------------------------
+    'login.title': 'Sign in',
+    'login.intro':
+      "Enter your sign-in code. You get it on your phone (Helsa ▸ Your own server ▸ Sign in to the web dashboard), or from the server's owner.",
+    'login.codeLabel': 'Sign-in code',
+    'login.submit': 'Sign in',
+    'login.busy': 'Checking…',
+    'login.error.shape': 'A sign-in code is eight characters, like K7QM-4XPA.',
+    'login.error.rejected':
+      'The server did not accept this code. It may have expired (a code lasts ten minutes), been used already, or been mistyped — ask for a new one.',
+    'login.error.limited':
+      'Too many attempts failed. Wait a quarter of an hour, then ask for a new code.',
+    'login.error.unavailable':
+      'The server cannot check the code right now. Try again in a few minutes.',
+    'login.ended': 'Your session has ended. Sign in again.',
+    'login.signedOut': 'You have signed out.',
+    'login.deleted.title': 'Your account is being deleted',
+    'login.deleted.body':
+      'The account is already disabled, and your data is being deleted. It disappears from the backups within five weeks at most.',
+    'login.legacy.title': 'This browser now signs in with a code',
+    'login.legacy.body':
+      'Until now a device token was saved here, and it opened everything. That token has now been removed from this browser: from here on the web dashboard shows data only after you sign in, and everyone sees their own. Nothing changes on your phone. You can ask for a sign-in code on your phone; for the very first sign-in, on the server: make prod-login-code HANDLE=…',
+    'login.unreachable':
+      'The server is not answering right now. If you have a code, try it; if not, check back in a few minutes.',
+    'login.first': 'First sign-in on a new server? On the server:',
+
+    // --- The code dialog -------------------------------------------------------
+    'code.device.title': 'Code for connecting a new phone',
+    'code.device.titleFor': 'Connection code — {name}',
+    'code.web.title': 'Web sign-in code',
+    'code.web.titleFor': 'Web sign-in code — {name}',
+    'code.close': 'Close',
+    'code.qrLabel': 'QR code for connecting the phone',
+    'code.expires': 'Expires at {time} · {left} left',
+    'code.expired': 'The code has expired. Close this and ask for a new one.',
+    'code.device.address': "The server's address for the phone",
+    'code.web.address': 'The sign-in page',
+    'code.copy': 'Copy',
+    'code.copied': 'Copied',
+    'code.device.howTo':
+      'On the phone: Helsa ▸ Your own server ▸ Sending ▸ Join with a QR code. If the QR code will not scan, the code and the address can be typed by hand.',
+    'code.device.cert':
+      'The phone needs its client certificate first — without it the server will not let it in.',
+    'code.device.certAdmin':
+      'The phone needs its client certificate first: make client NAME=… on your own machine, then AirDrop it to the phone.',
+    'code.web.howTo':
+      'The code is typed on the sign-in page, in the browser that is to be signed in.',
+    'code.once': 'The code works once, and is not shown again once you close this.',
+    'code.failed': 'The code could not be issued. Try again.',
+
+    // --- Devices and sign-ins (My account and a member's page) -----------------
+    'tokens.col.label': 'Name',
+    'tokens.col.kind': 'Type',
+    'tokens.col.created': 'Added',
+    'tokens.col.lastUsed': 'Last used',
+    'tokens.col.action': 'Action',
+    'tokens.kind.device': 'phone',
+    'tokens.kind.web': 'browser',
+    'tokens.thisOne': 'this one',
+    'tokens.now': 'now',
+    'tokens.never': 'never',
+    'tokens.revoke': 'Revoke',
+    'tokens.revokeAria': 'Revoke {label}',
+    'tokens.revokeAsk.device': 'Revoke it? From then on the phone cannot upload.',
+    'tokens.revokeAsk.web': 'Revoke it? That browser is signed out.',
+    'tokens.revokeYes': 'Yes, revoke',
+    'tokens.revokeFailed': 'That did not work.',
+
+    // --- My account ------------------------------------------------------------
+    'account.title': 'My account',
+    'account.devices.title': 'My devices and sign-ins',
+    'account.devices.empty': 'You have no connected device yet.',
+    'account.devices.connect': 'Connect a new phone',
+    'account.devices.webCode': 'Sign in on another browser',
+    'account.ha.title': 'Home Assistant',
+    'account.ha.label': 'Send my daily numbers (steps, sleep, rings) to Home Assistant.',
+    'account.ha.note':
+      'Whatever is sent there can be seen by everyone in the house who uses Home Assistant.',
+    'account.ha.failed': 'The setting could not be saved.',
+    'account.visibility.title': "What does the server's owner see?",
+    'account.visibility.ui':
+      "In Helsa, the server's owner sees only your name, your devices and when you last uploaded — not your health data and not your journal. If they do something with your account (issue a code, revoke a device), it shows in the log below.",
+    'account.visibility.db':
+      'Because the server runs on their machine, they can technically reach the database. The log does not show that — only connect to a server whose owner you trust.',
+    'account.visibility.admin':
+      "You are this server's admin. On the Household page you see the members' names, devices and last uploads — not their health data or their journal. Whatever you do with their account shows in their own log too.",
+    'account.delete.title': 'Delete my account and data',
+    'account.delete.intro':
+      'Your account and all your data are deleted from this server. Nothing changes on your phone or in the Health app.',
+    'account.delete.button': 'Delete my account and data…',
+    'account.delete.body':
+      'Your account and everything you uploaded are permanently deleted from this server. It disappears from the backups within five weeks at most. If you want to keep your data, export it before deleting (above, on the Export card).',
+    'account.delete.confirm': 'Delete for good',
+    'account.delete.lastAdmin':
+      "You are this server's only admin, so you cannot delete your account. Make someone else an admin on the Household page first.",
+    'account.delete.unavailable': 'This server cannot delete accounts yet.',
+    'account.log.title': 'What happened to my account',
+    'delete.typeHandle': 'To confirm, type the handle: {handle}',
+    'delete.failed': 'The deletion could not be started.',
+
+    // --- The account log — {actor} opens the sentence: a name, or the operator ---
+    'log.empty': 'Nothing has happened to the account yet.',
+    'log.operator': "The server's operator",
+    'log.unknown': '{actor}: {kind}',
+    'log.memberAdded': '{actor} created the account.',
+    'log.roleChanged': '{actor} changed the role to {role}.',
+    'log.disabled': '{actor} disabled the account.',
+    'log.enabled': '{actor} re-enabled the account.',
+    'log.tokenRevoked.you': 'You revoked {label}.',
+    'log.tokenRevoked.by': '{actor} revoked {label}.',
+    'log.deviceCode.you': 'You asked for a code to connect a new phone.',
+    'log.deviceCode.named': '{actor} asked for a code to connect a new phone.',
+    'log.deviceCode.by': '{actor} issued a code to connect a phone.',
+    'log.webCode.you': 'You asked for a sign-in code for the web dashboard.',
+    'log.webCode.named': '{actor} asked for a sign-in code for the web dashboard.',
+    'log.webCode.by': '{actor} issued a sign-in code for the web dashboard.',
+    'log.redeemed.device': 'A phone joined: {label}.',
+    'log.redeemed.web': 'Signed in to the web dashboard: {label}.',
+    'log.haOn.you': 'You started sending your daily numbers to Home Assistant.',
+    'log.haOn.by': '{actor} started sending their daily numbers to Home Assistant.',
+    'log.haOff.you': 'You stopped sending your daily numbers to Home Assistant.',
+    'log.haOff.by': '{actor} stopped sending their daily numbers to Home Assistant.',
+
+    // --- The household (admin) -------------------------------------------------
+    'household.title': 'Household',
+    'household.subtitle':
+      'Who uploads to this server, and from which device. No health data is shown here.',
+    'household.add': '+ New member',
+    'household.col.name': 'Name',
+    'household.col.role': 'Role',
+    'household.col.devices': 'Devices',
+    'household.col.lastUpload': 'Last upload',
+    'household.col.link': 'Open',
+    'household.you': '(you)',
+    'household.disabled': 'disabled',
+    'household.deleting': 'being deleted',
+    'household.never': 'never',
+    'household.details': 'Details ›',
+    'household.connect': 'Connect ›',
+    'household.new.title': 'New member',
+    'household.new.name': 'Name',
+    'household.new.namePlaceholder': 'Nóri',
+    'household.new.handle': 'Handle',
+    'household.new.handleHint':
+      'A short lower-case name without accents, like nori. It is typed to confirm when the account is deleted, and cannot be changed later.',
+    'household.new.handleRule':
+      'The handle is 1–32 characters: lower-case letters, digits, - and _, starting with a letter or a digit.',
+    'household.new.taken': 'There is already a member called {handle}.',
+    'household.new.failed': 'The member could not be added.',
+    'household.new.submit': 'Add',
+
+    // --- One member (admin) ----------------------------------------------------
+    'member.line': 'handle: {handle} · added {date}',
+    'member.role': 'Role',
+    'member.enable': 'Re-enable',
+    'member.disable': 'Disable',
+    'member.delete': 'Delete…',
+    'member.own':
+      'This is your own account. Your role, disabling and deleting are not changed here — your own things are on My account.',
+    'member.disabledNow.title': '{name} is disabled',
+    'member.disabledNow.body':
+      "{name}'s phone and browser cannot reach anything right now, and {name} cannot export either. The devices are kept: after re-enabling, the same phone carries on.",
+    'member.disableAsk':
+      "Disable? From then on {name}'s phone and browser cannot reach anything, and {name} cannot export either. Nothing is lost: after re-enabling, the same phone carries on — this is not revoking.",
+    'member.deleteBody':
+      "{name}'s account and everything they uploaded are permanently deleted from this server. It disappears from the backups within five weeks at most. If {name} wants to keep the data, they should export it on their My account page before the deletion.",
+    'member.deleteDisabled': '{name} is disabled right now, and so cannot export either.',
+    'member.deleteConfirm': 'Delete {name} for good',
+    'member.lastAdmin':
+      'This server must always keep at least one enabled admin, so this is not possible right now. Make someone else an admin first.',
+    'member.saveFailed': 'The change could not be saved.',
+    'member.devices.title': 'Devices and sign-ins',
+    'member.devices.empty': 'No connected device yet.',
+    'member.code.device': 'Connect a device',
+    'member.code.web': 'Web sign-in code',
+    'member.code.hasDevice':
+      '{name} already has a working device, so they ask for the new code themselves: on their phone (Your own server) or on My account. If they have lost all their devices, revoke them here first, and then you can give a code.',
+    'member.log.title': 'Log (also shown to {name})',
+
+    // --- Elsewhere -------------------------------------------------------------
+    'ingest.redrive.memberNote': "The server's owner can retry them, from this page.",
+    'settings.export.moved': 'Export has moved to {link}, next to deleting the account.',
+    'dashboard.empty.noPhone':
+      'You have no phone connected yet. Ask for a connection code on {link} — once the phone syncs, everything shows up here.',
   },
 
   // --- Metric group names ---------------------------------------------------

@@ -12,6 +12,10 @@ COPY package.json package-lock.json* ./
 # one (the allowScripts field in package.json permits it).
 RUN npm ci --no-audit --no-fund || npm install --no-audit --no-fund
 COPY . .
+# The address the connection QR sends a phone to — the mTLS port, not this page's
+# (src/lib/household.ts, deviceEndpoint). Empty: the page's own host on 443.
+ARG VITE_HELSA_DEVICE_ENDPOINT=
+ENV VITE_HELSA_DEVICE_ENDPOINT=$VITE_HELSA_DEVICE_ENDPOINT
 RUN npm run build
 
 FROM nginx:1.27-alpine

@@ -35,6 +35,9 @@ The full set is in [`web/package-lock.json`](web/package-lock.json) and
 [`site/package-lock.json`](site/package-lock.json). Worth naming:
 
 - **MapLibre GL JS** — BSD-3-Clause. Shipped inside the `web` image.
+- **qrcode-generator** (Kazuhiko Arase, pinned at 2.0.4) — MIT. Shipped inside the
+  `web` image: it draws the QR code a household member's phone scans to join.
+  "QR Code" is a registered trademark of DENSO WAVE INCORPORATED.
 - **React**, **Vite**, **TypeScript** — MIT.
 - **Astro** and **Starlight** — MIT. This documentation site. (Not "Just the Docs",
   which it was before 2026-08-26.)

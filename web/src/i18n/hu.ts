@@ -50,9 +50,6 @@ export const hu = {
     'relative.now': 'épp most',
 
     // --- Error and empty states -------------------------------------------
-    'error.noToken.title': 'Nincs érvényes eszköz-token',
-    'error.noToken.body':
-      'Állítsd be a Beállítások oldalon. Egyfelhasználós rendszer — nincs bejelentkezés, csak egy token, amit egyszer kell megadni ezen a gépen.',
     'error.generic.title': 'Hiba történt',
     'error.generic.detail': 'A backend nem válaszolt a várt módon.',
 
@@ -621,13 +618,7 @@ export const hu = {
     // --- Settings ----------------------------------------------------------
     'settings.title': 'Beállítások',
     'settings.subtitle':
-      'Egyfelhasználós rendszer — nincs bejelentkezés. A hozzáférés kétrétegű: hálózati (WireGuard) és alkalmazásszintű (eszköztoken).',
-    'settings.token.title': 'Eszköztoken',
-    'settings.token.present': 'Be van állítva ezen a gépen. Új gépen egyszer kell megadni.',
-    'settings.token.clear': 'Token törlése',
-    'settings.token.hint': 'Illeszd be a tokent — a böngésző tárolja, a szerver nem kér jelszót.',
-    'settings.token.placeholder': 'eszköz-token',
-    'settings.token.save': 'Mentés',
+      'A nyelv, a térkép, az eszközök és a célok. A saját fiókod — belépések, export, törlés — a Fiókom oldalon van.',
     'settings.devices.title': 'Eszközök és a szinkronizálás frissessége',
     'settings.devices.empty': 'Még nincs regisztrált eszköz.',
     'settings.devices.col.device': 'Eszköz',
@@ -1766,6 +1757,207 @@ export const hu = {
       'A „járásstabilitás” és a szintjei az Apple számítása és az Apple besorolása, nem a miénk. Ezt mindenhol kiírjuk, ahol megjelenik.',
     'meas.gait.description':
       'Ez leírás, nem diagnózis és nem kockázatbecslés. A járásadatokat a cipő, a terep, a teher és a napszak is befolyásolja.',
+
+    // --- The household: signing in, the account, the members (docs/36 §5) ------
+    'nav.household': 'Háztartás',
+    'nav.account': 'Fiókom',
+    'common.cancel': 'Mégse',
+    'common.understood': 'Értem',
+    'role.admin': 'admin',
+    'role.member': 'tag',
+    'menu.aria': 'Fiókmenü',
+    'menu.you': '{name} (te)',
+    'menu.signOut': 'Kijelentkezés',
+    'menu.signOutFailed':
+      'A kijelentkezés nem sikerült: a szerver nem tudta lezárni a munkamenetet. Próbáld újra.',
+    'error.signedOut.title': 'Nem vagy bejelentkezve',
+    'error.signedOut.body': 'Lépj be újra egy belépőkóddal.',
+    'error.forbidden.title': 'Ehhez nincs jogod',
+    'error.forbidden.body': 'Ezt csak a szerver adminja láthatja.',
+
+    // --- Sign-in page ----------------------------------------------------------
+    'login.title': 'Belépés',
+    'login.intro':
+      'Írd be a belépőkódot. A telefonodon kapod meg (Helsa ▸ Saját szerver ▸ Belépés a webes felületre), vagy a szerver gazdájától.',
+    'login.codeLabel': 'Belépőkód',
+    'login.submit': 'Belépés',
+    'login.busy': 'Ellenőrzés…',
+    'login.error.shape': 'A belépőkód nyolc karakter, például K7QM-4XPA.',
+    'login.error.rejected':
+      'Ezt a kódot a szerver nem fogadta el. Lehet, hogy lejárt (tíz percig él), már felhasználták, vagy elírás van benne — kérj egy újat.',
+    'login.error.limited':
+      'Túl sok volt a sikertelen próbálkozás. Várj negyed órát, aztán kérj új kódot.',
+    'login.error.unavailable':
+      'A szerver most nem tudja ellenőrizni a kódot. Próbáld újra pár perc múlva.',
+    'login.ended': 'A munkameneted véget ért. Lépj be újra.',
+    'login.signedOut': 'Kijelentkeztél.',
+    'login.deleted.title': 'A fiókod törlése elindult',
+    'login.deleted.body':
+      'A fiók már le van tiltva, az adataid törlése folyamatban van. A mentésekből legkésőbb öt hét alatt tűnnek el.',
+    'login.legacy.title': 'Ez a böngésző mostantól belépőkóddal lép be',
+    'login.legacy.body':
+      'Eddig egy eszköz-token volt itt elmentve, és azzal ért el mindent. Ezt a tokent most töröltük ebből a böngészőből: a webes felület innentől csak belépés után mutat adatot, és mindenki a sajátját látja. A telefonodon ettől semmi nem változik. Belépőkódot a telefonodon kérhetsz; a legelső belépéshez a szerveren: make prod-login-code HANDLE=…',
+    'login.unreachable':
+      'A szerver most nem válaszol. Ha van kódod, próbáld meg; ha nincs, nézz vissza pár perc múlva.',
+    'login.first': 'Első belépés egy új szerverre? A szerveren:',
+
+    // --- The code dialog -------------------------------------------------------
+    'code.device.title': 'Csatlakozási kód új telefonhoz',
+    'code.device.titleFor': 'Csatlakozási kód — {name}',
+    'code.web.title': 'Webes belépőkód',
+    'code.web.titleFor': 'Webes belépőkód — {name}',
+    'code.close': 'Bezárás',
+    'code.qrLabel': 'QR-kód a telefon csatlakoztatásához',
+    'code.expires': 'Lejár {time}-kor · még {left}',
+    'code.expired': 'A kód lejárt. Zárd be ezt az ablakot, és kérj újat.',
+    'code.device.address': 'A szerver címe a telefonnak',
+    'code.web.address': 'A belépő oldal',
+    'code.copy': 'Másolás',
+    'code.copied': 'Kimásolva',
+    'code.device.howTo':
+      'A telefonon: Helsa ▸ Saját szerver ▸ Küldés ▸ Csatlakozás QR-kóddal. Ha a QR-kód nem olvasható be, a kódot és a címet kézzel is be lehet írni.',
+    'code.device.cert':
+      'Előtte a telefonon kell lennie a kliens-tanúsítványnak — anélkül a szerver nem engedi be.',
+    'code.device.certAdmin':
+      'Előtte a telefonon kell lennie a kliens-tanúsítványnak: make client NAME=… a saját gépeden, aztán AirDroppal át a telefonra.',
+    'code.web.howTo':
+      'A kódot a belépő oldalon kell beírni, abban a böngészőben, amelyikkel be akarsz lépni.',
+    'code.once': 'A kód egyszer használható, és ha bezárod ezt az ablakot, többé nem jelenik meg.',
+    'code.failed': 'A kódot nem sikerült kiadni. Próbáld újra.',
+
+    // --- Devices and sign-ins (My account and a member's page) -----------------
+    'tokens.col.label': 'Név',
+    'tokens.col.kind': 'Típus',
+    'tokens.col.created': 'Csatlakozott',
+    'tokens.col.lastUsed': 'Utoljára',
+    'tokens.col.action': 'Művelet',
+    'tokens.kind.device': 'telefon',
+    'tokens.kind.web': 'böngésző',
+    'tokens.thisOne': 'ez',
+    'tokens.now': 'most',
+    'tokens.never': 'még soha',
+    'tokens.revoke': 'Visszavonás',
+    'tokens.revokeAria': '{label} visszavonása',
+    'tokens.revokeAsk.device': 'Visszavonod? A telefon ettől kezdve nem tud feltölteni.',
+    'tokens.revokeAsk.web': 'Visszavonod? Az a böngésző kijelentkezik.',
+    'tokens.revokeYes': 'Igen, visszavonom',
+    'tokens.revokeFailed': 'Nem sikerült.',
+
+    // --- My account ------------------------------------------------------------
+    'account.title': 'Fiókom',
+    'account.devices.title': 'Eszközeim és belépéseim',
+    'account.devices.empty': 'Még nincs csatlakoztatott eszközöd.',
+    'account.devices.connect': 'Új telefon csatlakoztatása',
+    'account.devices.webCode': 'Belépés egy másik böngészőben',
+    'account.ha.title': 'Home Assistant',
+    'account.ha.label': 'A napi számaim (lépés, alvás, gyűrűk) menjenek a Home Assistantbe.',
+    'account.ha.note': 'Amit oda küldünk, a ház minden HA-felhasználója láthatja.',
+    'account.ha.failed': 'A beállítást nem sikerült menteni.',
+    'account.visibility.title': 'Mit lát a szerver gazdája?',
+    'account.visibility.ui':
+      'A Helsa felületén a szerver gazdája csak a nevedet, az eszközeidet és az utolsó feltöltés idejét látja — az egészségadataidat és a naplódat nem. Ha a fiókoddal tesz valamit (kódot ad ki, eszközt von vissza), az lent, a naplóban megjelenik.',
+    'account.visibility.db':
+      'Mivel a szerver az ő gépén fut, az adatbázishoz technikailag hozzáfér. Ezt a napló nem mutatja — csak olyan szerverhez csatlakozz, aminek a gazdájában megbízol.',
+    'account.visibility.admin':
+      'Te vagy ennek a szervernek az adminja. A Háztartás oldalon a tagok nevét, eszközeit és utolsó feltöltését látod — az egészségadataikat és a naplójukat nem. Amit a fiókjukkal teszel, az az ő naplójukban is megjelenik.',
+    'account.delete.title': 'Fiókom és adataim törlése',
+    'account.delete.intro':
+      'A fiókod és minden adatod törlődik erről a szerverről. A telefonodon és az Egészség appban semmi nem változik.',
+    'account.delete.button': 'Fiókom és adataim törlése…',
+    'account.delete.body':
+      'A fiókod és minden feltöltött adatod végleg törlődik erről a szerverről. A mentésekből legkésőbb öt hét alatt tűnik el. Ha meg akarod tartani az adataidat, a törlés előtt exportáld őket (fent, az Export kártyán).',
+    'account.delete.confirm': 'Végleges törlés',
+    'account.delete.lastAdmin':
+      'Te vagy a szerver egyetlen adminja, ezért a fiókodat nem törölheted. Előbb tegyél adminná valaki mást a Háztartás oldalon.',
+    'account.delete.unavailable': 'Ez a szerver még nem tud fiókot törölni.',
+    'account.log.title': 'Mi történt a fiókommal',
+    'delete.typeHandle': 'A megerősítéshez írd be az azonosítót: {handle}',
+    'delete.failed': 'A törlést nem sikerült elindítani.',
+
+    // --- The account log — {actor} opens the sentence: a name, or the operator ---
+    'log.empty': 'Még nem történt semmi a fiókkal.',
+    'log.operator': 'A szerver üzemeltetője',
+    'log.unknown': '{actor}: {kind}',
+    'log.memberAdded': '{actor} létrehozta a fiókot.',
+    'log.roleChanged': '{actor} átállította a szerepet: {role}.',
+    'log.disabled': '{actor} letiltotta a fiókot.',
+    'log.enabled': '{actor} újra engedélyezte a fiókot.',
+    'log.tokenRevoked.you': 'Visszavontad: {label}.',
+    'log.tokenRevoked.by': '{actor} visszavonta: {label}.',
+    'log.deviceCode.you': 'Csatlakozási kódot kértél egy új telefonhoz.',
+    'log.deviceCode.named': '{actor} csatlakozási kódot kért egy új telefonhoz.',
+    'log.deviceCode.by': '{actor} csatlakozási kódot adott ki egy telefonhoz.',
+    'log.webCode.you': 'Belépőkódot kértél a webes felülethez.',
+    'log.webCode.named': '{actor} belépőkódot kért a webes felülethez.',
+    'log.webCode.by': '{actor} belépőkódot adott ki a webes felülethez.',
+    'log.redeemed.device': 'Csatlakozott egy telefon: {label}.',
+    'log.redeemed.web': 'Belépés a webes felületre: {label}.',
+    'log.haOn.you': 'Elindítottad a napi számaid küldését a Home Assistantbe.',
+    'log.haOn.by': '{actor} elindította a napi számai küldését a Home Assistantbe.',
+    'log.haOff.you': 'Leállítottad a napi számaid küldését a Home Assistantbe.',
+    'log.haOff.by': '{actor} leállította a napi számai küldését a Home Assistantbe.',
+
+    // --- The household (admin) -------------------------------------------------
+    'household.title': 'Háztartás',
+    'household.subtitle':
+      'Ki tölt fel erre a szerverre, és melyik eszközről. Egészségadatot itt nem látsz.',
+    'household.add': '+ Új tag',
+    'household.col.name': 'Név',
+    'household.col.role': 'Szerep',
+    'household.col.devices': 'Eszközök',
+    'household.col.lastUpload': 'Utolsó feltöltés',
+    'household.col.link': 'Megnyitás',
+    'household.you': '(te)',
+    'household.disabled': 'letiltva',
+    'household.deleting': 'törlés alatt',
+    'household.never': 'még soha',
+    'household.details': 'Részletek ›',
+    'household.connect': 'Csatlakoztatás ›',
+    'household.new.title': 'Új tag',
+    'household.new.name': 'Név',
+    'household.new.namePlaceholder': 'Nóri',
+    'household.new.handle': 'Azonosító',
+    'household.new.handleHint':
+      'Rövid, kisbetűs név ékezet nélkül, például nori. A fiók törlésekor ezt kell beírni, és később nem változtatható.',
+    'household.new.handleRule':
+      'Az azonosító 1–32 karakter lehet: kisbetű, szám, kötőjel vagy aláhúzás, és betűvel vagy számmal kezdődik.',
+    'household.new.taken': 'Már van tag ezzel az azonosítóval: {handle}.',
+    'household.new.failed': 'A tagot nem sikerült felvenni.',
+    'household.new.submit': 'Felvétel',
+
+    // --- One member (admin) ----------------------------------------------------
+    'member.line': 'azonosító: {handle} · felvéve {date}',
+    'member.role': 'Szerep',
+    'member.enable': 'Újraengedélyezés',
+    'member.disable': 'Letiltás',
+    'member.delete': 'Törlés…',
+    'member.own':
+      'Ez a saját fiókod. A szerepedet, a letiltást és a törlést itt nem állíthatod — a saját dolgaidat a Fiókom oldalon intézed.',
+    'member.disabledNow.title': '{name} le van tiltva',
+    'member.disabledNow.body':
+      '{name} telefonja és böngészője most semmit nem ér el, és exportálni sem tud. Az eszközei megmaradnak: újraengedélyezés után ugyanaz a telefon megy tovább.',
+    'member.disableAsk':
+      'Letiltod? {name} telefonja és böngészője ettől kezdve semmit nem ér el, és exportálni sem tud. Semmi nem vész el: újraengedélyezés után ugyanaz a telefon folytatja — ez nem visszavonás.',
+    'member.deleteBody':
+      '{name} fiókja és minden feltöltött adata végleg törlődik erről a szerverről. A mentésekből legkésőbb öt hét alatt tűnik el. Ha {name} meg akarja tartani az adatait, a törlés előtt exportálja őket a Fiókom oldalon.',
+    'member.deleteDisabled': '{name} most le van tiltva, ezért exportálni sem tud.',
+    'member.deleteConfirm': '{name} végleges törlése',
+    'member.lastAdmin':
+      'A szervernek mindig kell legalább egy engedélyezett admin, ezért ez most nem megy. Előbb tegyél adminná valaki mást.',
+    'member.saveFailed': 'A változtatást nem sikerült menteni.',
+    'member.devices.title': 'Eszközök és belépések',
+    'member.devices.empty': 'Még nincs csatlakoztatott eszköz.',
+    'member.code.device': 'Eszköz csatlakoztatása',
+    'member.code.web': 'Webes belépőkód',
+    'member.code.hasDevice':
+      '{name} már használ egy eszközt, ezért az új kódot maga kéri: a telefonján (Saját szerver) vagy a Fiókom oldalon. Ha minden eszközét elvesztette, előbb vond vissza őket itt, és utána adhatsz kódot.',
+    'member.log.title': 'Napló ({name} is látja)',
+
+    // --- Elsewhere -------------------------------------------------------------
+    'ingest.redrive.memberNote': 'Újrapróbálni a szerver gazdája tudja, erről az oldalról.',
+    'settings.export.moved': 'Az export átkerült a {link} oldalra, a fiók törlése mellé.',
+    'dashboard.empty.noPhone':
+      'Még nincs csatlakoztatott telefonod. A {link} oldalon kérhetsz csatlakozási kódot — amint a telefon szinkronizál, itt megjelenik minden.',
   },
 
   // --- Metric group names ---------------------------------------------------
