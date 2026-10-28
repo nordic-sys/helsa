@@ -23,13 +23,13 @@
 .text-input:disabled {
   opacity: 0.6;
 }
-.field {
+.form-field {
   display: flex;
   flex-direction: column;
   gap: 6px;
   min-width: 0;
 }
-.field > span {
+.form-field > span {
   font-size: var(--fs-small);
   font-weight: 500;
 }
@@ -185,13 +185,15 @@
   white-space: nowrap;
 }
 /* Opens UPWARDS in the rail (it sits at the bottom of the screen) and downwards
-   in the bar (it sits at the top). */
+   in the bar (it sits at the top). ⚠️ As wide as the rail and no wider: the rail
+   scrolls (`overflow-y: auto`), and a scroll container clips sideways too, so a
+   wider panel lost its right edge. */
 .user-menu-panel {
   position: absolute;
   left: 0;
+  right: 0;
   bottom: calc(100% + 6px);
   z-index: 30;
-  min-width: 220px;
   padding: 6px;
   border-radius: var(--radius-sm);
   border: 1px solid var(--border);
@@ -239,8 +241,10 @@
   .user-menu-panel {
     bottom: auto;
     top: calc(100% + 6px);
-    left: auto;
-    right: 0;
+    /* The button starts the second row of the bar, at its left edge. */
+    left: 0;
+    right: auto;
+    min-width: 220px;
   }
   .user-menu-button {
     max-width: 160px;
@@ -352,4 +356,12 @@
   .account-log li {
     grid-template-columns: 1fr;
   }
+}
+
+/* ⚠️ The action column's header is visually hidden (`.sr-only`, absolutely
+   positioned). Without a positioned ancestor it is placed against the page, not
+   the scrolling table, and at phone width it pushed the whole PAGE sideways.
+   Anchoring it here keeps it inside the scroller. */
+.table-wrap--anchor {
+  position: relative;
 }

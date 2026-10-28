@@ -53,7 +53,7 @@ export default function Household() {
         <ErrorState error={members.error} />
       ) : (
         <Card>
-          <div className="table-wrap">
+          <div className="table-wrap table-wrap--anchor">
             <table>
               <thead>
                 <tr>
@@ -141,7 +141,7 @@ function AddMember({ onCancel }: { onCancel: () => void }) {
     <div style={{ marginBottom: 20 }}>
       <Card title={t('household.new.title')}>
         <form className="form-grid" onSubmit={submit} noValidate>
-          <label className="field">
+          <label className="form-field">
             <span>{t('household.new.name')}</span>
             <input
               className="text-input"
@@ -152,7 +152,7 @@ function AddMember({ onCancel }: { onCancel: () => void }) {
               placeholder={t('household.new.namePlaceholder')}
             />
           </label>
-          <label className="field">
+          <label className="form-field">
             <span>{t('household.new.handle')}</span>
             <input
               className="text-input"

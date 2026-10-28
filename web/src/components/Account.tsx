@@ -35,7 +35,7 @@ export function TokenList({
       </p>
     )
   return (
-    <div className="table-wrap">
+    <div className="table-wrap table-wrap--anchor">
       <table>
         <thead>
           <tr>
@@ -185,7 +185,7 @@ export function ConfirmByHandle({
   return (
     <div className="confirm confirm--danger" role="group" aria-label={action}>
       {children}
-      <label className="field">
+      <label className="form-field">
         <span>{t('delete.typeHandle', { handle })}</span>
         <input
           ref={input}

@@ -176,6 +176,8 @@ export function SessionGate({ children }: { children: ReactNode }) {
   }, [forget])
 
   const onSignedIn = useCallback(async () => {
+    // The sign-in page has already explained the removed token; once is enough.
+    setLegacy(false)
     purge()
     signalOtherTabs()
     await look('none')
