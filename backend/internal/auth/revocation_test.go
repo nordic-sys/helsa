@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -178,6 +179,30 @@ func TestTheDenyListNeverHoldsTheTokenItself(t *testing.T) {
 		}
 		if key == "revoked:"+tok {
 			t.Fatal("the token itself must not be the key")
+		}
+	}
+}
+
+// A revoked token stays revoked however it is spelled. Base64url leaves bits of a
+// part's last character unused; a lenient decoder ignores them, so changing them
+// kept the signature valid and moved the token off its deny-list key (Codex R1).
+func TestARevokedTokenCannotBeRespelled(t *testing.T) {
+	svc, _ := serviceWithFake(t)
+	tok, _ := mint(t, svc, time.Hour)
+	if _, err := svc.Revoke(context.Background(), tok); err != nil {
+		t.Fatal(err)
+	}
+	const alpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+	i := strings.IndexByte(alpha, tok[len(tok)-1])
+	for d := 1; d < 4; d++ {
+		v := tok[:len(tok)-1] + string(alpha[(i&^3)|((i+d)&3)])
+		if _, err := svc.VerifyAccess(context.Background(), v); err == nil {
+			t.Errorf("a re-spelled revoked token was accepted: …%s", v[len(v)-3:])
+		}
+	}
+	for _, v := range []string{tok + "\n", strings.Replace(tok, ".", ".\n", 1), " " + tok} {
+		if _, err := svc.VerifyAccess(context.Background(), v); err == nil {
+			t.Errorf("a token with whitespace was accepted: %q", v[:8])
 		}
 	}
 }

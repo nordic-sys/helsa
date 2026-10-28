@@ -19,6 +19,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -187,7 +188,16 @@ func TokenDevice(token string) string {
 
 // parse checks the signature and the expiry, and reads the claims.
 func (s *Service) parse(token string) (accessClaims, uuid.UUID, uuid.UUID, error) {
-	parser := jwt.NewParser(jwt.WithValidMethods([]string{"HS256"}), jwt.WithExpirationRequired())
+	// ⛔ One token, one spelling. Base64url leaves a few bits of the last character
+	// of each part unused, and a lenient decoder ignores them — so a revoked token
+	// with those bits changed decodes to the same signature, verifies, and hashes to
+	// a DIFFERENT deny-list key: revoked, and working again (Codex R1, 2026-10-28,
+	// reproduced before this fix). Strict decoding refuses a non-canonical part; the
+	// character check refuses what the decoder would skip (line breaks).
+	if !canonicalChars(token) {
+		return accessClaims{}, uuid.Nil, uuid.Nil, ErrUnauthorized
+	}
+	parser := jwt.NewParser(jwt.WithValidMethods([]string{"HS256"}), jwt.WithExpirationRequired(), jwt.WithStrictDecoding())
 	var claims accessClaims
 	if _, err := parser.ParseWithClaims(token, &claims, func(*jwt.Token) (any, error) {
 		return []byte(s.cfg.JWTSecret), nil
@@ -349,6 +359,22 @@ func (s *Service) Revoke(ctx context.Context, token string) (time.Time, error) {
 		return time.Time{}, fmt.Errorf("deny-list write: %w", err)
 	}
 	return expiry, nil
+}
+
+// canonicalChars: three base64url parts and nothing else.
+func canonicalChars(token string) bool {
+	if token == "" || strings.Count(token, ".") != 2 {
+		return false
+	}
+	for i := 0; i < len(token); i++ {
+		c := token[i]
+		switch {
+		case c >= 'A' && c <= 'Z', c >= 'a' && c <= 'z', c >= '0' && c <= '9', c == '-', c == '_', c == '.':
+		default:
+			return false
+		}
+	}
+	return true
 }
 
 // revokedKey is the deny-list key for a token: a SHA-256 of the token string, so the

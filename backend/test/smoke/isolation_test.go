@@ -4,6 +4,7 @@ package smoke
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"sort"
@@ -201,7 +202,7 @@ func TestTwoPeopleSeeOnlyTheirOwnData(t *testing.T) {
 		{op: "GET /summary", path: func(p *person) string { return "/v1/summary?range=week&metrics=stepCount,heartRate&tz=" + p.tz }, status: 200,
 			own: func(p *person) []string { return []string{fmt.Sprint(p.steps)} }},
 		{op: "GET /sleep", path: func(p *person) string { return "/v1/sleep?from=" + today(p) + "&tz=" + p.tz }, status: 200,
-			own: none, why: "the sleep DTO carries stages and minutes, nothing distinctive of the fixture; the leak check still runs"},
+			own: none, why: "nothing distinctive to search for; checked by COUNT below (exactly the caller's one segment)"},
 		{op: "GET /journal", path: func(p *person) string { return "/v1/journal?from=" + today(p) + "&tz=" + p.tz }, status: 200,
 			own: func(p *person) []string { return []string{p.sub + "-j1"} }},
 		{op: "GET /workouts", path: func(*person) string { return "/v1/workouts?limit=10" }, status: 200,
@@ -251,7 +252,8 @@ func TestTwoPeopleSeeOnlyTheirOwnData(t *testing.T) {
 		}
 	}
 
-	// The export, read to its end.
+	// The export, read to its end and decoded whole: a document cut short after the
+	// samples would otherwise pass on what it did contain (Codex R6).
 	covered["POST /export"] = true
 	for _, pair := range [][2]*person{{a, b}, {b, a}} {
 		me, other := pair[0], pair[1]
@@ -260,8 +262,46 @@ func TestTwoPeopleSeeOnlyTheirOwnData(t *testing.T) {
 			t.Fatalf("export as %s: %d %.200s", me.name, st, body)
 		}
 		checkNoLeak(t, "POST /export as "+me.name, string(body), other)
-		if !strings.Contains(string(body), fmt.Sprint(me.steps)) {
-			t.Errorf("export as %s does not contain their own steps", me.name)
+		var doc map[string]json.RawMessage
+		if err := json.Unmarshal(body, &doc); err != nil {
+			t.Fatalf("export as %s is not one complete JSON document: %v", me.name, err)
+		}
+		for section, want := range map[string]string{"samples": fmt.Sprint(me.steps), "workouts": me.sub + "-wk"} {
+			if !strings.Contains(string(doc[section]), want) {
+				t.Errorf("export as %s: section %q lacks the caller's own %q", me.name, section, want)
+			}
+		}
+		// An exported sleep segment carries no id (start, end, stage), so: by count.
+		var sleep []json.RawMessage
+		if err := json.Unmarshal(doc["sleep_segments"], &sleep); err != nil || len(sleep) != 1 {
+			t.Errorf("export as %s: %d sleep segments (%v), want exactly their own one", me.name, len(sleep), err)
+		}
+	}
+
+	// The summary cache, asked the SAME question by both — identical range, metrics and
+	// timezone — in both warming orders. Different timezones would keep their cache
+	// keys apart even if the key forgot the user (Codex R5).
+	same := "/v1/summary?range=week&metrics=stepCount&tz=UTC"
+	for _, order := range [][2]*person{{a, b}, {b, a}, {a, b}} {
+		for _, me := range order {
+			other := a
+			if me == a {
+				other = b
+			}
+			body, _, st := c.raw(t, http.MethodGet, same, me.token, nil)
+			if st != 200 || !strings.Contains(string(body), fmt.Sprint(me.steps)) {
+				t.Errorf("same-key summary as %s: %d, own steps missing — %.200s", me.name, st, body)
+			}
+			checkNoLeak(t, "same-key summary as "+me.name, string(body), other)
+		}
+	}
+
+	// Sleep, by count: each fixture has exactly one segment, and the DTO has nothing
+	// distinctive to search for (Codex R4).
+	for _, me := range []*person{a, b} {
+		var segs []api.SleepSegment
+		if st := c.do(t, http.MethodGet, "/v1/sleep?from="+today(me)+"&tz="+me.tz, me.token, nil, &segs); st != 200 || len(segs) != 1 {
+			t.Errorf("sleep as %s: %d segments (status %d), want exactly their own one", me.name, len(segs), st)
 		}
 	}
 

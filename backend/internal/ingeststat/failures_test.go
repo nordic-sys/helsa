@@ -10,6 +10,8 @@ import (
 	"unicode/utf8"
 
 	"github.com/google/uuid"
+
+	"github.com/nordic-sys/helsa/backend/internal/api"
 )
 
 func TestSanitizeErrorRedactsValues(t *testing.T) {
@@ -119,5 +121,25 @@ func TestParseFailuresSkipsJunk(t *testing.T) {
 	}
 	if parseLastRedrive(map[string]string{"at": "yesterday"}) != nil {
 		t.Error("an unparsable last redrive must be absent, not a zero time")
+	}
+}
+
+// A member's view keeps the depth and their own failures, and nothing that tells
+// when or how much anybody else uploaded (docs/36 §5.8; Codex R2).
+func TestMemberViewHidesEverybodysPace(t *testing.T) {
+	eta, n, last := 120, 7, time.Now()
+	full := api.IngestStatus{
+		EtaSeconds: &eta,
+		Throughput: &api.IngestThroughput{Batches: 9},
+		Worker:     &api.IngestWorkerStats{BatchesSinceStart: &n, LastBatchAt: &last},
+		DeadLetter: &api.IngestDeadLetter{LastRedrive: &api.IngestLastRedrive{At: last, Moved: 2}},
+		Queue:      &api.IngestQueueDepth{Ready: 3},
+	}
+	m := MemberView(full)
+	if m.EtaSeconds != nil || m.Throughput != nil || m.Worker.BatchesSinceStart != nil || m.Worker.LastBatchAt != nil || m.DeadLetter.LastRedrive != nil {
+		t.Errorf("a member's view still carries the server's pace: %+v", m)
+	}
+	if m.Queue == nil || m.Queue.Ready != 3 {
+		t.Errorf("the depth itself is the member's to see: %+v", m.Queue)
 	}
 }

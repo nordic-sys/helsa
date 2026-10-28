@@ -62,6 +62,15 @@ CROSS JOIN LATERAL (
     LIMIT 1
 ) s`
 
+// productionSamples is internal/samples buildQuery without the optional bounds.
+const productionSamples = `SELECT ts, data_type, value, unit, source_device, source_uuid
+FROM samples
+WHERE user_id = $1
+  AND data_type = $2
+  AND (ts < $3 OR (ts = $3 AND source_uuid < $4))
+ORDER BY ts DESC, source_uuid DESC
+LIMIT $5`
+
 type query struct {
 	name  string
 	sql   string
@@ -84,6 +93,13 @@ func queries() []query {
 		{"Latest (10 types)", latestQuery, func(u string) []any { return []any{u, ten} }, "samples"},
 		{"Raw series (500 newest)", `SELECT ts, value FROM samples WHERE user_id = $1 AND data_type = 'heartRate' ORDER BY ts DESC LIMIT 500`,
 			func(u string) []any { return []any{u} }, "samples"},
+		// The production shape of GET /v1/samples (internal/samples buildQuery): the
+		// keyset cursor, the second sort key and the full projection — the parts that
+		// decide how the ordered scan crosses chunks (Codex R8).
+		{"Samples page, production shape (first)", productionSamples,
+			func(u string) []any { return []any{u, "heartRate", now.Add(time.Hour), "", 501} }, "samples"},
+		{"Samples page, production shape (cursor, 30 days back)", productionSamples,
+			func(u string) []any { return []any{u, "heartRate", now.AddDate(0, 0, -30), "a-zzz", 501} }, "samples"},
 		{"Workouts list (50)", `SELECT id, started_at FROM workouts WHERE user_id = $1 ORDER BY started_at DESC LIMIT 50`,
 			func(u string) []any { return []any{u} }, ""},
 		{"Sleep, 30 days", `SELECT started_at, stage FROM sleep_segments WHERE user_id = $1 AND started_at >= now() - interval '30 days' ORDER BY started_at`,
@@ -115,7 +131,10 @@ func (v variant) sql(q query) string {
 	if q.table == "" {
 		return q.sql
 	}
-	return fromSamples.ReplaceAllString(q.sql, "FROM "+v.table+"$1")
+	// The backend's own queries read my_samples since F1; the variants name their
+	// table themselves, so start from the raw table in every case.
+	raw := strings.ReplaceAll(q.sql, "FROM my_samples", "FROM samples")
+	return fromSamples.ReplaceAllString(raw, "FROM "+v.table+"$1")
 }
 
 // run executes one query once, the way the API would: a transaction with the GUC
@@ -184,7 +203,10 @@ func TestM1M5PoliciesAndFailClosed(t *testing.T) {
 					return err
 				}
 			}
-			for _, rel := range []string{"workouts", "sleep_segments", "my_samples", "samples_plain"} {
+			// Every candidate view, the chosen InitPlan one above all: the timing queries
+			// carry their own WHERE user_id, which would hide a view that filters nothing
+			// (Codex R7).
+			for _, rel := range []string{"workouts", "sleep_segments", "my_samples", "my_samples_nb", "my_samples_ip", "samples_plain"} {
 				var foreign, n int
 				// An UNFILTERED select: the policy is the only thing narrowing it.
 				if err := tx.QueryRow(ctx, "SELECT count(*) FILTER (WHERE user_id::text <> $1), count(*) FROM "+rel, user).Scan(&foreign, &n); err != nil {

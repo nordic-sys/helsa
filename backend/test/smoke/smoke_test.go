@@ -760,7 +760,10 @@ func (c *apiClient) raw(t *testing.T, method, path, token string, body any) ([]b
 	resp, err := c.hc.Do(req)
 	must(t, err, "do request")
 	defer resp.Body.Close()
-	raw, _ := io.ReadAll(resp.Body)
+	raw, err := io.ReadAll(resp.Body)
+	// A body cut short is a failure, not a shorter answer: a truncated export would
+	// otherwise pass every substring check on what it did contain (Codex R6).
+	must(t, err, "read response body")
 	return raw, resp.Header.Get("Content-Type"), resp.StatusCode
 }
 

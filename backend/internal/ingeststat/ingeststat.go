@@ -358,11 +358,14 @@ func recentFailures(fs []Failure) *[]api.IngestFailure {
 // queue's depth as plain numbers, whether a worker is there, and their OWN failed
 // batches — the snapshot's failures are already narrowed by the caller (OwnedBy).
 //
-// What goes: the throughput window, the worker's counters and the time of its last
-// batch, and the last redrive. Each of them says WHEN somebody uploaded and how
+// What goes: the throughput window and the ETA derived from it, the worker's
+// counters and the time of its last batch, and the last redrive. Each of them says WHEN somebody uploaded and how
 // much — on a server shared by a household, that is somebody else's day.
 func MemberView(out api.IngestStatus) api.IngestStatus {
 	out.Throughput = nil
+	// The ETA is depth ÷ the server's rate: with the depth shown, it gives the rate
+	// back (Codex R2). A member's view has the depth, not the pace.
+	out.EtaSeconds = nil
 	if out.Worker != nil {
 		out.Worker = &api.IngestWorkerStats{StartedAt: out.Worker.StartedAt, Prefetch: out.Worker.Prefetch}
 	}

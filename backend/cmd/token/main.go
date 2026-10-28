@@ -38,6 +38,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -120,14 +121,9 @@ func main() {
 		fail("%v", err)
 	}
 
-	// The first user of a fresh database runs the server: make them its admin, so
-	// that a new install is never left without one (docs/36 §9, C3). The migration
-	// does the same for an existing install with exactly one user.
-	if created {
-		if err := db.New(st.DB).SetUserRole(ctx, db.SetUserRoleParams{ID: pgconv.UUID(owner.ID), Role: string(auth.RoleAdmin)}); err != nil {
-			fail("make the first user admin: %v", err)
-		}
-	}
+	// The first user of a fresh database is created as its admin (resolveOrCreateUser),
+	// so a new install is never left without one (docs/36 §9, C3). The migration does
+	// the same for an existing install with exactly one user.
 
 	sess, err := svc.IssueDeviceToken(ctx, owner.ID, device, uuid.Nil)
 	if err != nil {
@@ -152,40 +148,58 @@ func main() {
 
 // resolveOrCreateUser reads every user, lets resolveUser choose, and creates the
 // user when the choice is "none yet". created reports the latter.
+// resolveOrCreateUser reads every user, lets resolveUser choose, and creates the
+// user when the choice is "none yet". created reports the latter.
+//
+// ⚠️ One transaction, under the admins' lock: the first user of an empty database
+// is created AS admin, in the same statement — never created and promoted in two
+// steps, where a failure between them would leave a server whose only user is not
+// its admin, and two concurrent runs could each find the database empty and each
+// make an admin (Codex R3).
 func resolveOrCreateUser(ctx context.Context, pool *pgxpool.Pool, explicit string) (userRow, bool, error) {
-	rows, err := pool.Query(ctx, `SELECT id, handle, created_at FROM users ORDER BY created_at, id`)
-	if err != nil {
-		return userRow{}, false, fmt.Errorf("list users: %w", err)
-	}
-	var users []userRow
-	for rows.Next() {
-		var id pgtype.UUID
-		var u userRow
-		var created pgtype.Timestamptz
-		if err := rows.Scan(&id, &u.Handle, &created); err != nil {
-			rows.Close()
-			return userRow{}, false, fmt.Errorf("scan user: %w", err)
+	var out userRow
+	var created bool
+	err := pgx.BeginFunc(ctx, pool, func(tx pgx.Tx) error {
+		q := db.New(pool).WithTx(tx)
+		if err := q.LockAdmins(ctx); err != nil {
+			return fmt.Errorf("lock: %w", err)
 		}
-		u.ID, u.CreatedAt = pgconv.ToUUID(id), created.Time
-		users = append(users, u)
-	}
-	rows.Close()
-	if err := rows.Err(); err != nil {
-		return userRow{}, false, fmt.Errorf("list users: %w", err)
-	}
-
-	res, err := resolveUser(users, explicit)
-	if err != nil {
-		return userRow{}, false, err
-	}
-	if res.create == "" {
-		return res.user, false, nil
-	}
-	u, err := db.New(pool).UpsertUserByHandle(ctx, db.UpsertUserByHandleParams{Handle: res.create})
-	if err != nil {
-		return userRow{}, false, fmt.Errorf("create user: %w", err)
-	}
-	return userRow{ID: pgconv.ToUUID(u.ID), Handle: u.Handle, CreatedAt: u.CreatedAt.Time}, true, nil
+		rows, err := tx.Query(ctx, `SELECT id, handle, created_at FROM users ORDER BY created_at, id`)
+		if err != nil {
+			return fmt.Errorf("list users: %w", err)
+		}
+		var users []userRow
+		for rows.Next() {
+			var id pgtype.UUID
+			var u userRow
+			var c pgtype.Timestamptz
+			if err := rows.Scan(&id, &u.Handle, &c); err != nil {
+				rows.Close()
+				return fmt.Errorf("scan user: %w", err)
+			}
+			u.ID, u.CreatedAt = pgconv.ToUUID(id), c.Time
+			users = append(users, u)
+		}
+		rows.Close()
+		if err := rows.Err(); err != nil {
+			return fmt.Errorf("list users: %w", err)
+		}
+		res, err := resolveUser(users, explicit)
+		if err != nil {
+			return err
+		}
+		if res.create == "" {
+			out = res.user
+			return nil
+		}
+		u, err := q.CreateMember(ctx, db.CreateMemberParams{Handle: res.create, Role: string(auth.RoleAdmin)})
+		if err != nil {
+			return fmt.Errorf("create user: %w", err)
+		}
+		out, created = userRow{ID: pgconv.ToUUID(u.ID), Handle: u.Handle, CreatedAt: u.CreatedAt.Time}, true
+		return nil
+	})
+	return out, created, err
 }
 
 func fail(format string, a ...any) {

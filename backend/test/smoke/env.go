@@ -27,9 +27,9 @@ import (
 // stack). Every caller gets a fresh user, so the tests never see each other's
 // data.
 type env struct {
-	cfg      *config.Config
-	client   *apiClient
-	token    string
+	cfg    *config.Config
+	client *apiClient
+	token  string
 	handle string
 	// store and userID are what the tests that bypass HTTP need — the Home
 	// Assistant publisher reads the database directly, exactly as it does in the
@@ -100,13 +100,13 @@ func newEnv(t *testing.T) *env {
 	must(t, err, "issuing the device token")
 
 	return &env{
-		cfg:      cfg,
-		client:   &apiClient{base: ts.URL, hc: ts.Client()},
-		token:    sess.AccessToken,
+		cfg:    cfg,
+		client: &apiClient{base: ts.URL, hc: ts.Client()},
+		token:  sess.AccessToken,
 		handle: handle,
-		store:    st,
-		api:      apiStore,
-		userID:   sess.UserID,
+		store:  st,
+		api:    apiStore,
+		userID: sess.UserID,
 	}
 }
 
