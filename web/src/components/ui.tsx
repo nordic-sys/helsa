@@ -199,8 +199,11 @@ export function Legend({ items }: { items: { label: string; color: string; value
 }
 
 /**
- * The error state. A 401 is handled separately, because it has a concrete course
- * of action.
+ * The error state.
+ *
+ * A 401 rarely reaches here: the session layer turns it into the sign-in page
+ * before the card draws (`session.tsx`). A 403 is its own case — signed in, but
+ * not allowed (an admin's page for a member) — and says so rather than "failed".
  *
  * ⚠️ `e.message` and `e.detail` come from the backend's problem+json and are
  * NOT translated here — they are server content, not interface text. Only the
@@ -212,8 +215,8 @@ export function ErrorState({ error }: { error: unknown }) {
   if (e?.status === 401 || e?.status === 403) {
     return (
       <div className="state error">
-        <strong>{t('error.noToken.title')}</strong>
-        {t('error.noToken.body')}
+        <strong>{t(e.status === 401 ? 'error.signedOut.title' : 'error.forbidden.title')}</strong>
+        {t(e.status === 401 ? 'error.signedOut.body' : 'error.forbidden.body')}
       </div>
     )
   }

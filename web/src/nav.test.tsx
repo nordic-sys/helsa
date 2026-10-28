@@ -13,16 +13,14 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { I18nProvider, detectLang } from './i18n'
 import { en } from './i18n/en'
 import { hu } from './i18n/hu'
-import { DETAILS, LANDING, NAV, NAV_GROUPS, entriesIn } from './nav'
+import { DETAILS, LANDING, MENU, NAV, NAV_GROUPS, entriesIn } from './nav'
+import { MEMBER, TestSession } from './test/session'
 
 // The frame is what is under test, not the pages inside it — but `nav.tsx`
 // imports all ten of them, so the module they all reach for has to answer.
 vi.mock('./api/client', () => ({
   api: new Proxy({}, { get: () => () => new Promise(() => {}) }),
   browserTz: () => 'UTC',
-  getToken: () => null,
-  setToken: () => {},
-  clearToken: () => {},
   ApiError: class ApiError extends Error {
     status = 0
   },
@@ -66,7 +64,7 @@ describe('the route table and the sidebar are the same list', () => {
   })
 
   it('routes each path once', () => {
-    const paths = [...NAV.map((n) => n.path), ...DETAILS.map((d) => d.path)]
+    const paths = [...NAV.map((n) => n.path), ...DETAILS.map((d) => d.path), ...MENU.map((m) => m.path)]
     expect(new Set(paths).size).toBe(paths.length)
   })
 
@@ -93,26 +91,30 @@ describe('the route table and the sidebar are the same list', () => {
   })
 
   it('labels every entry and every heading in both languages', () => {
-    for (const key of [...NAV.map((n) => n.label), ...NAV_GROUPS.map((g) => g.label)]) {
+    for (const key of [...NAV.map((n) => n.label), ...NAV_GROUPS.map((g) => g.label), ...MENU.map((m) => m.label)]) {
       expect(en.ui[key], `en: ${key}`).toBeTruthy()
       expect(hu.ui[key], `hu: ${key}`).toBeTruthy()
     }
   })
 })
 
+function frame(me?: Parameters<typeof TestSession>[0]['me'], at = '/settings') {
+  return render(
+    <I18nProvider>
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MemoryRouter initialEntries={[at]}>
+          <TestSession me={me}>
+            <App />
+          </TestSession>
+        </MemoryRouter>
+      </QueryClientProvider>
+    </I18nProvider>,
+  )
+}
+
 describe('the sidebar', () => {
   it('shows every heading and every link at once, with nothing to open first', () => {
-    render(
-      <I18nProvider>
-        <QueryClientProvider
-          client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}
-        >
-          <MemoryRouter initialEntries={['/settings']}>
-            <App />
-          </MemoryRouter>
-        </QueryClientProvider>
-      </I18nProvider>,
-    )
+    frame()
 
     const sidebar = screen.getByRole('navigation')
     for (const group of NAV_GROUPS) {
@@ -126,5 +128,43 @@ describe('the sidebar', () => {
       }
     }
     expect(within(sidebar).getByRole('link', { name: dict.ui['nav.today'] })).toBeInTheDocument()
+  })
+})
+
+/**
+ * The Household page is an admin's (docs/36 §5.3). Hiding it is a courtesy —
+ * the server answers 403 to a member regardless — but a member must not be
+ * shown a link to a page that can only refuse them, nor reach it by its URL.
+ */
+describe('admin-only pages', () => {
+  const household = NAV.find((n) => n.path === '/household')!
+
+  it('lists the Household for an admin', () => {
+    frame()
+    const sidebar = screen.getByRole('navigation')
+    expect(within(sidebar).getByRole('link', { name: dict.ui[household.label] })).toBeInTheDocument()
+  })
+
+  it('hides it from a member, in the sidebar and at its URL', () => {
+    frame(MEMBER, '/household')
+    const sidebar = screen.getByRole('navigation')
+    expect(within(sidebar).queryByRole('link', { name: dict.ui[household.label] })).not.toBeInTheDocument()
+    // Sent home rather than shown a page that can only answer 403.
+    expect(within(sidebar).getByRole('link', { name: dict.ui['nav.today'] })).toHaveAttribute('aria-current', 'page')
+  })
+
+  it('takes a member\'s detail page with it', () => {
+    frame(MEMBER, '/household/u-bob')
+    expect(within(screen.getByRole('navigation')).getByRole('link', { name: dict.ui['nav.today'] })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+  })
+
+  it('is the only kind of entry that hides — every other link shows for a member', () => {
+    expect(NAV.filter((n) => n.adminOnly).map((n) => n.path)).toEqual(['/household'])
+    for (const group of NAV_GROUPS) {
+      expect(entriesIn(group.key, false)).toEqual(entriesIn(group.key).filter((n) => !n.adminOnly))
+    }
   })
 })

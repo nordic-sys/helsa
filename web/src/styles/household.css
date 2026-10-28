@@ -1,0 +1,355 @@
+/* The household (docs/36 §5): the sign-in page, the user menu, the account and
+ * member pages, the code dialog. Loaded by `session.tsx`, because the sign-in
+ * page and the user menu are on screen before any page is. */
+
+/* --- Shared form pieces --- */
+.text-input,
+.select {
+  min-height: var(--touch);
+  padding: 0 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--field-border);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-body);
+}
+.text-input:focus-visible,
+.select:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+.select:disabled,
+.text-input:disabled {
+  opacity: 0.6;
+}
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+.field > span {
+  font-size: var(--fs-small);
+  font-weight: 500;
+}
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: var(--sp-4);
+  align-items: start;
+}
+.form-grid > .btn-row,
+.form-grid > .form-error {
+  grid-column: 1 / -1;
+}
+.form-error {
+  margin: 10px 0 0;
+  color: var(--error-fg);
+  font-size: var(--fs-small);
+}
+.btn-small {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: var(--fs-caption);
+}
+.check {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  cursor: pointer;
+}
+.check input {
+  width: 18px;
+  height: 18px;
+  margin: 2px 0 0;
+  flex: none;
+  accent-color: var(--helsa-fjord);
+}
+.chip {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 1px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--accent-tint);
+  color: var(--accent-text);
+  font-size: var(--fs-micro);
+  font-weight: 600;
+  vertical-align: 1px;
+}
+.chip--warn {
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+}
+.confirm--danger {
+  border: 1px solid var(--error-border);
+  background: var(--error-bg);
+}
+.inline-confirm {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+.back-link {
+  margin: 0 0 var(--sp-3);
+  font-size: var(--fs-small);
+}
+
+/* --- The gate --- */
+.gate-loading {
+  min-height: 100vh;
+  background: var(--bg);
+}
+
+/* --- Sign-in --- */
+.login {
+  min-height: 100vh;
+  display: grid;
+  place-items: start center;
+  padding: clamp(24px, 12vh, 120px) 16px 40px;
+  background: var(--bg);
+}
+.login-box {
+  width: min(460px, 100%);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+.login-brand {
+  padding: 0;
+  margin-bottom: var(--sp-4);
+}
+.login-box h1 {
+  margin: var(--sp-2) 0 0;
+}
+.login-box .subtle {
+  margin: 0;
+}
+.login-form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: var(--sp-2);
+}
+.code-input {
+  flex: 1 1 200px;
+  font-family: var(--font-num);
+  font-size: 1.25rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.code-input::placeholder {
+  color: var(--text-faint);
+}
+.login-first {
+  margin-top: var(--sp-4) !important;
+  font-size: var(--fs-caption);
+}
+.login-first code {
+  overflow-wrap: anywhere;
+}
+.login-foot {
+  margin-top: var(--sp-4);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--border);
+}
+
+/* --- The user menu (sidebar foot) --- */
+.user-menu {
+  position: relative;
+}
+.user-menu-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: 100%;
+  min-height: var(--touch);
+  padding: 0 12px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--border-strong);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-small);
+  font-weight: 600;
+  cursor: pointer;
+}
+.user-menu-button[aria-expanded='true'] {
+  background: var(--surface-2);
+}
+.user-menu-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+/* Opens UPWARDS in the rail (it sits at the bottom of the screen) and downwards
+   in the bar (it sits at the top). */
+.user-menu-panel {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 6px);
+  z-index: 30;
+  min-width: 220px;
+  padding: 6px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+  display: flex;
+  flex-direction: column;
+}
+.user-menu-who {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 8px 10px 10px;
+  margin-bottom: 4px;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-dim);
+  font-size: var(--fs-caption);
+}
+.user-menu-who strong {
+  color: var(--text);
+  font-size: var(--fs-small);
+}
+.user-menu-item {
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-small);
+  text-align: left;
+  cursor: pointer;
+}
+.user-menu-item:hover {
+  background: var(--surface-2);
+  text-decoration: none;
+}
+.user-menu-error {
+  padding: 0 10px 6px;
+}
+@media (max-width: 899px) {
+  .user-menu-panel {
+    bottom: auto;
+    top: calc(100% + 6px);
+    left: auto;
+    right: 0;
+  }
+  .user-menu-button {
+    max-width: 160px;
+  }
+}
+
+/* --- The code dialog --- */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: color-mix(in srgb, var(--text) 40%, transparent);
+}
+.modal {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  padding: var(--sp-6);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  box-shadow: var(--shadow-pop);
+}
+.modal-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: var(--sp-4);
+}
+.modal-head h2 {
+  margin: 0;
+  font-size: var(--fs-h2);
+}
+.code-body {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sp-5);
+  align-items: center;
+  margin-bottom: var(--sp-4);
+}
+.qr {
+  flex: none;
+  border-radius: var(--radius-xs);
+  /* The white quiet zone is part of the symbol; a border shows where it ends on
+     a white card. */
+  border: 1px solid var(--border);
+}
+.code-text {
+  flex: 1 1 220px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.code-value {
+  font-family: var(--font-num);
+  font-size: 2rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  user-select: all;
+}
+.copyable {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: center;
+}
+.copyable-label {
+  flex: 1 0 100%;
+  font-size: var(--fs-caption);
+  color: var(--text-dim);
+}
+.copyable-value {
+  padding: 4px 8px;
+  border-radius: var(--radius-xs);
+  background: var(--surface-2);
+  font-size: var(--fs-small);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+
+/* --- The account log --- */
+.account-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.account-log li {
+  display: grid;
+  grid-template-columns: minmax(130px, max-content) 1fr;
+  gap: 4px 16px;
+  padding: 8px 0;
+  border-top: 1px solid var(--border);
+}
+.account-log li:first-child {
+  border-top: 0;
+}
+.account-log time {
+  color: var(--text-dim);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--fs-small);
+}
+@media (max-width: 520px) {
+  .account-log li {
+    grid-template-columns: 1fr;
+  }
+}

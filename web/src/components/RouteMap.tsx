@@ -21,7 +21,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Map as MapLibreMap } from 'maplibre-gl'
 import 'maplibre-gl/dist/maplibre-gl.css'
-import { getToken } from '../api/client'
 import { TILE_PROXY_PATH, basemapStyle, prefersDark, routeCamera, type MapSource } from '../lib/routeMap'
 import type { ProjectedRoute } from '../lib/workoutDetail'
 
@@ -87,15 +86,13 @@ export default function RouteMap({ source, projected, viewBoxWidth, onFailed }: 
         attributionControl: false,
         // A basemap that fades in behind an already-drawn line reads as a glitch.
         fadeDuration: 0,
-        // ⚠️ The tile proxy sits behind the device token like every other `/v1`
-        // route, and MapLibre fetches tiles from a worker, where `localStorage`
-        // is not reachable. This hook is what carries the header across: it runs
-        // on the main thread, per request.
-        transformRequest: (url) => {
-          if (!url.includes(TILE_PROXY_PATH)) return { url }
-          const token = getToken()
-          return token ? { url, headers: { Authorization: `Bearer ${token}` } } : { url }
-        },
+        // ⚠️ The tile proxy sits behind the session cookie like every other
+        // `/v1` route. MapLibre fetches tiles from a worker; `same-origin` is
+        // what makes that fetch carry the cookie (Path=/v1). It used to carry a
+        // bearer header from `localStorage` here — the web sends none any more
+        // (api/client.ts), and the server refuses a cookie and a bearer together.
+        transformRequest: (url) =>
+          url.includes(TILE_PROXY_PATH) ? { url, credentials: 'same-origin' } : { url },
       })
     } catch {
       failed.current()

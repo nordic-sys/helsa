@@ -11,6 +11,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import type { IngestStatus } from './api/types'
 import { I18nProvider } from './i18n'
+import { TestSession } from './test/session'
 
 const ingestStatus = vi.fn<() => Promise<IngestStatus>>()
 
@@ -23,9 +24,6 @@ vi.mock('./api/client', () => ({
     },
   ),
   browserTz: () => 'Europe/Budapest',
-  getToken: () => null,
-  setToken: () => {},
-  clearToken: () => {},
   ApiError: class ApiError extends Error {
     status = 0
   },
@@ -48,7 +46,9 @@ function show() {
     <I18nProvider>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <MemoryRouter initialEntries={['/settings']}>
-          <App />
+          <TestSession>
+            <App />
+          </TestSession>
         </MemoryRouter>
       </QueryClientProvider>
     </I18nProvider>,
@@ -132,7 +132,7 @@ describe('the queue badge', () => {
     ingestStatus.mockResolvedValue(status())
     show()
     expect(screen.getByRole('link', { name: 'Settings' })).toHaveAttribute('aria-current', 'page')
-    expect(screen.getByText(/Europe\/Budapest/)).toBeInTheDocument()
+    expect(within(screen.getByRole('navigation')).getByText(/Europe\/Budapest/)).toBeInTheDocument()
   })
 })
 

@@ -594,3 +594,85 @@ export type JournalResponse = {
   total: number
   last_received_at?: string | null
 }
+
+// --- The household (docs/36 F1; openapi.yaml `User`, `Member`, `TokenInfo`…) ---
+
+export type Role = 'admin' | 'member'
+
+/** One device token or browser session. Listed for its owner (`/me/tokens`) and
+ * for an admin (`/admin/users/{id}/tokens`) — the label, never the token. */
+export type TokenInfo = {
+  id: string
+  label: string
+  kind: 'device' | 'web'
+  created_at: string
+  created_by?: string
+  expires_at: string
+  last_used_at?: string
+  revoked_at?: string
+  /** The token this very request came with — "this browser". */
+  current?: boolean
+}
+
+/** What this server can do for this caller. ⚠️ Absent or false = hide it: an
+ * older server sends none of it (openapi.yaml `Capabilities`). */
+export type Capabilities = {
+  household?: boolean
+  /** False for the last enabled admin, who cannot delete themselves. */
+  can_delete_self?: boolean
+}
+
+/** `GET /me` — who is signed in. */
+export type User = {
+  id?: string
+  handle?: string
+  display_name?: string
+  role?: Role
+  token?: TokenInfo
+  capabilities?: Capabilities
+  ha_publish?: boolean
+  settings?: Settings
+  created_at?: string
+}
+
+export type MePatch = { display_name?: string; ha_publish?: boolean }
+
+export type CodePurpose = 'device' | 'web'
+
+/** A one-time code — shown once, stored on the server only as a hash. */
+export type CodeIssued = {
+  /** Eight characters of Crockford base32, as `XXXX-XXXX`. */
+  code: string
+  purpose: CodePurpose
+  expires_at: string
+}
+
+/**
+ * One line of an account's log. `actor` is the display name or handle of who did
+ * it, and is ABSENT when it was the server's operator (the CLI on the server).
+ */
+export type AccountEvent = {
+  kind: string
+  at: string
+  actor?: string
+  actor_is_self?: boolean
+  detail?: Record<string, unknown>
+}
+
+/** A row of the admin's Household page — account metadata, no health data. */
+export type Member = {
+  id: string
+  handle: string
+  display_name?: string
+  role: Role
+  disabled?: boolean
+  deleting?: boolean
+  created_at: string
+  /** Live tokens: devices and browser sessions together. */
+  devices?: number
+  last_upload_at?: string
+}
+
+export type MemberCreate = { handle: string; display_name?: string; role?: Role }
+
+export type MemberPatch = { role?: Role; disabled?: boolean; display_name?: string }

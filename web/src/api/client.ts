@@ -5,6 +5,9 @@ import type {
   BaselineResponse,
   Challenge,
   CoverageResponse,
+  AccountEvent,
+  CodeIssued,
+  CodePurpose,
   Device,
   Goal,
   IngestRedriveResult,
@@ -12,37 +15,68 @@ import type {
   Insight,
   JournalResponse,
   LatestResponse,
+  MePatch,
+  Member,
+  MemberCreate,
+  MemberPatch,
   Range,
   Settings,
   SamplePage,
   SleepSegment,
   SummaryResponse,
+  TokenInfo,
+  User,
   Workout,
   WorkoutPage,
   WorkoutRoute,
   WorkoutIntensity,
 } from './types'
 
-// Access is layered (docs/08-auth-hozzaferes.md):
-//   1. network — the web is reachable over WireGuard ONLY; Caddy serves it on
-//      :8443, which is deliberately NOT port-forwarded on the router;
-//   2. application — a long-lived device token.
+// # How the web is let in (docs/36 §3.4, the review §9 C10–C12, A5, A7)
 //
-// There is no sign-in screen and no Sign in with Apple: in a single-user system
-// there is nobody to sign in.
+// **Only by the session cookie.** A browser signs in with a one-time code
+// (`POST /v1/auth/web/login`), and the server answers with `helsa_session` —
+// httpOnly, so no script here can read it, and Path=/v1, so it travels with
+// every call below and with nothing else. `fetch` carries it because the API is
+// same-origin (`credentials: 'same-origin'`).
 //
-// Where the token comes from, in order: an httpOnly cookie (sent by the server,
-// carried by fetch automatically) → localStorage (set by hand on a new machine).
-const TOKEN_KEY = 'helsa.device_token'
+// ⛔ **No bearer header, ever.** Until the household the web kept a year-long
+// device token in `localStorage` and sent it as `Authorization: Bearer`. That
+// token is gone (`takeLegacyToken` deletes it on load, with no transition
+// period — A5), and the server refuses a request carrying both a bearer and the
+// cookie (400, C11): "which one wins" is exactly the question that ends with one
+// person's browser acting as another. `client.test.ts` pins that no request
+// sends one.
+//
+// ⚠️ **A 401 is an identity change.** Whatever the page was showing belonged to
+// a session that is over, so the session layer (`session.tsx`) is told through
+// `setUnauthorizedHandler`, empties the whole query cache and shows the sign-in
+// page (A7, C12). The two requests whose 401 means something else — redeeming a
+// code ("not accepted") and the first look at who is signed in ("nobody yet") —
+// pass `quiet: true`.
 
-export function getToken(): string | null {
-  return localStorage.getItem(TOKEN_KEY)
+/** Where the old web kept the device token. Read only to delete it. */
+export const LEGACY_TOKEN_KEY = 'helsa.device_token'
+
+/**
+ * Deletes a device token left in this browser by an older web, and says whether
+ * there was one — so the page can explain once why it is asking for a code now.
+ */
+export function takeLegacyToken(): boolean {
+  try {
+    if (localStorage.getItem(LEGACY_TOKEN_KEY) == null) return false
+    localStorage.removeItem(LEGACY_TOKEN_KEY)
+    return true
+  } catch {
+    return false // storage blocked: there is nothing to delete either
+  }
 }
-export function setToken(t: string) {
-  localStorage.setItem(TOKEN_KEY, t.trim())
-}
-export function clearToken() {
-  localStorage.removeItem(TOKEN_KEY)
+
+let onUnauthorized: (() => void) | null = null
+
+/** The session layer's hook for "the server no longer knows this browser". */
+export function setUnauthorizedHandler(fn: (() => void) | null) {
+  onUnauthorized = fn
 }
 
 export class ApiError extends Error {
@@ -57,33 +91,44 @@ export class ApiError extends Error {
 
 const BASE = '/v1'
 
-async function req<T>(path: string, init?: RequestInit): Promise<T> {
-  const headers = new Headers(init?.headers)
+type ReqInit = Omit<RequestInit, 'body'> & {
+  /** A JSON body; sets the Content-Type the server insists on for a cookie write (C10). */
+  json?: unknown
+  /** A 401 here is an answer, not the end of the session (see the top of the file). */
+  quiet?: boolean
+}
+
+async function req<T>(path: string, init: ReqInit = {}): Promise<T> {
+  const { json, quiet, ...rest } = init
+  const headers = new Headers(rest.headers)
   headers.set('Accept', 'application/json')
-  const token = getToken()
-  if (token) headers.set('Authorization', `Bearer ${token}`)
+  if (json !== undefined) headers.set('Content-Type', 'application/json')
 
   const res = await fetch(`${BASE}${path}`, {
-    ...init,
+    ...rest,
     headers,
-    credentials: 'include',
+    body: json !== undefined ? JSON.stringify(json) : undefined,
+    credentials: 'same-origin',
   })
 
-  if (!res.ok) {
-    // The backend returns RFC 9457 problem+json; if it does not, do not fall over.
-    let title = `HTTP ${res.status}`
-    let detail: string | undefined
-    try {
-      const p = await res.json()
-      title = p.title ?? title
-      detail = p.detail
-    } catch {
-      /* not JSON — the status stands */
-    }
-    throw new ApiError(res.status, title, detail)
-  }
-  if (res.status === 204) return undefined as T
+  if (!res.ok) throw await problemOf(res, quiet)
+  if (res.status === 204 || res.status === 202) return undefined as T
   return (await res.json()) as T
+}
+
+/** The backend returns RFC 9457 problem+json; if it does not, do not fall over. */
+async function problemOf(res: Response, quiet?: boolean): Promise<ApiError> {
+  let title = `HTTP ${res.status}`
+  let detail: string | undefined
+  try {
+    const p = await res.json()
+    title = p.title ?? title
+    detail = p.detail
+  } catch {
+    /* not JSON — the status stands */
+  }
+  if (res.status === 401 && !quiet) onUnauthorized?.()
+  return new ApiError(res.status, title, detail)
 }
 
 function qs(params: Record<string, string | number | undefined>): string {
@@ -171,9 +216,7 @@ export const api = {
   redriveDeadLetters: (max?: number) =>
     req<IngestRedriveResult>('/ingest/dead-letter/redrive', {
       method: 'POST',
-      ...(max != null
-        ? { body: JSON.stringify({ max }), headers: { 'Content-Type': 'application/json' } }
-        : {}),
+      ...(max != null ? { json: { max } } : {}),
     }),
 
   goals: () => req<Goal[]>('/goals'),
@@ -182,7 +225,63 @@ export const api = {
 
   settings: () => req<Settings>('/settings'),
 
-  me: () => req<{ id?: string; display_name?: string }>('/me'),
+  // --- Who is signed in, and their account (docs/36 §5.6) -------------------
+
+  /** `quiet`: on the first look, a 401 means "nobody is signed in yet", not
+   * "a session just ended" — the session layer tells the two apart. */
+  me: (opts: { quiet?: boolean } = {}) => req<User>('/me', { quiet: opts.quiet }),
+  /** Only `ha_publish` from the web: the person's own switch (C25). */
+  patchMe: (body: MePatch) => req<User>('/me', { method: 'PATCH', json: body }),
+  /** 202: the account is disabled at once and its deletion queued. The handle is
+   * the confirmation; the last admin is refused (409). */
+  deleteMe: (handle: string) => req<void>('/me', { method: 'DELETE', json: { handle } }),
+  myTokens: () => req<TokenInfo[]>('/me/tokens'),
+  revokeMyToken: (id: string) =>
+    req<void>(`/me/tokens/${encodeURIComponent(id)}`, { method: 'DELETE' }),
+  /** A code for the caller's own next phone (15 minutes). */
+  myDeviceCode: () => req<CodeIssued>('/me/enrolment-codes', { method: 'POST' }),
+  /** A code for the caller's own next browser (10 minutes). */
+  myLoginCode: () => req<CodeIssued>('/me/login-codes', { method: 'POST' }),
+  myEvents: () => req<AccountEvent[]>('/me/events'),
+
+  // --- Signing in and out -------------------------------------------------
+
+  /** 204 and the cookie, or ONE 401 for every way a code can be wrong (C7), or a
+   * 429 when too many tries were made. `quiet`: that 401 is about the code. */
+  webLogin: (code: string) =>
+    req<void>('/auth/web/login', { method: 'POST', json: { code }, quiet: true }),
+  webLogout: () => req<void>('/auth/web/logout', { method: 'POST', quiet: true }),
+
+  // --- The household, for an admin (docs/36 §5.3–§5.4) ----------------------
+  // Account metadata only: nothing here returns a member's health data, and the
+  // database holds the admin to that too (docs/36 §10).
+
+  members: () => req<Member[]>('/admin/users'),
+  addMember: (body: MemberCreate) => req<Member>('/admin/users', { method: 'POST', json: body }),
+  member: (id: string) => req<Member>(`/admin/users/${encodeURIComponent(id)}`),
+  /** Role, disable / re-enable. Disabling is not revoking (A8); a change that
+   * would leave no enabled admin is a 409. */
+  patchMember: (id: string, body: MemberPatch) =>
+    req<Member>(`/admin/users/${encodeURIComponent(id)}`, { method: 'PATCH', json: body }),
+  deleteMember: (id: string, handle: string) =>
+    req<void>(`/admin/users/${encodeURIComponent(id)}`, { method: 'DELETE', json: { handle } }),
+  memberTokens: (id: string) => req<TokenInfo[]>(`/admin/users/${encodeURIComponent(id)}/tokens`),
+  revokeMemberToken: (id: string, tokenId: string) =>
+    req<void>(
+      `/admin/users/${encodeURIComponent(id)}/tokens/${encodeURIComponent(tokenId)}`,
+      { method: 'DELETE' },
+    ),
+  memberEvents: (id: string) => req<AccountEvent[]>(`/admin/users/${encodeURIComponent(id)}/events`),
+  /**
+   * A code for a member — ⚠️ only one with no live device or session: a member
+   * who has one asks for their own, so an admin cannot quietly become them
+   * (C2). Otherwise 409, which the page explains.
+   */
+  memberCode: (id: string, purpose: CodePurpose) =>
+    req<CodeIssued>(`/admin/users/${encodeURIComponent(id)}/codes`, {
+      method: 'POST',
+      json: { purpose },
+    }),
 
   /**
    * Rule-based observations. **An empty list is a complete answer**, not a
@@ -275,8 +374,8 @@ export type ExportedFile = {
  *
  * A separate path from `req` because the answer is a FILE, not JSON — and
  * because a large history takes a while, the body is read chunk by chunk so the
- * page can say how much has arrived. Same auth as every other call: the bearer
- * token if one is stored, the cookie otherwise.
+ * page can say how much has arrived. Same auth as every other call: the session
+ * cookie, and nothing else.
  *
  * ⚠️ A non-200 is a problem+json like everywhere else (400 for a bad window).
  * But once the server has sent 200 it is streaming and can no longer change the
@@ -285,28 +384,14 @@ export type ExportedFile = {
  * it knows the format.
  */
 async function exportFile(body: ExportRequest, opts: ExportOptions): Promise<ExportedFile> {
-  const headers = new Headers({ 'Content-Type': 'application/json' })
-  const token = getToken()
-  if (token) headers.set('Authorization', `Bearer ${token}`)
   const res = await fetch(`${BASE}/export`, {
     method: 'POST',
-    headers,
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
-    credentials: 'include',
+    credentials: 'same-origin',
     signal: opts.signal,
   })
-  if (!res.ok) {
-    let title = `HTTP ${res.status}`
-    let detail: string | undefined
-    try {
-      const p = await res.json()
-      title = p.title ?? title
-      detail = p.detail
-    } catch {
-      /* not JSON — the status stands */
-    }
-    throw new ApiError(res.status, title, detail)
-  }
+  if (!res.ok) throw await problemOf(res)
 
   const type = res.headers.get('Content-Type') ?? 'application/octet-stream'
   const disposition = res.headers.get('Content-Disposition')

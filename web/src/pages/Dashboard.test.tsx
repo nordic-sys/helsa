@@ -164,7 +164,7 @@ describe('one endpoint having a bad day', () => {
     mock.summary.mockRejectedValue(Object.assign(new Error('Unauthorized'), { status: 401 }))
     show(<Dashboard />)
 
-    expect(await screen.findByText(dict.ui['error.noToken.title'])).toBeInTheDocument()
+    expect(await screen.findByText(dict.ui['error.signedOut.title'])).toBeInTheDocument()
     expect(screen.queryByText(dict.ui['today.band.today'])).not.toBeInTheDocument()
   })
 })

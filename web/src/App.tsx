@@ -2,12 +2,15 @@ import { useRef, useState } from 'react'
 import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
 import { browserTz } from './api/client'
 import { LanguageSwitcher } from './components/LanguageSwitcher'
+import { UserMenu } from './components/UserMenu'
+import { Alert } from './components/ui'
 import { useI18n } from './i18n'
 import { useFormat } from './lib/format'
 import { queueBadge, type QueueBadge } from './lib/ingest'
 import { useIngestStatus } from './lib/useIngestStatus'
 import { useRefreshOnIngest } from './lib/useRefreshOnIngest'
-import { DETAILS, LANDING, NAV, NAV_GROUPS, entriesIn, type NavEntry } from './nav'
+import { DETAILS, LANDING, MENU, NAV, NAV_GROUPS, entriesIn, parentOf, type NavEntry } from './nav'
+import { useSession } from './session'
 
 /** The path whose link carries the queue badge. */
 export const QUEUE_PATH = '/ingest'
@@ -33,6 +36,8 @@ const BADGE_POLL_MS = 30_000
  */
 export default function App() {
   const { t } = useI18n()
+  const session = useSession()
+  const { isAdmin } = session
   const [menuOpen, setMenuOpen] = useState(false)
   const toggleRef = useRef<HTMLButtonElement>(null)
   // Following a link closes it — otherwise the panel stands over the page it was
@@ -108,7 +113,7 @@ export default function App() {
               <div className="nav-group-title" id={`nav-group-${group.key}`}>
                 {t(group.label)}
               </div>
-              {entriesIn(group.key).map((n) => (
+              {entriesIn(group.key, isAdmin).map((n) => (
                 <Item
                   key={n.path}
                   entry={n}
@@ -127,6 +132,7 @@ export default function App() {
             button, and drops under the panel while the panel is open, so the
             order you see is the order Tab takes. */}
         <div className="sidebar-foot">
+          <UserMenu onNavigate={close} />
           <LanguageSwitcher />
           <span className="sidebar-host" aria-label={t('nav.serverAria')}>
             {window.location.host} · {browserTz()}
@@ -135,16 +141,37 @@ export default function App() {
 
       </nav>
 
-      <main className="main">
+      {/* ⚠️ Keyed by the person: should the session layer ever hand this frame
+          somebody else without unmounting it, no page keeps state that was
+          built for the one before (docs/36 §9, C12; `session.tsx`). */}
+      <main className="main" key={session.me.id}>
+        {session.legacyNotice && (
+          <div style={{ marginBottom: 20 }}>
+            <Alert tone="info" title={t('login.legacy.title')} live={false}>
+              <p>{t('login.legacy.body')}</p>
+              <div className="btn-row">
+                <button type="button" className="btn" onClick={session.dismissLegacyNotice}>
+                  {t('common.understood')}
+                </button>
+              </div>
+            </Alert>
+          </div>
+        )}
         <Routes>
           {NAV.map((n) => (
-            <Route key={n.path} path={n.path} element={n.element} />
+            <Route key={n.path} path={n.path} element={allowed(n, isAdmin) ? n.element : <Navigate to="/" replace />} />
           ))}
           {/* The pages a listing opens. They are routed here and NOT drawn in
               the sidebar — see `DETAILS` in `nav.tsx` for why that is a second
-              rule rather than an exception to the first. */}
-          {DETAILS.map((d) => (
-            <Route key={d.path} path={d.path} element={d.element} />
+              rule rather than an exception to the first. A detail page is as
+              admin-only as the listing it opens from. */}
+          {DETAILS.map((d) => {
+            const parent = parentOf(d)
+            const ok = !parent || allowed(parent, isAdmin)
+            return <Route key={d.path} path={d.path} element={ok ? d.element : <Navigate to="/" replace />} />
+          })}
+          {MENU.map((m) => (
+            <Route key={m.path} path={m.path} element={m.element} />
           ))}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -158,6 +185,10 @@ export default function App() {
       </main>
     </div>
   )
+}
+
+function allowed(entry: NavEntry, isAdmin: boolean): boolean {
+  return isAdmin || !entry.adminOnly
 }
 
 function Item({
