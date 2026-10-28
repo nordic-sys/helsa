@@ -19,7 +19,7 @@ import (
 
 func TestInsightsFromSeededHistory(t *testing.T) {
 	e := newEnv(t)
-	c, token, sub := e.client, e.token, e.appleSub
+	c, token, sub := e.client, e.token, e.handle
 
 	const tz = "Europe/Budapest"
 	loc, err := time.LoadLocation(tz)
@@ -162,7 +162,7 @@ func TestInsightsFromSeededHistory(t *testing.T) {
 // HKWorkout.uuid.
 func TestTimingAndWorkoutInsightsFromSeededHistory(t *testing.T) {
 	e := newEnv(t)
-	c, token, sub := e.client, e.token, e.appleSub
+	c, token, sub := e.client, e.token, e.handle
 
 	const tz = "Europe/Budapest"
 	loc, err := time.LoadLocation(tz)

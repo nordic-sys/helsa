@@ -144,8 +144,14 @@ BEGIN
     REVOKE ALL ON TABLE public.goose_db_version FROM helsa_app;
   END IF;
 
-  -- No table uses a sequence today (UUID keys); a future SERIAL/IDENTITY will.
+  -- account_events.id is the first sequence (00015).
   GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO helsa_app;
+
+  -- The one function the API calls: redeeming a one-time code (00015). It runs as
+  -- the owner by design — see the migration for why, and for what it may do.
+  IF to_regprocedure('public.redeem_code(bytea, text, uuid, text, text, timestamptz)') IS NOT NULL THEN
+    GRANT EXECUTE ON FUNCTION public.redeem_code(bytea, text, uuid, text, text, timestamptz) TO helsa_app;
+  END IF;
 
   -- What the NEXT migrations create. Only objects created BY the owner are
   -- covered — which is every object, as long as migrations run as the owner.

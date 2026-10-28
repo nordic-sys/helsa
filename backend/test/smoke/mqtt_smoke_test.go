@@ -287,7 +287,7 @@ func TestHomeAssistantMQTTPublisher(t *testing.T) {
 func seedForMQTT(t *testing.T, e *env) {
 	t.Helper()
 	const tz = "Europe/Budapest"
-	c, token, appleSub := e.client, e.token, e.appleSub
+	c, token, handle := e.client, e.token, e.handle
 
 	tzDev := tz
 	var dev api.Device
@@ -310,10 +310,10 @@ func seedForMQTT(t *testing.T, e *env) {
 
 	var samples []api.SampleIn
 	for i, v := range []float32{100, 200, 700} { // 1000 steps
-		samples = append(samples, sample(appleSub, "stepCount", "count", noon.Add(-time.Duration(i)*time.Minute).UTC(), v, 900+i))
+		samples = append(samples, sample(handle, "stepCount", "count", noon.Add(-time.Duration(i)*time.Minute).UTC(), v, 900+i))
 	}
-	samples = append(samples, sample(appleSub, "activeEnergy", "kcal", noon.UTC(), 450, 950))
-	samples = append(samples, sample(appleSub, "restingHeartRate", "count/min", noon.UTC(), 55, 960))
+	samples = append(samples, sample(handle, "activeEnergy", "kcal", noon.UTC(), 450, 950))
+	samples = append(samples, sample(handle, "restingHeartRate", "count/min", noon.UTC(), 55, 960))
 
 	// Two hours in bed, one of them asleep: the published figure must be the hour
 	// asleep, not the two hours lying there — and not the two and a half a naive
@@ -323,10 +323,10 @@ func seedForMQTT(t *testing.T, e *env) {
 	core := api.SleepSegmentInStage("asleepCore")
 	deep := api.SleepSegmentInStage("asleepDeep")
 	sleeps := []api.SleepSegmentIn{
-		{SourceUuid: appleSub + "-mqtt-sl-bed", StartedAt: noon.Add(-8 * time.Hour).UTC(), EndedAt: noon.Add(-6 * time.Hour).UTC(), Stage: inBed},
-		{SourceUuid: appleSub + "-mqtt-sl-core", StartedAt: noon.Add(-7 * time.Hour).UTC(), EndedAt: noon.Add(-6 * time.Hour).UTC(), Stage: core},
-		{SourceUuid: appleSub + "-mqtt-sl-watch-1", StartedAt: noon.Add(-7 * time.Hour).UTC(), EndedAt: noon.Add(-390 * time.Minute).UTC(), Stage: deep},
-		{SourceUuid: appleSub + "-mqtt-sl-watch-2", StartedAt: noon.Add(-390 * time.Minute).UTC(), EndedAt: noon.Add(-6 * time.Hour).UTC(), Stage: core},
+		{SourceUuid: handle + "-mqtt-sl-bed", StartedAt: noon.Add(-8 * time.Hour).UTC(), EndedAt: noon.Add(-6 * time.Hour).UTC(), Stage: inBed},
+		{SourceUuid: handle + "-mqtt-sl-core", StartedAt: noon.Add(-7 * time.Hour).UTC(), EndedAt: noon.Add(-6 * time.Hour).UTC(), Stage: core},
+		{SourceUuid: handle + "-mqtt-sl-watch-1", StartedAt: noon.Add(-7 * time.Hour).UTC(), EndedAt: noon.Add(-390 * time.Minute).UTC(), Stage: deep},
+		{SourceUuid: handle + "-mqtt-sl-watch-2", StartedAt: noon.Add(-390 * time.Minute).UTC(), EndedAt: noon.Add(-6 * time.Hour).UTC(), Stage: core},
 	}
 
 	// Exercise and stand reach their goal, move does not → two rings closed.

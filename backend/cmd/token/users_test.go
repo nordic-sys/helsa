@@ -9,7 +9,7 @@ import (
 )
 
 func row(sub string) userRow {
-	return userRow{ID: uuid.New(), AppleSub: sub, CreatedAt: time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)}
+	return userRow{ID: uuid.New(), Handle: sub, CreatedAt: time.Date(2026, 8, 10, 12, 0, 0, 0, time.UTC)}
 }
 
 // An empty database: the first token creates the one user.
@@ -18,7 +18,7 @@ func TestResolveUserCreatesOnAnEmptyDatabase(t *testing.T) {
 	if err != nil || res.create != newOwnerSub {
 		t.Fatalf("got %+v, %v; want create %q", res, err, newOwnerSub)
 	}
-	// With -user, that name becomes the apple_sub (the old dev: prefix dropped).
+	// With -user, that name becomes the handle (the old dev: prefix dropped).
 	res, err = resolveUser(nil, "dev:bob")
 	if err != nil || res.create != "bob" {
 		t.Fatalf("got %+v, %v; want create bob", res, err)
@@ -45,15 +45,15 @@ func TestResolveUserRefusesToGuessAmongSeveral(t *testing.T) {
 		t.Fatal("expected a refusal with several users")
 	}
 	for _, u := range users {
-		if !strings.Contains(err.Error(), u.ID.String()) || !strings.Contains(err.Error(), u.AppleSub) {
-			t.Errorf("the refusal does not list %s (%s): %v", u.ID, u.AppleSub, err)
+		if !strings.Contains(err.Error(), u.ID.String()) || !strings.Contains(err.Error(), u.Handle) {
+			t.Errorf("the refusal does not list %s (%s): %v", u.ID, u.Handle, err)
 		}
 	}
 	if !strings.Contains(err.Error(), "-user") || !strings.Contains(err.Error(), "TOKEN_USER") {
 		t.Errorf("the refusal does not say how to choose: %v", err)
 	}
 
-	// An explicit choice settles it — by apple_sub or by id.
+	// An explicit choice settles it — by handle or by id.
 	if res, err := resolveUser(users, "bob"); err != nil || res.user.ID != users[0].ID {
 		t.Errorf("-user bob: %+v, %v", res, err)
 	}

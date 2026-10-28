@@ -49,7 +49,7 @@ func TestIntensityAgainstTheDatabase(t *testing.T) {
 	pool := testPool(t)
 
 	var uid uuid.UUID
-	if err := pool.QueryRow(ctx, `INSERT INTO users (apple_sub) VALUES ($1) RETURNING id`,
+	if err := pool.QueryRow(ctx, `INSERT INTO users (handle) VALUES ($1) RETURNING id`,
 		fmt.Sprintf("intensity-db-test-%d", time.Now().UnixNano())).Scan(&uid); err != nil {
 		t.Fatalf("create user: %v", err)
 	}

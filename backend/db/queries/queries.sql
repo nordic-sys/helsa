@@ -2,10 +2,10 @@
 -- The timezone-aware summary aggregation is NOT here: sqlc cannot type the
 -- Timescale time_bucket(.., tz) function → hand-written pgx in internal/summary.
 
--- name: UpsertUserByAppleSub :one
-INSERT INTO users (apple_sub, email, display_name)
+-- name: UpsertUserByHandle :one
+INSERT INTO users (handle, email, display_name)
 VALUES ($1, $2, $3)
-ON CONFLICT (apple_sub) DO UPDATE
+ON CONFLICT (handle) DO UPDATE
     SET email = COALESCE(EXCLUDED.email, users.email)
 RETURNING *;
 

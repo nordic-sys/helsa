@@ -9,7 +9,7 @@
 \set ON_ERROR_STOP on
 \timing on
 
-INSERT INTO users (id, apple_sub, role) VALUES
+INSERT INTO users (id, handle, role) VALUES
   ('aaaaaaaa-0000-0000-0000-00000000000a', 'bench-a', 'admin'),
   ('bbbbbbbb-0000-0000-0000-00000000000b', 'bench-b', 'member')
 ON CONFLICT DO NOTHING;

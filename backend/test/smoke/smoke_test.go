@@ -28,8 +28,8 @@ import (
 func TestSmoke(t *testing.T) {
 	// --- 1) Session ---
 	e := newEnv(t)
-	c, token, appleSub := e.client, e.token, e.appleSub
-	t.Logf("✓ session: device token obtained (sub=%s)", appleSub)
+	c, token, handle := e.client, e.token, e.handle
+	t.Logf("✓ session: device token obtained (sub=%s)", handle)
 
 	// --- 2) POST + GET /v1/devices (registration, heartbeat, upsert) ---
 	const tz = "Europe/Budapest"
@@ -178,20 +178,20 @@ func TestSmoke(t *testing.T) {
 	//          resolves it),
 	//   wk-2 — its samples come NOW, the workout only in the next chunk (the backfill
 	//          resolves it).
-	wkSrc := appleSub + "-wk-1"
-	wkSrc2 := appleSub + "-wk-2"
+	wkSrc := handle + "-wk-1"
+	wkSrc2 := handle + "-wk-2"
 
 	var samples []api.SampleIn
 	for i, v := range steps {
-		samples = append(samples, sample(appleSub, "stepCount", "count", now.Add(-time.Duration(i)*time.Minute), v, i))
+		samples = append(samples, sample(handle, "stepCount", "count", now.Add(-time.Duration(i)*time.Minute), v, i))
 	}
 	for i, v := range hrs {
-		s := sample(appleSub, "heartRate", "count/min", now.Add(-time.Duration(i)*time.Minute), v, 100+i)
+		s := sample(handle, "heartRate", "count/min", now.Add(-time.Duration(i)*time.Minute), v, 100+i)
 		s.WorkoutSourceUuid = &wkSrc
 		samples = append(samples, s)
 	}
 	for i, v := range hrs {
-		s := sample(appleSub, "heartRate", "count/min", now.Add(-time.Duration(10+i)*time.Minute), v, 200+i)
+		s := sample(handle, "heartRate", "count/min", now.Add(-time.Duration(10+i)*time.Minute), v, 200+i)
 		s.WorkoutSourceUuid = &wkSrc2 // the workout does not exist yet → an orphaned sample
 		samples = append(samples, s)
 	}
@@ -227,7 +227,7 @@ func TestSmoke(t *testing.T) {
 	}}
 	sleepStage := api.SleepSegmentInStage("asleepCore")
 	sleeps := []api.SleepSegmentIn{{
-		SourceUuid: appleSub + "-sl-1", StartedAt: now.Add(-8 * time.Hour), EndedAt: now.Add(-7 * time.Hour), Stage: sleepStage,
+		SourceUuid: handle + "-sl-1", StartedAt: now.Add(-8 * time.Hour), EndedAt: now.Add(-7 * time.Hour), Stage: sleepStage,
 	}}
 	ae, aeg, em, eg, sh, sg := float32(450), float32(500), float32(28), float32(30), float32(9), float32(12)
 	activities := []api.ActivitySummary{{
@@ -584,7 +584,7 @@ func TestSmoke(t *testing.T) {
 	// Sending is an open decision (docs/19); the only question here is whether the
 	// token can be stored, and whether repeated registration updates (rather than
 	// multiplies).
-	pushTok := "apns-" + appleSub
+	pushTok := "apns-" + handle
 	plat := api.PushRegisterPlatform("ios")
 	for i := 0; i < 2; i++ {
 		if st := c.do(t, http.MethodPost, "/v1/push/register", token, api.PushRegister{

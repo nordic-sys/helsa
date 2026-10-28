@@ -37,7 +37,7 @@ Output:
 
 ```
 device:        iphone
-user:          6d08a14d-… (apple_sub owner)
+user:          6d08a14d-… (handle owner)
 token id:      3f2b9c1e-…
 access_token:  eyJhbGciOiJIUzI1NiIs...
 expires:       2027-10-27T12:17:18Z (8760h0m0s from now)
@@ -56,7 +56,7 @@ make prod-token SUBJECT=browser
 
 On an empty database the first token creates the user. ⚠️ If the database holds **more than one**
 user — an install that issued tokens with the tool before 2026-10-27 made one per subject — the
-tool refuses and lists them; pick one with `TOKEN_USER=<id or apple_sub>`. The old per-subject
+tool refuses and lists them; pick one with `TOKEN_USER=<id or handle>`. The old per-subject
 users are not merged: revoke their tokens and issue new ones for the user that holds your data.
 
 ## Lifetime

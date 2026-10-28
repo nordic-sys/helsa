@@ -8,6 +8,15 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+type AccountEvent struct {
+	ID      int64              `json:"id"`
+	UserID  pgtype.UUID        `json:"user_id"`
+	ActorID pgtype.UUID        `json:"actor_id"`
+	Kind    string             `json:"kind"`
+	At      pgtype.Timestamptz `json:"at"`
+	Detail  []byte             `json:"detail"`
+}
+
 type Achievement struct {
 	UserID     pgtype.UUID        `json:"user_id"`
 	ID         string             `json:"id"`
@@ -34,6 +43,18 @@ type ActivitySummary struct {
 	IngestedAt       pgtype.Timestamptz `json:"ingested_at"`
 }
 
+type DeletionJob struct {
+	ID          pgtype.UUID        `json:"id"`
+	UserID      pgtype.UUID        `json:"user_id"`
+	Handle      string             `json:"handle"`
+	RequestedBy pgtype.UUID        `json:"requested_by"`
+	RequestedAt pgtype.Timestamptz `json:"requested_at"`
+	Stage       string             `json:"stage"`
+	Attempts    int32              `json:"attempts"`
+	LastError   *string            `json:"last_error"`
+	DoneAt      pgtype.Timestamptz `json:"done_at"`
+}
+
 type Device struct {
 	ID         pgtype.UUID        `json:"id"`
 	UserID     pgtype.UUID        `json:"user_id"`
@@ -54,6 +75,18 @@ type DeviceToken struct {
 	ExpiresAt  pgtype.Timestamptz `json:"expires_at"`
 	LastUsedAt pgtype.Timestamptz `json:"last_used_at"`
 	RevokedAt  pgtype.Timestamptz `json:"revoked_at"`
+}
+
+type EnrolmentCode struct {
+	CodeHash  []byte             `json:"code_hash"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	Purpose   string             `json:"purpose"`
+	CreatedBy pgtype.UUID        `json:"created_by"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+	UsedAt    pgtype.Timestamptz `json:"used_at"`
+	UsedLabel *string            `json:"used_label"`
+	RevokedAt pgtype.Timestamptz `json:"revoked_at"`
 }
 
 type Goal struct {
@@ -124,7 +157,7 @@ type SyncState struct {
 
 type User struct {
 	ID          pgtype.UUID        `json:"id"`
-	AppleSub    string             `json:"apple_sub"`
+	Handle      string             `json:"handle"`
 	Email       *string            `json:"email"`
 	DisplayName *string            `json:"display_name"`
 	TimeZone    string             `json:"time_zone"`
@@ -135,6 +168,7 @@ type User struct {
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
 	Role        string             `json:"role"`
 	DisabledAt  pgtype.Timestamptz `json:"disabled_at"`
+	HaPublish   bool               `json:"ha_publish"`
 }
 
 type Workout struct {

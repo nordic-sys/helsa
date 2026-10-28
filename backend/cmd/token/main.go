@@ -53,7 +53,7 @@ const maxDeviceLabel = 64
 
 func main() {
 	subject := flag.String("subject", "", "the DEVICE this token is for, e.g. iphone or browser — a label on the token, not a user")
-	user := flag.String("user", "", "the user (id or apple_sub) — needed only when the database holds more than one")
+	user := flag.String("user", "", "the user (id or handle) — needed only when the database holds more than one")
 	revoke := flag.String("revoke", "", "an access token to revoke — the device it is on loses access immediately")
 	flag.Parse()
 
@@ -124,9 +124,9 @@ func main() {
 
 	fmt.Printf("device:        %s\n", device)
 	if created {
-		fmt.Printf("user:          %s (apple_sub %s) — the database had no user, so this one was created\n", owner.ID, owner.AppleSub)
+		fmt.Printf("user:          %s (handle %s) — the database had no user, so this one was created\n", owner.ID, owner.Handle)
 	} else {
-		fmt.Printf("user:          %s (apple_sub %s)\n", owner.ID, owner.AppleSub)
+		fmt.Printf("user:          %s (handle %s)\n", owner.ID, owner.Handle)
 	}
 	fmt.Printf("token id:      %s\n", sess.TokenID)
 	fmt.Printf("access_token:  %s\n", sess.AccessToken)
@@ -141,7 +141,7 @@ func main() {
 // resolveOrCreateUser reads every user, lets resolveUser choose, and creates the
 // user when the choice is "none yet". created reports the latter.
 func resolveOrCreateUser(ctx context.Context, pool *pgxpool.Pool, explicit string) (userRow, bool, error) {
-	rows, err := pool.Query(ctx, `SELECT id, apple_sub, created_at FROM users ORDER BY created_at, id`)
+	rows, err := pool.Query(ctx, `SELECT id, handle, created_at FROM users ORDER BY created_at, id`)
 	if err != nil {
 		return userRow{}, false, fmt.Errorf("list users: %w", err)
 	}
@@ -150,7 +150,7 @@ func resolveOrCreateUser(ctx context.Context, pool *pgxpool.Pool, explicit strin
 		var id pgtype.UUID
 		var u userRow
 		var created pgtype.Timestamptz
-		if err := rows.Scan(&id, &u.AppleSub, &created); err != nil {
+		if err := rows.Scan(&id, &u.Handle, &created); err != nil {
 			rows.Close()
 			return userRow{}, false, fmt.Errorf("scan user: %w", err)
 		}
@@ -169,11 +169,11 @@ func resolveOrCreateUser(ctx context.Context, pool *pgxpool.Pool, explicit strin
 	if res.create == "" {
 		return res.user, false, nil
 	}
-	u, err := db.New(pool).UpsertUserByAppleSub(ctx, db.UpsertUserByAppleSubParams{AppleSub: res.create})
+	u, err := db.New(pool).UpsertUserByHandle(ctx, db.UpsertUserByHandleParams{Handle: res.create})
 	if err != nil {
 		return userRow{}, false, fmt.Errorf("create user: %w", err)
 	}
-	return userRow{ID: pgconv.ToUUID(u.ID), AppleSub: u.AppleSub, CreatedAt: u.CreatedAt.Time}, true, nil
+	return userRow{ID: pgconv.ToUUID(u.ID), Handle: u.Handle, CreatedAt: u.CreatedAt.Time}, true, nil
 }
 
 func fail(format string, a ...any) {

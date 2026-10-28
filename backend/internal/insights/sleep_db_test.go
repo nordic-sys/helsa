@@ -48,7 +48,7 @@ func freshUser(t *testing.T, pool *pgxpool.Pool, tz string) uuid.UUID {
 	t.Helper()
 	var id uuid.UUID
 	err := pool.QueryRow(context.Background(),
-		`INSERT INTO users (apple_sub, time_zone) VALUES ($1, $2) RETURNING id`,
+		`INSERT INTO users (handle, time_zone) VALUES ($1, $2) RETURNING id`,
 		fmt.Sprintf("sleep-db-test-%d", time.Now().UnixNano()), tz).Scan(&id)
 	if err != nil {
 		t.Fatalf("create user: %v", err)

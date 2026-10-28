@@ -30,7 +30,7 @@ type env struct {
 	cfg      *config.Config
 	client   *apiClient
 	token    string
-	appleSub string
+	handle string
 	// store and userID are what the tests that bypass HTTP need — the Home
 	// Assistant publisher reads the database directly, exactly as it does in the
 	// worker.
@@ -93,8 +93,8 @@ func newEnv(t *testing.T) *env {
 	// There is no interactive login: an install-time step issues the device token.
 	// The test therefore asks the service for it — from the HTTP surface it is the
 	// same Bearer token.
-	appleSub := fmt.Sprintf("smoke-%d", time.Now().UnixNano())
-	u, err := db.New(st.DB).UpsertUserByAppleSub(ctx, db.UpsertUserByAppleSubParams{AppleSub: appleSub})
+	handle := fmt.Sprintf("smoke-%d", time.Now().UnixNano())
+	u, err := db.New(st.DB).UpsertUserByHandle(ctx, db.UpsertUserByHandleParams{Handle: handle})
 	must(t, err, "creating the user")
 	sess, err := auth.New(cfg, st.DB, st.Redis).IssueDeviceToken(ctx, pgconv.ToUUID(u.ID), "smoke", uuid.Nil)
 	must(t, err, "issuing the device token")
@@ -103,7 +103,7 @@ func newEnv(t *testing.T) *env {
 		cfg:      cfg,
 		client:   &apiClient{base: ts.URL, hc: ts.Client()},
 		token:    sess.AccessToken,
-		appleSub: appleSub,
+		handle: handle,
 		store:    st,
 		api:      apiStore,
 		userID:   sess.UserID,

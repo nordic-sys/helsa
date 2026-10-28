@@ -79,7 +79,7 @@ func TestDeletingFromCompressedHistoryTakesOnlyTheNamedRows(t *testing.T) {
 
 	var uid uuid.UUID
 	if err := pool.QueryRow(ctx,
-		`INSERT INTO users (apple_sub, time_zone) VALUES ($1, 'Europe/Budapest') RETURNING id`,
+		`INSERT INTO users (handle, time_zone) VALUES ($1, 'Europe/Budapest') RETURNING id`,
 		fmt.Sprintf("ingest-delete-test-%d", time.Now().UnixNano())).Scan(&uid); err != nil {
 		t.Fatalf("create user: %v", err)
 	}

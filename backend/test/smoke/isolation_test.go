@@ -77,7 +77,7 @@ func addPerson(t *testing.T, e *env, name, tz string, steps, hr, energy, goal fl
 	t.Helper()
 	ctx := context.Background()
 	sub := fmt.Sprintf("iso-%s-%d", name, time.Now().UnixNano())
-	u, err := db.New(e.store.DB).UpsertUserByAppleSub(ctx, db.UpsertUserByAppleSubParams{AppleSub: sub})
+	u, err := db.New(e.store.DB).UpsertUserByHandle(ctx, db.UpsertUserByHandleParams{Handle: sub})
 	must(t, err, "create "+name)
 	sess, err := auth.New(e.cfg, e.store.DB, e.store.Redis).IssueDeviceToken(ctx, pgconv.ToUUID(u.ID), name+"-phone", uuid.Nil)
 	must(t, err, "token for "+name)

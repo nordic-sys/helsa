@@ -178,7 +178,7 @@ func (q *Queries) GetSettings(ctx context.Context, id pgtype.UUID) (GetSettingsR
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, apple_sub, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at FROM users WHERE id = $1
+SELECT id, handle, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at, ha_publish FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
@@ -186,7 +186,7 @@ func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.AppleSub,
+		&i.Handle,
 		&i.Email,
 		&i.DisplayName,
 		&i.TimeZone,
@@ -197,6 +197,7 @@ func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
 		&i.CreatedAt,
 		&i.Role,
 		&i.DisabledAt,
+		&i.HaPublish,
 	)
 	return i, err
 }
@@ -1086,17 +1087,17 @@ func (q *Queries) UpsertSleepSegment(ctx context.Context, arg UpsertSleepSegment
 	return err
 }
 
-const upsertUserByAppleSub = `-- name: UpsertUserByAppleSub :one
+const upsertUserByHandle = `-- name: UpsertUserByHandle :one
 
-INSERT INTO users (apple_sub, email, display_name)
+INSERT INTO users (handle, email, display_name)
 VALUES ($1, $2, $3)
-ON CONFLICT (apple_sub) DO UPDATE
+ON CONFLICT (handle) DO UPDATE
     SET email = COALESCE(EXCLUDED.email, users.email)
-RETURNING id, apple_sub, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at
+RETURNING id, handle, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at, ha_publish
 `
 
-type UpsertUserByAppleSubParams struct {
-	AppleSub    string  `json:"apple_sub"`
+type UpsertUserByHandleParams struct {
+	Handle      string  `json:"handle"`
 	Email       *string `json:"email"`
 	DisplayName *string `json:"display_name"`
 }
@@ -1104,12 +1105,12 @@ type UpsertUserByAppleSubParams struct {
 // Type-safe queries (sqlc generates Go from these into the internal/db package).
 // The timezone-aware summary aggregation is NOT here: sqlc cannot type the
 // Timescale time_bucket(.., tz) function → hand-written pgx in internal/summary.
-func (q *Queries) UpsertUserByAppleSub(ctx context.Context, arg UpsertUserByAppleSubParams) (User, error) {
-	row := q.db.QueryRow(ctx, upsertUserByAppleSub, arg.AppleSub, arg.Email, arg.DisplayName)
+func (q *Queries) UpsertUserByHandle(ctx context.Context, arg UpsertUserByHandleParams) (User, error) {
+	row := q.db.QueryRow(ctx, upsertUserByHandle, arg.Handle, arg.Email, arg.DisplayName)
 	var i User
 	err := row.Scan(
 		&i.ID,
-		&i.AppleSub,
+		&i.Handle,
 		&i.Email,
 		&i.DisplayName,
 		&i.TimeZone,
@@ -1120,6 +1121,7 @@ func (q *Queries) UpsertUserByAppleSub(ctx context.Context, arg UpsertUserByAppl
 		&i.CreatedAt,
 		&i.Role,
 		&i.DisabledAt,
+		&i.HaPublish,
 	)
 	return i, err
 }

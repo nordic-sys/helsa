@@ -13,6 +13,7 @@ sql:
       - "db/migrations/00010_phone_settings.sql"
       - "db/migrations/00012_users_roles.sql"
       - "db/migrations/00013_device_tokens.sql"
+      - "db/migrations/00015_household.sql"
     queries: "db/queries"
     gen:
       go:
