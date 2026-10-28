@@ -71,26 +71,30 @@ openssl rand -hex 32      # → REDIS_PASSWORD=…
 openssl rand -hex 32      # → RABBITMQ_PASSWORD=…
 ```
 
-**b) Four more lines are NOT in `.env` — add them at the end.** `HELSA_JWT_SECRET`,
-`HELSA_APP_DB_PASSWORD`, `LAN_SUBNET` and `WG_SUBNET` are not in `.env.example` (only commented
+**b) Five more lines are NOT in `.env` — add them at the end.** `HELSA_JWT_SECRET`,
+`HELSA_APP_DB_PASSWORD`, `HELSA_WORKER_DB_PASSWORD`, `LAN_SUBNET` and `WG_SUBNET` are not in `.env.example` (only commented
 reminders at its end), so there is nothing to edit; you append them:
 
 ```bash title="On the server"
 cd ~/helsa/deploy                      # wherever your clone lives
 echo "" >> .env
 echo "HELSA_JWT_SECRET=$(openssl rand -base64 48)" >> .env
-echo "HELSA_APP_DB_PASSWORD=$(openssl rand -hex 32)" >> .env   # the application's database login
+echo "HELSA_APP_DB_PASSWORD=$(openssl rand -hex 32)" >> .env   # the API's database login
+echo "HELSA_WORKER_DB_PASSWORD=$(openssl rand -hex 32)" >> .env   # the worker's database login
 echo "LAN_SUBNET=192.168.1.0/24" >> .env   # your home network
 echo "WG_SUBNET=10.100.0.0/24" >> .env     # your WireGuard range (the addresses the VPN hands out)
 chmod 600 .env
-grep -cE "^(HELSA_JWT_SECRET|HELSA_APP_DB_PASSWORD|LAN_SUBNET|WG_SUBNET)=" .env   # must print 4
+grep -cE "^(HELSA_JWT_SECRET|HELSA_APP_DB_PASSWORD|HELSA_WORKER_DB_PASSWORD|LAN_SUBNET|WG_SUBNET)=" .env   # must print 5
 ```
 
-**`HELSA_APP_DB_PASSWORD` is the application's own database login.** The api, the worker and the
-token tool connect as `helsa_app`, a role that can read and write rows in Helsa's tables and nothing
-else; `POSTGRES_USER` stays the owner, which only the migrations use. The database creates
-`helsa_app` on its first start from this value — so, like the others, set it **before** step 3. A
-production stack without it refuses to start, with a message naming it. (Upgrading an install from
+**`HELSA_APP_DB_PASSWORD` and `HELSA_WORKER_DB_PASSWORD` are the application's own database
+logins.** The API connects as `helsa_app`, the worker and the token tool as `helsa_worker`; neither
+can do anything but read and write rows, and `POSTGRES_USER` stays the owner, which only the
+migrations use. Two roles because the API reads every person's rows only through the database's
+own filters: on a server shared by a household, the database itself hands the API nothing but the
+signed-in person's data, even if a query forgot to ask for it. The database creates both roles on its first start
+from these values — so, like the others, set them **before** step 3. A production stack without
+them refuses to start, with a message naming the missing one. (Upgrading an install from
 before `helsa_app` existed: [the steps are below](#upgrading-an-install-from-before-helsa_app).)
 
 `LAN_SUBNET` and `WG_SUBNET` are the two ranges the dashboard on `:8443` answers; everything else
@@ -118,7 +122,8 @@ with a message naming it (the compose files read it as `$${HELSA_JWT_SECRET:?…
 | Variable | What it is | If you get it wrong |
 |---|---|---|
 | `POSTGRES_PASSWORD` | The database owner's password — the migrations and backups use it. | Migrations and backups cannot log in. |
-| `HELSA_APP_DB_PASSWORD` | The application role `helsa_app`'s password — the API, the worker and the token tool log in with it. | Missing: the production stack refuses to start. Changed in `.env` only: the API cannot log in until `make prod-app-role` sets it in the database too. |
+| `HELSA_APP_DB_PASSWORD` | The API's role `helsa_app`'s password. | Missing: the production stack refuses to start. Changed in `.env` only: the API cannot log in until `make prod-app-role` sets it in the database too. |
+| `HELSA_WORKER_DB_PASSWORD` | The worker's and the token tool's role `helsa_worker`'s password. | The same as above, for the worker: uploads are accepted and never written. |
 | `REDIS_PASSWORD` | Cache password. | Readiness check fails. |
 | `RABBITMQ_PASSWORD` | Queue password. | Uploads are accepted but never processed. |
 | `HELSA_JWT_SECRET` | Signs device tokens. | **Anyone who knows it can mint a token for your data.** Treat it like a private key. |
@@ -165,11 +170,13 @@ And that the application has its own, unprivileged login:
 
 ```bash title="On the server"
 docker compose exec timescaledb \
-  psql -U helsa -d helsa -c '\du helsa_app'
+  psql -U helsa -d helsa -c '\du helsa_*'
 ```
 
-One row, `helsa_app`, with no attributes beside it — no *Superuser*, no *Create role*, no *Create
-DB*. `make prod-migrate` ends by refreshing that role's grants (`helsa_app: role and grants are in
+Two rows. `helsa_app` with no attributes beside it — no *Superuser*, no *Create role*, no *Create
+DB*. `helsa_worker` with one, *Bypass RLS*, and that one on purpose: the database's per-person
+filters guard what the API reads, while the worker writes everyone's uploads, each one to the person
+who sent it. `make prod-migrate` ends by refreshing that role's grants (`helsa_app: role and grants are in
 place.`), so the tables the migration just created are covered.
 
 You should see `users`, `devices`, `workouts`, `workout_route_points`,
@@ -302,6 +309,23 @@ make prod-pull      # the images
 make prod-migrate   # only if the pull brought new migrations — read them first
 make prod-up
 ```
+
+### Upgrading an install from before `helsa_worker`
+
+A household server (2026-11) gives the worker and the token tool a role of their own, and the API
+loses its direct access to the raw samples. On an install that already has `helsa_app`:
+
+```bash title="On the server"
+cd ~/helsa/deploy
+git pull                                                          # 1. the Compose files, the migrations, the role script
+echo "HELSA_WORKER_DB_PASSWORD=$(openssl rand -hex 32)" >> .env   # 2. the new key (once; never echoed)
+make prod-pull                                                    # 3. the images
+make prod-migrate                                                 # 4. the migrations, then BOTH roles' grants
+make prod-up                                                      # 5. the worker and the token tool now log in as helsa_worker
+```
+
+Step 4 needs the new key: with `HELSA_WORKER_DB_PASSWORD` missing, the role script stops with a
+message naming it, and the worker would not be able to log in.
 
 ### Upgrading an install from before `helsa_app`
 

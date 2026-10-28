@@ -23,6 +23,8 @@ import (
 	"github.com/nordic-sys/helsa/backend/internal/api"
 	"github.com/nordic-sys/helsa/backend/internal/db"
 	"github.com/nordic-sys/helsa/backend/internal/pgconv"
+	"github.com/nordic-sys/helsa/backend/internal/store"
+	"github.com/nordic-sys/helsa/backend/internal/tenant"
 )
 
 const dbTZ = "Europe/Budapest"
@@ -33,7 +35,7 @@ func testPool(t *testing.T) *pgxpool.Pool {
 	if url == "" {
 		url = "postgres://helsa:helsa_local_dev@localhost:5433/helsa?sslmode=disable"
 	}
-	pool, err := pgxpool.New(context.Background(), url)
+	pool, err := store.NewPool(context.Background(), url)
 	if err != nil {
 		t.Fatalf("open the database: %v", err)
 	}
@@ -153,7 +155,7 @@ func TestTheChallengeReadsTheUploadedSettings(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, err := svc.Get(ctx, uid, Query{Month: m, Loc: loc, Now: now})
+	got, err := svc.Get(tenant.With(ctx, uid), uid, Query{Month: m, Loc: loc, Now: now})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -186,7 +188,7 @@ func TestTheChallengeReadsTheUploadedSettings(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	got, err = svc.Get(ctx, uid, Query{Month: m, Loc: loc, Now: now})
+	got, err = svc.Get(tenant.With(ctx, uid), uid, Query{Month: m, Loc: loc, Now: now})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -215,7 +217,7 @@ func TestTheChallengeReadsTheUploadedSettings(t *testing.T) {
 	if err := q.PutChallengeSettings(ctx, db.PutChallengeSettingsParams{UserID: pgconv.UUID(uid)}); err != nil {
 		t.Fatal(err)
 	}
-	got, _ = svc.Get(ctx, uid, Query{Month: m, Loc: loc, Now: now})
+	got, _ = svc.Get(tenant.With(ctx, uid), uid, Query{Month: m, Loc: loc, Now: now})
 	if got.ThresholdsSource != api.ChallengeResponseThresholdsSourceSettings || got.Goal == nil ||
 		*got.Goal != DefaultThresholds[len(DefaultThresholds)-1] {
 		t.Errorf("factory row: source %q goal %v", got.ThresholdsSource, got.Goal)
@@ -227,14 +229,14 @@ func TestTheChallengeReadsTheUploadedSettings(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	got, _ = svc.Get(ctx, uid, Query{Month: m, Loc: loc, Now: now})
+	got, _ = svc.Get(tenant.With(ctx, uid), uid, Query{Month: m, Loc: loc, Now: now})
 	if got.Goal != nil || len(got.Thresholds) != 0 || got.Streak.DailyGoal != nil {
 		t.Errorf("deleted milestones: goal %v, thresholds %v, daily %v", got.Goal, got.Thresholds, got.Streak.DailyGoal)
 	}
 
 	// An explicit parameter still wins over everything.
 	explicit := NewThresholds([]int{1_000})
-	got, _ = svc.Get(ctx, uid, Query{Month: m, Loc: loc, Now: now, Thresholds: &explicit})
+	got, _ = svc.Get(tenant.With(ctx, uid), uid, Query{Month: m, Loc: loc, Now: now, Thresholds: &explicit})
 	if got.ThresholdsSource != api.ChallengeResponseThresholdsSourceRequest {
 		t.Errorf("explicit parameter: source = %q", got.ThresholdsSource)
 	}

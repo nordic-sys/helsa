@@ -21,6 +21,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/nordic-sys/helsa/backend/internal/pgconv"
+	"github.com/nordic-sys/helsa/backend/internal/store"
+	"github.com/nordic-sys/helsa/backend/internal/tenant"
 )
 
 func testPool(t *testing.T) *pgxpool.Pool {
@@ -29,7 +31,7 @@ func testPool(t *testing.T) *pgxpool.Pool {
 	if url == "" {
 		url = "postgres://helsa:helsa_local_dev@localhost:5433/helsa?sslmode=disable"
 	}
-	pool, err := pgxpool.New(context.Background(), url)
+	pool, err := store.NewPool(context.Background(), url)
 	if err != nil {
 		t.Fatalf("open the database: %v", err)
 	}
@@ -125,7 +127,7 @@ func TestIntensityAgainstTheDatabase(t *testing.T) {
 	workout("running", now.AddDate(0, 0, -9), nil)
 
 	svc := New(pool)
-	got, err := svc.Intensity(ctx, uid, from, to, now)
+	got, err := svc.Intensity(tenant.With(ctx, uid), uid, from, to, now)
 	if err != nil {
 		t.Fatal(err)
 	}

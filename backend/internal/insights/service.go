@@ -281,7 +281,7 @@ SELECT w.started_at, w.ended_at, w.activity_type, w.total_energy_kcal, w.total_d
 FROM workouts w
 LEFT JOIN (
     SELECT s.workout_id, avg(s.value) AS avg_hr
-    FROM samples s
+    FROM my_samples s
     WHERE s.user_id = $1 AND s.data_type = 'heartRate' AND s.workout_id IS NOT NULL
     GROUP BY s.workout_id
 ) hr ON hr.workout_id = w.id

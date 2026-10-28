@@ -28,6 +28,8 @@ import (
 
 	"github.com/nordic-sys/helsa/backend/internal/api"
 	"github.com/nordic-sys/helsa/backend/internal/pgconv"
+	"github.com/nordic-sys/helsa/backend/internal/store"
+	"github.com/nordic-sys/helsa/backend/internal/tenant"
 )
 
 func testPool(t *testing.T) *pgxpool.Pool {
@@ -36,7 +38,7 @@ func testPool(t *testing.T) *pgxpool.Pool {
 	if url == "" {
 		url = "postgres://helsa:helsa_local_dev@localhost:5433/helsa?sslmode=disable"
 	}
-	pool, err := pgxpool.New(context.Background(), url)
+	pool, err := store.NewPool(context.Background(), url)
 	if err != nil {
 		t.Fatalf("open the database: %v", err)
 	}
@@ -105,7 +107,7 @@ func TestTheDayGridIsCutInTheUsersTimeZone(t *testing.T) {
 	insert(t, pool, uid, "stepCount", local, "com.nordic-sys.Helsa", nil)
 
 	svc := New(pool)
-	resp, err := svc.Compute(context.Background(), uid, Request{
+	resp, err := svc.Compute(tenant.With(context.Background(), uid), uid, Request{
 		From:   time.Date(2026, 6, 1, 0, 0, 0, 0, budapest),
 		ToExcl: time.Date(2026, 6, 30, 0, 0, 0, 0, budapest),
 		TZ:     "Europe/Budapest",
@@ -140,7 +142,7 @@ func TestTheStatesComeOutOfTheDatabaseCorrectly(t *testing.T) {
 		"com.example.scale", nil)
 
 	svc := New(pool)
-	resp, err := svc.Compute(context.Background(), uid, Request{From: from, ToExcl: toExcl, TZ: "Europe/Budapest"})
+	resp, err := svc.Compute(tenant.With(context.Background(), uid), uid, Request{From: from, ToExcl: toExcl, TZ: "Europe/Budapest"})
 	if err != nil {
 		t.Fatalf("compute: %v", err)
 	}
@@ -182,7 +184,7 @@ func TestSourcesComeBackPerAppAndDeviceKind(t *testing.T) {
 	insert(t, pool, uid, "heartRate", base.Add(time.Hour), "com.example.strap", nil)
 
 	svc := New(pool)
-	resp, err := svc.Compute(context.Background(), uid, Request{
+	resp, err := svc.Compute(tenant.With(context.Background(), uid), uid, Request{
 		From:   time.Date(2026, 6, 1, 0, 0, 0, 0, budapest),
 		ToExcl: time.Date(2026, 7, 1, 0, 0, 0, 0, budapest),
 		TZ:     "Europe/Budapest",
@@ -223,7 +225,7 @@ func TestAnEmptyDatabaseReportsAbsenceNotZeroes(t *testing.T) {
 	budapest, _ := time.LoadLocation("Europe/Budapest")
 
 	svc := New(pool)
-	resp, err := svc.Compute(context.Background(), uid, Request{
+	resp, err := svc.Compute(tenant.With(context.Background(), uid), uid, Request{
 		From:   time.Date(2026, 6, 1, 0, 0, 0, 0, budapest),
 		ToExcl: time.Date(2026, 7, 1, 0, 0, 0, 0, budapest),
 		TZ:     "Europe/Budapest",

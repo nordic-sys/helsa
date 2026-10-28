@@ -29,6 +29,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/nordic-sys/helsa/backend/internal/pgconv"
+	"github.com/nordic-sys/helsa/backend/internal/store"
+	"github.com/nordic-sys/helsa/backend/internal/tenant"
 )
 
 const tz = "Europe/Budapest"
@@ -45,7 +47,7 @@ func testPool(t *testing.T) *pgxpool.Pool {
 	if url == "" {
 		url = "postgres://helsa:helsa_local_dev@localhost:5433/helsa?sslmode=disable"
 	}
-	pool, err := pgxpool.New(context.Background(), url)
+	pool, err := store.NewPool(context.Background(), url)
 	if err != nil {
 		t.Fatalf("open the database: %v", err)
 	}
@@ -70,7 +72,7 @@ func ownerPool(t *testing.T) *pgxpool.Pool {
 	if url == "" {
 		url = "postgres://helsa:helsa_local_dev@localhost:5433/helsa?sslmode=disable"
 	}
-	pool, err := pgxpool.New(context.Background(), url)
+	pool, err := store.NewPool(context.Background(), url)
 	if err != nil {
 		t.Fatalf("open the database as the owner: %v", err)
 	}
@@ -118,7 +120,7 @@ type row struct {
 
 func query(t *testing.T, pool *pgxpool.Pool, uid uuid.UUID, dataType, bucket string, from, to time.Time) []row {
 	t.Helper()
-	rows, err := pool.Query(context.Background(), BucketQuery, pgconv.UUID(uid), []string{dataType},
+	rows, err := pool.Query(tenant.With(context.Background(), uid), BucketQuery, pgconv.UUID(uid), []string{dataType},
 		bucket, tz, pgconv.Timestamptz(from), pgconv.Timestamptz(to))
 	if err != nil {
 		t.Fatalf("query: %v", err)

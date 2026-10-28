@@ -33,7 +33,7 @@ func Open(ctx context.Context, cfg *config.Config) (*Store, error) {
 }
 
 func open(ctx context.Context, cfg *config.Config) (*Store, error) {
-	pool, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	pool, err := NewPool(ctx, cfg.DatabaseURL)
 	if err != nil {
 		return nil, fmt.Errorf("pgxpool new: %w", err)
 	}

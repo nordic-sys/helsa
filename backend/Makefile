@@ -78,8 +78,24 @@ migrate: ## Apply the goose migrations (idempotent against an already bootstrapp
 # Unset, it falls back to HELSA_DATABASE_URL.
 SMOKE_PKGS := ./test/smoke ./internal/insights ./internal/coverage ./internal/sourcemerge ./internal/ingeststat ./internal/queue ./internal/workouts ./internal/latest ./internal/challenge ./internal/journal ./internal/ingest
 
+# ⛔ test/smoke runs the API as helsa_app and the worker as helsa_worker — never as
+# the owner, whom row-level security does not bind (docs/36 §4.8.8, §9 C17): a smoke
+# run as the owner would pass with every policy missing. The two URLs are built from
+# the passwords in deploy/.env (`cd ../deploy && make app-role` creates the roles).
+DEPLOY_ENV := ../deploy/.env
+SMOKE_APP_PW := $(shell sed -n 's/^HELSA_APP_DB_PASSWORD=//p' $(DEPLOY_ENV) 2>/dev/null)
+SMOKE_WORKER_PW := $(shell sed -n 's/^HELSA_WORKER_DB_PASSWORD=//p' $(DEPLOY_ENV) 2>/dev/null)
+SMOKE_DB := localhost:5433/helsa?sslmode=disable
+# -p 1: the packages share ONE database and one samples hypertable, and the ingest
+# package's test compresses old chunks and relies on them staying compressed. Run in
+# parallel, another package's writes into the same chunk made it fail 2 runs in 3
+# (2026-10-28); serially, 3 in 3 pass. Packages, not tests, are what -p serialises.
+
 smoke: $(ENV_FILE) ## E2E smoke: auth -> ingest -> summary (against the running infrastructure)
-	go test -tags smoke -count=1 -v $(SMOKE_PKGS)
+	@test -n "$(SMOKE_APP_PW)" -a -n "$(SMOKE_WORKER_PW)" || { echo "smoke needs HELSA_APP_DB_PASSWORD and HELSA_WORKER_DB_PASSWORD in $(DEPLOY_ENV), then: cd ../deploy && make app-role"; exit 1; }
+	HELSA_SMOKE_API_DATABASE_URL="postgres://helsa_app:$(SMOKE_APP_PW)@$(SMOKE_DB)" \
+	HELSA_SMOKE_WORKER_DATABASE_URL="postgres://helsa_worker:$(SMOKE_WORKER_PW)@$(SMOKE_DB)" \
+	go test -p 1 -tags smoke -count=1 -v $(SMOKE_PKGS)
 
 test: ## Unit tests
 	go test ./...

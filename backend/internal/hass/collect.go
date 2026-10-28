@@ -15,6 +15,7 @@ import (
 	"github.com/nordic-sys/helsa/backend/internal/pgconv"
 	"github.com/nordic-sys/helsa/backend/internal/sleep"
 	"github.com/nordic-sys/helsa/backend/internal/sourcemerge"
+	"github.com/nordic-sys/helsa/backend/internal/tenant"
 )
 
 // errNoTarget: there is nobody to publish for. Not a failure — a brand-new
@@ -117,6 +118,9 @@ func (s Snapshot) value(suffix string) *float64 {
 
 // collectDaily gathers today's summary in the user's timezone.
 func collectDaily(ctx context.Context, pool *pgxpool.Pool, t target, now time.Time) (Snapshot, error) {
+	// Read as the published user: the source-merged sums come through my_samples,
+	// which shows nothing without one (internal/store, docs/36 §4.8.8).
+	ctx = tenant.With(ctx, t.userID)
 	local := now.In(t.loc)
 	dayStart := time.Date(local.Year(), local.Month(), local.Day(), 0, 0, 0, 0, t.loc)
 	dayEnd := dayStart.AddDate(0, 0, 1)
@@ -320,6 +324,7 @@ type Freshness struct {
 // looking healthy through weeks of a phone that had stopped syncing — precisely
 // the failure the metric exists to catch.
 func collectFreshness(ctx context.Context, pool *pgxpool.Pool, t target, now time.Time) (Freshness, error) {
+	ctx = tenant.With(ctx, t.userID)
 	const q = `
 SELECT GREATEST(
          COALESCE((SELECT max(ts) FROM samples WHERE user_id = $1), 'epoch'::timestamptz),

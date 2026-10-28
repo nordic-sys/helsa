@@ -28,6 +28,7 @@ services:
       # with it. Empty means no application role (local development). On an install
       # that already has data, `make prod-app-role` is the way in — see that file.
       HELSA_APP_DB_PASSWORD: ${HELSA_APP_DB_PASSWORD:-}
+      HELSA_WORKER_DB_PASSWORD: ${HELSA_WORKER_DB_PASSWORD:-}
     volumes:
       # The -ha image creates PGDATA in the /home/postgres/pgdata/data subdirectory;
       # the named volume is mounted on the PARENT directory, so that initdb can chmod
@@ -59,6 +60,7 @@ services:
       PGPASSWORD: ${POSTGRES_PASSWORD:-helsa_local_dev}
       PGDATABASE: ${POSTGRES_DB:-helsa}
       HELSA_APP_DB_PASSWORD: ${HELSA_APP_DB_PASSWORD:-}
+      HELSA_WORKER_DB_PASSWORD: ${HELSA_WORKER_DB_PASSWORD:-}
       # Here an empty password is an error, not "local development": somebody
       # asked for the role by name.
       HELSA_APP_ROLE_REQUIRED: "1"

@@ -32,7 +32,7 @@ func (s *DBSource) Journal(ctx context.Context, userID uuid.UUID, req Request, f
 
 const samplesQuery = `
 SELECT ts, data_type, value, unit, source_device, source_uuid
-FROM samples
+FROM my_samples
 WHERE user_id = $1
   AND ts >= $2 AND ts < $3
   AND (cardinality($4::text[]) = 0 OR data_type = ANY($4::text[]))

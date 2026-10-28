@@ -19,6 +19,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/nordic-sys/helsa/backend/internal/pgconv"
+	"github.com/nordic-sys/helsa/backend/internal/store"
+	"github.com/nordic-sys/helsa/backend/internal/tenant"
 )
 
 const tz = "Europe/Budapest"
@@ -29,7 +31,7 @@ func testPool(t *testing.T) *pgxpool.Pool {
 	if url == "" {
 		url = "postgres://helsa:helsa_local_dev@localhost:5433/helsa?sslmode=disable"
 	}
-	pool, err := pgxpool.New(context.Background(), url)
+	pool, err := store.NewPool(context.Background(), url)
 	if err != nil {
 		t.Fatalf("open the database: %v", err)
 	}
@@ -92,7 +94,7 @@ func TestLatestAgainstTheDatabase(t *testing.T) {
 	insert(t, pool, uid, "stepCount", day.Add(-20*time.Hour), f(9999), "phone")
 
 	svc := New(pool)
-	resp, err := svc.Compute(context.Background(), uid, Request{
+	resp, err := svc.Compute(tenant.With(context.Background(), uid), uid, Request{
 		Metrics: []string{"bodyMass", "stepCount", "bloodGlucose"},
 		TZ:      tz,
 	})

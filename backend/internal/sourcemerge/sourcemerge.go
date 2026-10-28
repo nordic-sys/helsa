@@ -78,7 +78,7 @@ WITH per_source AS (
            count(value) AS n,
            min(value)   AS min_value,
            max(value)   AS max_value
-    FROM samples
+    FROM my_samples
     WHERE user_id = $1
       AND data_type = ANY($2::text[])
       AND ts >= $5 AND ts < $6

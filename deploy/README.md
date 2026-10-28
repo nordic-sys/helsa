@@ -88,11 +88,14 @@ The expected directory layout is documented at the top of
   start-up side effect. On a live database, "migrate on start-up" is hard to reverse
   after a bad deploy.
 - **The application is not the database owner.** The migrations run as the owner
-  (`POSTGRES_USER`, a superuser); the api, the worker and the token tool connect as
-  `helsa_app`, which may read and write rows and nothing else
-  (`init/timescaledb/03-app-role.sql`). A fresh database creates the role on its
-  first start from `HELSA_APP_DB_PASSWORD`; an older install gets it with
-  `make prod-app-role`. `make prod-migrate` re-applies its grants after migrating.
+  (`POSTGRES_USER`, a superuser); the api connects as `helsa_app`, the worker and
+  the token tool as `helsa_worker`, and both may read and write rows and nothing else
+  (`init/timescaledb/03-app-role.sql`). `helsa_app` reads people's rows only through
+  row-level security and the `my_samples` view — never the raw samples — so the
+  database itself keeps household members apart (docs/36 §4.8.8). A fresh database
+  creates both roles on its first start from `HELSA_APP_DB_PASSWORD` and
+  `HELSA_WORKER_DB_PASSWORD`; an older install gets them with `make prod-app-role`.
+  `make prod-migrate` re-applies their grants after migrating.
 - **The signing material lives outside the checkout** (`/opt/helsa/pki`), so it can
   neither end up in the repository nor be swept away by a `git clean`.
 

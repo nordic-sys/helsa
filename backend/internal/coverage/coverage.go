@@ -342,7 +342,7 @@ const daysQuery = `
 SELECT data_type,
        (ts AT TIME ZONE $4::text)::date AS day,
        count(*)::int
-FROM samples
+FROM my_samples
 WHERE user_id = $1
   AND ts >= $2 AND ts < $3
 GROUP BY data_type, day
@@ -351,7 +351,7 @@ ORDER BY data_type, day`
 const everQuery = `
 SELECT data_type,
        (max(ts) AT TIME ZONE $2::text)::date
-FROM samples
+FROM my_samples
 WHERE user_id = $1
 GROUP BY data_type`
 
@@ -361,7 +361,7 @@ SELECT data_type,
        source_device,
        count(*)::int,
        (max(ts) AT TIME ZONE $4::text)::date
-FROM samples
+FROM my_samples
 WHERE user_id = $1
   AND ts >= $2 AND ts < $3
 GROUP BY data_type, source_bundle, source_device`

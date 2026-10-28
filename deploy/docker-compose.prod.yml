@@ -81,7 +81,7 @@ services:
     container_name: helsa-worker
     env_file: .env
     environment:
-      HELSA_DATABASE_URL: "postgres://helsa_app:${HELSA_APP_DB_PASSWORD:?set HELSA_APP_DB_PASSWORD in .env, then run make prod-app-role}@timescaledb:5432/${POSTGRES_DB:-helsa}?sslmode=disable"
+      HELSA_DATABASE_URL: "postgres://helsa_worker:${HELSA_WORKER_DB_PASSWORD:?set HELSA_WORKER_DB_PASSWORD in .env, then run make prod-app-role}@timescaledb:5432/${POSTGRES_DB:-helsa}?sslmode=disable"
       POSTGRES_PASSWORD: ""   # blanked — see the api
       HELSA_REDIS_ADDR: "redis:6379"
       HELSA_REDIS_PASSWORD: "${REDIS_PASSWORD}"
@@ -135,7 +135,7 @@ services:
     entrypoint: ["helsa-token"]
     env_file: .env
     environment:
-      HELSA_DATABASE_URL: "postgres://helsa_app:${HELSA_APP_DB_PASSWORD:?set HELSA_APP_DB_PASSWORD in .env, then run make prod-app-role}@timescaledb:5432/${POSTGRES_DB:-helsa}?sslmode=disable"
+      HELSA_DATABASE_URL: "postgres://helsa_worker:${HELSA_WORKER_DB_PASSWORD:?set HELSA_WORKER_DB_PASSWORD in .env, then run make prod-app-role}@timescaledb:5432/${POSTGRES_DB:-helsa}?sslmode=disable"
       POSTGRES_PASSWORD: ""   # blanked — see the api
       HELSA_REDIS_ADDR: "redis:6379"
       HELSA_REDIS_PASSWORD: "${REDIS_PASSWORD}"

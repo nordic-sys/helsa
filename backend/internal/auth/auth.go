@@ -31,6 +31,7 @@ import (
 	"github.com/nordic-sys/helsa/backend/internal/config"
 	"github.com/nordic-sys/helsa/backend/internal/db"
 	"github.com/nordic-sys/helsa/backend/internal/pgconv"
+	"github.com/nordic-sys/helsa/backend/internal/tenant"
 )
 
 var (
@@ -129,7 +130,7 @@ func (s *Service) IssueDeviceToken(ctx context.Context, userID uuid.UUID, device
 	if createdBy != uuid.Nil {
 		by = pgconv.UUID(createdBy)
 	}
-	if err := s.state.InsertDeviceToken(ctx, db.InsertDeviceTokenParams{
+	if err := s.state.InsertDeviceToken(tenant.With(ctx, userID), db.InsertDeviceTokenParams{
 		ID:        pgconv.UUID(id),
 		UserID:    pgconv.UUID(userID),
 		Label:     device,
@@ -248,6 +249,9 @@ func (s *Service) VerifyAccess(ctx context.Context, token string) (Principal, er
 	}
 
 	p := Principal{UserID: userID, Label: claims.Device, Via: ViaDeviceToken}
+	// The lookups below read rows the policies guard (device_tokens is the user's own),
+	// so they run as the token's user. The `sub` is signed: it was checked above.
+	ctx = tenant.With(ctx, userID)
 	if jti != uuid.Nil {
 		row, err := s.state.GetDeviceToken(ctx, pgconv.UUID(jti))
 		switch {
@@ -321,7 +325,7 @@ func (s *Service) Revoke(ctx context.Context, token string) (time.Time, error) {
 		if s.state == nil {
 			return time.Time{}, errors.New("auth: no database to revoke in")
 		}
-		_, err := s.state.RevokeDeviceToken(ctx, db.RevokeDeviceTokenParams{ID: pgconv.UUID(jti), UserID: pgconv.UUID(userID)})
+		_, err := s.state.RevokeDeviceToken(tenant.With(ctx, userID), db.RevokeDeviceTokenParams{ID: pgconv.UUID(jti), UserID: pgconv.UUID(userID)})
 		switch {
 		case errors.Is(err, pgx.ErrNoRows):
 			// Already revoked (or never registered): either way it no longer works.
@@ -379,6 +383,11 @@ func (s *Service) Middleware(next http.Handler) http.Handler {
 			http.Error(w, "the token cannot be checked right now", http.StatusServiceUnavailable)
 			return
 		}
-		next.ServeHTTP(w, r.WithContext(WithPrincipal(r.Context(), p)))
+		// The database work of this request is done as the caller: the pool sets
+		// helsa.user_id from this (internal/store, docs/36 §4.8.8). In v1 the caller
+		// and the person read are the same; from F2 on the policies decide what else
+		// the caller may read, so this stays the Principal, never the Subject.
+		ctx := tenant.With(WithPrincipal(r.Context(), p), p.UserID)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
 }

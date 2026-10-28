@@ -280,7 +280,7 @@ SELECT w.id, w.started_at, COALESCE(w.ended_at, $4) AS ends_at, hr.ts, hr.value
 FROM workouts w
 LEFT JOIN LATERAL (
     SELECT s.ts, s.value
-    FROM samples s
+    FROM my_samples s
     WHERE s.user_id = w.user_id
       AND s.data_type = 'heartRate'
       AND s.value > 0

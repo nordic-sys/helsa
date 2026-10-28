@@ -22,6 +22,7 @@ import (
 	"github.com/nordic-sys/helsa/backend/internal/db"
 	"github.com/nordic-sys/helsa/backend/internal/pgconv"
 	"github.com/nordic-sys/helsa/backend/internal/summary"
+	"github.com/nordic-sys/helsa/backend/internal/tenant"
 )
 
 // Payload limits (behind the 413). Local dev MVP values.
@@ -147,6 +148,9 @@ func Process(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, body []
 	}
 	counts.BatchID = msg.BatchID
 	uid := pgconv.UUID(msg.UserID)
+	// Everything this batch touches is its user's: the pool sets helsa.user_id from
+	// this before handing out the connection (internal/store).
+	ctx = tenant.With(ctx, msg.UserID)
 
 	tx, err := pool.Begin(ctx)
 	if err != nil {

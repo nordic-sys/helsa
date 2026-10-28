@@ -92,7 +92,7 @@ SELECT t.name, s.ts, s.value, COALESCE(s.unit, '')
 FROM unnest($2::text[]) AS t(name)
 CROSS JOIN LATERAL (
     SELECT ts, value, unit
-    FROM samples
+    FROM my_samples
     WHERE user_id = $1
       AND data_type = t.name
       AND value IS NOT NULL

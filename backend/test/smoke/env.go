@@ -36,6 +36,9 @@ type env struct {
 	// worker.
 	store  *store.Store
 	userID uuid.UUID
+	// api is the API's own connection (helsa_app): what the database lets the API
+	// see, with no application code in between.
+	api *store.Store
 }
 
 func newEnv(t *testing.T) *env {
@@ -62,9 +65,14 @@ func newEnv(t *testing.T) *env {
 	ctx, cancel := context.WithCancel(context.Background())
 	t.Cleanup(cancel)
 
+	// Three connections, as production has them: the owner only for the fixtures
+	// (creating users, flipping roles), the API as helsa_app, the worker as
+	// helsa_worker. Row-level security binds the last two and not the first.
 	st, err := store.Open(ctx, cfg)
-	must(t, err, "store open")
+	must(t, err, "store open (owner, fixtures)")
 	t.Cleanup(st.Close)
+	apiStore := openAs(t, ctx, cfg, "HELSA_SMOKE_API_DATABASE_URL", "helsa_app")
+	workerStore := openAs(t, ctx, cfg, "HELSA_SMOKE_WORKER_DATABASE_URL", "helsa_worker")
 
 	q, err := queue.Open(cfg.RabbitMQURL, cfg.IngestQueue)
 	must(t, err, "queue open")
@@ -73,12 +81,12 @@ func newEnv(t *testing.T) *env {
 	// The worker in-process: it consumes from the queue and writes to the database.
 	go func() {
 		_ = q.Consume(ctx, 4, func(ctx context.Context, body []byte, _ int) error {
-			_, err := ingest.Process(ctx, st.DB, st.Redis, body)
+			_, err := ingest.Process(ctx, workerStore.DB, workerStore.Redis, body)
 			return err
 		})
 	}()
 
-	srv := server.New(cfg, st, q)
+	srv := server.New(cfg, apiStore, q)
 	ts := httptest.NewServer(srv.Router())
 	t.Cleanup(ts.Close)
 
@@ -97,6 +105,28 @@ func newEnv(t *testing.T) *env {
 		token:    sess.AccessToken,
 		appleSub: appleSub,
 		store:    st,
+		api:      apiStore,
 		userID:   sess.UserID,
 	}
+}
+
+// openAs opens a store that logs in as role, from the URL in env. It refuses to run
+// without one: falling back to the owner would make every policy invisible.
+func openAs(t *testing.T, ctx context.Context, cfg *config.Config, env, role string) *store.Store {
+	t.Helper()
+	url := os.Getenv(env)
+	if url == "" {
+		t.Fatalf("%s is not set: the smoke test runs as %s, not as the owner. Run it through `make smoke`.", env, role)
+	}
+	c := *cfg
+	c.DatabaseURL = url
+	st, err := store.Open(ctx, &c)
+	must(t, err, "store open as "+role)
+	t.Cleanup(st.Close)
+	var who string
+	must(t, st.DB.QueryRow(ctx, "SELECT current_user").Scan(&who), "current_user")
+	if who != role {
+		t.Fatalf("%s logs in as %q, want %q", env, who, role)
+	}
+	return st
 }

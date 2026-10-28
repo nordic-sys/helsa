@@ -118,6 +118,15 @@ BEGIN
       AND c.relkind IN ('r', 'p', 'v', 'm')
       AND c.relname <> 'goose_db_version'
   LOOP
+    -- ⛔ The raw samples and the aggregates over them are NOT the API's: it reads
+    -- them through my_samples, which shows only the request's user (00014, docs/36
+    -- §4.8.8). TimescaleDB allows no row security on the compressed hypertable, so
+    -- this missing grant IS the database's line for samples. Revoked every run, so
+    -- an install that had the old grants loses them.
+    IF rel.name::text IN ('samples', 'samples_hourly', 'samples_daily', 'samples_weekly') THEN
+      EXECUTE format('REVOKE ALL ON TABLE %s FROM helsa_app', rel.name);
+      CONTINUE;
+    END IF;
     IF rel.relkind IN ('r', 'p') THEN
       EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE %s TO helsa_app', rel.name);
     ELSE
@@ -152,3 +161,107 @@ END $grants$;
 COMMIT;
 
 \echo 'helsa_app: role and grants are in place.'
+
+-- ===========================================================================
+-- helsa_worker — the worker's and the token tool's role (docs/36 §4.8.8)
+-- ===========================================================================
+--
+-- The API reads through policies and the my_samples view; the worker WRITES the
+-- raw tables — ingest, HealthKit deletions, the Home Assistant publisher, and later
+-- the member-deletion job — and the token tool registers tokens for any user.
+--
+-- ⚠️ BYPASSRLS, deliberately. Row-level security here is the second line on the
+-- API's READ path, against a forgotten `WHERE user_id = …` in a request handler.
+-- The worker takes no request input but the queued message, whose user the API set
+-- from the verified token, and every write it makes is keyed on that user; and its
+-- bulk route insert is a COPY, which PostgreSQL refuses under row security. The
+-- view still filters on helsa.user_id for it too, so where it READS through
+-- my_samples (the Home Assistant sums) it reads as one user at a time.
+--
+-- Password: HELSA_WORKER_DB_PASSWORD, through \getenv like the one above. Without it
+-- the same three cases as for helsa_app.
+
+\set worker_password ''
+\getenv worker_password HELSA_WORKER_DB_PASSWORD
+
+SELECT (:'worker_password' <> '')                                   AS have_worker_password,
+       EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'helsa_worker') AS worker_exists
+\gset
+
+\if :have_worker_password
+\elif :role_required
+  DO $$ BEGIN
+    RAISE EXCEPTION 'HELSA_WORKER_DB_PASSWORD is empty'
+      USING HINT = 'Add HELSA_WORKER_DB_PASSWORD=$(openssl rand -hex 32) to deploy/.env, then run this again.';
+  END $$;
+\elif :worker_exists
+  \echo 'helsa_worker: HELSA_WORKER_DB_PASSWORD is not set — keeping its password, refreshing its grants.'
+\else
+  \echo 'helsa_worker: HELSA_WORKER_DB_PASSWORD is not set — no worker role (local development connects as the owner).'
+  \quit
+\endif
+
+BEGIN;
+
+\if :worker_exists
+\else
+  CREATE ROLE helsa_worker;
+\endif
+
+ALTER ROLE helsa_worker WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION BYPASSRLS INHERIT;
+
+\if :have_worker_password
+  ALTER ROLE helsa_worker WITH PASSWORD :'worker_password';
+\endif
+\unset worker_password
+
+DO $$
+DECLARE granted text;
+BEGIN
+  SELECT string_agg(r.rolname, ', ') INTO granted
+  FROM pg_auth_members m
+  JOIN pg_roles r ON r.oid = m.roleid
+  WHERE m.member = 'helsa_worker'::regrole;
+  IF granted IS NOT NULL THEN
+    RAISE EXCEPTION 'helsa_worker is a member of: % — it would inherit their rights', granted
+      USING HINT = 'REVOKE <role> FROM helsa_worker; then run this again.';
+  END IF;
+END $$;
+
+DO $grants$
+DECLARE
+  rel record;
+BEGIN
+  EXECUTE format('REVOKE TEMPORARY ON DATABASE %I FROM helsa_worker', current_database());
+  EXECUTE format('GRANT CONNECT ON DATABASE %I TO helsa_worker', current_database());
+  GRANT USAGE ON SCHEMA public TO helsa_worker;
+  REVOKE CREATE ON SCHEMA public FROM helsa_worker;
+  FOR rel IN
+    SELECT c.oid::regclass AS name, c.relkind
+    FROM pg_class c
+    JOIN pg_namespace n ON n.oid = c.relnamespace
+    WHERE n.nspname = 'public'
+      AND c.relkind IN ('r', 'p', 'v', 'm')
+      AND c.relname <> 'goose_db_version'
+  LOOP
+    IF rel.relkind IN ('r', 'p') THEN
+      EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE %s TO helsa_worker', rel.name);
+    ELSE
+      EXECUTE format('REVOKE INSERT, UPDATE, DELETE ON TABLE %s FROM helsa_worker', rel.name);
+      EXECUTE format('GRANT SELECT ON TABLE %s TO helsa_worker', rel.name);
+    END IF;
+  END LOOP;
+  REVOKE TRUNCATE, REFERENCES, TRIGGER ON ALL TABLES IN SCHEMA public FROM helsa_worker;
+  IF to_regclass('public.goose_db_version') IS NOT NULL THEN
+    REVOKE ALL ON TABLE public.goose_db_version FROM helsa_worker;
+  END IF;
+  GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO helsa_worker;
+  EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public
+                    GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO helsa_worker', current_user);
+  EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public
+                    GRANT USAGE, SELECT ON SEQUENCES TO helsa_worker', current_user);
+END $grants$;
+
+COMMIT;
+
+\echo 'helsa_worker: role and grants are in place.'

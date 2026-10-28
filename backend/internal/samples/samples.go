@@ -152,7 +152,7 @@ func buildQuery(userID uuid.UUID, dataType string, from, to *time.Time, beforeTs
 	}
 	var b strings.Builder
 	b.WriteString(`SELECT ts, data_type, value, unit, source_device, source_uuid
-FROM samples
+FROM my_samples
 WHERE user_id = $1
   AND data_type = $2
   AND (ts < $3 OR (ts = $3 AND source_uuid < $4))`)

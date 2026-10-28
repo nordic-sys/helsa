@@ -47,7 +47,7 @@ SELECT w.id, w.source_uuid, w.activity_type, w.started_at, w.ended_at,
 FROM workouts w
 LEFT JOIN (
     SELECT s.user_id, s.workout_id, avg(s.value) AS avg_hr, max(s.value) AS max_hr
-    FROM samples s
+    FROM my_samples s
     WHERE s.data_type = 'heartRate' AND s.workout_id IS NOT NULL
     GROUP BY s.user_id, s.workout_id
 ) hr ON hr.user_id = w.user_id AND hr.workout_id = w.id`

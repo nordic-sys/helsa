@@ -76,14 +76,20 @@ any change to the proxy or the network.
          WHERE a.datname = 'helsa' AND a.backend_type = 'client backend' GROUP BY 1, 2;"
       ```
 
-      The api's and the worker's connections must be `helsa_app | f`; the one
-      `helsa | t` row is your own `psql`. And the role must be unable to change the
+      The api's connections must be `helsa_app | f`, the worker's `helsa_worker | f`;
+      the one `helsa | t` row is your own `psql`. And the role must be unable to change the
       schema — as `helsa_app`, `CREATE TABLE x (i int);` answers *permission denied
       for schema public*. What it may do is spelled out in
       `deploy/init/timescaledb/03-app-role.sql`: `SELECT`/`INSERT`/`UPDATE`/`DELETE`
       on Helsa's tables, `SELECT` on the views, nothing on the migration tool's
       table, no temporary tables, no `TRUNCATE`.
-- [ ] `.env` holds `HELSA_APP_DB_PASSWORD`, and it differs from `POSTGRES_PASSWORD`. The api,
+- [ ] The API cannot read another person's rows **even without the application's own filter**:
+      every table with a person's rows has row-level security, and the raw samples are out of
+      the API role's reach altogether (it reads them through the `my_samples` view). As
+      `helsa_app`, `SELECT 1 FROM samples LIMIT 1;` answers *permission denied*, and
+      `SELECT count(*) FROM workouts;` without setting `helsa.user_id` answers `0`. The smoke
+      suite checks this on every run (`TestEveryMemberTableHasAPolicy`).
+- [ ] `.env` holds `HELSA_APP_DB_PASSWORD` and `HELSA_WORKER_DB_PASSWORD`, and they differ from `POSTGRES_PASSWORD` and from each other. The api,
       worker and token containers see only the former — the Compose file blanks the
       owner's password in their environment.
 - [ ] Migrations are run as an explicit step, never automatically on API start-up.
