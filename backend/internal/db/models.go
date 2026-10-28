@@ -156,19 +156,20 @@ type SyncState struct {
 }
 
 type User struct {
-	ID          pgtype.UUID        `json:"id"`
-	Handle      string             `json:"handle"`
-	Email       *string            `json:"email"`
-	DisplayName *string            `json:"display_name"`
-	TimeZone    string             `json:"time_zone"`
-	Locale      string             `json:"locale"`
-	UnitSystem  string             `json:"unit_system"`
-	NotifPrefs  []byte             `json:"notif_prefs"`
-	ConsentAt   pgtype.Timestamptz `json:"consent_at"`
-	CreatedAt   pgtype.Timestamptz `json:"created_at"`
-	Role        string             `json:"role"`
-	DisabledAt  pgtype.Timestamptz `json:"disabled_at"`
-	HaPublish   bool               `json:"ha_publish"`
+	ID           pgtype.UUID        `json:"id"`
+	Handle       string             `json:"handle"`
+	Email        *string            `json:"email"`
+	DisplayName  *string            `json:"display_name"`
+	TimeZone     string             `json:"time_zone"`
+	Locale       string             `json:"locale"`
+	UnitSystem   string             `json:"unit_system"`
+	NotifPrefs   []byte             `json:"notif_prefs"`
+	ConsentAt    pgtype.Timestamptz `json:"consent_at"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	Role         string             `json:"role"`
+	DisabledAt   pgtype.Timestamptz `json:"disabled_at"`
+	HaPublish    bool               `json:"ha_publish"`
+	LastUploadAt pgtype.Timestamptz `json:"last_upload_at"`
 }
 
 type Workout struct {

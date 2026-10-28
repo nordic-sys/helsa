@@ -262,6 +262,11 @@ BEGIN
     REVOKE ALL ON TABLE public.goose_db_version FROM helsa_worker;
   END IF;
   GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO helsa_worker;
+  -- The member-deletion job's one owner-only step (00016): a deleted user's hourly
+  -- aggregates. It refuses any user who still exists.
+  IF to_regprocedure('public.purge_deleted_user_aggregates(uuid)') IS NOT NULL THEN
+    GRANT EXECUTE ON FUNCTION public.purge_deleted_user_aggregates(uuid) TO helsa_worker;
+  END IF;
   EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public
                     GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO helsa_worker', current_user);
   EXECUTE format('ALTER DEFAULT PRIVILEGES FOR ROLE %I IN SCHEMA public

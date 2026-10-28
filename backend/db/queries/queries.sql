@@ -306,3 +306,92 @@ RETURNING id, user_id, label;
 SELECT id, user_id, label, kind, created_by, created_at, expires_at, last_used_at, revoked_at
 FROM device_tokens WHERE user_id = @user_id
 ORDER BY created_at DESC;
+
+-- ── The household (00015, 00016; docs/36 F1) ───────────────────────────────
+
+-- name: GetUserByHandle :one
+SELECT * FROM users WHERE handle = @handle;
+
+-- name: CreateMember :one
+INSERT INTO users (handle, display_name, role)
+VALUES (@handle, sqlc.narg('display_name'), @role)
+RETURNING *;
+
+-- name: UpdateDisplayName :one
+UPDATE users SET display_name = @display_name WHERE id = @id RETURNING *;
+
+-- name: SetUserDisabled :exec
+UPDATE users SET disabled_at = CASE WHEN @disabled::boolean THEN COALESCE(disabled_at, now()) ELSE NULL END
+WHERE id = @id;
+
+-- name: TouchLastUpload :exec
+-- The worker, once per batch. Only forwards: a redriven old batch must not move it back.
+UPDATE users SET last_upload_at = now()
+WHERE id = @id AND (last_upload_at IS NULL OR last_upload_at < now());
+
+-- name: LockAdmins :exec
+-- Every change that could leave the server without an enabled admin takes this
+-- lock first, so two such changes cannot both see "there is another one" (C3).
+SELECT pg_advisory_xact_lock(hashtext('helsa.admins'));
+
+-- name: CountOtherEnabledAdmins :one
+SELECT count(*) FROM users u
+WHERE u.role = 'admin' AND u.disabled_at IS NULL AND u.id <> @except_id::uuid
+  AND NOT EXISTS (SELECT 1 FROM deletion_jobs j WHERE j.user_id = u.id AND j.done_at IS NULL);
+
+-- name: ListMembers :many
+-- Account metadata only — never anything read out of a member's data. The token
+-- count goes through device_tokens' admin policy; the last upload is users' own.
+SELECT u.id, u.handle, u.display_name, u.role, u.disabled_at, u.created_at, u.last_upload_at,
+       (SELECT count(*) FROM device_tokens t
+         WHERE t.user_id = u.id AND t.revoked_at IS NULL AND t.expires_at > now()) AS live_tokens,
+       EXISTS (SELECT 1 FROM deletion_jobs j WHERE j.user_id = u.id AND j.done_at IS NULL) AS deleting
+FROM users u
+ORDER BY u.created_at, u.id;
+
+-- name: CountLiveTokens :one
+SELECT count(*) FROM device_tokens
+WHERE user_id = @user_id AND revoked_at IS NULL AND expires_at > now();
+
+-- name: InsertCode :exec
+INSERT INTO enrolment_codes (code_hash, user_id, purpose, created_by, expires_at)
+VALUES (@code_hash, @user_id, @purpose, sqlc.narg('created_by'), @expires_at);
+
+-- name: RedeemCode :one
+SELECT redeem_code(@code_hash, @purpose, @token_id, @label, @kind, @expires_at)::uuid AS user_id;
+
+-- name: ExtendDeviceToken :exec
+UPDATE device_tokens SET expires_at = @expires_at WHERE id = @id AND revoked_at IS NULL;
+
+-- name: InsertAccountEvent :exec
+INSERT INTO account_events (user_id, actor_id, kind, detail)
+VALUES (@user_id, sqlc.narg('actor_id'), @kind, @detail);
+
+-- name: ListAccountEvents :many
+SELECT e.kind, e.at, e.actor_id, e.detail, a.display_name AS actor_name, a.handle AS actor_handle
+FROM account_events e LEFT JOIN users a ON a.id = e.actor_id
+WHERE e.user_id = @user_id
+ORDER BY e.at DESC, e.id DESC
+LIMIT 200;
+
+-- name: InsertDeletionJob :one
+INSERT INTO deletion_jobs (user_id, handle, requested_by)
+VALUES (@user_id, @handle, sqlc.narg('requested_by'))
+-- Already queued: nothing (a member cannot see the open job to update it, and does
+-- not need to). The caller treats "no row" as "already on its way".
+ON CONFLICT (user_id) WHERE done_at IS NULL DO NOTHING
+RETURNING id;
+
+-- name: NextDeletionJob :one
+SELECT * FROM deletion_jobs WHERE done_at IS NULL ORDER BY requested_at LIMIT 1 FOR UPDATE SKIP LOCKED;
+
+-- name: AdvanceDeletionJob :exec
+UPDATE deletion_jobs SET stage = @stage, attempts = 0, last_error = NULL,
+    done_at = CASE WHEN @stage = 'done' THEN now() ELSE NULL END
+WHERE id = @id;
+
+-- name: FailDeletionJob :exec
+UPDATE deletion_jobs SET attempts = attempts + 1, last_error = @last_error WHERE id = @id;
+
+-- name: PurgeDeletedUserAggregates :one
+SELECT purge_deleted_user_aggregates(@user_id::uuid)::bigint AS purged;

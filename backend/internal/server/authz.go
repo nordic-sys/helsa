@@ -81,6 +81,29 @@ var routes = map[string]rule{
 
 	"POST /ingest/dead-letter/redrive": {Admin, ScopeNone, "moves every member's stuck batches"},
 
+	// The household (docs/36 F1). Account operations act for the caller; the admin
+	// rows manage accounts and never read a member's data (and the database holds
+	// them to that: the admin policies exist on the account tables only).
+	"PATCH /me":                                 {Principal, ScopeNone, "the caller's own display name"},
+	"DELETE /me":                                {Principal, ScopeNone, "the caller's own account; the last admin is refused"},
+	"GET /me/tokens":                            {Principal, ScopeNone, "the caller's own devices and sessions"},
+	"DELETE /me/tokens/{id}":                    {Principal, ScopeNone, "one of the caller's own; another's id is 404"},
+	"POST /me/enrolment-codes":                  {Principal, ScopeNone, "a code for the caller's own next phone"},
+	"POST /me/login-codes":                      {Principal, ScopeNone, "a code for the caller's own browser"},
+	"GET /me/events":                            {Principal, ScopeNone, "the caller's own account log"},
+	"POST /enroll":                              {Public, ScopeNone, "the code is the credential; mTLS port only; rate-limited"},
+	"POST /auth/web/login":                      {Public, ScopeNone, "the code is the credential; web port and own Origin only; rate-limited"},
+	"POST /auth/web/logout":                     {Principal, ScopeNone, "ends the caller's own browser session"},
+	"GET /admin/users":                          {Admin, ScopeNone, "account metadata of every member, no health data"},
+	"POST /admin/users":                         {Admin, ScopeNone, "add a member"},
+	"GET /admin/users/{id}":                     {Admin, ScopeNone, "one member's account metadata"},
+	"PATCH /admin/users/{id}":                   {Admin, ScopeNone, "role, disable, rename; keeps one enabled admin"},
+	"DELETE /admin/users/{id}":                  {Admin, ScopeNone, "queue a member's deletion; keeps one enabled admin"},
+	"GET /admin/users/{id}/tokens":              {Admin, ScopeNone, "a member's devices and sessions"},
+	"DELETE /admin/users/{id}/tokens/{tokenId}": {Admin, ScopeNone, "revoke a member's device; the token must be theirs"},
+	"GET /admin/users/{id}/events":              {Admin, ScopeNone, "the member's account log, as the member sees it"},
+	"POST /admin/users/{id}/codes":              {Admin, ScopeNone, "only for a member with no live device (C2)"},
+
 	"GET /achievements":        {Subject, ScopeMetrics, "badges"},
 	"GET /activity":            {Subject, ScopeMetrics, "rings"},
 	"GET /baseline":            {Subject, ScopeMetrics, "usual range"},

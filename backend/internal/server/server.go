@@ -187,33 +187,7 @@ func (s *Server) PostAuthLogout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
-// --- Profile ---
-
-func (s *Server) GetMe(w http.ResponseWriter, r *http.Request) {
-	uid, ok := principalID(r)
-	if !ok {
-		problem(w, http.StatusUnauthorized, "Unauthorized", "")
-		return
-	}
-	u, err := s.q.GetUser(r.Context(), pgconv.UUID(uid))
-	if err != nil {
-		problem(w, http.StatusNotFound, "No such user", "")
-		return
-	}
-	id := openapi_types.UUID(pgconv.ToUUID(u.ID))
-	created := u.CreatedAt.Time
-	set := settingsDTO(u.TimeZone, u.Locale, u.UnitSystem, u.NotifPrefs)
-	// The same blocks GET /v1/settings carries, so the two views of one user's
-	// settings cannot disagree about what the phone has said.
-	phone, err := phoneBlocks(r.Context(), s.q, u.ID)
-	if err != nil {
-		problem(w, http.StatusInternalServerError, "Reading settings failed", err.Error())
-		return
-	}
-	phone.apply(&set)
-	out := api.User{Id: &id, DisplayName: u.DisplayName, CreatedAt: &created, Settings: &set}
-	writeJSON(w, http.StatusOK, out)
-}
+// --- Profile: household.go ---
 
 // --- Ingest (write path) ---
 

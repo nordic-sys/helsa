@@ -96,7 +96,7 @@ func TestRuleForMatchesTemplates(t *testing.T) {
 			t.Errorf("%s → %+v, %v; want %v", req, r, ok, want)
 		}
 	}
-	for _, req := range []string{"GET /v1/workouts//route", "GET /v1/nope", "DELETE /v1/me", "GET /workouts"} {
+	for _, req := range []string{"GET /v1/workouts//route", "GET /v1/nope", "DELETE /v1/settings", "GET /workouts"} {
 		m, p, _ := strings.Cut(req, " ")
 		if r, ok := ruleFor(m, p); ok {
 			t.Errorf("%s matched %+v", req, r)

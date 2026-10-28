@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"net/http"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -25,7 +26,7 @@ type Via int
 
 const (
 	ViaDeviceToken Via = iota + 1
-	// ViaWebSession — the browser's cookie session (F1).
+	ViaWebSession      // the browser's cookie (web.go)
 )
 
 // Principal is WHO is asking: the authenticated user, with the role read from the
@@ -49,6 +50,11 @@ type Principal struct {
 	TokenID uuid.UUID // device_tokens.id; uuid.Nil for a token issued before the register
 	Label   string    // the device's name
 	Via     Via
+	// Kind is the register row's: "device" (a phone, the CLI) or "web" (a browser
+	// session). A web session is accepted only as a cookie, a device token only as a
+	// bearer header (web.go).
+	Kind      string
+	ExpiresAt time.Time // the row's expiry; zero for a token from before the register
 }
 
 // IsAdmin reports whether the caller may administer the server.

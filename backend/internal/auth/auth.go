@@ -19,7 +19,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
@@ -152,7 +151,11 @@ func (s *Service) IssueDeviceToken(ctx context.Context, userID uuid.UUID, device
 // signAccess mints the token and reports when it expires. jti == uuid.Nil mints a
 // token without one — only the tests of the pre-register tokens do that.
 func (s *Service) signAccess(userID, jti uuid.UUID, device string, now time.Time) (string, time.Time, error) {
-	exp := now.Add(s.cfg.DeviceTokenTTL)
+	return s.signAccessUntil(userID, jti, device, now, now.Add(s.cfg.DeviceTokenTTL))
+}
+
+// signAccessUntil mints a token that expires at exp — a web session's, which slides.
+func (s *Service) signAccessUntil(userID, jti uuid.UUID, device string, now, exp time.Time) (string, time.Time, error) {
 	claims := accessClaims{
 		Device: device,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -272,6 +275,10 @@ func (s *Service) VerifyAccess(ctx context.Context, token string) (Principal, er
 		}
 		p.TokenID = jti
 		p.Label = row.Label
+		p.Kind = row.Kind
+		p.ExpiresAt = row.ExpiresAt.Time
+	} else {
+		p.Kind = "device" // every token from before the register was a device token
 	}
 
 	state, err := s.state.GetUserAuthState(ctx, pgconv.UUID(userID))
@@ -351,13 +358,13 @@ func revokedKey(token string) string {
 	return "revoked:" + hex.EncodeToString(sum[:])
 }
 
-// Middleware guards the /v1/* routes: Bearer token → Principal in the context.
+// Middleware guards the /v1/* routes: a bearer device token or a browser's session
+// cookie → Principal in the context. The rules for the cookie are in web.go.
 func (s *Service) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		authz := r.Header.Get("Authorization")
-		tok, ok := strings.CutPrefix(authz, "Bearer ")
-		if !ok || tok == "" {
-			http.Error(w, "missing bearer token", http.StatusUnauthorized)
+		tok, via, msg, status := s.credential(r)
+		if status != 0 {
+			http.Error(w, msg, status)
 			return
 		}
 		p, err := s.VerifyAccess(r.Context(), tok)
@@ -382,6 +389,17 @@ func (s *Service) Middleware(next http.Handler) http.Handler {
 			// wrong with the token, and a 503 is what a client should retry.
 			http.Error(w, "the token cannot be checked right now", http.StatusServiceUnavailable)
 			return
+		}
+		// A web session only as a cookie, a device token only as a bearer header: a
+		// session cookie lifted out of a browser does not become a phone's token, and a
+		// device token does not become a browser session.
+		if (via == ViaWebSession) != (p.Kind == "web") {
+			http.Error(w, "this token is not accepted this way", http.StatusUnauthorized)
+			return
+		}
+		p.Via = via
+		if via == ViaWebSession {
+			s.slideSession(w, r, &p, tok)
 		}
 		// The database work of this request is done as the caller: the pool sets
 		// helsa.user_id from this (internal/store, docs/36 §4.8.8). In v1 the caller

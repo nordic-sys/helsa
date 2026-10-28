@@ -28,6 +28,10 @@ type Config struct {
 	// expiry is more of a risk (a silent stop in syncing) than a protection, and a
 	// lost phone is taken back by revoking its token — docs/08 §7.
 	DeviceTokenTTL time.Duration
+	// WebOrigins are origins, besides the request's own host, whose browser requests
+	// may carry the session cookie — the dashboard's dev server, for one. Empty in
+	// production: there the dashboard and the API share one origin.
+	WebOrigins []string
 
 	// Home Assistant over MQTT — OFF unless MQTTURL is set.
 	MQTT MQTT
@@ -66,6 +70,7 @@ func Load() (*Config, error) {
 		// HELSA_ACCESS_TTL is the name the token container was given before; it is
 		// still read, so that an existing deploy/.env keeps meaning what it meant.
 		DeviceTokenTTL: envDuration("HELSA_DEVICE_TOKEN_TTL", envDuration("HELSA_ACCESS_TTL", 8760*time.Hour)),
+		WebOrigins:     envList("HELSA_WEB_ORIGINS", nil),
 		MQTT: MQTT{
 			URL:             env("HELSA_MQTT_URL", ""),
 			ClientID:        env("HELSA_MQTT_CLIENT_ID", "helsa"),

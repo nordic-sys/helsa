@@ -17,6 +17,7 @@ import (
 
 const (
 	DeviceTokenScopes deviceTokenContextKey = "deviceToken.Scopes"
+	WebSessionScopes  webSessionContextKey  = "webSession.Scopes"
 )
 
 // Defines values for AchievementKind.
@@ -115,6 +116,42 @@ func (e ChallengeStreakBreakReason) Valid() bool {
 	case RestOverBudget:
 		return true
 	case StartOfHistory:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CodeIssuedPurpose.
+const (
+	CodeIssuedPurposeDevice CodeIssuedPurpose = "device"
+	CodeIssuedPurposeWeb    CodeIssuedPurpose = "web"
+)
+
+// Valid indicates whether the value is a known member of the CodeIssuedPurpose enum.
+func (e CodeIssuedPurpose) Valid() bool {
+	switch e {
+	case CodeIssuedPurposeDevice:
+		return true
+	case CodeIssuedPurposeWeb:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for CodeRequestPurpose.
+const (
+	CodeRequestPurposeDevice CodeRequestPurpose = "device"
+	CodeRequestPurposeWeb    CodeRequestPurpose = "web"
+)
+
+// Valid indicates whether the value is a known member of the CodeRequestPurpose enum.
+func (e CodeRequestPurpose) Valid() bool {
+	switch e {
+	case CodeRequestPurposeDevice:
+		return true
+	case CodeRequestPurposeWeb:
 		return true
 	default:
 		return false
@@ -487,6 +524,60 @@ func (e LatestValueAgg) Valid() bool {
 	}
 }
 
+// Defines values for MemberRole.
+const (
+	MemberRoleAdmin  MemberRole = "admin"
+	MemberRoleMember MemberRole = "member"
+)
+
+// Valid indicates whether the value is a known member of the MemberRole enum.
+func (e MemberRole) Valid() bool {
+	switch e {
+	case MemberRoleAdmin:
+		return true
+	case MemberRoleMember:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MemberCreateRole.
+const (
+	MemberCreateRoleAdmin  MemberCreateRole = "admin"
+	MemberCreateRoleMember MemberCreateRole = "member"
+)
+
+// Valid indicates whether the value is a known member of the MemberCreateRole enum.
+func (e MemberCreateRole) Valid() bool {
+	switch e {
+	case MemberCreateRoleAdmin:
+		return true
+	case MemberCreateRoleMember:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MemberPatchRole.
+const (
+	MemberPatchRoleAdmin  MemberPatchRole = "admin"
+	MemberPatchRoleMember MemberPatchRole = "member"
+)
+
+// Valid indicates whether the value is a known member of the MemberPatchRole enum.
+func (e MemberPatchRole) Valid() bool {
+	switch e {
+	case MemberPatchRoleAdmin:
+		return true
+	case MemberPatchRoleMember:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MetricBaselineAgg.
 const (
 	MetricBaselineAggAvg MetricBaselineAgg = "avg"
@@ -676,6 +767,42 @@ func (e SleepSegmentInStage) Valid() bool {
 	}
 }
 
+// Defines values for TokenInfoKind.
+const (
+	TokenInfoKindDevice TokenInfoKind = "device"
+	TokenInfoKindWeb    TokenInfoKind = "web"
+)
+
+// Valid indicates whether the value is a known member of the TokenInfoKind enum.
+func (e TokenInfoKind) Valid() bool {
+	switch e {
+	case TokenInfoKindDevice:
+		return true
+	case TokenInfoKindWeb:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UserRole.
+const (
+	UserRoleAdmin  UserRole = "admin"
+	UserRoleMember UserRole = "member"
+)
+
+// Valid indicates whether the value is a known member of the UserRole enum.
+func (e UserRole) Valid() bool {
+	switch e {
+	case UserRoleAdmin:
+		return true
+	case UserRoleMember:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for GetBaselineParamsRange.
 const (
 	GetBaselineParamsRangeMonth GetBaselineParamsRange = "month"
@@ -716,6 +843,16 @@ func (e GetSummaryParamsRange) Valid() bool {
 	default:
 		return false
 	}
+}
+
+// AccountEvent defines model for AccountEvent.
+type AccountEvent struct {
+	// Actor the display name or handle of who did it; absent when it was the server's operator (CLI)
+	Actor       *string                 `json:"actor,omitempty"`
+	ActorIsSelf *bool                   `json:"actor_is_self,omitempty"`
+	At          time.Time               `json:"at"`
+	Detail      *map[string]interface{} `json:"detail,omitempty"`
+	Kind        string                  `json:"kind"`
 }
 
 // Achievement defines model for Achievement.
@@ -790,6 +927,15 @@ type BaselineResponse struct {
 	// To its last day, inclusive
 	To *openapi_types.Date `json:"to,omitempty"`
 	Tz *string             `json:"tz,omitempty"`
+}
+
+// Capabilities What this server can do for this caller. A client hides what is false or absent — an older server sends none of it, and the client keeps its older screens (docs/36 §6.2).
+type Capabilities struct {
+	// CanDeleteSelf false for the last admin
+	CanDeleteSelf *bool `json:"can_delete_self,omitempty"`
+
+	// Household members, codes and accounts exist on this server
+	Household *bool `json:"household,omitempty"`
 }
 
 // ChallengeDay defines model for ChallengeDay.
@@ -917,6 +1063,28 @@ type ChallengeStreakBreak struct {
 // ChallengeStreakBreakReason Why the run does not reach further back. `missed` and `no_data` are deliberately not the same answer: one is a day under the goal, the other a day we know nothing about, and reporting the second as the first is the same lie as treating a missing measurement as a zero. `rest_over_budget` is a day marked as a rest day after the weekly allowance (two in any seven days) was spent — the mark did not work, and saying so beats letting it look as if it had. `start_of_history` means the window simply ends there.
 type ChallengeStreakBreakReason string
 
+// CodeIssued defines model for CodeIssued.
+type CodeIssued struct {
+	// Code 8 characters of Crockford base32, shown as XXXX-XXXX
+	Code      string            `json:"code"`
+	ExpiresAt time.Time         `json:"expires_at"`
+	Purpose   CodeIssuedPurpose `json:"purpose"`
+}
+
+// CodeIssuedPurpose defines model for CodeIssued.Purpose.
+type CodeIssuedPurpose string
+
+// CodeRequest defines model for CodeRequest.
+type CodeRequest struct {
+	Purpose CodeRequestPurpose `json:"purpose"`
+
+	// TtlMinutes device codes only; default 15. A web code always lives 10 minutes.
+	TtlMinutes *int `json:"ttl_minutes,omitempty"`
+}
+
+// CodeRequestPurpose defines model for CodeRequest.Purpose.
+type CodeRequestPurpose string
+
 // CoverageGap The metric had settled into a rhythm and that rhythm has broken. **An observation, not a problem** — a flat battery, a holiday, a broken sensor and a deliberate break all look the same from here, and the server does not guess which.
 //
 // The rules are the phone's (`Coverage/MetricGap.swift`), value for value: at least 6 intervals spanning at least 14 days before a rhythm is claimed at all, a silence of at least 3 days AND at least 3× the typical interval, no judgement above a 30-day cadence, and nothing after 90 silent days — past that the metric is not silent but discontinued, and the rhythm being compared against would itself be stale.
@@ -1001,6 +1169,12 @@ type CoverageTypeGroup string
 // `never_arrived` — no sample of this type has ever reached this server. ⚠️ This is not the same claim as the phone's "no data": it does not say the measurement does not exist, only that it never got here. A refused permission and a missing sensor both look like this.
 type CoverageTypeState string
 
+// DeleteConfirm defines model for DeleteConfirm.
+type DeleteConfirm struct {
+	// Handle the account's handle, typed as confirmation
+	Handle string `json:"handle"`
+}
+
 // Device defines model for Device.
 type Device struct {
 	// Id the server-side identifier; optional on POST (if given, that row is updated)
@@ -1020,6 +1194,26 @@ type Device struct {
 
 // DevicePlatform defines model for Device.Platform.
 type DevicePlatform string
+
+// EnrollRequest defines model for EnrollRequest.
+type EnrollRequest struct {
+	Code string `json:"code"`
+
+	// Label the device's name on the server, e.g. Nóri iPhone
+	Label    string  `json:"label"`
+	Platform *string `json:"platform,omitempty"`
+}
+
+// EnrollResult defines model for EnrollResult.
+type EnrollResult struct {
+	AccessToken string    `json:"access_token"`
+	ExpiresAt   time.Time `json:"expires_at"`
+	User        struct {
+		DisplayName *string             `json:"display_name,omitempty"`
+		Handle      *string             `json:"handle,omitempty"`
+		Id          *openapi_types.UUID `json:"id,omitempty"`
+	} `json:"user"`
+}
 
 // ExportJob The shape of the asynchronous export branch. **No such object is produced today** — the export is synchronous and `POST /v1/export` hands back the file. The schema stays for a future introduction.
 type ExportJob struct {
@@ -1466,6 +1660,49 @@ type LatestValue struct {
 // LatestValueAgg the catalog's aggregation — which of `value` and `day_total` is present
 type LatestValueAgg string
 
+// MePatch defines model for MePatch.
+type MePatch struct {
+	DisplayName *string `json:"display_name,omitempty"`
+}
+
+// Member defines model for Member.
+type Member struct {
+	CreatedAt time.Time `json:"created_at"`
+	Deleting  *bool     `json:"deleting,omitempty"`
+
+	// Devices live tokens (devices and browser sessions)
+	Devices      *int               `json:"devices,omitempty"`
+	Disabled     *bool              `json:"disabled,omitempty"`
+	DisplayName  *string            `json:"display_name,omitempty"`
+	Handle       string             `json:"handle"`
+	Id           openapi_types.UUID `json:"id"`
+	LastUploadAt *time.Time         `json:"last_upload_at,omitempty"`
+	Role         MemberRole         `json:"role"`
+}
+
+// MemberRole defines model for Member.Role.
+type MemberRole string
+
+// MemberCreate defines model for MemberCreate.
+type MemberCreate struct {
+	DisplayName *string           `json:"display_name,omitempty"`
+	Handle      string            `json:"handle"`
+	Role        *MemberCreateRole `json:"role,omitempty"`
+}
+
+// MemberCreateRole defines model for MemberCreate.Role.
+type MemberCreateRole string
+
+// MemberPatch defines model for MemberPatch.
+type MemberPatch struct {
+	Disabled    *bool            `json:"disabled,omitempty"`
+	DisplayName *string          `json:"display_name,omitempty"`
+	Role        *MemberPatchRole `json:"role,omitempty"`
+}
+
+// MemberPatchRole defines model for MemberPatch.Role.
+type MemberPatchRole string
+
 // MetricBaseline One metric's usual range.
 //
 // ⚠️ **Everything but `day_count` may be absent, and the absence IS the answer:** too few measured days, or a reference window that never varied, means there is no band to draw. It does not mean zero, and it must not be shown as a narrower or a guessed one.
@@ -1653,12 +1890,45 @@ type SummaryResponse struct {
 	Tz      *string                  `json:"tz,omitempty"`
 }
 
+// TokenInfo defines model for TokenInfo.
+type TokenInfo struct {
+	CreatedAt time.Time           `json:"created_at"`
+	CreatedBy *openapi_types.UUID `json:"created_by,omitempty"`
+
+	// Current the token this request came with
+	Current    *bool              `json:"current,omitempty"`
+	ExpiresAt  time.Time          `json:"expires_at"`
+	Id         openapi_types.UUID `json:"id"`
+	Kind       TokenInfoKind      `json:"kind"`
+	Label      string             `json:"label"`
+	LastUsedAt *time.Time         `json:"last_used_at,omitempty"`
+	RevokedAt  *time.Time         `json:"revoked_at,omitempty"`
+}
+
+// TokenInfoKind defines model for TokenInfo.Kind.
+type TokenInfoKind string
+
 // User defines model for User.
 type User struct {
-	CreatedAt   *time.Time          `json:"created_at,omitempty"`
-	DisplayName *string             `json:"display_name,omitempty"`
-	Id          *openapi_types.UUID `json:"id,omitempty"`
-	Settings    *Settings           `json:"settings,omitempty"`
+	// Capabilities What this server can do for this caller. A client hides what is false or absent — an older server sends none of it, and the client keeps its older screens (docs/36 §6.2).
+	Capabilities *Capabilities `json:"capabilities,omitempty"`
+	CreatedAt    *time.Time    `json:"created_at,omitempty"`
+	DisplayName  *string       `json:"display_name,omitempty"`
+
+	// Handle the short name, e.g. nori
+	Handle   *string             `json:"handle,omitempty"`
+	Id       *openapi_types.UUID `json:"id,omitempty"`
+	Role     *UserRole           `json:"role,omitempty"`
+	Settings *Settings           `json:"settings,omitempty"`
+	Token    *TokenInfo          `json:"token,omitempty"`
+}
+
+// UserRole defines model for User.Role.
+type UserRole string
+
+// WebLoginRequest defines model for WebLoginRequest.
+type WebLoginRequest struct {
+	Code string `json:"code"`
 }
 
 // Workout defines model for Workout.
@@ -1729,6 +1999,9 @@ type WorkoutRoute struct {
 
 // deviceTokenContextKey is the context key for deviceToken security scheme
 type deviceTokenContextKey string
+
+// webSessionContextKey is the context key for webSession security scheme
+type webSessionContextKey string
 
 // PostAchievementsJSONBody defines parameters for PostAchievements.
 type PostAchievementsJSONBody = []AchievementInput
@@ -1848,8 +2121,26 @@ type GetWorkoutsParams struct {
 // PostAchievementsJSONRequestBody defines body for PostAchievements for application/json ContentType.
 type PostAchievementsJSONRequestBody = PostAchievementsJSONBody
 
+// PostAdminUsersJSONRequestBody defines body for PostAdminUsers for application/json ContentType.
+type PostAdminUsersJSONRequestBody = MemberCreate
+
+// DeleteAdminUsersIdJSONRequestBody defines body for DeleteAdminUsersId for application/json ContentType.
+type DeleteAdminUsersIdJSONRequestBody = DeleteConfirm
+
+// PatchAdminUsersIdJSONRequestBody defines body for PatchAdminUsersId for application/json ContentType.
+type PatchAdminUsersIdJSONRequestBody = MemberPatch
+
+// PostAdminUsersIdCodesJSONRequestBody defines body for PostAdminUsersIdCodes for application/json ContentType.
+type PostAdminUsersIdCodesJSONRequestBody = CodeRequest
+
+// PostAuthWebLoginJSONRequestBody defines body for PostAuthWebLogin for application/json ContentType.
+type PostAuthWebLoginJSONRequestBody = WebLoginRequest
+
 // PostDevicesJSONRequestBody defines body for PostDevices for application/json ContentType.
 type PostDevicesJSONRequestBody = Device
+
+// PostEnrollJSONRequestBody defines body for PostEnroll for application/json ContentType.
+type PostEnrollJSONRequestBody = EnrollRequest
 
 // PostExportJSONRequestBody defines body for PostExport for application/json ContentType.
 type PostExportJSONRequestBody = ExportRequest
@@ -1865,6 +2156,12 @@ type PostIngestDeadLetterRedriveJSONRequestBody = IngestRedriveRequest
 
 // PostJournalJSONRequestBody defines body for PostJournal for application/json ContentType.
 type PostJournalJSONRequestBody = JournalBatch
+
+// DeleteMeJSONRequestBody defines body for DeleteMe for application/json ContentType.
+type DeleteMeJSONRequestBody = DeleteConfirm
+
+// PatchMeJSONRequestBody defines body for PatchMe for application/json ContentType.
+type PatchMeJSONRequestBody = MePatch
 
 // PutPushPrefsJSONRequestBody defines body for PutPushPrefs for application/json ContentType.
 type PutPushPrefsJSONRequestBody = NotifPrefs
@@ -1886,12 +2183,45 @@ type ServerInterface interface {
 	// Activity rings (Move/Exercise/Stand), daily value + goal
 	// (GET /activity)
 	GetActivity(w http.ResponseWriter, r *http.Request, params GetActivityParams)
+	// The household — members, roles, devices, last upload. No health data.
+	// (GET /admin/users)
+	GetAdminUsers(w http.ResponseWriter, r *http.Request)
+	// Add a member
+	// (POST /admin/users)
+	PostAdminUsers(w http.ResponseWriter, r *http.Request)
+	// Delete a member and everything of theirs on this server
+	// (DELETE /admin/users/{id})
+	DeleteAdminUsersId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// One member
+	// (GET /admin/users/{id})
+	GetAdminUsersId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Change a member's role, disable or re-enable them
+	// (PATCH /admin/users/{id})
+	PatchAdminUsersId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// A connection or sign-in code for a member who has no live device or session
+	// (POST /admin/users/{id}/codes)
+	PostAdminUsersIdCodes(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// What was done with a member's account — the same list the member sees
+	// (GET /admin/users/{id}/events)
+	GetAdminUsersIdEvents(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// A member's devices and sessions
+	// (GET /admin/users/{id}/tokens)
+	GetAdminUsersIdTokens(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Revoke one of a member's devices or sessions
+	// (DELETE /admin/users/{id}/tokens/{tokenId})
+	DeleteAdminUsersIdTokensTokenId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, tokenId openapi_types.UUID)
 	// End this device's session — the token on the request stops working
 	// (POST /auth/logout)
 	PostAuthLogout(w http.ResponseWriter, r *http.Request)
 	// Retired — always 410
 	// (POST /auth/refresh)
 	PostAuthRefresh(w http.ResponseWriter, r *http.Request)
+	// Sign in a browser with a sign-in code — sets the session cookie
+	// (POST /auth/web/login)
+	PostAuthWebLogin(w http.ResponseWriter, r *http.Request)
+	// End this browser's session
+	// (POST /auth/web/logout)
+	PostAuthWebLogout(w http.ResponseWriter, r *http.Request)
 	// The person's own usual range, and where a period stands against it
 	// (GET /baseline)
 	GetBaseline(w http.ResponseWriter, r *http.Request, params GetBaselineParams)
@@ -1907,6 +2237,9 @@ type ServerInterface interface {
 	// Device registration / heartbeat
 	// (POST /devices)
 	PostDevices(w http.ResponseWriter, r *http.Request)
+	// Redeem a connection code — the phone receives its device token
+	// (POST /enroll)
+	PostEnroll(w http.ResponseWriter, r *http.Request)
 	// Export (synchronous download)
 	// (POST /export)
 	PostExport(w http.ResponseWriter, r *http.Request)
@@ -1946,9 +2279,30 @@ type ServerInterface interface {
 	// The most recent measurement of each requested type — what it was and when
 	// (GET /latest)
 	GetLatest(w http.ResponseWriter, r *http.Request, params GetLatestParams)
-	// Profile
+	// Delete your account and everything of yours on this server
+	// (DELETE /me)
+	DeleteMe(w http.ResponseWriter, r *http.Request)
+	// Profile — who you are on this server, and through which token
 	// (GET /me)
 	GetMe(w http.ResponseWriter, r *http.Request)
+	// Change your display name
+	// (PATCH /me)
+	PatchMe(w http.ResponseWriter, r *http.Request)
+	// A one-time code to connect another phone of yours
+	// (POST /me/enrolment-codes)
+	PostMeEnrolmentCodes(w http.ResponseWriter, r *http.Request)
+	// What was done with your account, and by whom
+	// (GET /me/events)
+	GetMeEvents(w http.ResponseWriter, r *http.Request)
+	// A one-time code to sign in to the web dashboard (10 minutes)
+	// (POST /me/login-codes)
+	PostMeLoginCodes(w http.ResponseWriter, r *http.Request)
+	// Your devices and browser sessions
+	// (GET /me/tokens)
+	GetMeTokens(w http.ResponseWriter, r *http.Request)
+	// Revoke one of your devices or sessions
+	// (DELETE /me/tokens/{id})
+	DeleteMeTokensId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// Notification preferences
 	// (PUT /push/prefs)
 	PutPushPrefs(w http.ResponseWriter, r *http.Request)
@@ -2009,6 +2363,60 @@ func (_ Unimplemented) GetActivity(w http.ResponseWriter, r *http.Request, param
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// The household — members, roles, devices, last upload. No health data.
+// (GET /admin/users)
+func (_ Unimplemented) GetAdminUsers(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Add a member
+// (POST /admin/users)
+func (_ Unimplemented) PostAdminUsers(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete a member and everything of theirs on this server
+// (DELETE /admin/users/{id})
+func (_ Unimplemented) DeleteAdminUsersId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// One member
+// (GET /admin/users/{id})
+func (_ Unimplemented) GetAdminUsersId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change a member's role, disable or re-enable them
+// (PATCH /admin/users/{id})
+func (_ Unimplemented) PatchAdminUsersId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// A connection or sign-in code for a member who has no live device or session
+// (POST /admin/users/{id}/codes)
+func (_ Unimplemented) PostAdminUsersIdCodes(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What was done with a member's account — the same list the member sees
+// (GET /admin/users/{id}/events)
+func (_ Unimplemented) GetAdminUsersIdEvents(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// A member's devices and sessions
+// (GET /admin/users/{id}/tokens)
+func (_ Unimplemented) GetAdminUsersIdTokens(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Revoke one of a member's devices or sessions
+// (DELETE /admin/users/{id}/tokens/{tokenId})
+func (_ Unimplemented) DeleteAdminUsersIdTokensTokenId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, tokenId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // End this device's session — the token on the request stops working
 // (POST /auth/logout)
 func (_ Unimplemented) PostAuthLogout(w http.ResponseWriter, r *http.Request) {
@@ -2018,6 +2426,18 @@ func (_ Unimplemented) PostAuthLogout(w http.ResponseWriter, r *http.Request) {
 // Retired — always 410
 // (POST /auth/refresh)
 func (_ Unimplemented) PostAuthRefresh(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Sign in a browser with a sign-in code — sets the session cookie
+// (POST /auth/web/login)
+func (_ Unimplemented) PostAuthWebLogin(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// End this browser's session
+// (POST /auth/web/logout)
+func (_ Unimplemented) PostAuthWebLogout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2048,6 +2468,12 @@ func (_ Unimplemented) GetDevices(w http.ResponseWriter, r *http.Request) {
 // Device registration / heartbeat
 // (POST /devices)
 func (_ Unimplemented) PostDevices(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Redeem a connection code — the phone receives its device token
+// (POST /enroll)
+func (_ Unimplemented) PostEnroll(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2129,9 +2555,51 @@ func (_ Unimplemented) GetLatest(w http.ResponseWriter, r *http.Request, params 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Profile
+// Delete your account and everything of yours on this server
+// (DELETE /me)
+func (_ Unimplemented) DeleteMe(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Profile — who you are on this server, and through which token
 // (GET /me)
 func (_ Unimplemented) GetMe(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Change your display name
+// (PATCH /me)
+func (_ Unimplemented) PatchMe(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// A one-time code to connect another phone of yours
+// (POST /me/enrolment-codes)
+func (_ Unimplemented) PostMeEnrolmentCodes(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What was done with your account, and by whom
+// (GET /me/events)
+func (_ Unimplemented) GetMeEvents(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// A one-time code to sign in to the web dashboard (10 minutes)
+// (POST /me/login-codes)
+func (_ Unimplemented) PostMeLoginCodes(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Your devices and browser sessions
+// (GET /me/tokens)
+func (_ Unimplemented) GetMeTokens(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Revoke one of your devices or sessions
+// (DELETE /me/tokens/{id})
+func (_ Unimplemented) DeleteMeTokensId(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2321,6 +2789,297 @@ func (siw *ServerInterfaceWrapper) GetActivity(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// GetAdminUsers operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminUsers(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	ctx = context.WithValue(ctx, WebSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminUsers(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAdminUsers operation middleware
+func (siw *ServerInterfaceWrapper) PostAdminUsers(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	ctx = context.WithValue(ctx, WebSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAdminUsers(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteAdminUsersId operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAdminUsersId(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	ctx = context.WithValue(ctx, WebSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAdminUsersId(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAdminUsersId operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminUsersId(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	ctx = context.WithValue(ctx, WebSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminUsersId(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PatchAdminUsersId operation middleware
+func (siw *ServerInterfaceWrapper) PatchAdminUsersId(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	ctx = context.WithValue(ctx, WebSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchAdminUsersId(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAdminUsersIdCodes operation middleware
+func (siw *ServerInterfaceWrapper) PostAdminUsersIdCodes(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	ctx = context.WithValue(ctx, WebSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAdminUsersIdCodes(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAdminUsersIdEvents operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminUsersIdEvents(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	ctx = context.WithValue(ctx, WebSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminUsersIdEvents(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetAdminUsersIdTokens operation middleware
+func (siw *ServerInterfaceWrapper) GetAdminUsersIdTokens(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	ctx = context.WithValue(ctx, WebSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetAdminUsersIdTokens(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteAdminUsersIdTokensTokenId operation middleware
+func (siw *ServerInterfaceWrapper) DeleteAdminUsersIdTokensTokenId(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "tokenId" -------------
+	var tokenId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "tokenId", chi.URLParam(r, "tokenId"), &tokenId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tokenId", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	ctx = context.WithValue(ctx, WebSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteAdminUsersIdTokensTokenId(w, r, id, tokenId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // PostAuthLogout operation middleware
 func (siw *ServerInterfaceWrapper) PostAuthLogout(w http.ResponseWriter, r *http.Request) {
 
@@ -2346,6 +3105,40 @@ func (siw *ServerInterfaceWrapper) PostAuthRefresh(w http.ResponseWriter, r *htt
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostAuthRefresh(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAuthWebLogin operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthWebLogin(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAuthWebLogin(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAuthWebLogout operation middleware
+func (siw *ServerInterfaceWrapper) PostAuthWebLogout(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, WebSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAuthWebLogout(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2607,6 +3400,20 @@ func (siw *ServerInterfaceWrapper) PostDevices(w http.ResponseWriter, r *http.Re
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostDevices(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostEnroll operation middleware
+func (siw *ServerInterfaceWrapper) PostEnroll(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostEnroll(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -2959,6 +3766,28 @@ func (siw *ServerInterfaceWrapper) GetLatest(w http.ResponseWriter, r *http.Requ
 	handler.ServeHTTP(w, r)
 }
 
+// DeleteMe operation middleware
+func (siw *ServerInterfaceWrapper) DeleteMe(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	ctx = context.WithValue(ctx, WebSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteMe(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetMe operation middleware
 func (siw *ServerInterfaceWrapper) GetMe(w http.ResponseWriter, r *http.Request) {
 
@@ -2966,10 +3795,156 @@ func (siw *ServerInterfaceWrapper) GetMe(w http.ResponseWriter, r *http.Request)
 
 	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
 
+	ctx = context.WithValue(ctx, WebSessionScopes, []string{})
+
 	r = r.WithContext(ctx)
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetMe(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PatchMe operation middleware
+func (siw *ServerInterfaceWrapper) PatchMe(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	ctx = context.WithValue(ctx, WebSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PatchMe(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostMeEnrolmentCodes operation middleware
+func (siw *ServerInterfaceWrapper) PostMeEnrolmentCodes(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	ctx = context.WithValue(ctx, WebSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostMeEnrolmentCodes(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMeEvents operation middleware
+func (siw *ServerInterfaceWrapper) GetMeEvents(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	ctx = context.WithValue(ctx, WebSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMeEvents(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostMeLoginCodes operation middleware
+func (siw *ServerInterfaceWrapper) PostMeLoginCodes(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	ctx = context.WithValue(ctx, WebSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostMeLoginCodes(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMeTokens operation middleware
+func (siw *ServerInterfaceWrapper) GetMeTokens(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	ctx = context.WithValue(ctx, WebSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMeTokens(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteMeTokensId operation middleware
+func (siw *ServerInterfaceWrapper) DeleteMeTokensId(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	ctx = context.WithValue(ctx, WebSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteMeTokensId(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3611,10 +4586,43 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/activity", wrapper.GetActivity)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/users", wrapper.GetAdminUsers)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/users", wrapper.PostAdminUsers)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/admin/users/{id}", wrapper.DeleteAdminUsersId)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/users/{id}", wrapper.GetAdminUsersId)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/admin/users/{id}", wrapper.PatchAdminUsersId)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/users/{id}/codes", wrapper.PostAdminUsersIdCodes)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/users/{id}/events", wrapper.GetAdminUsersIdEvents)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/admin/users/{id}/tokens", wrapper.GetAdminUsersIdTokens)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/admin/users/{id}/tokens/{tokenId}", wrapper.DeleteAdminUsersIdTokensTokenId)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/auth/logout", wrapper.PostAuthLogout)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/auth/refresh", wrapper.PostAuthRefresh)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/auth/web/login", wrapper.PostAuthWebLogin)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/auth/web/logout", wrapper.PostAuthWebLogout)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/baseline", wrapper.GetBaseline)
@@ -3630,6 +4638,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/devices", wrapper.PostDevices)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/enroll", wrapper.PostEnroll)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/export", wrapper.PostExport)
@@ -3671,7 +4682,28 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/latest", wrapper.GetLatest)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/me", wrapper.DeleteMe)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me", wrapper.GetMe)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/me", wrapper.PatchMe)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/me/enrolment-codes", wrapper.PostMeEnrolmentCodes)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/events", wrapper.GetMeEvents)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/me/login-codes", wrapper.PostMeLoginCodes)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/tokens", wrapper.GetMeTokens)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/me/tokens/{id}", wrapper.DeleteMeTokensId)
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/push/prefs", wrapper.PutPushPrefs)

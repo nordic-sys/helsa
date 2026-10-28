@@ -11,6 +11,47 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const advanceDeletionJob = `-- name: AdvanceDeletionJob :exec
+UPDATE deletion_jobs SET stage = $1, attempts = 0, last_error = NULL,
+    done_at = CASE WHEN $1 = 'done' THEN now() ELSE NULL END
+WHERE id = $2
+`
+
+type AdvanceDeletionJobParams struct {
+	Stage string      `json:"stage"`
+	ID    pgtype.UUID `json:"id"`
+}
+
+func (q *Queries) AdvanceDeletionJob(ctx context.Context, arg AdvanceDeletionJobParams) error {
+	_, err := q.db.Exec(ctx, advanceDeletionJob, arg.Stage, arg.ID)
+	return err
+}
+
+const countLiveTokens = `-- name: CountLiveTokens :one
+SELECT count(*) FROM device_tokens
+WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > now()
+`
+
+func (q *Queries) CountLiveTokens(ctx context.Context, userID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countLiveTokens, userID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
+const countOtherEnabledAdmins = `-- name: CountOtherEnabledAdmins :one
+SELECT count(*) FROM users u
+WHERE u.role = 'admin' AND u.disabled_at IS NULL AND u.id <> $1::uuid
+  AND NOT EXISTS (SELECT 1 FROM deletion_jobs j WHERE j.user_id = u.id AND j.done_at IS NULL)
+`
+
+func (q *Queries) CountOtherEnabledAdmins(ctx context.Context, exceptID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, countOtherEnabledAdmins, exceptID)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const countUsers = `-- name: CountUsers :one
 SELECT count(*) FROM users
 `
@@ -20,6 +61,40 @@ func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
 	var count int64
 	err := row.Scan(&count)
 	return count, err
+}
+
+const createMember = `-- name: CreateMember :one
+INSERT INTO users (handle, display_name, role)
+VALUES ($1, $2, $3)
+RETURNING id, handle, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at, ha_publish, last_upload_at
+`
+
+type CreateMemberParams struct {
+	Handle      string  `json:"handle"`
+	DisplayName *string `json:"display_name"`
+	Role        string  `json:"role"`
+}
+
+func (q *Queries) CreateMember(ctx context.Context, arg CreateMemberParams) (User, error) {
+	row := q.db.QueryRow(ctx, createMember, arg.Handle, arg.DisplayName, arg.Role)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Handle,
+		&i.Email,
+		&i.DisplayName,
+		&i.TimeZone,
+		&i.Locale,
+		&i.UnitSystem,
+		&i.NotifPrefs,
+		&i.ConsentAt,
+		&i.CreatedAt,
+		&i.Role,
+		&i.DisabledAt,
+		&i.HaPublish,
+		&i.LastUploadAt,
+	)
+	return i, err
 }
 
 const deleteSamplesByUUIDInSpan = `-- name: DeleteSamplesByUUIDInSpan :exec
@@ -86,6 +161,34 @@ type DeleteWorkoutsByUUIDParams struct {
 
 func (q *Queries) DeleteWorkoutsByUUID(ctx context.Context, arg DeleteWorkoutsByUUIDParams) error {
 	_, err := q.db.Exec(ctx, deleteWorkoutsByUUID, arg.UserID, arg.SourceUuids)
+	return err
+}
+
+const extendDeviceToken = `-- name: ExtendDeviceToken :exec
+UPDATE device_tokens SET expires_at = $1 WHERE id = $2 AND revoked_at IS NULL
+`
+
+type ExtendDeviceTokenParams struct {
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+	ID        pgtype.UUID        `json:"id"`
+}
+
+func (q *Queries) ExtendDeviceToken(ctx context.Context, arg ExtendDeviceTokenParams) error {
+	_, err := q.db.Exec(ctx, extendDeviceToken, arg.ExpiresAt, arg.ID)
+	return err
+}
+
+const failDeletionJob = `-- name: FailDeletionJob :exec
+UPDATE deletion_jobs SET attempts = attempts + 1, last_error = $1 WHERE id = $2
+`
+
+type FailDeletionJobParams struct {
+	LastError *string     `json:"last_error"`
+	ID        pgtype.UUID `json:"id"`
+}
+
+func (q *Queries) FailDeletionJob(ctx context.Context, arg FailDeletionJobParams) error {
+	_, err := q.db.Exec(ctx, failDeletionJob, arg.LastError, arg.ID)
 	return err
 }
 
@@ -178,7 +281,7 @@ func (q *Queries) GetSettings(ctx context.Context, id pgtype.UUID) (GetSettingsR
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, handle, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at, ha_publish FROM users WHERE id = $1
+SELECT id, handle, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at, ha_publish, last_upload_at FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
@@ -198,6 +301,7 @@ func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
 		&i.Role,
 		&i.DisabledAt,
 		&i.HaPublish,
+		&i.LastUploadAt,
 	)
 	return i, err
 }
@@ -223,6 +327,34 @@ func (q *Queries) GetUserAuthState(ctx context.Context, id pgtype.UUID) (GetUser
 	return i, err
 }
 
+const getUserByHandle = `-- name: GetUserByHandle :one
+
+SELECT id, handle, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at, ha_publish, last_upload_at FROM users WHERE handle = $1
+`
+
+// ── The household (00015, 00016; docs/36 F1) ───────────────────────────────
+func (q *Queries) GetUserByHandle(ctx context.Context, handle string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserByHandle, handle)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Handle,
+		&i.Email,
+		&i.DisplayName,
+		&i.TimeZone,
+		&i.Locale,
+		&i.UnitSystem,
+		&i.NotifPrefs,
+		&i.ConsentAt,
+		&i.CreatedAt,
+		&i.Role,
+		&i.DisabledAt,
+		&i.HaPublish,
+		&i.LastUploadAt,
+	)
+	return i, err
+}
+
 const getWorkoutIDBySourceUUID = `-- name: GetWorkoutIDBySourceUUID :one
 SELECT id FROM workouts WHERE user_id = $1 AND source_uuid = $2
 `
@@ -238,6 +370,74 @@ type GetWorkoutIDBySourceUUIDParams struct {
 // another user's workout route even if the source_uuid matches.
 func (q *Queries) GetWorkoutIDBySourceUUID(ctx context.Context, arg GetWorkoutIDBySourceUUIDParams) (pgtype.UUID, error) {
 	row := q.db.QueryRow(ctx, getWorkoutIDBySourceUUID, arg.UserID, arg.SourceUuid)
+	var id pgtype.UUID
+	err := row.Scan(&id)
+	return id, err
+}
+
+const insertAccountEvent = `-- name: InsertAccountEvent :exec
+INSERT INTO account_events (user_id, actor_id, kind, detail)
+VALUES ($1, $2, $3, $4)
+`
+
+type InsertAccountEventParams struct {
+	UserID  pgtype.UUID `json:"user_id"`
+	ActorID pgtype.UUID `json:"actor_id"`
+	Kind    string      `json:"kind"`
+	Detail  []byte      `json:"detail"`
+}
+
+func (q *Queries) InsertAccountEvent(ctx context.Context, arg InsertAccountEventParams) error {
+	_, err := q.db.Exec(ctx, insertAccountEvent,
+		arg.UserID,
+		arg.ActorID,
+		arg.Kind,
+		arg.Detail,
+	)
+	return err
+}
+
+const insertCode = `-- name: InsertCode :exec
+INSERT INTO enrolment_codes (code_hash, user_id, purpose, created_by, expires_at)
+VALUES ($1, $2, $3, $4, $5)
+`
+
+type InsertCodeParams struct {
+	CodeHash  []byte             `json:"code_hash"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	Purpose   string             `json:"purpose"`
+	CreatedBy pgtype.UUID        `json:"created_by"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+}
+
+func (q *Queries) InsertCode(ctx context.Context, arg InsertCodeParams) error {
+	_, err := q.db.Exec(ctx, insertCode,
+		arg.CodeHash,
+		arg.UserID,
+		arg.Purpose,
+		arg.CreatedBy,
+		arg.ExpiresAt,
+	)
+	return err
+}
+
+const insertDeletionJob = `-- name: InsertDeletionJob :one
+INSERT INTO deletion_jobs (user_id, handle, requested_by)
+VALUES ($1, $2, $3)
+ON CONFLICT (user_id) WHERE done_at IS NULL DO NOTHING
+RETURNING id
+`
+
+type InsertDeletionJobParams struct {
+	UserID      pgtype.UUID `json:"user_id"`
+	Handle      string      `json:"handle"`
+	RequestedBy pgtype.UUID `json:"requested_by"`
+}
+
+// Already queued: nothing (a member cannot see the open job to update it, and does
+// not need to). The caller treats "no row" as "already on its way".
+func (q *Queries) InsertDeletionJob(ctx context.Context, arg InsertDeletionJobParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, insertDeletionJob, arg.UserID, arg.Handle, arg.RequestedBy)
 	var id pgtype.UUID
 	err := row.Scan(&id)
 	return id, err
@@ -334,6 +534,50 @@ type LinkSamplesToWorkoutsParams struct {
 func (q *Queries) LinkSamplesToWorkouts(ctx context.Context, arg LinkSamplesToWorkoutsParams) error {
 	_, err := q.db.Exec(ctx, linkSamplesToWorkouts, arg.UserID, arg.SourceUuids)
 	return err
+}
+
+const listAccountEvents = `-- name: ListAccountEvents :many
+SELECT e.kind, e.at, e.actor_id, e.detail, a.display_name AS actor_name, a.handle AS actor_handle
+FROM account_events e LEFT JOIN users a ON a.id = e.actor_id
+WHERE e.user_id = $1
+ORDER BY e.at DESC, e.id DESC
+LIMIT 200
+`
+
+type ListAccountEventsRow struct {
+	Kind        string             `json:"kind"`
+	At          pgtype.Timestamptz `json:"at"`
+	ActorID     pgtype.UUID        `json:"actor_id"`
+	Detail      []byte             `json:"detail"`
+	ActorName   *string            `json:"actor_name"`
+	ActorHandle *string            `json:"actor_handle"`
+}
+
+func (q *Queries) ListAccountEvents(ctx context.Context, userID pgtype.UUID) ([]ListAccountEventsRow, error) {
+	rows, err := q.db.Query(ctx, listAccountEvents, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListAccountEventsRow
+	for rows.Next() {
+		var i ListAccountEventsRow
+		if err := rows.Scan(
+			&i.Kind,
+			&i.At,
+			&i.ActorID,
+			&i.Detail,
+			&i.ActorName,
+			&i.ActorHandle,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
 
 const listAchievements = `-- name: ListAchievements :many
@@ -526,6 +770,59 @@ func (q *Queries) ListGoals(ctx context.Context, userID pgtype.UUID) ([]Goal, er
 	return items, nil
 }
 
+const listMembers = `-- name: ListMembers :many
+SELECT u.id, u.handle, u.display_name, u.role, u.disabled_at, u.created_at, u.last_upload_at,
+       (SELECT count(*) FROM device_tokens t
+         WHERE t.user_id = u.id AND t.revoked_at IS NULL AND t.expires_at > now()) AS live_tokens,
+       EXISTS (SELECT 1 FROM deletion_jobs j WHERE j.user_id = u.id AND j.done_at IS NULL) AS deleting
+FROM users u
+ORDER BY u.created_at, u.id
+`
+
+type ListMembersRow struct {
+	ID           pgtype.UUID        `json:"id"`
+	Handle       string             `json:"handle"`
+	DisplayName  *string            `json:"display_name"`
+	Role         string             `json:"role"`
+	DisabledAt   pgtype.Timestamptz `json:"disabled_at"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	LastUploadAt pgtype.Timestamptz `json:"last_upload_at"`
+	LiveTokens   int64              `json:"live_tokens"`
+	Deleting     bool               `json:"deleting"`
+}
+
+// Account metadata only — never anything read out of a member's data. The token
+// count goes through device_tokens' admin policy; the last upload is users' own.
+func (q *Queries) ListMembers(ctx context.Context) ([]ListMembersRow, error) {
+	rows, err := q.db.Query(ctx, listMembers)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []ListMembersRow
+	for rows.Next() {
+		var i ListMembersRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.Handle,
+			&i.DisplayName,
+			&i.Role,
+			&i.DisabledAt,
+			&i.CreatedAt,
+			&i.LastUploadAt,
+			&i.LiveTokens,
+			&i.Deleting,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const listSleepSegments = `-- name: ListSleepSegments :many
 
 SELECT started_at, ended_at, stage FROM sleep_segments
@@ -618,6 +915,49 @@ func (q *Queries) LocateSamplesByUUID(ctx context.Context, arg LocateSamplesByUU
 	return items, nil
 }
 
+const lockAdmins = `-- name: LockAdmins :exec
+SELECT pg_advisory_xact_lock(hashtext('helsa.admins'))
+`
+
+// Every change that could leave the server without an enabled admin takes this
+// lock first, so two such changes cannot both see "there is another one" (C3).
+func (q *Queries) LockAdmins(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, lockAdmins)
+	return err
+}
+
+const nextDeletionJob = `-- name: NextDeletionJob :one
+SELECT id, user_id, handle, requested_by, requested_at, stage, attempts, last_error, done_at FROM deletion_jobs WHERE done_at IS NULL ORDER BY requested_at LIMIT 1 FOR UPDATE SKIP LOCKED
+`
+
+func (q *Queries) NextDeletionJob(ctx context.Context) (DeletionJob, error) {
+	row := q.db.QueryRow(ctx, nextDeletionJob)
+	var i DeletionJob
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Handle,
+		&i.RequestedBy,
+		&i.RequestedAt,
+		&i.Stage,
+		&i.Attempts,
+		&i.LastError,
+		&i.DoneAt,
+	)
+	return i, err
+}
+
+const purgeDeletedUserAggregates = `-- name: PurgeDeletedUserAggregates :one
+SELECT purge_deleted_user_aggregates($1::uuid)::bigint AS purged
+`
+
+func (q *Queries) PurgeDeletedUserAggregates(ctx context.Context, userID pgtype.UUID) (int64, error) {
+	row := q.db.QueryRow(ctx, purgeDeletedUserAggregates, userID)
+	var purged int64
+	err := row.Scan(&purged)
+	return purged, err
+}
+
 const putChallengeSettings = `-- name: PutChallengeSettings :exec
 INSERT INTO phone_settings (user_id, challenge_thresholds, challenge_rest_days, challenge_at)
 VALUES ($1, $2::integer[], $3::date[], now())
@@ -678,6 +1018,33 @@ func (q *Queries) PutJourneySettings(ctx context.Context, arg PutJourneySettings
 	return err
 }
 
+const redeemCode = `-- name: RedeemCode :one
+SELECT redeem_code($1, $2, $3, $4, $5, $6)::uuid AS user_id
+`
+
+type RedeemCodeParams struct {
+	CodeHash  []byte             `json:"code_hash"`
+	Purpose   string             `json:"purpose"`
+	TokenID   pgtype.UUID        `json:"token_id"`
+	Label     string             `json:"label"`
+	Kind      string             `json:"kind"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+}
+
+func (q *Queries) RedeemCode(ctx context.Context, arg RedeemCodeParams) (pgtype.UUID, error) {
+	row := q.db.QueryRow(ctx, redeemCode,
+		arg.CodeHash,
+		arg.Purpose,
+		arg.TokenID,
+		arg.Label,
+		arg.Kind,
+		arg.ExpiresAt,
+	)
+	var user_id pgtype.UUID
+	err := row.Scan(&user_id)
+	return user_id, err
+}
+
 const revokeDeviceToken = `-- name: RevokeDeviceToken :one
 UPDATE device_tokens SET revoked_at = now()
 WHERE id = $1 AND user_id = $2 AND revoked_at IS NULL
@@ -702,6 +1069,21 @@ func (q *Queries) RevokeDeviceToken(ctx context.Context, arg RevokeDeviceTokenPa
 	var i RevokeDeviceTokenRow
 	err := row.Scan(&i.ID, &i.UserID, &i.Label)
 	return i, err
+}
+
+const setUserDisabled = `-- name: SetUserDisabled :exec
+UPDATE users SET disabled_at = CASE WHEN $1::boolean THEN COALESCE(disabled_at, now()) ELSE NULL END
+WHERE id = $2
+`
+
+type SetUserDisabledParams struct {
+	Disabled bool        `json:"disabled"`
+	ID       pgtype.UUID `json:"id"`
+}
+
+func (q *Queries) SetUserDisabled(ctx context.Context, arg SetUserDisabledParams) error {
+	_, err := q.db.Exec(ctx, setUserDisabled, arg.Disabled, arg.ID)
+	return err
 }
 
 const setUserRole = `-- name: SetUserRole :exec
@@ -749,6 +1131,48 @@ WHERE id = $1 AND (last_used_at IS NULL OR last_used_at < now() - interval '1 ho
 func (q *Queries) TouchDeviceToken(ctx context.Context, id pgtype.UUID) error {
 	_, err := q.db.Exec(ctx, touchDeviceToken, id)
 	return err
+}
+
+const touchLastUpload = `-- name: TouchLastUpload :exec
+UPDATE users SET last_upload_at = now()
+WHERE id = $1 AND (last_upload_at IS NULL OR last_upload_at < now())
+`
+
+// The worker, once per batch. Only forwards: a redriven old batch must not move it back.
+func (q *Queries) TouchLastUpload(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, touchLastUpload, id)
+	return err
+}
+
+const updateDisplayName = `-- name: UpdateDisplayName :one
+UPDATE users SET display_name = $1 WHERE id = $2 RETURNING id, handle, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at, ha_publish, last_upload_at
+`
+
+type UpdateDisplayNameParams struct {
+	DisplayName *string     `json:"display_name"`
+	ID          pgtype.UUID `json:"id"`
+}
+
+func (q *Queries) UpdateDisplayName(ctx context.Context, arg UpdateDisplayNameParams) (User, error) {
+	row := q.db.QueryRow(ctx, updateDisplayName, arg.DisplayName, arg.ID)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Handle,
+		&i.Email,
+		&i.DisplayName,
+		&i.TimeZone,
+		&i.Locale,
+		&i.UnitSystem,
+		&i.NotifPrefs,
+		&i.ConsentAt,
+		&i.CreatedAt,
+		&i.Role,
+		&i.DisabledAt,
+		&i.HaPublish,
+		&i.LastUploadAt,
+	)
+	return i, err
 }
 
 const updateSettings = `-- name: UpdateSettings :one
@@ -1093,7 +1517,7 @@ INSERT INTO users (handle, email, display_name)
 VALUES ($1, $2, $3)
 ON CONFLICT (handle) DO UPDATE
     SET email = COALESCE(EXCLUDED.email, users.email)
-RETURNING id, handle, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at, ha_publish
+RETURNING id, handle, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at, ha_publish, last_upload_at
 `
 
 type UpsertUserByHandleParams struct {
@@ -1122,6 +1546,7 @@ func (q *Queries) UpsertUserByHandle(ctx context.Context, arg UpsertUserByHandle
 		&i.Role,
 		&i.DisabledAt,
 		&i.HaPublish,
+		&i.LastUploadAt,
 	)
 	return i, err
 }

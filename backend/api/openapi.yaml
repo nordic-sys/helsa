@@ -86,13 +86,320 @@ paths:
   /me:
     get:
       tags: [profile]
-      summary: Profile
+      summary: Profile — who you are on this server, and through which token
+      security: [{ deviceToken: [] }, { webSession: [] }]
       responses:
         '200':
           description: The signed-in user
           content:
             application/json:
               schema: { $ref: '#/components/schemas/User' }
+    patch:
+      tags: [profile]
+      summary: Change your display name
+      security: [{ deviceToken: [] }, { webSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MePatch' }
+      responses:
+        '200':
+          description: The updated profile
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/User' }
+        '400': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [profile]
+      summary: Delete your account and everything of yours on this server
+      description: >
+        Disables the account at once (every token is refused from the next request) and queues the
+        deletion; the worker removes the rows, the aggregates, the caches, the Home Assistant topics
+        and the queued batches. The phone and the Health app are not touched. Backups keep the data
+        until they expire (docs/36 §4.5). The handle in the body is the confirmation. The last admin
+        cannot delete themselves (409).
+      security: [{ deviceToken: [] }, { webSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DeleteConfirm' }
+      responses:
+        '202': { description: Disabled now; the deletion is queued }
+        '400': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /me/tokens:
+    get:
+      tags: [profile]
+      summary: Your devices and browser sessions
+      security: [{ deviceToken: [] }, { webSession: [] }]
+      responses:
+        '200':
+          description: Newest first
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/TokenInfo' } }
+
+  /me/tokens/{id}:
+    delete:
+      tags: [profile]
+      summary: Revoke one of your devices or sessions
+      security: [{ deviceToken: [] }, { webSession: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Revoked }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /me/enrolment-codes:
+    post:
+      tags: [profile]
+      summary: A one-time code to connect another phone of yours
+      security: [{ deviceToken: [] }, { webSession: [] }]
+      responses:
+        '201':
+          description: The code — shown once, stored only as a hash
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CodeIssued' }
+
+  /me/login-codes:
+    post:
+      tags: [profile]
+      summary: A one-time code to sign in to the web dashboard (10 minutes)
+      security: [{ deviceToken: [] }, { webSession: [] }]
+      responses:
+        '201':
+          description: The code — shown once, stored only as a hash
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CodeIssued' }
+
+  /me/events:
+    get:
+      tags: [profile]
+      summary: What was done with your account, and by whom
+      security: [{ deviceToken: [] }, { webSession: [] }]
+      responses:
+        '200':
+          description: Newest first, at most 200
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/AccountEvent' } }
+
+  /enroll:
+    post:
+      tags: [auth]
+      summary: Redeem a connection code — the phone receives its device token
+      description: >
+        No token: the code is the credential. Reachable only through the mTLS port (the proxy answers
+        404 on the web port), so a caller already holds a client certificate of this server's CA. The
+        token belongs to the user the CODE names; the request cannot choose one. Every failure —
+        unknown, expired, used, revoked, a web code, a disabled account — is the same 401; too many
+        failures are 429 (docs/36 §3.2, §9 C7–C8).
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/EnrollRequest' }
+      responses:
+        '201':
+          description: The device token and whose it is
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/EnrollResult' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+
+  /auth/web/login:
+    post:
+      tags: [auth]
+      summary: Sign in a browser with a sign-in code — sets the session cookie
+      description: >
+        Web port only. Sets `helsa_session` (httpOnly, Secure, SameSite=Strict, host-only,
+        Path=/v1), a 30-day session that slides while used. Failures as on /enroll.
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/WebLoginRequest' }
+      responses:
+        '204': { description: Signed in; the cookie is set }
+        '400': { $ref: '#/components/responses/Problem' }
+        '401': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '429': { $ref: '#/components/responses/Problem' }
+
+  /auth/web/logout:
+    post:
+      tags: [auth]
+      summary: End this browser's session
+      security: [{ webSession: [] }]
+      responses:
+        '204': { description: Signed out; the cookie is cleared }
+
+  /admin/users:
+    get:
+      tags: [admin]
+      summary: The household — members, roles, devices, last upload. No health data.
+      security: [{ deviceToken: [] }, { webSession: [] }]
+      responses:
+        '200':
+          description: Every member
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/Member' } }
+        '403': { $ref: '#/components/responses/Problem' }
+    post:
+      tags: [admin]
+      summary: Add a member
+      security: [{ deviceToken: [] }, { webSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MemberCreate' }
+      responses:
+        '201':
+          description: The new member
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Member' }
+        '400': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /admin/users/{id}:
+    get:
+      tags: [admin]
+      summary: One member
+      security: [{ deviceToken: [] }, { webSession: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: The member
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Member' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+    patch:
+      tags: [admin]
+      summary: Change a member's role, disable or re-enable them
+      description: >
+        Disabling is not revoking: the tokens stay, and re-enabling lets the same phone carry on.
+        There is always at least one enabled admin: a change that would leave none is 409.
+      security: [{ deviceToken: [] }, { webSession: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MemberPatch' }
+      responses:
+        '200':
+          description: The member
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Member' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+    delete:
+      tags: [admin]
+      summary: Delete a member and everything of theirs on this server
+      security: [{ deviceToken: [] }, { webSession: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/DeleteConfirm' }
+      responses:
+        '202': { description: Disabled now; the deletion is queued }
+        '400': { $ref: '#/components/responses/Problem' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /admin/users/{id}/events:
+    get:
+      tags: [admin]
+      summary: What was done with a member's account — the same list the member sees
+      security: [{ deviceToken: [] }, { webSession: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Newest first, at most 200
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/AccountEvent' } }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /admin/users/{id}/tokens:
+    get:
+      tags: [admin]
+      summary: A member's devices and sessions
+      security: [{ deviceToken: [] }, { webSession: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Newest first
+          content:
+            application/json:
+              schema: { type: array, items: { $ref: '#/components/schemas/TokenInfo' } }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /admin/users/{id}/tokens/{tokenId}:
+    delete:
+      tags: [admin]
+      summary: Revoke one of a member's devices or sessions
+      security: [{ deviceToken: [] }, { webSession: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: tokenId, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Revoked }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+
+  /admin/users/{id}/codes:
+    post:
+      tags: [admin]
+      summary: A connection or sign-in code for a member who has no live device or session
+      description: >
+        Only for a member with no live token (a new member, or one who has lost everything): a member
+        who has a device asks for their own code, so that an admin cannot quietly sign in as them
+        (docs/36 §9, C2). Otherwise 409.
+      security: [{ deviceToken: [] }, { webSession: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CodeRequest' }
+      responses:
+        '201':
+          description: The code — shown once
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CodeIssued' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
 
   /settings:
     get:
@@ -1033,10 +1340,17 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: >
-        A long-lived device token (docs/08-auth-hozzaferes.md §7). It does NOT come from an interactive
-        sign-in — an install-time or manual step issues it. This is the application-level factor; the
-        transport-level factor is the mTLS client certificate that the reverse proxy verifies (the backend
-        sees which device is speaking from the X-Client-Cert-CN header).
+        A long-lived device token (docs/08-auth-hozzaferes.md §7), issued by the token tool or by
+        redeeming a connection code (/enroll). This is the application-level factor; the
+        transport-level factor is the mTLS client certificate the reverse proxy verifies.
+    webSession:
+      type: apiKey
+      in: cookie
+      name: helsa_session
+      description: >
+        A browser's session, set by /auth/web/login: httpOnly, Secure, SameSite=Strict, host-only,
+        Path=/v1, 30 days sliding. Accepted only through the web port, never together with a bearer
+        token, and a cookie-authenticated request that changes something must carry a matching Origin.
 
   responses:
     Problem:
@@ -1066,9 +1380,128 @@ components:
       type: object
       properties:
         id: { type: string, format: uuid }
+        handle: { type: string, description: "the short name, e.g. nori" }
         display_name: { type: string }
+        role: { type: string, enum: [admin, member] }
+        token: { $ref: '#/components/schemas/TokenInfo' }
+        capabilities: { $ref: '#/components/schemas/Capabilities' }
         settings: { $ref: '#/components/schemas/Settings' }
         created_at: { type: string, format: date-time }
+
+    Capabilities:
+      type: object
+      description: >
+        What this server can do for this caller. A client hides what is false or absent — an older
+        server sends none of it, and the client keeps its older screens (docs/36 §6.2).
+      properties:
+        household: { type: boolean, description: "members, codes and accounts exist on this server" }
+        can_delete_self: { type: boolean, description: "false for the last admin" }
+
+    MePatch:
+      type: object
+      properties:
+        display_name: { type: string, minLength: 1, maxLength: 64 }
+
+    DeleteConfirm:
+      type: object
+      required: [handle]
+      properties:
+        handle: { type: string, description: "the account's handle, typed as confirmation" }
+
+    TokenInfo:
+      type: object
+      required: [id, label, kind, created_at, expires_at]
+      properties:
+        id: { type: string, format: uuid }
+        label: { type: string }
+        kind: { type: string, enum: [device, web] }
+        created_at: { type: string, format: date-time }
+        created_by: { type: string, format: uuid }
+        expires_at: { type: string, format: date-time }
+        last_used_at: { type: string, format: date-time }
+        revoked_at: { type: string, format: date-time }
+        current: { type: boolean, description: "the token this request came with" }
+
+    CodeRequest:
+      type: object
+      required: [purpose]
+      properties:
+        purpose: { type: string, enum: [device, web] }
+        ttl_minutes: { type: integer, minimum: 1, maximum: 1440, description: "device codes only; default 15. A web code always lives 10 minutes." }
+
+    CodeIssued:
+      type: object
+      required: [code, purpose, expires_at]
+      properties:
+        code: { type: string, description: "8 characters of Crockford base32, shown as XXXX-XXXX" }
+        purpose: { type: string, enum: [device, web] }
+        expires_at: { type: string, format: date-time }
+
+    AccountEvent:
+      type: object
+      required: [kind, at]
+      properties:
+        kind: { type: string }
+        at: { type: string, format: date-time }
+        actor: { type: string, description: "the display name or handle of who did it; absent when it was the server's operator (CLI)" }
+        actor_is_self: { type: boolean }
+        detail: { type: object, additionalProperties: true }
+
+    EnrollRequest:
+      type: object
+      required: [code, label]
+      properties:
+        code: { type: string }
+        label: { type: string, minLength: 1, maxLength: 64, description: "the device's name on the server, e.g. Nóri iPhone" }
+        platform: { type: string }
+
+    EnrollResult:
+      type: object
+      required: [access_token, expires_at, user]
+      properties:
+        access_token: { type: string }
+        expires_at: { type: string, format: date-time }
+        user:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            handle: { type: string }
+            display_name: { type: string }
+
+    WebLoginRequest:
+      type: object
+      required: [code]
+      properties:
+        code: { type: string }
+
+    Member:
+      type: object
+      required: [id, handle, role, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        handle: { type: string }
+        display_name: { type: string }
+        role: { type: string, enum: [admin, member] }
+        disabled: { type: boolean }
+        deleting: { type: boolean }
+        created_at: { type: string, format: date-time }
+        devices: { type: integer, description: "live tokens (devices and browser sessions)" }
+        last_upload_at: { type: string, format: date-time }
+
+    MemberCreate:
+      type: object
+      required: [handle]
+      properties:
+        handle: { type: string, pattern: '^[a-z0-9][a-z0-9_-]{0,31}$' }
+        display_name: { type: string, maxLength: 64 }
+        role: { type: string, enum: [admin, member], default: member }
+
+    MemberPatch:
+      type: object
+      properties:
+        role: { type: string, enum: [admin, member] }
+        disabled: { type: boolean }
+        display_name: { type: string, minLength: 1, maxLength: 64 }
 
     Settings:
       type: object

@@ -79,7 +79,7 @@ func addPerson(t *testing.T, e *env, name, tz string, steps, hr, energy, goal fl
 	sub := fmt.Sprintf("iso-%s-%d", name, time.Now().UnixNano())
 	u, err := db.New(e.store.DB).UpsertUserByHandle(ctx, db.UpsertUserByHandleParams{Handle: sub})
 	must(t, err, "create "+name)
-	sess, err := auth.New(e.cfg, e.store.DB, e.store.Redis).IssueDeviceToken(ctx, pgconv.ToUUID(u.ID), name+"-phone", uuid.Nil)
+	sess, err := auth.New(e.cfg, e.store.DB, e.store.Redis).IssueDeviceToken(ctx, pgconv.ToUUID(u.ID), sub+"-tok", uuid.Nil)
 	must(t, err, "token for "+name)
 	return &person{name: name, sub: sub, token: sess.AccessToken, userID: pgconv.ToUUID(u.ID), tz: tz,
 		steps: steps, hr: hr, energy: energy, goal: goal, lat: lat}
@@ -222,6 +222,10 @@ func TestTwoPeopleSeeOnlyTheirOwnData(t *testing.T) {
 			own: none, why: "the rules need weeks of history the fixture does not have"},
 		{op: "GET /ingest/status", path: func(*person) string { return "/v1/ingest/status" }, status: 200,
 			own: none, why: "the queue is empty by now; a member's view is checked for the other's batch id"},
+		{op: "GET /me/tokens", path: func(*person) string { return "/v1/me/tokens" }, status: 200,
+			own: func(p *person) []string { return []string{p.sub + "-tok"} }},
+		{op: "GET /me/events", path: func(*person) string { return "/v1/me/events" }, status: 200,
+			own: none, why: "the fixture's accounts have no events; TestHouseholdFlow reads a member's log with entries"},
 		{op: "GET /export/{id}", path: func(*person) string { return "/v1/export/" + uuid.NewString() }, status: 404,
 			own: none, why: "always 404 — the export is synchronous (POST /export)"},
 	}
@@ -322,6 +326,11 @@ func TestTwoPeopleSeeOnlyTheirOwnData(t *testing.T) {
 	}
 
 	// Nothing of the contract went untested.
+	// The household's own operations are exercised by TestHouseholdFlow, which fails
+	// if it skips any of householdOps.
+	for _, op := range householdOps {
+		covered[op] = true
+	}
 	var missing []string
 	for _, op := range contractOperations(t) {
 		if !covered[op] {
