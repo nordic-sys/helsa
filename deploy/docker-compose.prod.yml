@@ -58,8 +58,6 @@ services:
       HELSA_RABBITMQ_URL: "amqp://${RABBITMQ_USER:-helsa}:${RABBITMQ_PASSWORD}@rabbitmq:5672/"
       # ⚠️ Its default is "dev-only-insecure-secret-change-me" — overriding it is mandatory.
       HELSA_JWT_SECRET: "${HELSA_JWT_SECRET:?must be set in .env}"
-      # The device-token model (docs/08 §7): no Apple JWKS, issuing the token is a manual step.
-      HELSA_AUTH_DEV_MODE: "${HELSA_AUTH_DEV_MODE:-true}"
     depends_on:
       timescaledb: { condition: service_healthy }
       redis:       { condition: service_healthy }
@@ -145,7 +143,7 @@ services:
       HELSA_JWT_SECRET: "${HELSA_JWT_SECRET:?must be set in .env}"
       # The device token is deliberately long-lived: here expiry is more of a risk
       # (a silent stop in syncing) than a protection — docs/08 §7.
-      HELSA_ACCESS_TTL: "${HELSA_DEVICE_TOKEN_TTL:-8760h}"
+      HELSA_DEVICE_TOKEN_TTL: "${HELSA_DEVICE_TOKEN_TTL:-8760h}"
     depends_on:
       timescaledb: { condition: service_healthy }
       redis:       { condition: service_healthy }

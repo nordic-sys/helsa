@@ -43,21 +43,17 @@ Authorization: Bearer eyJhbGciOiJIUzI1NiIs...
 Lifetime is long by design. The reasoning — and the revocation options — are on the
 [Device token](/getting-started/device-token/) page.
 
-## `/v1/auth/refresh` and `/v1/auth/logout`
+## `/v1/auth/logout` (and the retired `/v1/auth/refresh`)
 
-These exist for a session that rotates. ⚠️ The dashboard is **not** one of them: it
-keeps the device token you paste into it in `localStorage`, like any other device.
-There is no cookie and no browser-specific session — one more reason `8443` stays off
-the internet.
+- `POST /v1/auth/logout` — ends the calling device's session: **revokes the access token
+  presented on the request**. `204`, or `503` if the revocation could not be written —
+  because answering success when the session is still alive would be the worst possible
+  lie here.
+- `POST /v1/auth/refresh` — **retired, always `410`.** Device tokens are long-lived and are
+  not refreshed. Older servers handed out a refresh token next to every device token; it was
+  never used, and it was a second credential that outlived the revocation of its token.
 
-- `POST /v1/auth/refresh` — exchange a refresh token for a new session. No bearer
-  token needed.
-- `POST /v1/auth/logout` — ends the calling device's session: drops the refresh token
-  **and revokes the access token presented on the request**. `204`, or `503` if the
-  deny-list could not be written — because answering success when the session is still
-  alive would be the worst possible lie here.
-
-Native clients normally use their long-lived device token and never touch either. To
+Native clients use their long-lived device token and never refresh it. To
 revoke a token from a device you no longer have, use the CLI — see
 [revoking](/getting-started/device-token/#revoking).
 

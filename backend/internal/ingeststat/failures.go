@@ -47,7 +47,10 @@ func redriveKey(q string) string  { return prefix(q) + ":redrive" }
 
 // Failure is one dead-lettered batch as the worker saw it.
 type Failure struct {
-	BatchID  uuid.UUID `json:"batch_id"`
+	BatchID uuid.UUID `json:"batch_id"`
+	// UserID is whose batch it was. A record written before it existed has none,
+	// and is shown to admins only (MemberView).
+	UserID   uuid.UUID `json:"user_id,omitempty"`
 	At       time.Time `json:"failed_at"`
 	Error    string    `json:"error"`
 	Redriven int       `json:"redriven"`
@@ -170,4 +173,16 @@ func SanitizeError(err error) string {
 		s = string(r[:MaxErrorLen]) + "…"
 	}
 	return s
+}
+
+// OwnedBy keeps the failures of one user's batches. A record without a user —
+// written before records carried one — belongs to nobody it can be shown to.
+func OwnedBy(fs []Failure, user uuid.UUID) []Failure {
+	var out []Failure
+	for _, f := range fs {
+		if f.UserID != uuid.Nil && f.UserID == user {
+			out = append(out, f)
+		}
+	}
+	return out
 }

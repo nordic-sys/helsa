@@ -79,7 +79,7 @@ migrate: ## Apply the goose migrations (idempotent against an already bootstrapp
 SMOKE_PKGS := ./test/smoke ./internal/insights ./internal/coverage ./internal/sourcemerge ./internal/ingeststat ./internal/queue ./internal/workouts ./internal/latest ./internal/challenge ./internal/journal ./internal/ingest
 
 smoke: $(ENV_FILE) ## E2E smoke: auth -> ingest -> summary (against the running infrastructure)
-	HELSA_AUTH_DEV_MODE=true go test -tags smoke -count=1 -v $(SMOKE_PKGS)
+	go test -tags smoke -count=1 -v $(SMOKE_PKGS)
 
 test: ## Unit tests
 	go test ./...

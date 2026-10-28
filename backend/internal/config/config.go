@@ -23,12 +23,11 @@ type Config struct {
 	IngestQueue string // name of the queue the API publishes to and the worker consumes
 
 	// Auth
-	JWTSecret       string        // HMAC secret for the session JWT
-	AccessTokenTTL  time.Duration // short lifetime
-	RefreshTokenTTL time.Duration
-	AppleAudiences  []string // accepted audiences (native bundleID + web serviceID)
-	AppleIssuer     string   // https://appleid.apple.com
-	AuthDevMode     bool     // if true, /auth/apple accepts the "dev:<apple_sub>" token without JWKS (local smoke)
+	JWTSecret string // HMAC secret for the device tokens
+	// DeviceTokenTTL is a device token's lifetime. Deliberately long: on a phone, an
+	// expiry is more of a risk (a silent stop in syncing) than a protection, and a
+	// lost phone is taken back by revoking its token — docs/08 §7.
+	DeviceTokenTTL time.Duration
 
 	// Home Assistant over MQTT — OFF unless MQTTURL is set.
 	MQTT MQTT
@@ -57,18 +56,16 @@ func (m MQTT) Enabled() bool { return m.URL != "" }
 // published by the deploy/ compose stack.
 func Load() (*Config, error) {
 	c := &Config{
-		HTTPAddr:        env("HELSA_HTTP_ADDR", ":8080"),
-		DatabaseURL:     env("HELSA_DATABASE_URL", "postgres://helsa:helsa_local_dev@localhost:5433/helsa?sslmode=disable"),
-		RedisAddr:       env("HELSA_REDIS_ADDR", "localhost:6380"),
-		RedisPassword:   env("HELSA_REDIS_PASSWORD", "helsa_local_dev"),
-		RabbitMQURL:     env("HELSA_RABBITMQ_URL", "amqp://helsa:helsa_local_dev@localhost:5672/"),
-		IngestQueue:     env("HELSA_INGEST_QUEUE", "helsa.ingest"),
-		JWTSecret:       env("HELSA_JWT_SECRET", "dev-only-insecure-secret-change-me"),
-		AccessTokenTTL:  envDuration("HELSA_ACCESS_TTL", 15*time.Minute),
-		RefreshTokenTTL: envDuration("HELSA_REFRESH_TTL", 30*24*time.Hour),
-		AppleAudiences:  envList("HELSA_APPLE_AUDIENCES", []string{"com.nordic-sys.Helsa"}),
-		AppleIssuer:     env("HELSA_APPLE_ISSUER", "https://appleid.apple.com"),
-		AuthDevMode:     envBool("HELSA_AUTH_DEV_MODE", false),
+		HTTPAddr:      env("HELSA_HTTP_ADDR", ":8080"),
+		DatabaseURL:   env("HELSA_DATABASE_URL", "postgres://helsa:helsa_local_dev@localhost:5433/helsa?sslmode=disable"),
+		RedisAddr:     env("HELSA_REDIS_ADDR", "localhost:6380"),
+		RedisPassword: env("HELSA_REDIS_PASSWORD", "helsa_local_dev"),
+		RabbitMQURL:   env("HELSA_RABBITMQ_URL", "amqp://helsa:helsa_local_dev@localhost:5672/"),
+		IngestQueue:   env("HELSA_INGEST_QUEUE", "helsa.ingest"),
+		JWTSecret:     env("HELSA_JWT_SECRET", "dev-only-insecure-secret-change-me"),
+		// HELSA_ACCESS_TTL is the name the token container was given before; it is
+		// still read, so that an existing deploy/.env keeps meaning what it meant.
+		DeviceTokenTTL: envDuration("HELSA_DEVICE_TOKEN_TTL", envDuration("HELSA_ACCESS_TTL", 8760*time.Hour)),
 		MQTT: MQTT{
 			URL:             env("HELSA_MQTT_URL", ""),
 			ClientID:        env("HELSA_MQTT_CLIENT_ID", "helsa"),

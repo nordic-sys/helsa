@@ -178,7 +178,7 @@ func (s *Server) GetGoals(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) PutGoals(w http.ResponseWriter, r *http.Request) {
-	uid, ok := auth.UserID(r.Context())
+	uid, ok := principalID(r)
 	if !ok {
 		problem(w, http.StatusUnauthorized, "Unauthorized", "")
 		return

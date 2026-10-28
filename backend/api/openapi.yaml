@@ -36,24 +36,25 @@ paths:
   /auth/refresh:
     post:
       tags: [auth]
-      summary: Refresh the access token with a refresh token
+      summary: Retired — always 410
+      deprecated: true
+      description: >
+        Nothing issues refresh tokens any more. A device token is long-lived and is not
+        refreshed; a lost device is taken back by revoking its token. The route answers 410
+        rather than 404, so that a client still holding an old refresh token hears that the
+        route existed and is gone. (Kept, a refresh token was a second, independent credential
+        that outlived the revocation of its device token — docs/36 §9, C6.)
       security: []
       responses:
-        '200':
-          description: A new session
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/Session' }
-        '401': { $ref: '#/components/responses/Problem' }
+        '410': { $ref: '#/components/responses/Problem' }
 
   /auth/logout:
     post:
       tags: [auth]
       summary: End this device's session — the token on the request stops working
       description: >
-        Drops the refresh token **and puts the access token presented on this request on the
-        deny-list**, so the device that made the call is refused from its next request on. Other
-        devices are untouched.
+        **Revokes the access token presented on this request**, so the device that made the
+        call is refused from its next request on. Other devices are untouched.
 
 
         ⚠️ **The second half used to be missing, and the gap was the whole feature.** This route
@@ -1058,7 +1059,7 @@ components:
       type: object
       properties:
         access_token: { type: string }
-        refresh_token: { type: string, description: "for the native clients; on the web it lives in an httpOnly cookie" }
+        refresh_token: { type: string, deprecated: true, description: "no longer issued (refresh is retired)" }
         expires_in: { type: integer }
 
     User:

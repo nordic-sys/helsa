@@ -43,7 +43,7 @@ func (s *Server) GetAchievements(w http.ResponseWriter, r *http.Request) {
 // set" semantics would take that emptiness as an instruction — wiping out badges
 // collected over years. So there is no deletion, anywhere.
 func (s *Server) PostAchievements(w http.ResponseWriter, r *http.Request) {
-	uid, ok := auth.UserID(r.Context())
+	uid, ok := principalID(r)
 	if !ok {
 		problem(w, http.StatusUnauthorized, "Unauthorized", "")
 		return

@@ -23,7 +23,7 @@ import (
 // names the field that was wrong, never its content.
 
 func (s *Server) PostJournal(w http.ResponseWriter, r *http.Request) {
-	uid, ok := auth.UserID(r.Context())
+	uid, ok := principalID(r)
 	if !ok {
 		problem(w, http.StatusUnauthorized, "Unauthorized", "")
 		return
@@ -92,7 +92,7 @@ func (s *Server) GetJournal(w http.ResponseWriter, r *http.Request, params api.G
 }
 
 func (s *Server) DeleteJournal(w http.ResponseWriter, r *http.Request) {
-	uid, ok := auth.UserID(r.Context())
+	uid, ok := principalID(r)
 	if !ok {
 		problem(w, http.StatusUnauthorized, "Unauthorized", "")
 		return

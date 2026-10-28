@@ -14,7 +14,9 @@ import (
 
 	"github.com/nordic-sys/helsa/backend/internal/auth"
 	"github.com/nordic-sys/helsa/backend/internal/config"
+	"github.com/nordic-sys/helsa/backend/internal/db"
 	"github.com/nordic-sys/helsa/backend/internal/ingest"
+	"github.com/nordic-sys/helsa/backend/internal/pgconv"
 	"github.com/nordic-sys/helsa/backend/internal/queue"
 	"github.com/nordic-sys/helsa/backend/internal/server"
 	"github.com/nordic-sys/helsa/backend/internal/store"
@@ -38,7 +40,6 @@ type env struct {
 
 func newEnv(t *testing.T) *env {
 	t.Helper()
-	setIfEmpty("HELSA_AUTH_DEV_MODE", "true")
 	setIfEmpty("HELSA_DATABASE_URL", "postgres://helsa:helsa_local_dev@localhost:5433/helsa?sslmode=disable")
 	setIfEmpty("HELSA_REDIS_ADDR", "localhost:6380")
 	setIfEmpty("HELSA_REDIS_PASSWORD", "helsa_local_dev")
@@ -85,7 +86,9 @@ func newEnv(t *testing.T) *env {
 	// The test therefore asks the service for it — from the HTTP surface it is the
 	// same Bearer token.
 	appleSub := fmt.Sprintf("smoke-%d", time.Now().UnixNano())
-	sess, err := auth.New(cfg, st.DB, st.Redis).LoginWithApple(ctx, "dev:"+appleSub, "")
+	u, err := db.New(st.DB).UpsertUserByAppleSub(ctx, db.UpsertUserByAppleSubParams{AppleSub: appleSub})
+	must(t, err, "creating the user")
+	sess, err := auth.New(cfg, st.DB, st.Redis).IssueDeviceToken(ctx, pgconv.ToUUID(u.ID), "smoke", uuid.Nil)
 	must(t, err, "issuing the device token")
 
 	return &env{

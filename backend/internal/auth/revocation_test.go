@@ -50,12 +50,19 @@ func (f *fakeDenyList) Set(_ context.Context, key string, _ any, ttl time.Durati
 }
 
 func serviceWithFake(t *testing.T) (*Service, *fakeDenyList) {
+	svc, deny, _ := serviceWithFakes(t)
+	return svc, deny
+}
+
+func serviceWithFakes(t *testing.T) (*Service, *fakeDenyList, *fakeState) {
 	t.Helper()
-	fake := newFake()
+	deny := newFake()
+	state := newFakeState()
 	return &Service{
-		cfg:  &config.Config{JWTSecret: "test-secret-for-revocation", AccessTokenTTL: time.Hour},
-		deny: fake,
-	}, fake
+		cfg:   &config.Config{JWTSecret: "test-secret-for-revocation", DeviceTokenTTL: time.Hour},
+		deny:  deny,
+		state: state,
+	}, deny, state
 }
 
 func mint(t *testing.T, s *Service, life time.Duration) (string, uuid.UUID) {
@@ -71,6 +78,10 @@ func mint(t *testing.T, s *Service, life time.Duration) (string, uuid.UUID) {
 	if err != nil {
 		t.Fatalf("mint: %v", err)
 	}
+	// A token from before the register: no jti, but its user exists.
+	if f, ok := s.state.(*fakeState); ok {
+		f.addUser(id, RoleMember)
+	}
 	return tok, id
 }
 
@@ -79,7 +90,7 @@ func TestARevokedTokenStopsWorking(t *testing.T) {
 	tok, id := mint(t, svc, time.Hour)
 
 	got, err := svc.VerifyAccess(context.Background(), tok)
-	if err != nil || got != id {
+	if err != nil || got.UserID != id {
 		t.Fatalf("before revocation the token must work: %v %v", got, err)
 	}
 	if _, err := svc.Revoke(context.Background(), tok); err != nil {
@@ -101,7 +112,7 @@ func TestRevokingOneDeviceLeavesTheOthersAlone(t *testing.T) {
 		t.Fatalf("revoke: %v", err)
 	}
 	got, err := svc.VerifyAccess(context.Background(), browser)
-	if err != nil || got != browserID {
+	if err != nil || got.UserID != browserID {
 		t.Fatalf("the other device must be untouched: %v %v", got, err)
 	}
 }

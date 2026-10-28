@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/nordic-sys/helsa/backend/internal/api"
+	"github.com/nordic-sys/helsa/backend/internal/auth"
 
 	"github.com/nordic-sys/helsa/backend/internal/ingeststat"
 	"github.com/nordic-sys/helsa/backend/internal/queue"
@@ -35,18 +36,36 @@ func (s *Server) GetIngestStatus(w http.ResponseWriter, r *http.Request) {
 		depth = &d
 	}
 
+	p, ok := auth.PrincipalFrom(r.Context())
+	if !ok {
+		problem(w, http.StatusUnauthorized, "Unauthorized", "")
+		return
+	}
+
 	var snap *ingeststat.Snapshot
 	sn, snapErr := ingeststat.Read(r.Context(), s.store.Redis, s.cfg.IngestQueue, now)
 	if snapErr == nil {
+		if !p.IsAdmin() {
+			sn.Failures = ingeststat.OwnedBy(sn.Failures, p.UserID)
+		}
 		snap = &sn
 	}
 
-	writeJSON(w, http.StatusOK, ingeststat.Build(now, depth, depthErr, snap, snapErr))
+	out := ingeststat.Build(now, depth, depthErr, snap, snapErr)
+	if !p.IsAdmin() {
+		// The queue is everybody's; a member sees their own batches in it and the
+		// rest only as numbers (docs/36 §1.2/1, §5.8).
+		out = ingeststat.MemberView(out)
+	}
+	writeJSON(w, http.StatusOK, out)
 }
 
 var errNoQueue = errors.New("the API has no RabbitMQ connection")
 
 // --- POST /v1/ingest/dead-letter/redrive — dead-lettered batches back to the worker ---
+//
+// Admins only (authz.go): a redrive moves EVERY member's stuck batches, so a member
+// pressing it would be acting on other people's data (docs/36 §1.2/2).
 //
 // The whole argument (why it is safe, how nothing is lost, why one at a time) is
 // on queue.Redrive. This handler only reads the optional body, maps the outcomes

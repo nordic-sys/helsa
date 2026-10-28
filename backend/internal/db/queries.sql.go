@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const countUsers = `-- name: CountUsers :one
+SELECT count(*) FROM users
+`
+
+func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
+	row := q.db.QueryRow(ctx, countUsers)
+	var count int64
+	err := row.Scan(&count)
+	return count, err
+}
+
 const deleteSamplesByUUIDInSpan = `-- name: DeleteSamplesByUUIDInSpan :exec
 DELETE FROM samples
 WHERE user_id = $1 AND data_type = $2
@@ -78,6 +89,36 @@ func (q *Queries) DeleteWorkoutsByUUID(ctx context.Context, arg DeleteWorkoutsBy
 	return err
 }
 
+const getDeviceToken = `-- name: GetDeviceToken :one
+SELECT id, user_id, label, kind, expires_at, revoked_at, last_used_at
+FROM device_tokens WHERE id = $1
+`
+
+type GetDeviceTokenRow struct {
+	ID         pgtype.UUID        `json:"id"`
+	UserID     pgtype.UUID        `json:"user_id"`
+	Label      string             `json:"label"`
+	Kind       string             `json:"kind"`
+	ExpiresAt  pgtype.Timestamptz `json:"expires_at"`
+	RevokedAt  pgtype.Timestamptz `json:"revoked_at"`
+	LastUsedAt pgtype.Timestamptz `json:"last_used_at"`
+}
+
+func (q *Queries) GetDeviceToken(ctx context.Context, id pgtype.UUID) (GetDeviceTokenRow, error) {
+	row := q.db.QueryRow(ctx, getDeviceToken, id)
+	var i GetDeviceTokenRow
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.Label,
+		&i.Kind,
+		&i.ExpiresAt,
+		&i.RevokedAt,
+		&i.LastUsedAt,
+	)
+	return i, err
+}
+
 const getPhoneSettings = `-- name: GetPhoneSettings :one
 SELECT challenge_thresholds, challenge_rest_days, challenge_at,
        hydration_goal_ml, hydration_at,
@@ -137,7 +178,7 @@ func (q *Queries) GetSettings(ctx context.Context, id pgtype.UUID) (GetSettingsR
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, apple_sub, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at FROM users WHERE id = $1
+SELECT id, apple_sub, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
@@ -154,7 +195,30 @@ func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
 		&i.NotifPrefs,
 		&i.ConsentAt,
 		&i.CreatedAt,
+		&i.Role,
+		&i.DisabledAt,
 	)
+	return i, err
+}
+
+const getUserAuthState = `-- name: GetUserAuthState :one
+
+SELECT id, role, disabled_at FROM users WHERE id = $1
+`
+
+type GetUserAuthStateRow struct {
+	ID         pgtype.UUID        `json:"id"`
+	Role       string             `json:"role"`
+	DisabledAt pgtype.Timestamptz `json:"disabled_at"`
+}
+
+// ── Who is asking (docs/36 §2.4) ────────────────────────────────────────────
+// Read on EVERY authenticated request, never cached: a demotion or a disable
+// takes effect on the next request, not a minute later (docs/36 §9, C5).
+func (q *Queries) GetUserAuthState(ctx context.Context, id pgtype.UUID) (GetUserAuthStateRow, error) {
+	row := q.db.QueryRow(ctx, getUserAuthState, id)
+	var i GetUserAuthStateRow
+	err := row.Scan(&i.ID, &i.Role, &i.DisabledAt)
 	return i, err
 }
 
@@ -176,6 +240,34 @@ func (q *Queries) GetWorkoutIDBySourceUUID(ctx context.Context, arg GetWorkoutID
 	var id pgtype.UUID
 	err := row.Scan(&id)
 	return id, err
+}
+
+const insertDeviceToken = `-- name: InsertDeviceToken :exec
+
+INSERT INTO device_tokens (id, user_id, label, kind, created_by, expires_at)
+VALUES ($1, $2, $3, $4, $5, $6)
+`
+
+type InsertDeviceTokenParams struct {
+	ID        pgtype.UUID        `json:"id"`
+	UserID    pgtype.UUID        `json:"user_id"`
+	Label     string             `json:"label"`
+	Kind      string             `json:"kind"`
+	CreatedBy pgtype.UUID        `json:"created_by"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+}
+
+// ── The token register (00013) ──────────────────────────────────────────────
+func (q *Queries) InsertDeviceToken(ctx context.Context, arg InsertDeviceTokenParams) error {
+	_, err := q.db.Exec(ctx, insertDeviceToken,
+		arg.ID,
+		arg.UserID,
+		arg.Label,
+		arg.Kind,
+		arg.CreatedBy,
+		arg.ExpiresAt,
+	)
+	return err
 }
 
 const insertSample = `-- name: InsertSample :exec
@@ -317,6 +409,42 @@ func (q *Queries) ListActivitySummary(ctx context.Context, arg ListActivitySumma
 			&i.StandHours,
 			&i.StandGoal,
 			&i.IngestedAt,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const listDeviceTokens = `-- name: ListDeviceTokens :many
+SELECT id, user_id, label, kind, created_by, created_at, expires_at, last_used_at, revoked_at
+FROM device_tokens WHERE user_id = $1
+ORDER BY created_at DESC
+`
+
+func (q *Queries) ListDeviceTokens(ctx context.Context, userID pgtype.UUID) ([]DeviceToken, error) {
+	rows, err := q.db.Query(ctx, listDeviceTokens, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []DeviceToken
+	for rows.Next() {
+		var i DeviceToken
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.Label,
+			&i.Kind,
+			&i.CreatedBy,
+			&i.CreatedAt,
+			&i.ExpiresAt,
+			&i.LastUsedAt,
+			&i.RevokedAt,
 		); err != nil {
 			return nil, err
 		}
@@ -549,6 +677,46 @@ func (q *Queries) PutJourneySettings(ctx context.Context, arg PutJourneySettings
 	return err
 }
 
+const revokeDeviceToken = `-- name: RevokeDeviceToken :one
+UPDATE device_tokens SET revoked_at = now()
+WHERE id = $1 AND user_id = $2 AND revoked_at IS NULL
+RETURNING id, user_id, label
+`
+
+type RevokeDeviceTokenParams struct {
+	ID     pgtype.UUID `json:"id"`
+	UserID pgtype.UUID `json:"user_id"`
+}
+
+type RevokeDeviceTokenRow struct {
+	ID     pgtype.UUID `json:"id"`
+	UserID pgtype.UUID `json:"user_id"`
+	Label  string      `json:"label"`
+}
+
+// The owner is part of the WHERE, not checked beforehand: a token id of another
+// user matches no row, and the caller answers 404 (docs/36 §9, C4).
+func (q *Queries) RevokeDeviceToken(ctx context.Context, arg RevokeDeviceTokenParams) (RevokeDeviceTokenRow, error) {
+	row := q.db.QueryRow(ctx, revokeDeviceToken, arg.ID, arg.UserID)
+	var i RevokeDeviceTokenRow
+	err := row.Scan(&i.ID, &i.UserID, &i.Label)
+	return i, err
+}
+
+const setUserRole = `-- name: SetUserRole :exec
+UPDATE users SET role = $1 WHERE id = $2
+`
+
+type SetUserRoleParams struct {
+	Role string      `json:"role"`
+	ID   pgtype.UUID `json:"id"`
+}
+
+func (q *Queries) SetUserRole(ctx context.Context, arg SetUserRoleParams) error {
+	_, err := q.db.Exec(ctx, setUserRole, arg.Role, arg.ID)
+	return err
+}
+
 const touchDevice = `-- name: TouchDevice :exec
 UPDATE devices SET
     last_seen_at = now(),
@@ -566,6 +734,19 @@ type TouchDeviceParams struct {
 // separate POST /devices is needed.
 func (q *Queries) TouchDevice(ctx context.Context, arg TouchDeviceParams) error {
 	_, err := q.db.Exec(ctx, touchDevice, arg.TimeZone, arg.ID, arg.UserID)
+	return err
+}
+
+const touchDeviceToken = `-- name: TouchDeviceToken :exec
+UPDATE device_tokens SET last_used_at = now()
+WHERE id = $1 AND (last_used_at IS NULL OR last_used_at < now() - interval '1 hour')
+`
+
+// At most once an hour per token, so that a burst of uploads does not write a row
+// per request. The condition is in the UPDATE, so two concurrent requests cannot
+// both write.
+func (q *Queries) TouchDeviceToken(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, touchDeviceToken, id)
 	return err
 }
 
@@ -911,7 +1092,7 @@ INSERT INTO users (apple_sub, email, display_name)
 VALUES ($1, $2, $3)
 ON CONFLICT (apple_sub) DO UPDATE
     SET email = COALESCE(EXCLUDED.email, users.email)
-RETURNING id, apple_sub, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at
+RETURNING id, apple_sub, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at
 `
 
 type UpsertUserByAppleSubParams struct {
@@ -937,6 +1118,8 @@ func (q *Queries) UpsertUserByAppleSub(ctx context.Context, arg UpsertUserByAppl
 		&i.NotifPrefs,
 		&i.ConsentAt,
 		&i.CreatedAt,
+		&i.Role,
+		&i.DisabledAt,
 	)
 	return i, err
 }

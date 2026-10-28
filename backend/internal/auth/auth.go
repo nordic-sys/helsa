@@ -1,15 +1,19 @@
-// Package auth provides Sign in with Apple verification and our own session
-// handling.
+// Package auth issues and checks Helsa's device tokens, and tells the handlers
+// who is asking.
 //
-// Flow (docs/08): client → Apple identity JWT → POST /v1/auth/apple → JWKS
-// verify → users upsert (apple_sub) → our own session JWT (short-lived) +
-// refresh token (in Redis, revocable). The /v1/* routes are guarded by
-// Middleware using the session JWT.
+// There is no interactive sign-in (ADR-0003): access is layered — an mTLS client
+// certificate at the proxy, and above it a long-lived device token. A token is an
+// HS256 JWT whose `sub` is the user; a token issued since the household work
+// (docs/36) also carries a `jti` that names its row in `device_tokens`.
+//
+// Every request is checked against the database, not only the signature: the
+// token's row (not revoked, not expired, the same user) and the user's own state
+// (still there, not disabled, which role). See VerifyAccess for why there is no
+// cache in front of that.
 package auth
 
 import (
 	"context"
-	"crypto/rand"
 	"crypto/sha256"
 	"encoding/hex"
 	"errors"
@@ -20,6 +24,7 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
@@ -33,11 +38,10 @@ var (
 	// ErrRevoked is separate from ErrUnauthorized so that the caller can say which
 	// happened. They lead to the same status code and to very different sentences.
 	ErrRevoked = errors.New("token revoked")
+	// ErrDisabled: the token is fine, its user has been switched off. Not a
+	// revocation — clearing users.disabled_at lets the same token work again.
+	ErrDisabled = errors.New("account disabled")
 )
-
-type ctxKey int
-
-const userIDKey ctxKey = 0
 
 // tokenDenyList is the deny-list's storage, narrowed to the two calls it makes.
 //
@@ -51,132 +55,103 @@ type tokenDenyList interface {
 	Set(ctx context.Context, key string, value any, ttl time.Duration) *redis.StatusCmd
 }
 
+// stateStore is the part of the database the check reads and the issuer writes —
+// narrowed for the same reason as tokenDenyList: so that "the database cannot be
+// read" can be tested to refuse rather than to wave through.
+type stateStore interface {
+	GetUserAuthState(ctx context.Context, id pgtypeUUID) (db.GetUserAuthStateRow, error)
+	GetDeviceToken(ctx context.Context, id pgtypeUUID) (db.GetDeviceTokenRow, error)
+	TouchDeviceToken(ctx context.Context, id pgtypeUUID) error
+	InsertDeviceToken(ctx context.Context, arg db.InsertDeviceTokenParams) error
+	RevokeDeviceToken(ctx context.Context, arg db.RevokeDeviceTokenParams) (db.RevokeDeviceTokenRow, error)
+}
+
 // Service bundles the auth dependencies.
 type Service struct {
 	cfg   *config.Config
-	pool  *pgxpool.Pool
-	q     *db.Queries
-	redis *redis.Client
 	deny  tokenDenyList
-	jwks  *jwksCache
+	state stateStore
 }
 
 func New(cfg *config.Config, pool *pgxpool.Pool, rdb *redis.Client) *Service {
-	return &Service{
-		cfg:   cfg,
-		pool:  pool,
-		q:     db.New(pool),
-		redis: rdb,
-		deny:  rdb,
-		jwks:  newJWKSCache(cfg.AppleIssuer + "/auth/keys"),
+	s := &Service{cfg: cfg}
+	// nil-safe: the handler unit tests build a Server with no database at all and
+	// only ever reach the "no token" branch.
+	if rdb != nil {
+		s.deny = rdb
 	}
+	if pool != nil {
+		s.state = db.New(pool)
+	}
+	return s
 }
 
-// appleClaims holds the Apple identity-token fields we care about.
-type appleClaims struct {
-	Email string `json:"email"`
-	Nonce string `json:"nonce"`
-	jwt.RegisteredClaims
-}
-
-// VerifyApple validates the identity token and returns the stable apple_sub
-// plus the (optional) email.
-// Local dev: with AuthDevMode on and a token shaped "dev:<apple_sub>", the JWKS
-// round-trip is skipped.
-func (s *Service) VerifyApple(ctx context.Context, identityToken, nonce string) (sub, email string, err error) {
-	if s.cfg.AuthDevMode && strings.HasPrefix(identityToken, "dev:") {
-		sub = strings.TrimPrefix(identityToken, "dev:")
-		if sub == "" {
-			return "", "", fmt.Errorf("dev token has an empty apple_sub")
-		}
-		return sub, "", nil
-	}
-
-	parser := jwt.NewParser(
-		jwt.WithValidMethods([]string{"RS256"}),
-		jwt.WithIssuer(s.cfg.AppleIssuer),
-		jwt.WithExpirationRequired(),
-	)
-	var claims appleClaims
-	_, err = parser.ParseWithClaims(identityToken, &claims, func(t *jwt.Token) (any, error) {
-		kid, _ := t.Header["kid"].(string)
-		if kid == "" {
-			return nil, fmt.Errorf("missing kid")
-		}
-		return s.jwks.keyForKid(ctx, kid)
-	})
-	if err != nil {
-		return "", "", fmt.Errorf("apple token verify: %w", err)
-	}
-
-	// Audience: aud must be one of the allowed values (native bundleID / web serviceID).
-	if !audienceAllowed(claims.Audience, s.cfg.AppleAudiences) {
-		return "", "", fmt.Errorf("audience not allowed")
-	}
-	// Nonce (anti-replay): if the client sent one, it must match the claim in the
-	// token. (docs/08 §8: the native flow sends SHA256(nonce) — an implementation
-	// refinement.)
-	if nonce != "" && claims.Nonce != nonce {
-		return "", "", fmt.Errorf("nonce mismatch")
-	}
-	if claims.Subject == "" {
-		return "", "", fmt.Errorf("missing sub")
-	}
-	return claims.Subject, claims.Email, nil
-}
-
-// Session is the issued token pair.
+// Session is an issued token.
 type Session struct {
-	AccessToken  string
-	RefreshToken string
-	ExpiresIn    int
-	ExpiresAt    time.Time // the access token's own `exp`, so nobody has to recompute it
-	UserID       uuid.UUID
+	AccessToken string
+	ExpiresIn   int
+	ExpiresAt   time.Time // the token's own `exp`, so nobody has to recompute it
+	UserID      uuid.UUID
+	TokenID     uuid.UUID // = the `jti` and the device_tokens row
 }
 
-// accessClaims is the access token's payload: the user in `sub`, and — on a device
-// token — which device it was issued for.
+// accessClaims is the token's payload: the user in `sub`, the register row in `jti`,
+// and the device's name.
 //
 // ⚠️ `device` is a LABEL, not an identity. The data belongs to the user in `sub`, and
 // every device of that user reads the same data; the label is there so that a token
-// pulled out of a browser or a log can be told apart from its siblings when it is
-// revoked. VerifyAccess parses into jwt.RegisteredClaims and ignores the field, so
-// the tokens issued before it existed keep working unchanged.
+// pulled out of a browser or a log can be told apart from its siblings.
 type accessClaims struct {
 	Device string `json:"device,omitempty"`
 	jwt.RegisteredClaims
 }
 
-// LoginWithApple is the full sign-in: verify → users upsert → issue session.
-func (s *Service) LoginWithApple(ctx context.Context, identityToken, nonce string) (*Session, error) {
-	sub, email, err := s.VerifyApple(ctx, identityToken, nonce)
+// IssueDeviceToken issues a token for an EXISTING user, labelled with the device it
+// is for, and writes its row into device_tokens. Choosing the user is the caller's
+// job — see cmd/token for why the device name must never be what picks it.
+//
+// createdBy is who issued it (uuid.Nil: the operator, from the server's CLI).
+//
+// ⚠️ The row is written BEFORE the token exists, so there is never a token in the
+// world without its row: a token whose INSERT failed would be refused by every
+// request anyway (no row → unauthorised), but the caller would have printed it.
+func (s *Service) IssueDeviceToken(ctx context.Context, userID uuid.UUID, device string, createdBy uuid.UUID) (*Session, error) {
+	if s.state == nil {
+		return nil, errors.New("auth: no database to register the token in")
+	}
+	now := time.Now()
+	id := uuid.New()
+	tok, exp, err := s.signAccess(userID, id, device, now)
 	if err != nil {
 		return nil, err
 	}
-	var emailPtr *string
-	if email != "" {
-		emailPtr = &email
+	var by pgtypeUUID
+	if createdBy != uuid.Nil {
+		by = pgconv.UUID(createdBy)
 	}
-	u, err := s.q.UpsertUserByAppleSub(ctx, db.UpsertUserByAppleSubParams{
-		AppleSub: sub,
-		Email:    emailPtr,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("user upsert: %w", err)
+	if err := s.state.InsertDeviceToken(ctx, db.InsertDeviceTokenParams{
+		ID:        pgconv.UUID(id),
+		UserID:    pgconv.UUID(userID),
+		Label:     device,
+		Kind:      "device",
+		CreatedBy: by,
+		ExpiresAt: pgconv.Timestamptz(exp),
+	}); err != nil {
+		return nil, fmt.Errorf("register token: %w", err)
 	}
-	return s.issueSession(ctx, pgconv.ToUUID(u.ID), "")
+	return &Session{
+		AccessToken: tok,
+		ExpiresIn:   int(s.cfg.DeviceTokenTTL.Seconds()),
+		ExpiresAt:   exp,
+		UserID:      userID,
+		TokenID:     id,
+	}, nil
 }
 
-// IssueDeviceToken issues a token for an EXISTING user, labelled with the device it
-// is for (cmd/token). Choosing the user is the caller's job — see cmd/token for why
-// the device name must never be what picks it.
-func (s *Service) IssueDeviceToken(ctx context.Context, userID uuid.UUID, device string) (*Session, error) {
-	return s.issueSession(ctx, userID, device)
-}
-
-// signAccess mints the access JWT and reports when it expires.
-func (s *Service) signAccess(userID uuid.UUID, device string, now time.Time) (string, time.Time, error) {
-	exp := now.Add(s.cfg.AccessTokenTTL)
+// signAccess mints the token and reports when it expires. jti == uuid.Nil mints a
+// token without one — only the tests of the pre-register tokens do that.
+func (s *Service) signAccess(userID, jti uuid.UUID, device string, now time.Time) (string, time.Time, error) {
+	exp := now.Add(s.cfg.DeviceTokenTTL)
 	claims := accessClaims{
 		Device: device,
 		RegisteredClaims: jwt.RegisteredClaims{
@@ -184,6 +159,9 @@ func (s *Service) signAccess(userID uuid.UUID, device string, now time.Time) (st
 			IssuedAt:  jwt.NewNumericDate(now),
 			ExpiresAt: jwt.NewNumericDate(exp),
 		},
+	}
+	if jti != uuid.Nil {
+		claims.ID = jti.String()
 	}
 	tok, err := jwt.NewWithClaims(jwt.SigningMethodHS256, claims).SignedString([]byte(s.cfg.JWTSecret))
 	if err != nil {
@@ -203,110 +181,132 @@ func TokenDevice(token string) string {
 	return claims.Device
 }
 
-// issueSession issues an access JWT and a refresh token (in Redis, with a TTL).
-func (s *Service) issueSession(ctx context.Context, userID uuid.UUID, device string) (*Session, error) {
-	access, exp, err := s.signAccess(userID, device, time.Now())
-	if err != nil {
-		return nil, err
-	}
-	refresh, err := randomToken()
-	if err != nil {
-		return nil, err
-	}
-	if err := s.redis.Set(ctx, refreshKey(refresh), userID.String(), s.cfg.RefreshTokenTTL).Err(); err != nil {
-		return nil, fmt.Errorf("refresh store: %w", err)
-	}
-	return &Session{
-		AccessToken:  access,
-		RefreshToken: refresh,
-		ExpiresIn:    int(s.cfg.AccessTokenTTL.Seconds()),
-		ExpiresAt:    exp,
-		UserID:       userID,
-	}, nil
-}
-
-// Refresh rotates the refresh token: the old one is revoked, a new one issued.
-func (s *Service) Refresh(ctx context.Context, refresh string) (*Session, error) {
-	val, err := s.redis.Get(ctx, refreshKey(refresh)).Result()
-	if err == redis.Nil {
-		return nil, ErrUnauthorized
-	} else if err != nil {
-		return nil, err
-	}
-	userID, err := uuid.Parse(val)
-	if err != nil {
-		return nil, ErrUnauthorized
-	}
-	s.redis.Del(ctx, refreshKey(refresh)) // rotation
-	return s.issueSession(ctx, userID, "")
-}
-
-// Logout revokes the refresh token.
-func (s *Service) Logout(ctx context.Context, refresh string) error {
-	return s.redis.Del(ctx, refreshKey(refresh)).Err()
-}
-
-// VerifyAccess validates our own session JWT and returns the user_id.
-//
-// # Why this touches Redis, when a JWT is supposed to be checkable on its own
-//
-// A device token here lives for a year (`HELSA_DEVICE_TOKEN_TTL`, default 8760h, which
-// the compose file hands the token tool as `HELSA_ACCESS_TTL`). A signature-and-expiry check alone therefore means that a phone which is
-// lost on day two keeps full access for the remaining three hundred and sixty-three
-// days, and the only way to stop it is to rotate `HELSA_JWT_SECRET` — which logs out
-// every other device at the same time. That is not a revocation, it is an evacuation.
-//
-// So a revoked token is written to a deny-list and every request checks it. The cost
-// is one Redis lookup per request against a store that is already on the request path
-// for `/v1/summary`'s cache.
-//
-// ⚠️ **The check fails CLOSED.** If Redis cannot be reached, this returns
-// unauthorised rather than waving the request through. A deny-list that can be
-// bypassed by taking Redis down is not one, and "revoked" has to mean revoked on the
-// worst day rather than the ordinary one. The cost is honest and bounded: Redis is
-// already part of `/readyz` (`store.Ready`), so an instance that cannot reach it is
-// reporting itself unready anyway — this makes the data path agree with the probe
-// instead of quietly outliving it.
-func (s *Service) VerifyAccess(ctx context.Context, token string) (uuid.UUID, error) {
+// parse checks the signature and the expiry, and reads the claims.
+func (s *Service) parse(token string) (accessClaims, uuid.UUID, uuid.UUID, error) {
 	parser := jwt.NewParser(jwt.WithValidMethods([]string{"HS256"}), jwt.WithExpirationRequired())
-	var claims jwt.RegisteredClaims
-	_, err := parser.ParseWithClaims(token, &claims, func(*jwt.Token) (any, error) {
-		return []byte(s.cfg.JWTSecret), nil
-	})
-	if err != nil {
-		return uuid.Nil, ErrUnauthorized
-	}
-	id, err := uuid.Parse(claims.Subject)
-	if err != nil {
-		return uuid.Nil, ErrUnauthorized
-	}
-	switch err := s.deny.Get(ctx, revokedKey(token)).Err(); {
-	case err == redis.Nil:
-		// Not revoked — the ordinary case, and the only one that proceeds.
-	case err == nil:
-		return uuid.Nil, ErrRevoked
-	default:
-		return uuid.Nil, fmt.Errorf("deny-list unavailable: %w", err)
-	}
-	return id, nil
-}
-
-// Revoke puts one token on the deny-list and reports when the entry will expire.
-//
-// ⚠️ Keyed by a HASH of the token, not by a `jti` claim, and the reason is the tokens
-// that already exist. A `jti` would have to be minted into new tokens, so every token
-// in the field on the day this shipped — the ones on a phone, in a browser, in a Home
-// Assistant configuration — would have stayed unrevocable. Hashing needs nothing of
-// the token but the string the operator already holds.
-//
-// The entry's TTL is the token's own remaining life. After that the JWT is refused on
-// expiry anyway, so keeping the row would only grow a list that can never shrink.
-func (s *Service) Revoke(ctx context.Context, token string) (time.Time, error) {
-	parser := jwt.NewParser(jwt.WithValidMethods([]string{"HS256"}), jwt.WithExpirationRequired())
-	var claims jwt.RegisteredClaims
+	var claims accessClaims
 	if _, err := parser.ParseWithClaims(token, &claims, func(*jwt.Token) (any, error) {
 		return []byte(s.cfg.JWTSecret), nil
 	}); err != nil {
+		return claims, uuid.Nil, uuid.Nil, ErrUnauthorized
+	}
+	user, err := uuid.Parse(claims.Subject)
+	if err != nil {
+		return claims, uuid.Nil, uuid.Nil, ErrUnauthorized
+	}
+	var jti uuid.UUID
+	if claims.ID != "" {
+		// A `jti` that is present but not a UUID is not one of ours: refuse, rather
+		// than fall back to the register-less path a forged claim could aim for.
+		if jti, err = uuid.Parse(claims.ID); err != nil || jti == uuid.Nil {
+			return claims, uuid.Nil, uuid.Nil, ErrUnauthorized
+		}
+	}
+	return claims, user, jti, nil
+}
+
+// VerifyAccess checks a token and says who is asking.
+//
+// # Why every request reads the database
+//
+// A device token lives for a year. A signature-and-expiry check alone means that a
+// phone lost on day two keeps access for the rest of the year, and that a member who
+// was disabled, deleted or demoted keeps what they had until then. So, on every
+// request:
+//
+//  1. the hash deny-list (Redis) — the only revocation the tokens issued before the
+//     register have;
+//  2. for a token with a `jti`: its device_tokens row must exist, belong to the
+//     same user, be unrevoked and unexpired;
+//  3. for EVERY token, old and new: the user must still exist and not be disabled,
+//     and the role is read here, from the row — it is never in the token.
+//
+// ⚠️ There is no cache in front of 2 and 3. The plan had a 60-second Redis cache
+// (docs/36 §2.4); the review threw it out (§9, C5): it would keep a demoted admin an
+// admin for a minute, and a cache that is invalidated on write can still be refilled
+// by a read that started before the write. Two primary-key lookups per request are
+// nothing for a household's traffic.
+//
+// ⚠️ **Every check fails CLOSED.** If Redis or the database cannot be read, this
+// returns an error rather than waving the request through — the caller answers 503,
+// not 401, because nothing is wrong with the token.
+func (s *Service) VerifyAccess(ctx context.Context, token string) (Principal, error) {
+	claims, userID, jti, err := s.parse(token)
+	if err != nil {
+		return Principal{}, err
+	}
+	if s.deny == nil || s.state == nil {
+		return Principal{}, errors.New("auth: no deny-list or database to check against")
+	}
+	switch err := s.deny.Get(ctx, revokedKey(token)).Err(); {
+	case err == redis.Nil:
+		// Not on the deny-list — the ordinary case, and the only one that proceeds.
+	case err == nil:
+		return Principal{}, ErrRevoked
+	default:
+		return Principal{}, fmt.Errorf("deny-list unavailable: %w", err)
+	}
+
+	p := Principal{UserID: userID, Label: claims.Device, Via: ViaDeviceToken}
+	if jti != uuid.Nil {
+		row, err := s.state.GetDeviceToken(ctx, pgconv.UUID(jti))
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+			return Principal{}, ErrUnauthorized
+		case err != nil:
+			return Principal{}, fmt.Errorf("token register unavailable: %w", err)
+		}
+		switch {
+		case pgconv.ToUUID(row.UserID) != userID:
+			// A signed token naming another user's row. Cannot happen without the
+			// signing secret; if it does, it is not a token to trust.
+			return Principal{}, ErrUnauthorized
+		case row.RevokedAt.Valid:
+			return Principal{}, ErrRevoked
+		case !row.ExpiresAt.Time.After(time.Now()):
+			return Principal{}, ErrUnauthorized
+		}
+		p.TokenID = jti
+		p.Label = row.Label
+	}
+
+	state, err := s.state.GetUserAuthState(ctx, pgconv.UUID(userID))
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		// The user is gone. Their tokens go with them, the old ones included.
+		return Principal{}, ErrUnauthorized
+	case err != nil:
+		return Principal{}, fmt.Errorf("user state unavailable: %w", err)
+	}
+	if state.DisabledAt.Valid {
+		return Principal{}, ErrDisabled
+	}
+	p.Role = Role(state.Role)
+	if !p.Role.valid() {
+		return Principal{}, fmt.Errorf("user %s has an unknown role %q", userID, state.Role)
+	}
+
+	if p.TokenID != uuid.Nil {
+		// "Last used" is for display only; a failure to write it must not fail the
+		// request, and the hourly condition lives in the UPDATE itself.
+		_ = s.state.TouchDeviceToken(ctx, pgconv.UUID(p.TokenID))
+	}
+	return p, nil
+}
+
+// Revoke takes one token back and reports when it would have expired.
+//
+// A token with a `jti` is revoked in its device_tokens row — the authoritative
+// record, which the lists in the web and the app read. A token without one (issued
+// before the register) goes on the hash deny-list, as it always has.
+//
+// ⚠️ The deny-list is keyed by a HASH of the token, not by a claim, and the reason is
+// the tokens that already exist: every token in the field on the day the deny-list
+// shipped would otherwise have stayed unrevocable. Hashing needs nothing of the token
+// but the string the operator already holds.
+func (s *Service) Revoke(ctx context.Context, token string) (time.Time, error) {
+	claims, userID, jti, err := s.parse(token)
+	if err != nil {
 		// ⚠️ An expired or forged token is not an error worth reporting as a failure to
 		// revoke: it already cannot be used. Saying "revoked" about it would be a lie in
 		// the reassuring direction, so say what it is.
@@ -316,6 +316,23 @@ func (s *Service) Revoke(ctx context.Context, token string) (time.Time, error) {
 	ttl := time.Until(expiry)
 	if ttl <= 0 {
 		return expiry, ErrUnauthorized
+	}
+	if jti != uuid.Nil {
+		if s.state == nil {
+			return time.Time{}, errors.New("auth: no database to revoke in")
+		}
+		_, err := s.state.RevokeDeviceToken(ctx, db.RevokeDeviceTokenParams{ID: pgconv.UUID(jti), UserID: pgconv.UUID(userID)})
+		switch {
+		case errors.Is(err, pgx.ErrNoRows):
+			// Already revoked (or never registered): either way it no longer works.
+			return expiry, nil
+		case err != nil:
+			return time.Time{}, fmt.Errorf("revoke: %w", err)
+		}
+		return expiry, nil
+	}
+	if s.deny == nil {
+		return time.Time{}, errors.New("auth: no deny-list to revoke in")
 	}
 	if err := s.deny.Set(ctx, revokedKey(token), "1", ttl).Err(); err != nil {
 		return time.Time{}, fmt.Errorf("deny-list write: %w", err)
@@ -330,7 +347,7 @@ func revokedKey(token string) string {
 	return "revoked:" + hex.EncodeToString(sum[:])
 }
 
-// Middleware guards the /v1/* routes: Bearer access token → user_id in the context.
+// Middleware guards the /v1/* routes: Bearer token → Principal in the context.
 func (s *Service) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		authz := r.Header.Get("Authorization")
@@ -339,7 +356,7 @@ func (s *Service) Middleware(next http.Handler) http.Handler {
 			http.Error(w, "missing bearer token", http.StatusUnauthorized)
 			return
 		}
-		userID, err := s.VerifyAccess(r.Context(), tok)
+		p, err := s.VerifyAccess(r.Context(), tok)
 		switch {
 		case errors.Is(err, ErrRevoked):
 			// ⚠️ Said out loud on purpose. "Invalid token" would send somebody whose
@@ -347,43 +364,21 @@ func (s *Service) Middleware(next http.Handler) http.Handler {
 			// did worked.
 			http.Error(w, "this token has been revoked", http.StatusUnauthorized)
 			return
+		case errors.Is(err, ErrDisabled):
+			// Also said out loud: the phone shows it, and the member should hear that
+			// it is the account, not the phone, so that they ask the admin rather than
+			// re-enrol.
+			http.Error(w, "this account has been disabled", http.StatusUnauthorized)
+			return
 		case errors.Is(err, ErrUnauthorized):
 			http.Error(w, "invalid token", http.StatusUnauthorized)
 			return
 		case err != nil:
-			// The deny-list could not be read. Not 401: nothing is wrong with the
-			// token, and a 503 is what a client should retry.
-			http.Error(w, "the deny-list cannot be reached", http.StatusServiceUnavailable)
+			// The deny-list or the database could not be read. Not 401: nothing is
+			// wrong with the token, and a 503 is what a client should retry.
+			http.Error(w, "the token cannot be checked right now", http.StatusServiceUnavailable)
 			return
 		}
-		ctx := context.WithValue(r.Context(), userIDKey, userID)
-		next.ServeHTTP(w, r.WithContext(ctx))
+		next.ServeHTTP(w, r.WithContext(WithPrincipal(r.Context(), p)))
 	})
 }
-
-// UserID reads the authenticated user_id out of the context.
-func UserID(ctx context.Context) (uuid.UUID, bool) {
-	id, ok := ctx.Value(userIDKey).(uuid.UUID)
-	return id, ok
-}
-
-func audienceAllowed(aud jwt.ClaimStrings, allowed []string) bool {
-	for _, a := range aud {
-		for _, ok := range allowed {
-			if a == ok {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-func randomToken() (string, error) {
-	b := make([]byte, 32)
-	if _, err := rand.Read(b); err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(b), nil
-}
-
-func refreshKey(token string) string { return "refresh:" + token }

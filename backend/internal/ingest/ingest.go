@@ -112,6 +112,9 @@ type Counts struct {
 	// BatchID is copied from the message, not counted: it is here so the worker's
 	// log line can name the batch the client was told about in its 202.
 	BatchID uuid.UUID
+	// UserID is whose batch it is — copied from the message, so that a failure
+	// record can be shown to its owner and to nobody else (docs/36 §1.2/1).
+	UserID uuid.UUID
 }
 
 // Items is the batch's size as the status page counts it: every kind added up.
@@ -132,6 +135,7 @@ func Peek(body []byte) Counts {
 	}
 	c := Tally(&msg.Batch)
 	c.BatchID = msg.BatchID
+	c.UserID = msg.UserID
 	return c
 }
 

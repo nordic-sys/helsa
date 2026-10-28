@@ -9,7 +9,6 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/nordic-sys/helsa/backend/internal/api"
-	"github.com/nordic-sys/helsa/backend/internal/auth"
 	"github.com/nordic-sys/helsa/backend/internal/db"
 	"github.com/nordic-sys/helsa/backend/internal/pgconv"
 )
@@ -22,7 +21,7 @@ import (
 // always written by the server's clock (see the queries).
 
 func (s *Server) GetDevices(w http.ResponseWriter, r *http.Request) {
-	uid, ok := auth.UserID(r.Context())
+	uid, ok := principalID(r)
 	if !ok {
 		problem(w, http.StatusUnauthorized, "Unauthorized", "")
 		return
@@ -47,7 +46,7 @@ func (s *Server) GetDevices(w http.ResponseWriter, r *http.Request) {
 // every reinstall.
 
 func (s *Server) PostDevices(w http.ResponseWriter, r *http.Request) {
-	uid, ok := auth.UserID(r.Context())
+	uid, ok := principalID(r)
 	if !ok {
 		problem(w, http.StatusUnauthorized, "Unauthorized", "")
 		return

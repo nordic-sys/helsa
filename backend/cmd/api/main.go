@@ -58,7 +58,7 @@ func main() {
 	}
 
 	go func() {
-		log.Info("api listening", "addr", cfg.HTTPAddr, "dev_auth", cfg.AuthDevMode)
+		log.Info("api listening", "addr", cfg.HTTPAddr)
 		if err := httpServer.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			log.Error("listen", "err", err)
 			stop()

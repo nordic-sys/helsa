@@ -1602,15 +1602,6 @@ type SamplePage struct {
 	NextCursor *string   `json:"next_cursor,omitempty"`
 }
 
-// Session defines model for Session.
-type Session struct {
-	AccessToken *string `json:"access_token,omitempty"`
-	ExpiresIn   *int    `json:"expires_in,omitempty"`
-
-	// RefreshToken for the native clients; on the web it lives in an httpOnly cookie
-	RefreshToken *string `json:"refresh_token,omitempty"`
-}
-
 // Settings defines model for Settings.
 type Settings struct {
 	// Challenge The monthly challenge as the phone has it set: the milestones from "Monthly challenge" and the days the user marked as rest days. `GET /v1/challenge` reads both — the milestones as `thresholds_source: settings`, the rest days as neutral days in the streak, under the phone's own weekly allowance.
@@ -1898,7 +1889,7 @@ type ServerInterface interface {
 	// End this device's session — the token on the request stops working
 	// (POST /auth/logout)
 	PostAuthLogout(w http.ResponseWriter, r *http.Request)
-	// Refresh the access token with a refresh token
+	// Retired — always 410
 	// (POST /auth/refresh)
 	PostAuthRefresh(w http.ResponseWriter, r *http.Request)
 	// The person's own usual range, and where a period stands against it
@@ -2024,7 +2015,7 @@ func (_ Unimplemented) PostAuthLogout(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Refresh the access token with a refresh token
+// Retired — always 410
 // (POST /auth/refresh)
 func (_ Unimplemented) PostAuthRefresh(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)

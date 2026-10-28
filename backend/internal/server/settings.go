@@ -9,7 +9,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/nordic-sys/helsa/backend/internal/api"
-	"github.com/nordic-sys/helsa/backend/internal/auth"
 	"github.com/nordic-sys/helsa/backend/internal/db"
 	"github.com/nordic-sys/helsa/backend/internal/pgconv"
 )
@@ -26,7 +25,7 @@ import (
 // first sends them. See phonesettings.go.
 
 func (s *Server) GetSettings(w http.ResponseWriter, r *http.Request) {
-	uid, ok := auth.UserID(r.Context())
+	uid, ok := principalID(r)
 	if !ok {
 		problem(w, http.StatusUnauthorized, "Unauthorized", "")
 		return
@@ -55,7 +54,7 @@ func (s *Server) GetSettings(w http.ResponseWriter, r *http.Request) {
 // transaction: a request with one bad field changes nothing, rather than the
 // half of it that happened to come first.
 func (s *Server) PutSettings(w http.ResponseWriter, r *http.Request) {
-	uid, ok := auth.UserID(r.Context())
+	uid, ok := principalID(r)
 	if !ok {
 		problem(w, http.StatusUnauthorized, "Unauthorized", "")
 		return

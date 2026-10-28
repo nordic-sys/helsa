@@ -44,6 +44,18 @@ type Device struct {
 	LastSeenAt pgtype.Timestamptz `json:"last_seen_at"`
 }
 
+type DeviceToken struct {
+	ID         pgtype.UUID        `json:"id"`
+	UserID     pgtype.UUID        `json:"user_id"`
+	Label      string             `json:"label"`
+	Kind       string             `json:"kind"`
+	CreatedBy  pgtype.UUID        `json:"created_by"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt  pgtype.Timestamptz `json:"expires_at"`
+	LastUsedAt pgtype.Timestamptz `json:"last_used_at"`
+	RevokedAt  pgtype.Timestamptz `json:"revoked_at"`
+}
+
 type Goal struct {
 	ID          pgtype.UUID        `json:"id"`
 	UserID      pgtype.UUID        `json:"user_id"`
@@ -121,6 +133,8 @@ type User struct {
 	NotifPrefs  []byte             `json:"notif_prefs"`
 	ConsentAt   pgtype.Timestamptz `json:"consent_at"`
 	CreatedAt   pgtype.Timestamptz `json:"created_at"`
+	Role        string             `json:"role"`
+	DisabledAt  pgtype.Timestamptz `json:"disabled_at"`
 }
 
 type Workout struct {

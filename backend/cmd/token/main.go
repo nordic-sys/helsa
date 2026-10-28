@@ -37,6 +37,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -107,7 +108,16 @@ func main() {
 		fail("%v", err)
 	}
 
-	sess, err := svc.IssueDeviceToken(ctx, owner.ID, device)
+	// The first user of a fresh database runs the server: make them its admin, so
+	// that a new install is never left without one (docs/36 §9, C3). The migration
+	// does the same for an existing install with exactly one user.
+	if created {
+		if err := db.New(st.DB).SetUserRole(ctx, db.SetUserRoleParams{ID: pgconv.UUID(owner.ID), Role: string(auth.RoleAdmin)}); err != nil {
+			fail("make the first user admin: %v", err)
+		}
+	}
+
+	sess, err := svc.IssueDeviceToken(ctx, owner.ID, device, uuid.Nil)
 	if err != nil {
 		fail("issue token: %v", err)
 	}
@@ -118,17 +128,12 @@ func main() {
 	} else {
 		fmt.Printf("user:          %s (apple_sub %s)\n", owner.ID, owner.AppleSub)
 	}
+	fmt.Printf("token id:      %s\n", sess.TokenID)
 	fmt.Printf("access_token:  %s\n", sess.AccessToken)
-	fmt.Printf("refresh_token: %s\n", sess.RefreshToken)
 	fmt.Printf("expires:       %s (%s from now)\n",
-		sess.ExpiresAt.UTC().Format(time.RFC3339), cfg.AccessTokenTTL)
-	// ⚠️ This used to say "the lifetime comes from HELSA_ACCESS_TTL (default: 15
-	// minutes) — run this with HELSA_ACCESS_TTL=8760h", while the token it had just
-	// printed was already valid for a year: the compose file sets HELSA_ACCESS_TTL
-	// for this container from HELSA_DEVICE_TOKEN_TTL. Both statements below are true
-	// on both paths, and the expiry above is read from the token itself.
-	fmt.Printf("\nThe lifetime is HELSA_ACCESS_TTL as this process saw it (%s).\n", cfg.AccessTokenTTL)
-	fmt.Printf("Through `make prod-token` it is set from HELSA_DEVICE_TOKEN_TTL in deploy/.env (default 8760h, one year).\n")
+		sess.ExpiresAt.UTC().Format(time.RFC3339), cfg.DeviceTokenTTL)
+	// The expiry above is read from the token itself.
+	fmt.Printf("\nThe lifetime is HELSA_DEVICE_TOKEN_TTL in deploy/.env (default 8760h, one year).\n")
 	fmt.Printf("Every device of this user reads the same data. Give each its own token, so that\n")
 	fmt.Printf("`make prod-token-revoke TOKEN=...` can take one back without touching the others.\n")
 }

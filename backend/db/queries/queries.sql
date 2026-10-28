@@ -264,3 +264,45 @@ ON CONFLICT (user_id, id) DO UPDATE SET
     unit       = EXCLUDED.unit,
     thresholds = EXCLUDED.thresholds,
     updated_at = now();
+
+-- ── Who is asking (docs/36 §2.4) ────────────────────────────────────────────
+-- Read on EVERY authenticated request, never cached: a demotion or a disable
+-- takes effect on the next request, not a minute later (docs/36 §9, C5).
+
+-- name: GetUserAuthState :one
+SELECT id, role, disabled_at FROM users WHERE id = @id;
+
+-- name: CountUsers :one
+SELECT count(*) FROM users;
+
+-- name: SetUserRole :exec
+UPDATE users SET role = @role WHERE id = @id;
+
+-- ── The token register (00013) ──────────────────────────────────────────────
+
+-- name: InsertDeviceToken :exec
+INSERT INTO device_tokens (id, user_id, label, kind, created_by, expires_at)
+VALUES (@id, @user_id, @label, @kind, sqlc.narg('created_by'), @expires_at);
+
+-- name: GetDeviceToken :one
+SELECT id, user_id, label, kind, expires_at, revoked_at, last_used_at
+FROM device_tokens WHERE id = @id;
+
+-- name: TouchDeviceToken :exec
+-- At most once an hour per token, so that a burst of uploads does not write a row
+-- per request. The condition is in the UPDATE, so two concurrent requests cannot
+-- both write.
+UPDATE device_tokens SET last_used_at = now()
+WHERE id = @id AND (last_used_at IS NULL OR last_used_at < now() - interval '1 hour');
+
+-- name: RevokeDeviceToken :one
+-- The owner is part of the WHERE, not checked beforehand: a token id of another
+-- user matches no row, and the caller answers 404 (docs/36 §9, C4).
+UPDATE device_tokens SET revoked_at = now()
+WHERE id = @id AND user_id = @user_id AND revoked_at IS NULL
+RETURNING id, user_id, label;
+
+-- name: ListDeviceTokens :many
+SELECT id, user_id, label, kind, created_by, created_at, expires_at, last_used_at, revoked_at
+FROM device_tokens WHERE user_id = @user_id
+ORDER BY created_at DESC;

@@ -11,33 +11,36 @@ import (
 // A device token carries its device's name and still verifies as before: the
 // label rides along, the user in `sub` is what VerifyAccess returns.
 func TestDeviceTokenCarriesItsLabelAndVerifies(t *testing.T) {
-	svc, _ := serviceWithFake(t)
+	svc, _, state := serviceWithFakes(t)
 	user := uuid.New()
+	state.addUser(user, RoleMember)
 	now := time.Now()
 
-	tok, exp, err := svc.signAccess(user, "iphone", now)
+	sess, err := svc.IssueDeviceToken(context.Background(), user, "iphone", uuid.Nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := TokenDevice(tok); got != "iphone" {
+	if got := TokenDevice(sess.AccessToken); got != "iphone" {
 		t.Errorf("device label: %q", got)
 	}
-	if d := exp.Sub(now); d < svc.cfg.AccessTokenTTL-time.Second || d > svc.cfg.AccessTokenTTL {
-		t.Errorf("reported expiry is %v after issue, the TTL is %v", d, svc.cfg.AccessTokenTTL)
+	if d := sess.ExpiresAt.Sub(now); d < svc.cfg.DeviceTokenTTL-time.Second || d > svc.cfg.DeviceTokenTTL {
+		t.Errorf("reported expiry is %v after issue, the TTL is %v", d, svc.cfg.DeviceTokenTTL)
 	}
-	id, err := svc.VerifyAccess(context.Background(), tok)
-	if err != nil || id != user {
-		t.Fatalf("VerifyAccess = %v, %v; want %v", id, err, user)
+	p, err := svc.VerifyAccess(context.Background(), sess.AccessToken)
+	if err != nil || p.UserID != user || p.TokenID != sess.TokenID || p.Label != "iphone" {
+		t.Fatalf("VerifyAccess = %+v, %v; want user %v, token %v", p, err, user, sess.TokenID)
 	}
 }
 
 // Two devices, one user: both tokens resolve to the same user, and revoking one
 // leaves the other working — the single-user model the token tool now follows.
 func TestTwoDevicesOneUserRevokeOne(t *testing.T) {
-	svc, _ := serviceWithFake(t)
+	svc, _, state := serviceWithFakes(t)
 	user := uuid.New()
-	phone, _, _ := svc.signAccess(user, "iphone", time.Now())
-	browser, _, _ := svc.signAccess(user, "browser", time.Now())
+	state.addUser(user, RoleMember)
+	p1, _ := svc.IssueDeviceToken(context.Background(), user, "iphone", uuid.Nil)
+	p2, _ := svc.IssueDeviceToken(context.Background(), user, "browser", uuid.Nil)
+	phone, browser := p1.AccessToken, p2.AccessToken
 
 	if _, err := svc.Revoke(context.Background(), browser); err != nil {
 		t.Fatal(err)
@@ -45,8 +48,8 @@ func TestTwoDevicesOneUserRevokeOne(t *testing.T) {
 	if _, err := svc.VerifyAccess(context.Background(), browser); err != ErrRevoked {
 		t.Errorf("the revoked browser token: %v", err)
 	}
-	if id, err := svc.VerifyAccess(context.Background(), phone); err != nil || id != user {
-		t.Errorf("the phone token after revoking the browser's: %v, %v", id, err)
+	if p, err := svc.VerifyAccess(context.Background(), phone); err != nil || p.UserID != user {
+		t.Errorf("the phone token after revoking the browser's: %v, %v", p, err)
 	}
 }
 

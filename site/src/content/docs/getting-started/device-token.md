@@ -38,8 +38,8 @@ Output:
 ```
 device:        iphone
 user:          6d08a14d-… (apple_sub owner)
+token id:      3f2b9c1e-…
 access_token:  eyJhbGciOiJIUzI1NiIs...
-refresh_token: ...
 expires:       2027-10-27T12:17:18Z (8760h0m0s from now)
 ```
 
@@ -93,15 +93,6 @@ on the public interface, or being on your LAN or VPN for the dashboard.
   reason `8443` never faces the internet.
 - Do not paste it into a shell history, a chat, a screenshot, or an issue report.
 - Do not commit it. Not to a private repository either — git history is forever.
-
-## `HELSA_AUTH_DEV_MODE=true` in production is not a mistake
-
-`docker-compose.prod.yml` sets it, and a hardening reader grepping their own compose
-file will find "DEV_MODE true" and worry. It is what lets the `token` CLI mint a
-session for a named subject instead of going through Apple's identity flow — which is
-the only way tokens are issued here, because there is no sign-in
-([ADR-0003](https://github.com/nordic-sys/helsa)). It opens **no HTTP route**: there is
-no endpoint that issues tokens, in any mode.
 
 ## Revoking
 

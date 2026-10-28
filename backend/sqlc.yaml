@@ -11,6 +11,8 @@ sql:
       - "db/migrations/00007_achievements.sql"
       - "db/migrations/00008_workout_routes.sql"
       - "db/migrations/00010_phone_settings.sql"
+      - "db/migrations/00012_users_roles.sql"
+      - "db/migrations/00013_device_tokens.sql"
     queries: "db/queries"
     gen:
       go:

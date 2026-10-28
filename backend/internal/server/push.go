@@ -7,7 +7,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/nordic-sys/helsa/backend/internal/api"
-	"github.com/nordic-sys/helsa/backend/internal/auth"
 	"github.com/nordic-sys/helsa/backend/internal/db"
 	"github.com/nordic-sys/helsa/backend/internal/pgconv"
 )
@@ -24,7 +23,7 @@ import (
 // will.
 
 func (s *Server) PostPushRegister(w http.ResponseWriter, r *http.Request) {
-	uid, ok := auth.UserID(r.Context())
+	uid, ok := principalID(r)
 	if !ok {
 		problem(w, http.StatusUnauthorized, "Unauthorized", "")
 		return
@@ -81,7 +80,7 @@ func pushEnvironment(env *api.PushRegisterEnvironment) (string, bool) {
 // This endpoint is only a convenience surface: the native client calls it from
 // the permission screen instead of sending the whole settings object.
 func (s *Server) PutPushPrefs(w http.ResponseWriter, r *http.Request) {
-	uid, ok := auth.UserID(r.Context())
+	uid, ok := principalID(r)
 	if !ok {
 		problem(w, http.StatusUnauthorized, "Unauthorized", "")
 		return

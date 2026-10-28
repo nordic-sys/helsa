@@ -353,3 +353,23 @@ func recentFailures(fs []Failure) *[]api.IngestFailure {
 	}
 	return &out
 }
+
+// MemberView is the status page as a household member sees it (docs/36 §5.8): the
+// queue's depth as plain numbers, whether a worker is there, and their OWN failed
+// batches — the snapshot's failures are already narrowed by the caller (OwnedBy).
+//
+// What goes: the throughput window, the worker's counters and the time of its last
+// batch, and the last redrive. Each of them says WHEN somebody uploaded and how
+// much — on a server shared by a household, that is somebody else's day.
+func MemberView(out api.IngestStatus) api.IngestStatus {
+	out.Throughput = nil
+	if out.Worker != nil {
+		out.Worker = &api.IngestWorkerStats{StartedAt: out.Worker.StartedAt, Prefetch: out.Worker.Prefetch}
+	}
+	if out.DeadLetter != nil {
+		dl := *out.DeadLetter
+		dl.LastRedrive = nil
+		out.DeadLetter = &dl
+	}
+	return out
+}

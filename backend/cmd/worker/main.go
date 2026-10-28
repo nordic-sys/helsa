@@ -85,7 +85,7 @@ func main() {
 	deadLettered := func(ctx context.Context, body []byte, redriven int, cause error) {
 		c := ingest.Peek(body)
 		f := ingeststat.Failure{
-			BatchID: c.BatchID, Redriven: redriven,
+			BatchID: c.BatchID, UserID: c.UserID, Redriven: redriven,
 			Samples: c.Samples, Workouts: c.Workouts, SleepSegments: c.SleepSegments,
 			ActivitySummaries: c.ActivitySummaries, Deletions: c.Deletions,
 		}

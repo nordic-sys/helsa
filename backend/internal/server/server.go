@@ -1,10 +1,8 @@
 // Package server is the hand-written implementation of the generated
 // api.ServerInterface.
 //
-// The MVP's critical path is live: auth (Sign in with Apple) + POST /v1/ingest +
-// GET /v1/summary + health. The remaining endpoints answer 501 until they are
-// implemented — that way the contract is complete, the surface is stable, and it
-// gets filled in gradually.
+// Every endpoint of the contract is implemented. Who may call which one is in
+// authz.go — the table the isolation test reads too.
 package server
 
 import (
@@ -130,7 +128,7 @@ func (s *Server) Router() http.Handler {
 // and a known one look the same (401) — which endpoints exist is not for a caller
 // without a token to find out.
 func (s *Server) authGate(next http.Handler) http.Handler {
-	protected := s.auth.Middleware(next)
+	protected := s.auth.Middleware(requireAccess(next))
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if isPublic(r.Method, r.URL.Path) || !strings.HasPrefix(r.URL.Path, "/v1/") {
 			next.ServeHTTP(w, r)
@@ -140,64 +138,45 @@ func (s *Server) authGate(next http.Handler) http.Handler {
 	})
 }
 
+// isPublic: the root probes, and the /v1 operations the table (authz.go) marks
+// Public. One list, so the gate and the table cannot disagree.
 func isPublic(method, path string) bool {
-	switch path {
-	case "/v1/auth/apple", "/v1/auth/refresh", "/v1/healthz", "/v1/readyz",
-		"/healthz", "/readyz":
+	if path == "/healthz" || path == "/readyz" {
 		return true
 	}
-	return false
+	rl, ok := ruleFor(method, path)
+	return ok && rl.Access == Public
 }
 
 // --- Auth ---
 //
 // There is no interactive login: access is layered — an mTLS client certificate
 // at the proxy (transport), and above it a long-lived device token
-// (application). Sign in with Apple and its /auth/apple endpoint have been
-// retired, see docs/ADR-0003. What remains: refreshing and revoking an existing
-// token.
+// (application), see docs/ADR-0003. What remains here: revoking one's own token.
 
-type refreshBody struct {
-	RefreshToken string `json:"refresh_token"`
-}
-
-func (s *Server) PostAuthRefresh(w http.ResponseWriter, r *http.Request) {
-	var body refreshBody
-	_ = json.NewDecoder(r.Body).Decode(&body)
-	if body.RefreshToken == "" {
-		body.RefreshToken = r.Header.Get("X-Refresh-Token")
-	}
-	sess, err := s.auth.Refresh(r.Context(), body.RefreshToken)
-	if err != nil {
-		problem(w, http.StatusUnauthorized, "Refresh failed", "invalid refresh token")
-		return
-	}
-	writeJSON(w, http.StatusOK, sessionDTO(sess))
-}
-
-// PostAuthLogout ends this device's session: the refresh token is dropped AND the
-// access token presented on the request is put on the deny-list.
+// PostAuthRefresh is retired: nothing issues refresh tokens any more.
 //
-// ⚠️ The second half is the half that matters here, and it used to be missing. This
-// route deleted a refresh token — which the phone never holds, because it is handed a
-// long-lived access token instead — so "log out" left the only credential in play
-// working exactly as before. A device could be logged out and keep uploading.
+// ⚠️ The phone was handed one with every token and never used it; the web never did
+// either. Kept, it was a second, independent credential: revoking a device token
+// left its refresh token able to mint a new one, and two concurrent refreshes could
+// both succeed (docs/36 §9, C6). 410 rather than 404, so that a client still holding
+// one hears that the route existed and is gone.
+func (s *Server) PostAuthRefresh(w http.ResponseWriter, r *http.Request) {
+	problem(w, http.StatusGone, "Refresh retired",
+		"device tokens are long-lived and are not refreshed; ask the server's admin for a new one")
+}
+
+// PostAuthLogout ends this device's session: the access token presented on the
+// request is revoked.
 //
 // It revokes the token on the REQUEST rather than one named in the body, deliberately:
 // that way the route can only ever end the caller's own session. A body-named token
 // would let anyone holding one valid token revoke somebody else's.
 func (s *Server) PostAuthLogout(w http.ResponseWriter, r *http.Request) {
-	var body refreshBody
-	_ = json.NewDecoder(r.Body).Decode(&body)
-	if body.RefreshToken == "" {
-		body.RefreshToken = r.Header.Get("X-Refresh-Token")
-	}
-	_ = s.auth.Logout(r.Context(), body.RefreshToken)
-
 	if tok, ok := strings.CutPrefix(r.Header.Get("Authorization"), "Bearer "); ok && tok != "" {
 		if _, err := s.auth.Revoke(r.Context(), tok); err != nil &&
 			!errors.Is(err, auth.ErrUnauthorized) {
-			// ⛔ The one case that must not answer 204. If the deny-list could not be
+			// ⛔ The one case that must not answer 204. If the revocation could not be
 			// written, the session is NOT over, and a success here would tell somebody
 			// with a stolen phone that they had dealt with it.
 			problem(w, http.StatusServiceUnavailable, "Not logged out",
@@ -211,7 +190,7 @@ func (s *Server) PostAuthLogout(w http.ResponseWriter, r *http.Request) {
 // --- Profile ---
 
 func (s *Server) GetMe(w http.ResponseWriter, r *http.Request) {
-	uid, ok := auth.UserID(r.Context())
+	uid, ok := principalID(r)
 	if !ok {
 		problem(w, http.StatusUnauthorized, "Unauthorized", "")
 		return
@@ -239,7 +218,7 @@ func (s *Server) GetMe(w http.ResponseWriter, r *http.Request) {
 // --- Ingest (write path) ---
 
 func (s *Server) PostIngest(w http.ResponseWriter, r *http.Request) {
-	uid, ok := auth.UserID(r.Context())
+	uid, ok := principalID(r)
 	if !ok {
 		problem(w, http.StatusUnauthorized, "Unauthorized", "")
 		return
@@ -357,11 +336,6 @@ func (s *Server) GetReadyz(w http.ResponseWriter, r *http.Request) {
 // push (push.go), achievements (achievements.go).
 
 // --- helpers ---
-
-func sessionDTO(s *auth.Session) api.Session {
-	at, rt, exp := s.AccessToken, s.RefreshToken, s.ExpiresIn
-	return api.Session{AccessToken: &at, RefreshToken: &rt, ExpiresIn: &exp}
-}
 
 func splitCSV(s string) []string {
 	var out []string

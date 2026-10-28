@@ -21,7 +21,7 @@ import (
 // until exporting the full history starts timing out.
 
 func (s *Server) PostExport(w http.ResponseWriter, r *http.Request) {
-	uid, ok := auth.UserID(r.Context())
+	uid, ok := principalID(r)
 	if !ok {
 		problem(w, http.StatusUnauthorized, "Unauthorized", "")
 		return
