@@ -6,6 +6,7 @@ import { useI18n } from '../i18n'
 import type { UiKey } from '../i18n'
 import { useFormat } from '../lib/format'
 import { groupInsights, valueDigits, type InsightGroupKey } from '../lib/insights'
+import { useInsightText, type InsightText } from '../lib/insightText'
 
 const KIND_LABEL: Record<InsightGroupKey, UiKey> = {
   anomaly: 'insights.kind.anomaly',
@@ -43,11 +44,16 @@ const SEVERITY_COLOR: Record<InsightSeverity, string> = {
 export default function Insights() {
   const q = useQuery({ queryKey: ['insights'], queryFn: () => api.insights() })
   const { t } = useI18n()
+  const word = useInsightText()
 
   if (q.isLoading) return <Loading rows={2} />
   if (q.isError) return <ErrorState error={q.error} />
 
   const groups = groupInsights(q.data ?? [])
+  // Worded once per render, so the page can tell whether any sentence on it is
+  // the server's fallback — the note below is only true when one is.
+  const texts = new Map(groups.flatMap((g) => g.items).map((i) => [i, word(i)] as const))
+  const anyFallback = [...texts.values()].some(isServerSentence)
 
   return (
     <>
@@ -58,9 +64,11 @@ export default function Insights() {
         <Empty title={t('insights.empty.title')} hint={t('insights.empty.hint')} />
       ) : (
         <>
-          <p className="subtle" style={{ marginBottom: 16 }}>
-            {t('insights.serverLanguage')}
-          </p>
+          {anyFallback && (
+            <p className="subtle" style={{ marginBottom: 16 }}>
+              {t('insights.serverLanguage')}
+            </p>
+          )}
 
           {/* ⚠️ These are paragraphs, and a paragraph has a width past which it
               stops being readable — the eye loses the start of the next line. One
@@ -78,6 +86,7 @@ export default function Insights() {
                   <Observation
                     key={insight.id ?? `${group.key}-${i}`}
                     insight={insight}
+                    text={texts.get(insight)!}
                     first={i === 0}
                   />
                 ))}
@@ -90,25 +99,38 @@ export default function Insights() {
   )
 }
 
+/** A sentence that came from the server rather than from our own wording. */
+function isServerSentence(text: InsightText): boolean {
+  return text.fallback && Boolean(text.title || text.detail)
+}
+
 /**
  * One observation.
  *
- * ⚠️ `lang="hu"` on the two sentences is not a stray literal, it is the honest
- * markup: the schema states outright that the server's wording is Hungarian,
- * because that is the only language this server has ever spoken. The document's
- * `lang` follows the interface switch, so without this a screen reader would
- * read a Hungarian sentence with English pronunciation rules on an English page.
+ * The sentence is worded here, in the interface language, from `rule` +
+ * `values` (`lib/insightText.ts`). Only for a rule this build does not know is
+ * it the server's own wording — and ⚠️ then, and only then, it carries
+ * `lang="hu"`: the schema states that the fallback is Hungarian, and without the
+ * attribute a screen reader would read it with English rules on an English page.
  */
-function Observation({ insight, first }: { insight: Insight; first: boolean }) {
+function Observation({
+  insight,
+  text,
+  first,
+}: {
+  insight: Insight
+  text: InsightText
+  first: boolean
+}) {
   const { t, tMetric } = useI18n()
   const f = useFormat()
 
   const severity = insight.severity
   const color = severity ? SEVERITY_COLOR[severity] : 'var(--text-dim)'
-  // The sentence is the server's. An empty one is not filled in with a guess —
-  // the rule that fired is named instead, which is at least true.
-  const title = insight.title?.trim()
-  const detail = insight.detail?.trim()
+  // Neither ours nor the server's: not filled in with a guess — the rule that
+  // fired is named instead, which is at least true.
+  const { title, detail } = text
+  const lang = text.fallback ? 'hu' : undefined
   const values = Object.entries(insight.values ?? {})
 
   return (
@@ -127,7 +149,7 @@ function Observation({ insight, first }: { insight: Insight; first: boolean }) {
         />
         <div style={{ minWidth: 0 }}>
           {title ? (
-            <strong lang="hu">{title}</strong>
+            <strong lang={lang}>{title}</strong>
           ) : (
             <strong className="subtle">
               {insight.rule ? <code>{insight.rule}</code> : t('insights.unnamed')}
@@ -135,7 +157,7 @@ function Observation({ insight, first }: { insight: Insight; first: boolean }) {
           )}
 
           {detail && (
-            <p className="subtle" lang="hu" style={{ margin: '4px 0 0' }}>
+            <p className="subtle" lang={lang} style={{ margin: '4px 0 0' }}>
               {detail}
             </p>
           )}

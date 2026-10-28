@@ -248,11 +248,10 @@ export type InsightSeverity = 'info' | 'notice'
  * A rule-based observation. There is no model behind it: a rolling average, a
  * z-score and a Pearson correlation (openapi.yaml, `/insights`).
  *
- * ⚠️ `title` and `detail` are SERVER TEXT. They arrive already worded, in the
- * language the server speaks, and the web prints them as they came — the
- * interface language switch governs our own strings, not these. `rule` +
- * `values` is what a client that words the sentence itself keys on; the web does
- * not word it, so it shows those numbers as numbers instead.
+ * ⚠️ `rule` + `values` is the statement: the web words the sentence itself, in
+ * the interface language (`lib/insightText.ts`, a port of the app's composer).
+ * `title` and `detail` are the server's Hungarian FALLBACK, printed only for a
+ * rule this build does not know or a value set that cannot carry the sentence.
  */
 export type Insight = {
   id?: string

@@ -4,9 +4,9 @@
 // the only thing on that screen with a decision in it, and it is exactly the
 // kind of thing that silently regresses.
 //
-// ⚠️ Nothing here reads `title` or `detail`. Those are the server's sentences and
-// the page prints them untouched; sorting on their text would quietly make the
-// order depend on the language the server happens to speak.
+// ⚠️ Nothing here reads the sentences (ours from `insightText.ts`, or the
+// server's fallback): sorting on their text would quietly make the order depend
+// on the language they happen to be in.
 
 import type { Insight, InsightKind, InsightSeverity } from '../api/types'
 

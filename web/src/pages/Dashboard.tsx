@@ -66,6 +66,7 @@ import { groupByNight, lastNight } from '../lib/sleep'
 import { etaMinutes, syncState, toneOf, isApiTooOld, type SyncState } from '../lib/ingest'
 import { useIngestStatus } from '../lib/useIngestStatus'
 import { useToday } from '../lib/useToday'
+import { useInsightText } from '../lib/insightText'
 import { durationMin, isIndoor } from '../lib/workouts'
 
 /**
@@ -633,6 +634,7 @@ function ChallengeCard({ tz, today }: { tz: string; today: string }) {
 function ObservationsCard() {
   const { t, tp, tMetric } = useI18n()
   const q = useQuery({ queryKey: ['insights'], queryFn: () => api.insights() })
+  const word = useInsightText()
 
   // `groupInsights` already ranks them: the families that can be news today
   // first, and within each the server's own severity before recency.
@@ -640,6 +642,10 @@ function ObservationsCard() {
   const first = ordered[0]
   const shown = ordered.slice(1, CARD_LIST_LIMIT)
   const rest = ordered.length - 1 - shown.length
+  const firstText = first ? word(first) : undefined
+  const shownTexts = shown.map(word)
+  // The note is only true when a sentence on the card is the server's fallback.
+  const anyFallback = [firstText, ...shownTexts].some((x) => x?.fallback && x.title)
 
   return (
     <LinkCard to="/insights" title={t('nav.insights')}>
@@ -650,9 +656,14 @@ function ObservationsCard() {
       >
         {first && (
           <p className="card-lead">
-            {/* ⚠️ `lang="hu"` is honest markup: the schema states that these
-                sentences are the server's, and this server speaks Hungarian. */}
-            {first.title?.trim() ? <span lang="hu">{first.title}</span> : t('insights.unnamed')}
+            {/* Worded here, in the interface language (`lib/insightText.ts`).
+                ⚠️ `lang="hu"` only on the server's fallback sentence, which the
+                schema states is Hungarian. */}
+            {firstText?.title ? (
+              <span lang={firstText.fallback ? 'hu' : undefined}>{firstText.title}</span>
+            ) : (
+              t('insights.unnamed')
+            )}
             {first.metric && (
               <span className="subtle" style={{ fontWeight: 400, fontSize: 14 }}>
                 {' '}
@@ -665,8 +676,8 @@ function ObservationsCard() {
           <ul className="card-list">
             {shown.map((insight, i) => (
               <li key={insight.id ?? i}>
-                {insight.title?.trim() ? (
-                  <span lang="hu">{insight.title}</span>
+                {shownTexts[i].title ? (
+                  <span lang={shownTexts[i].fallback ? 'hu' : undefined}>{shownTexts[i].title}</span>
                 ) : (
                   <span className="subtle">{t('insights.unnamed')}</span>
                 )}
@@ -680,9 +691,11 @@ function ObservationsCard() {
             {tp('today.insights.more', rest)}
           </p>
         )}
-        <p className="subtle" style={{ margin: '8px 0 0' }}>
-          {t('today.insights.serverLanguage')}
-        </p>
+        {anyFallback && (
+          <p className="subtle" style={{ margin: '8px 0 0' }}>
+            {t('today.insights.serverLanguage')}
+          </p>
+        )}
       </CardState>
     </LinkCard>
   )

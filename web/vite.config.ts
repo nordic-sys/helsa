@@ -65,6 +65,11 @@ export default defineConfig({
     include: ['src/**/*.test.{ts,tsx}'],
   },
   server: {
+    // Under vitest only: the insight-wording tests read the backend's rule list
+    // and the shared vectors from `../backend` (lib/insightText.test.ts), and
+    // Vite refuses `?raw` outside the project root. The dev server keeps the
+    // default, narrower allow-list.
+    fs: process.env.VITEST ? { allow: ['..'] } : undefined,
     proxy: {
       '/v1': {
         target: process.env.HELSA_API ?? 'http://localhost:8080',
