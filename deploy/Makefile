@@ -131,6 +131,18 @@ prod-token: ## [VM] Issue a device token (SUBJECT=iphone; TOKEN_USER=... only if
 	  -subject "$${SUBJECT:?set SUBJECT to the device name, e.g. SUBJECT=iphone}" \
 	  $${TOKEN_USER:+-user "$${TOKEN_USER}"}
 
+prod-user-add: ## [VM] Add a household member (HANDLE=nori NAME="Nóri")
+	@test -n "$(HANDLE)" || { echo "HANDLE=… is required"; exit 1; }
+	$(PROD) --profile tools run --rm token -add-user "$(HANDLE)" -name "$(NAME)"
+
+prod-user-admin: ## [VM] Make a member an admin (HANDLE=bob)
+	@test -n "$(HANDLE)" || { echo "HANDLE=… is required"; exit 1; }
+	$(PROD) --profile tools run --rm token -make-admin "$(HANDLE)"
+
+prod-login-code: ## [VM] A 10-minute web sign-in code for a member (HANDLE=bob) — the first admin's way in
+	@test -n "$(HANDLE)" || { echo "HANDLE=… is required"; exit 1; }
+	$(PROD) --profile tools run --rm token -login-code "$(HANDLE)"
+
 prod-token-revoke: ## [VM] Revoke ONE device token; the others keep working (TOKEN=...)
 	$(PROD) --profile tools run --rm token -revoke "$${TOKEN:?set TOKEN to the access token to revoke}"
 

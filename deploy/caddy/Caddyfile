@@ -39,6 +39,12 @@ https://:443 {
 		max_size 32MB
 	}
 
+	# A browser signs in on the web port only (docs/36 §3.4). Here, on the phone's
+	# port, the route does not exist. The backend refuses it too (X-Helsa-Listener).
+	handle /v1/auth/web/* {
+		respond "not found" 404
+	}
+
 	# This is how the backend knows which device is speaking (docs/08 §4).
 	#
 	# Every header the backend may ever trust is SET here, never passed through:
@@ -89,6 +95,13 @@ https://:8443 {
 	@allowed remote_ip {$LAN_SUBNET} {$WG_SUBNET}
 
 	handle @allowed {
+		# Redeeming a phone's connection code is for the mTLS port only (docs/36
+		# §3.2): a caller there already holds a certificate of our CA. Here the route
+		# does not exist. The backend refuses it too.
+		handle /v1/enroll {
+			respond "not found" 404
+		}
+
 		# The web reads the same API, just not through mTLS.
 		#
 		# ⛔ There is no client certificate on this port, so the certificate headers

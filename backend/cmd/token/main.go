@@ -55,6 +55,10 @@ func main() {
 	subject := flag.String("subject", "", "the DEVICE this token is for, e.g. iphone or browser — a label on the token, not a user")
 	user := flag.String("user", "", "the user (id or handle) — needed only when the database holds more than one")
 	revoke := flag.String("revoke", "", "an access token to revoke — the device it is on loses access immediately")
+	addUser := flag.String("add-user", "", "add a household member with this handle (e.g. nori)")
+	name := flag.String("name", "", "with -add-user: the member's display name")
+	makeAdmin := flag.String("make-admin", "", "make the member with this handle an admin")
+	loginCode := flag.String("login-code", "", "print a 10-minute web sign-in code for the member with this handle")
 	flag.Parse()
 
 	cfg, err := config.Load()
@@ -92,6 +96,14 @@ func main() {
 		}
 		fmt.Printf("The other tokens keep working. The deny-list entry is kept until this one would have expired anyway: %s\n",
 			expiry.Format(time.RFC3339))
+		return
+	}
+
+	// The household (docs/36 §3.4): what the operator does on the server, before
+	// there is anybody to do it in the dashboard — the first admin's first sign-in,
+	// above all. Each writes an account event with no actor: "the server's operator".
+	if *addUser != "" || *makeAdmin != "" || *loginCode != "" {
+		household(ctx, svc, st.DB, *addUser, *name, *makeAdmin, *loginCode)
 		return
 	}
 
@@ -179,4 +191,48 @@ func resolveOrCreateUser(ctx context.Context, pool *pgxpool.Pool, explicit strin
 func fail(format string, a ...any) {
 	fmt.Fprintf(os.Stderr, format+"\n", a...)
 	os.Exit(1)
+}
+
+func household(ctx context.Context, svc *auth.Service, pool *pgxpool.Pool, add, name, admin, login string) {
+	q := db.New(pool)
+	event := func(user pgtype.UUID, kind string, detail string) {
+		if err := q.InsertAccountEvent(ctx, db.InsertAccountEventParams{UserID: user, Kind: kind, Detail: []byte(detail)}); err != nil {
+			fmt.Fprintf(os.Stderr, "warning: the account log was not written: %v\n", err)
+		}
+	}
+	switch {
+	case add != "":
+		var dn *string
+		if n := strings.TrimSpace(name); n != "" {
+			dn = &n
+		}
+		u, err := q.CreateMember(ctx, db.CreateMemberParams{Handle: strings.TrimSpace(add), DisplayName: dn, Role: string(auth.RoleMember)})
+		if err != nil {
+			fail("add %s: %v", add, err)
+		}
+		event(u.ID, "member_added", `{"by":"operator"}`)
+		fmt.Printf("added %s (%s) as a member. Give them a code: make prod-login-code HANDLE=%s, or from the dashboard.\n", u.Handle, pgconv.ToUUID(u.ID), u.Handle)
+	case admin != "":
+		u, err := q.GetUserByHandle(ctx, strings.TrimSpace(admin))
+		if err != nil {
+			fail("no member called %s: %v", admin, err)
+		}
+		if err := q.SetUserRole(ctx, db.SetUserRoleParams{ID: u.ID, Role: string(auth.RoleAdmin)}); err != nil {
+			fail("make %s an admin: %v", admin, err)
+		}
+		event(u.ID, "role_changed", `{"to":"admin","by":"operator"}`)
+		fmt.Printf("%s is an admin.\n", u.Handle)
+	case login != "":
+		u, err := q.GetUserByHandle(ctx, strings.TrimSpace(login))
+		if err != nil {
+			fail("no member called %s: %v", login, err)
+		}
+		code, exp, err := svc.IssueCode(ctx, pgconv.ToUUID(u.ID), auth.PurposeWeb, 0, uuid.Nil)
+		if err != nil {
+			fail("issue the code: %v", err)
+		}
+		event(u.ID, "code_issued", `{"purpose":"web","by":"operator"}`)
+		fmt.Printf("sign-in code for %s: %s\nvalid until %s, once. Type it on the dashboard's sign-in page.\n",
+			u.Handle, code, exp.Local().Format("15:04"))
+	}
 }
