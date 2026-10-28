@@ -38,6 +38,9 @@ any change to the proxy or the network.
       reboot or a power cut.
 - [ ] The host starts the stack on boot — and a VM starts with its hypervisor
       (Proxmox: *Start at boot*, off by default).
+- [ ] TimescaleDB telemetry is off: `SHOW timescaledb.telemetry_level;` answers `off`. The image
+      phones home daily by default; the Compose file switches it off since 2026-10-28 — an older
+      install gets it with the next `git pull` and `make prod-up`.
 - [ ] Images are rebuilt and pulled occasionally. A container that has been up for
       a year is running a year-old TLS stack.
 

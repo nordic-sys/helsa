@@ -39,10 +39,54 @@ HELSA_BACKUP_DIR=/mnt/nas/helsa-backups bash scripts/pg-backup.sh
 `pg_dump` prints a warning about *circular foreign-key constraints* on `continuous_agg`. That is
 TimescaleDB's own catalog, it is expected, and the restore below handles it — the dump is fine.
 
-```bash
-# Example: daily at 03:30, keeping dumps on a NAS mount.
-30 3 * * *  cd /home/you/helsa/deploy && HELSA_BACKUP_DIR=/mnt/nas/helsa-backups bash scripts/pg-backup.sh >> /var/log/helsa-backup.log 2>&1
+**Schedule it with a systemd timer.** A Debian or Ubuntu cloud image has no `cron` at all, and a
+cron line that appends to `/var/log/…` fails for an ordinary user anyway. A timer logs to the
+journal (`journalctl -u helsa-backup`):
+
+```ini title="/etc/systemd/system/helsa-backup.service"
+[Unit]
+Description=Helsa logical database backup (pg_dump)
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=oneshot
+User=you
+WorkingDirectory=/home/you/helsa/deploy
+Environment=HELSA_BACKUP_DIR=/home/you/helsa-backups
+Environment=HELSA_BACKUP_KEEP=3
+ExecStart=/usr/bin/bash scripts/pg-backup.sh
 ```
+
+```ini title="/etc/systemd/system/helsa-backup.timer"
+[Unit]
+Description=Nightly Helsa database backup
+
+[Timer]
+OnCalendar=*-*-* 03:30:00 Europe/Budapest
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+```bash title="On the server"
+sudo systemctl daemon-reload
+sudo systemctl enable --now helsa-backup.timer
+sudo systemctl start helsa-backup.service      # run one now, and look at the result
+journalctl -u helsa-backup -n 5
+```
+
+⚠️ **Give the time a zone.** A cloud VM usually runs on UTC while the hypervisor's backup schedule is
+in local time; without the zone, summer time moves the dump to *after* the VM backup that was meant
+to carry it away.
+
+**"Not the same machine", when the host is isolated.** If the Helsa host cannot open connections into
+your LAN ([as the hardening checklist asks](/deployment/hardening/#network)), it cannot write to a
+NAS either. Then let the two layers work together: dump to a local directory, keep only the last few
+(`HELSA_BACKUP_KEEP`), and schedule the dump shortly **before** the nightly VM backup — the VM backup
+carries the dump off the machine. Measured on a real install: four million samples dump to 166 MB in
+20 seconds.
 
 Check afterwards that the file exists and has a plausible size. A backup job that
 has been failing for a month usually looks exactly like one that is working, unless
@@ -130,10 +174,34 @@ are a better check than any row count.
 until you have.**
 :::
 
-1. Restore a machine snapshot to a scratch VM. Does the stack come up?
+1. Restore a machine snapshot to a scratch VM. Does the stack come up? Give the scratch VM a
+   **new MAC address** (Proxmox: *unique* on restore), or it collides with the original on the network.
+   ⚠️ A VM made from a cloud image often has its network matched **by MAC** (cloud-init writes
+   `match: macaddress:` into `/etc/netplan/50-cloud-init.yaml`) — the restored copy then boots with
+   no network at all. That is exactly what would happen in a real disaster on new hardware. Match by
+   driver instead, on the real server, before you need it:
+
+   ```yaml title="/etc/netplan/50-cloud-init.yaml"
+   network:
+     version: 2
+     ethernets:
+       eth0:
+         match:
+           driver: virtio_net
+         dhcp4: true
+         set-name: eth0
+   ```
+
+   then `sudo netplan generate && sudo netplan apply`.
 2. Restore a logical dump into an **empty** database. Are all hypertables and
    continuous aggregates there?
-3. Write down what you did, and how long it took, next to the backup script.
+3. Write down what you did, and how long it took, next to the backup script — or next to the
+   dumps, where you will look for it.
+
+For scale, measured on a real install of four million samples: the dump restored into an empty
+database in 6 seconds with identical counts everywhere; the VM restored from Proxmox Backup Server
+in about 70 seconds and came up by itself. (In the TimescaleDB `-ha` image the extension already
+exists in a new database, so `CREATE EXTENSION` answers *already exists, skipping* — that is fine.)
 
 Step 3 matters because the next time you do this, something will have gone wrong
 and you will not be in a mood to work it out from first principles.
@@ -177,8 +245,8 @@ uploaded **millions of samples**; at 2.27 million the database stood at **1.3 GB
 a sample with its indexes, plus ~380,000 GPS points. The phone finishes in minutes and the worker
 then drains the queue at roughly 100 batches a minute — the numbers in the database keep rising for
 a while after the app says *Done*. Size the disk for the first upload, not for the yearly growth:
-the 20 GB in [What you need](/getting-started/#what-you-need) holds it, with the Docker images,
-but not with much to spare. **There is no
+plan for the 32 GB in [What you need](/getting-started/#what-you-need) — 20 GB held it, with the
+Docker images, at 61 %. **There is no
 retention policy and there is not meant to be one**: for a personal health archive
 the old data is the interesting part. A ten-year resting-heart-rate trend is not
 stale data, it is the most valuable thing in the database.

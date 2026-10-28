@@ -72,9 +72,15 @@ sudo touch /etc/cloud/cloud-init.disabled
 sudo hostnamectl set-hostname helsa
 ```
 
+**Network by driver, not by MAC.** A cloud image's netplan matches the NIC by MAC; a copy restored
+with a new MAC then has no network. Switch it to `match: driver: virtio_net` now —
+[the restore test](/deployment/backups/#the-restore-test) shows the file.
+
 **A VM-level backup** on top of the database dumps of [Backups and restore](/deployment/backups/):
 a Proxmox Backup Server job for the VM, nightly, kept for a week. The dumps are what you restore
-data from; the VM backup is what you restore *the machine* from.
+data from; the VM backup is what you restore *the machine* from. Since the isolated VM cannot write
+to the NAS, the dump runs at 03:30 into a local directory and the 04:40 VM backup carries it off the
+machine — [the timer](/deployment/backups/#logical-dumps).
 
 ## 2. Isolation belongs to the hypervisor, not the router
 

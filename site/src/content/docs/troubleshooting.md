@@ -36,6 +36,9 @@ meet them.
 | Deployment | A new certificate without the name the phone still uses | The phone drops off right after the install | Keep the old name in `server.cnf` until the phone is switched — [Issuing](/getting-started/certificates/#issuing--on-your-own-computer) |
 | Deployment | The dashboard moved to a new address | "No valid device token" although it worked yesterday | The token is stored per address: paste it again — [The web dashboard](/dashboard/#how-to-reach-it) |
 | Deployment | A Proxmox VM without *Start at boot* | After a power cut everything is down until you start the VM | VM → Options → Start at boot |
+| Backups | Restoring the VM backup to a new VM (new MAC) | The restored VM boots with no network | cloud-init matched the network to the old MAC: match by driver — [The restore test](/deployment/backups/#the-restore-test) |
+| Backups | A dump timer without a time zone, on a UTC VM | In summer the dump runs after the VM backup that should carry it | `OnCalendar=… Europe/Budapest` (your zone) — [Logical dumps](/deployment/backups/#logical-dumps) |
+| Backups | Following the cron example on a cloud image | `crontab: command not found` | Use the systemd timer — [Logical dumps](/deployment/backups/#logical-dumps) |
 | Tokens | One `SUBJECT` per person instead of per device (tool before 2026-10-27) | The dashboard is empty while the phone uploads | Since then every token binds to the one user; on an old install use `TOKEN_USER` — [Device token](/getting-started/device-token/) |
 
 ## Nothing arrives from the phone
