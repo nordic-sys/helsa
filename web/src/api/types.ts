@@ -631,6 +631,8 @@ export type User = {
   token?: TokenInfo
   capabilities?: Capabilities
   ha_publish?: boolean
+  /** The phone's address (HELSA_DEVICE_ENDPOINT on the server); absent when not set. */
+  device_endpoint?: string
   settings?: Settings
   created_at?: string
 }

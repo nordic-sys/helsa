@@ -1916,7 +1916,10 @@ type User struct {
 	// Capabilities What this server can do for this caller. A client hides what is false or absent — an older server sends none of it, and the client keeps its older screens (docs/36 §6.2).
 	Capabilities *Capabilities `json:"capabilities,omitempty"`
 	CreatedAt    *time.Time    `json:"created_at,omitempty"`
-	DisplayName  *string       `json:"display_name,omitempty"`
+
+	// DeviceEndpoint The address a PHONE of this server uses — the mTLS door, which differs from the web dashboard's address on every real install. From HELSA_DEVICE_ENDPOINT; absent when the operator has not set it, and the dashboard then guesses.
+	DeviceEndpoint *string `json:"device_endpoint,omitempty"`
+	DisplayName    *string `json:"display_name,omitempty"`
 
 	// HaPublish your daily numbers go to Home Assistant (PATCH /me)
 	HaPublish *bool `json:"ha_publish,omitempty"`

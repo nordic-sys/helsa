@@ -36,6 +36,11 @@ describe('the connection QR', () => {
   it('guesses the default HTTPS port of this host when nothing is configured', () => {
     expect(deviceEndpoint({ hostname: 'helsa.local' }, '')).toBe('https://helsa.local/v1')
     expect(deviceEndpoint({ hostname: 'helsa.local' }, undefined)).toBe('https://helsa.local/v1')
+    // The server's own setting wins over the build's and over the guess: a published
+    // image is built once for everybody, and only the server knows its mTLS door.
+    expect(deviceEndpoint({ hostname: 'helsa.local' }, 'https://build.example/v1', 'https://helsa.local:48443/v1/')).toBe(
+      'https://helsa.local:48443/v1',
+    )
   })
 })
 

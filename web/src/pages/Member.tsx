@@ -253,7 +253,7 @@ function MemberDetail({ m }: { m: Member }) {
         </Card>
       </div>
 
-      {code && <CodeDialog code={code} forName={own ? undefined : name} onClose={() => setCode(null)} />}
+      {code && <CodeDialog code={code} forName={own ? undefined : name} serverEndpoint={me.device_endpoint} onClose={() => setCode(null)} />}
     </>
   )
 }

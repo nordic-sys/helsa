@@ -121,7 +121,7 @@ export default function Account() {
         </Card>
       </div>
 
-      {code && <CodeDialog code={code} onClose={() => setCode(null)} />}
+      {code && <CodeDialog code={code} serverEndpoint={session.me.device_endpoint} onClose={() => setCode(null)} />}
     </>
   )
 }

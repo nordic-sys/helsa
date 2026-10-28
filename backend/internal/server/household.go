@@ -76,8 +76,12 @@ func (s *Server) userDTO(ctx context.Context, u db.User, p auth.Principal) (api.
 	}
 	out := api.User{
 		Id: &id, Handle: &handle, DisplayName: u.DisplayName, Role: &role, CreatedAt: &created, Settings: &set,
-		HaPublish: &u.HaPublish,
+		HaPublish:    &u.HaPublish,
 		Capabilities: &api.Capabilities{Household: &household, CanDeleteSelf: &canDelete},
+	}
+	if s.cfg.DeviceEndpoint != "" {
+		ep := s.cfg.DeviceEndpoint
+		out.DeviceEndpoint = &ep
 	}
 	if p.TokenID != uuid.Nil {
 		kind := api.TokenInfoKind(p.Kind)

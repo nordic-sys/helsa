@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -32,6 +33,10 @@ type Config struct {
 	// may carry the session cookie — the dashboard's dev server, for one. Empty in
 	// production: there the dashboard and the API share one origin.
 	WebOrigins []string
+	// DeviceEndpoint is what a phone of this server connects to (the mTLS door), as
+	// the connection QR carries it — e.g. https://helsa.example.net:48443/v1. Empty:
+	// the dashboard guesses this host on :443.
+	DeviceEndpoint string
 
 	// Home Assistant over MQTT — OFF unless MQTTURL is set.
 	MQTT MQTT
@@ -71,6 +76,7 @@ func Load() (*Config, error) {
 		// still read, so that an existing deploy/.env keeps meaning what it meant.
 		DeviceTokenTTL: envDuration("HELSA_DEVICE_TOKEN_TTL", envDuration("HELSA_ACCESS_TTL", 8760*time.Hour)),
 		WebOrigins:     envList("HELSA_WEB_ORIGINS", nil),
+		DeviceEndpoint: strings.TrimRight(env("HELSA_DEVICE_ENDPOINT", ""), "/"),
 		MQTT: MQTT{
 			URL:             env("HELSA_MQTT_URL", ""),
 			ClientID:        env("HELSA_MQTT_CLIENT_ID", "helsa"),

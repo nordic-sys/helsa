@@ -22,11 +22,14 @@ import { QrCode } from './QrCode'
 export function CodeDialog({
   code,
   forName,
+  serverEndpoint,
   onClose,
 }: {
   code: CodeIssued
   /** Whose code it is, when an admin issued it for somebody else. */
   forName?: string
+  /** The phone's address as the server knows it (GET /v1/me device_endpoint). */
+  serverEndpoint?: string
   onClose: () => void
 }) {
   const { t, locale } = useI18n()
@@ -34,7 +37,7 @@ export function CodeDialog({
   const now = useNow(1000)
   const left = secondsLeft(code.expires_at, now)
   const device = code.purpose === 'device'
-  const endpoint = deviceEndpoint()
+  const endpoint = deviceEndpoint(window.location, import.meta.env.VITE_HELSA_DEVICE_ENDPOINT, serverEndpoint)
   const until = new Date(code.expires_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
 
   useEffect(() => {

@@ -34,19 +34,25 @@ export function normalizeCode(input: string): string | null {
  * ⚠️ **This is not the address of this page.** The dashboard is served on the
  * web door (Caddy `:8443`, or the home proxy); the phone talks to the mTLS door
  * (`:443` by default, a different port behind NPM — e.g. `:48443` on Bob's
- * server). The two differ on every real install, which is why the address is a
- * build setting: `VITE_HELSA_DEVICE_ENDPOINT=https://helsa.example.net:48443/v1`.
+ * server). The two differ on every real install, so the address comes, in this
+ * order, from:
  *
- * Without it the guess is this page's host on the default HTTPS port — the
- * mTLS door of a stock `deploy/` install — with the `/v1` the app's base URL
- * reaches to (`APIClient.baseURL`, helsa-apple).
+ *   1. the server (`device_endpoint` in GET /v1/me, from HELSA_DEVICE_ENDPOINT) —
+ *      what a published image needs, since it is built once for everybody;
+ *   2. a build setting, `VITE_HELSA_DEVICE_ENDPOINT=https://helsa.example.net:48443/v1`;
+ *   3. a guess: this page's host on the default HTTPS port — the mTLS door of a
+ *      stock `deploy/` install — with the `/v1` the app's base URL reaches to
+ *      (`APIClient.baseURL`, helsa-apple).
  */
 export function deviceEndpoint(
   loc: Pick<Location, 'hostname'> = window.location,
   configured: string | undefined = import.meta.env.VITE_HELSA_DEVICE_ENDPOINT,
+  fromServer?: string,
 ): string {
-  const set = configured?.trim()
-  if (set) return set.replace(/\/+$/, '')
+  for (const v of [fromServer, configured]) {
+    const set = v?.trim()
+    if (set) return set.replace(/\/+$/, '')
+  }
   return `https://${loc.hostname}/v1`
 }
 
