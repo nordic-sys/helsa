@@ -56,6 +56,28 @@ func testPool(t *testing.T) *pgxpool.Pool {
 	return pool
 }
 
+// ownerPool is the connection for what only the aggregate's OWNER may do: an
+// on-demand refresh, which production leaves to Timescale's policy. Point
+// HELSA_DATABASE_URL at the application role (helsa_app) and
+// HELSA_SMOKE_OWNER_DATABASE_URL at the owner to run this suite as production
+// connects; unset, it is the same URL as the test pool.
+func ownerPool(t *testing.T) *pgxpool.Pool {
+	t.Helper()
+	url := os.Getenv("HELSA_SMOKE_OWNER_DATABASE_URL")
+	if url == "" {
+		url = os.Getenv("HELSA_DATABASE_URL")
+	}
+	if url == "" {
+		url = "postgres://helsa:helsa_local_dev@localhost:5433/helsa?sslmode=disable"
+	}
+	pool, err := pgxpool.New(context.Background(), url)
+	if err != nil {
+		t.Fatalf("open the database as the owner: %v", err)
+	}
+	t.Cleanup(pool.Close)
+	return pool
+}
+
 func freshUser(t *testing.T, pool *pgxpool.Pool) uuid.UUID {
 	t.Helper()
 	var id uuid.UUID
@@ -315,7 +337,7 @@ func TestTheAggregatesAgreeWithTheReadPath(t *testing.T) {
 		}
 	}
 	ctx := context.Background()
-	if _, err := pool.Exec(ctx, `CALL refresh_continuous_aggregate('samples_hourly', $1::timestamptz, $2::timestamptz)`,
+	if _, err := ownerPool(t).Exec(ctx, `CALL refresh_continuous_aggregate('samples_hourly', $1::timestamptz, $2::timestamptz)`,
 		day.Add(-24*time.Hour), day.Add(48*time.Hour)); err != nil {
 		t.Fatalf("refresh samples_hourly: %v", err)
 	}

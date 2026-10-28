@@ -50,6 +50,29 @@ func testPool(t *testing.T) *pgxpool.Pool {
 	return pool
 }
 
+// ownerPool is the connection for what only the table's OWNER may do — here,
+// compressing a chunk on demand, which production leaves to Timescale's policy.
+// In production the application connects as helsa_app, which is not the owner
+// (deploy/init/timescaledb/03-app-role.sql); run this suite the same way by
+// pointing HELSA_DATABASE_URL at helsa_app and HELSA_SMOKE_OWNER_DATABASE_URL at
+// the owner. Unset, it is the same database URL as the test pool.
+func ownerPool(t *testing.T) *pgxpool.Pool {
+	t.Helper()
+	url := os.Getenv("HELSA_SMOKE_OWNER_DATABASE_URL")
+	if url == "" {
+		url = os.Getenv("HELSA_DATABASE_URL")
+	}
+	if url == "" {
+		url = "postgres://helsa:helsa_local_dev@localhost:5433/helsa?sslmode=disable"
+	}
+	pool, err := pgxpool.New(context.Background(), url)
+	if err != nil {
+		t.Fatalf("open the database as the owner: %v", err)
+	}
+	t.Cleanup(pool.Close)
+	return pool
+}
+
 func TestDeletingFromCompressedHistoryTakesOnlyTheNamedRows(t *testing.T) {
 	ctx := context.Background()
 	pool := testPool(t)
@@ -80,7 +103,9 @@ func TestDeletingFromCompressedHistoryTakesOnlyTheNamedRows(t *testing.T) {
 		VALUES ($1, $2, 'stepCount', 1200, 'count', $3)`, pgconv.UUID(uid), base.Add(90*time.Minute), target); err != nil {
 		t.Fatalf("insert the target: %v", err)
 	}
-	if _, err := pool.Exec(ctx, `
+	// The fixture is the owner's; the deletion below runs through the test pool,
+	// as the application would.
+	if _, err := ownerPool(t).Exec(ctx, `
 		SELECT compress_chunk(c, if_not_compressed => true)
 		FROM show_chunks('samples', older_than => now() - INTERVAL '1 year') AS c`); err != nil {
 		t.Fatalf("compress: %v", err)
