@@ -76,6 +76,7 @@ func (s *Server) userDTO(ctx context.Context, u db.User, p auth.Principal) (api.
 	}
 	out := api.User{
 		Id: &id, Handle: &handle, DisplayName: u.DisplayName, Role: &role, CreatedAt: &created, Settings: &set,
+		HaPublish: &u.HaPublish,
 		Capabilities: &api.Capabilities{Household: &household, CanDeleteSelf: &canDelete},
 	}
 	if p.TokenID != uuid.Nil {
@@ -91,6 +92,13 @@ func (s *Server) PatchMe(w http.ResponseWriter, r *http.Request) {
 	var body api.MePatch
 	if !decodeBody(w, r, &body, "Invalid profile") {
 		return
+	}
+	if body.HaPublish != nil {
+		if err := s.q.SetHAPublish(r.Context(), db.SetHAPublishParams{ID: pgconv.UUID(p.UserID), HaPublish: *body.HaPublish}); err != nil {
+			problem(w, http.StatusInternalServerError, "Saving failed", "")
+			return
+		}
+		s.event(r.Context(), p.UserID, p.UserID, "ha_publish", map[string]any{"on": *body.HaPublish})
 	}
 	if body.DisplayName == nil {
 		s.GetMe(w, r)

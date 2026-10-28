@@ -28,7 +28,7 @@ const newOwnerSub = "owner"
 // userRow is one row of `users`, as much of it as choosing needs.
 type userRow struct {
 	ID        uuid.UUID
-	Handle  string
+	Handle    string
 	CreatedAt time.Time
 }
 

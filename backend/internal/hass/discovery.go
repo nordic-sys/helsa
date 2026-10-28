@@ -3,6 +3,7 @@ package hass
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -177,15 +178,57 @@ var entities = []entity{
 	},
 }
 
-// topics derives every topic from the two configured prefixes.
+// topics derives every topic from the two configured prefixes — and, on a
+// household server, from the member they are about (docs/36 §4.4, D8).
+//
+// ⚠️ The legacy member — HELSA_MQTT_USER_ID, or the only user of a one-person
+// server — keeps EXACTLY the names a single-user Helsa always used: `helsa/daily/…`,
+// `sensor.helsa_steps_today`, the device "Helsa". Home Assistant automations are
+// built on those, and they must not break because a second person joined. Everyone
+// else gets their handle in every name: `helsa/nori/daily/…`,
+// `sensor.helsa_nori_steps_today`, the device "Helsa — Nóri". Legacy decides the
+// NAMES only; whether anything is published at all is the member's own switch
+// (users.ha_publish, §9 C25).
 type topics struct {
 	prefix          string
 	discoveryPrefix string
+	member          string // "" for the legacy member
+	memberName      string // the device's name in Home Assistant, for a non-legacy member
 }
 
-func (t topics) state(suffix string) string  { return t.prefix + "/" + suffix }
+// forMember is t for one member's entities.
+func (t topics) forMember(handle, name string, legacy bool) topics {
+	if legacy {
+		return t
+	}
+	t.member = strings.ReplaceAll(handle, "-", "_")
+	t.memberName = name
+	if t.memberName == "" {
+		t.memberName = handle
+	}
+	return t
+}
+
+func (t topics) state(suffix string) string {
+	if t.member != "" {
+		return t.prefix + "/" + t.member + "/" + suffix
+	}
+	return t.prefix + "/" + suffix
+}
+
+// status is the publisher's own availability topic — one for the whole process,
+// whoever the entities are about: it says whether Helsa's worker is alive.
 func (t topics) status() string              { return t.prefix + "/status" }
 func (t topics) discovery(obj string) string { return t.discoveryPrefix + "/sensor/" + obj + "/config" }
+
+// objectID is e's object id for this member: helsa_steps_today, or
+// helsa_nori_steps_today.
+func (t topics) objectID(e entity) string {
+	if t.member == "" {
+		return e.objectID
+	}
+	return strings.Replace(e.objectID, "helsa_", "helsa_"+t.member+"_", 1)
+}
 
 // haStatus is the topic Home Assistant publishes its own birth/will message on
 // ("online"/"offline"). Seeing `online` there means Home Assistant has just
@@ -194,18 +237,22 @@ func (t topics) haStatus() string { return t.discoveryPrefix + "/status" }
 
 // discoveryFor builds the discovery document for one entity.
 func (t topics) discoveryFor(e entity, expireAfter time.Duration) discoveryPayload {
+	id, devID, devName := t.objectID(e), deviceIdentifier, "Helsa"
+	if t.member != "" {
+		devID, devName = deviceIdentifier+"_"+t.member, "Helsa — "+t.memberName
+	}
 	p := discoveryPayload{
 		Name:              e.name,
-		UniqueID:          e.objectID,
-		DefaultEntityID:   "sensor." + e.objectID,
+		UniqueID:          id,
+		DefaultEntityID:   "sensor." + id,
 		StateTopic:        t.state(e.suffix),
 		UnitOfMeasurement: e.unit,
 		DeviceClass:       e.class,
 		StateClass:        e.stateCls,
 		Icon:              e.icon,
 		Device: device{
-			Identifiers:  []string{deviceIdentifier},
-			Name:         "Helsa",
+			Identifiers:  []string{devID},
+			Name:         devName,
 			Manufacturer: "Helsa",
 			Model:        "Self-hosted health backend",
 		},

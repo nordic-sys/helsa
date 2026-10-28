@@ -122,6 +122,11 @@ func TestHomeAssistantMQTTPublisher(t *testing.T) {
 
 	// --- 3) The publisher, exactly as the worker runs it ---
 	ctx, cancel := context.WithCancel(context.Background())
+	// Publishing is the member's own switch (users.ha_publish, docs/36 §4.4): without
+	// it, nothing of theirs goes on the broker — not even as the pinned user.
+	if _, err := e.store.DB.Exec(context.Background(), `UPDATE users SET ha_publish = true WHERE id = $1`, e.userID); err != nil {
+		t.Fatalf("switch publishing on: %v", err)
+	}
 	cfg := config.MQTT{
 		URL:             broker,
 		ClientID:        prefix + "-pub",

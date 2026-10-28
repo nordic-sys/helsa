@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -140,6 +141,24 @@ func Peek(body []byte) Counts {
 	return c
 }
 
+// ErrUserGone: the batch's member is deleted or being deleted. The worker
+// acknowledges such a batch and drops it, rather than dead-lettering it.
+var ErrUserGone = errors.New("the batch's user is deleted or being deleted")
+
+// Dropped reports whether a Process error means "drop the batch, do not
+// dead-letter it": the member is gone (ErrUserGone), or was deleted while the batch
+// was being written (a foreign-key violation on the user).
+func Dropped(err error) bool {
+	return errors.Is(err, ErrUserGone) || isGoneUser(err)
+}
+
+// isGoneUser: a foreign-key violation — the member was deleted between the check
+// and the write.
+func isGoneUser(err error) bool {
+	var pg *pgconn.PgError
+	return errors.As(err, &pg) && pg.Code == "23503"
+}
+
 func Process(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, body []byte) (Counts, error) {
 	var counts Counts
 	var msg Message
@@ -151,6 +170,23 @@ func Process(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, body []
 	// Everything this batch touches is its user's: the pool sets helsa.user_id from
 	// this before handing out the connection (internal/store).
 	ctx = tenant.With(ctx, msg.UserID)
+
+	// Whose batch is it, still? A member who has been deleted, or whose deletion is
+	// under way, gets nothing written: the batch is dropped, not dead-lettered — a
+	// dead-lettered copy would wait for a redrive into a database without its owner
+	// (docs/36 §9, C20–C21). A DISABLED member's batch is written as usual: disabling
+	// is reversible, and the phone was accepted when it sent it. A database error is
+	// an error, never "no such user".
+	var state string
+	if err := pool.QueryRow(ctx, `SELECT CASE
+	      WHEN EXISTS (SELECT 1 FROM deletion_jobs WHERE user_id = $1 AND done_at IS NULL) THEN 'deleting'
+	      WHEN EXISTS (SELECT 1 FROM users WHERE id = $1) THEN 'ok'
+	      ELSE 'gone' END`, uid).Scan(&state); err != nil {
+		return counts, fmt.Errorf("check the batch's user: %w", err)
+	}
+	if state != "ok" {
+		return counts, fmt.Errorf("%w (%s)", ErrUserGone, state)
+	}
 
 	tx, err := pool.Begin(ctx)
 	if err != nil {
@@ -250,7 +286,15 @@ func Process(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, body []
 		}
 	}
 
+	// What the admin's Household page shows — written with the batch, not after it.
+	if err := q.TouchLastUpload(ctx, uid); err != nil {
+		return counts, fmt.Errorf("last upload: %w", err)
+	}
 	if err := tx.Commit(ctx); err != nil {
+		if isGoneUser(err) {
+			// Deleted while this batch was being written: the foreign key says so.
+			return counts, fmt.Errorf("%w (deleted during the batch)", ErrUserGone)
+		}
 		return counts, fmt.Errorf("commit: %w", err)
 	}
 	// Cache busting: the fresh data makes the user's range keys stale.

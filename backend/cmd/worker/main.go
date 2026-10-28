@@ -9,8 +9,10 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/nordic-sys/helsa/backend/internal/config"
+	"github.com/nordic-sys/helsa/backend/internal/deletion"
 	"github.com/nordic-sys/helsa/backend/internal/hass"
 	"github.com/nordic-sys/helsa/backend/internal/ingest"
 	"github.com/nordic-sys/helsa/backend/internal/ingeststat"
@@ -67,6 +69,16 @@ func main() {
 		}
 	}()
 
+	// Member deletions (internal/deletion): the API disables the member and queues
+	// the job; the stages run here, a pass every 30 seconds.
+	del := &deletion.Runner{Pool: st.DB, Redis: st.Redis, Queue: q, MQTT: hp.ForgetUser, Log: log}
+	delDone := make(chan struct{})
+	go func() {
+		defer close(delDone)
+		del.Loop(ctx, 30*time.Second)
+	}()
+	defer func() { <-delDone }()
+
 	// The tally behind GET /v1/ingest/status (internal/ingeststat): counts only, in
 	// Redis. A failure to record is a log line, never a failed batch.
 	stats := ingeststat.NewRecorder(st.Redis, cfg.IngestQueue)
@@ -97,6 +109,12 @@ func main() {
 	log.Info("worker started", "queue", cfg.IngestQueue)
 	err = q.Consume(ctx, prefetch, func(ctx context.Context, body []byte, redriven int) error {
 		counts, err := ingest.Process(ctx, st.DB, st.Redis, body)
+		if ingest.Dropped(err) {
+			// A deleted member's batch: acknowledged and dropped, never dead-lettered
+			// (docs/36 §9, C21). The log line says so; the data is not kept anywhere.
+			log.Info("batch dropped: its member is deleted", "batch_id", counts.BatchID, "reason", err)
+			return nil
+		}
 		if err != nil {
 			log.Error("process batch", "err", err, "bytes", len(body),
 				"batch_id", counts.BatchID, "redriven", redriven)

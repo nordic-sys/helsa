@@ -25,9 +25,11 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/google/uuid"
 	"log/slog"
 	"net/url"
 	"strings"
+	"sync"
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
@@ -64,6 +66,12 @@ type Publisher struct {
 	top  topics
 
 	client mqtt.Client
+
+	// published remembers whose topics this process has put on the broker, so that
+	// a member who switches publishing off — or is deleted — has them cleared rather
+	// than left there retained (docs/36 §4.4, §4.6/4).
+	mu        sync.Mutex
+	published map[uuid.UUID]topics
 }
 
 // New builds a Publisher. It performs no I/O — nothing connects until Run.
@@ -73,6 +81,8 @@ func New(pool *pgxpool.Pool, log *slog.Logger, cfg config.MQTT) *Publisher {
 		log:  log.With("component", "hass"),
 		cfg:  cfg,
 		top:  topics{prefix: cfg.Prefix, discoveryPrefix: cfg.DiscoveryPrefix},
+
+		published: map[uuid.UUID]topics{},
 	}
 }
 
@@ -186,7 +196,7 @@ func (p *Publisher) onConnect(c mqtt.Client) {
 	p.log.Info("mqtt connected", "broker", redactBroker(p.cfg.URL))
 
 	p.publishRaw(c, p.top.status(), payloadOnline, true)
-	p.publishDiscovery(c)
+	p.publishDiscoveryAll(context.Background(), c)
 
 	// Home Assistant announces its own start-up on <discovery_prefix>/status with
 	// "online". Its documentation asks publishers to treat that as the cue to send
@@ -211,23 +221,113 @@ func (p *Publisher) onHAStatus(c mqtt.Client, m mqtt.Message) {
 	}
 	p.log.Info("home assistant restarted, republishing discovery")
 	p.publishRaw(c, p.top.status(), payloadOnline, true)
-	p.publishDiscovery(c)
+	p.publishDiscoveryAll(context.Background(), c)
 }
 
 // publishDiscovery sends one retained config message per entity. Retained is what
 // makes the entities survive a Home Assistant restart without us being awake for
 // it.
-func (p *Publisher) publishDiscovery(c mqtt.Client) {
+func (p *Publisher) publishDiscovery(c mqtt.Client, top topics) bool {
 	for _, e := range entities {
-		buf, err := p.top.discoveryJSON(e, p.cfg.ExpireAfter)
+		buf, err := top.discoveryJSON(e, p.cfg.ExpireAfter)
 		if err != nil {
 			p.log.Error("build discovery", "entity", e.objectID, "err", err)
 			continue
 		}
-		if !p.publishRaw(c, p.top.discovery(e.objectID), string(buf), true) {
+		if !p.publishRaw(c, top.discovery(top.objectID(e)), string(buf), true) {
+			return false
+		}
+	}
+	return true
+}
+
+func (p *Publisher) publishDiscoveryAll(ctx context.Context, c mqtt.Client) {
+	ctx, cancel := context.WithTimeout(ctx, collectTimeout)
+	defer cancel()
+	for _, t := range p.targets(ctx) {
+		if !p.publishDiscovery(c, p.topicsFor(t)) {
 			return
 		}
 	}
+}
+
+func (p *Publisher) topicsFor(t target) topics { return p.top.forMember(t.handle, t.name, t.legacy) }
+
+// sync records the current targets, publishes discovery for any that are new, and
+// clears the topics of any that were published before and no longer are.
+func (p *Publisher) sync(ts []target) {
+	want := map[uuid.UUID]topics{}
+	for _, t := range ts {
+		want[t.userID] = p.topicsFor(t)
+	}
+	p.mu.Lock()
+	var gone []topics
+	var fresh []topics
+	for id, top := range p.published {
+		if _, ok := want[id]; !ok {
+			gone = append(gone, top)
+		}
+	}
+	for id, top := range want {
+		if old, ok := p.published[id]; !ok || old != top {
+			fresh = append(fresh, top)
+			if ok {
+				gone = append(gone, old) // renamed (legacy changed): clear the old names
+			}
+		}
+	}
+	p.published = want
+	p.mu.Unlock()
+	for _, top := range gone {
+		p.clear(top)
+	}
+	for _, top := range fresh {
+		p.publishDiscovery(p.client, top)
+	}
+}
+
+// clear removes a member's entities: an empty retained message on each discovery
+// topic (Home Assistant deletes the entity) and on each retained state topic (the
+// broker forgets the last value). ⚠️ What Home Assistant already recorded in its
+// own history stays there — that is Home Assistant's database, not ours.
+func (p *Publisher) clear(top topics) bool {
+	for _, e := range entities {
+		if !p.publishRaw(p.client, top.discovery(top.objectID(e)), "", true) {
+			return false
+		}
+		if e.retain {
+			if !p.publishRaw(p.client, top.state(e.suffix), "", true) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+// ForgetUser clears a member's retained topics — the member-deletion job's MQTT
+// stage (internal/deletion). With the publisher off there is nothing to clear; with
+// it on but the broker unreachable, it is an error, and the job retries.
+func (p *Publisher) ForgetUser(_ context.Context, user uuid.UUID, handle string) error {
+	if !p.cfg.Enabled() {
+		return nil
+	}
+	if !p.connected() {
+		return errors.New("mqtt broker not connected")
+	}
+	p.mu.Lock()
+	top, ok := p.published[user]
+	delete(p.published, user)
+	p.mu.Unlock()
+	if !ok {
+		// Not published by this process (it restarted): clear the non-legacy names,
+		// which are the only ones a deleted member can have had unless they were the
+		// pinned user — and then their legacy names are the pinned user's, cleared below.
+		top = p.top.forMember(handle, handle, false)
+	}
+	if !p.clear(top) {
+		return errors.New("mqtt publish failed while clearing")
+	}
+	return nil
 }
 
 // publishSummary collects and publishes the daily numbers.
@@ -238,30 +338,29 @@ func (p *Publisher) publishSummary(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx, collectTimeout)
 	defer cancel()
 
-	t, ok := p.target(ctx)
-	if !ok {
-		return
-	}
-	snap, err := collectDaily(ctx, p.pool, t, time.Now())
-	if err != nil {
-		p.log.Error("collect daily summary", "err", err)
-		return
-	}
-	for _, e := range entities {
-		if e.expiring {
-			continue // the heartbeat has its own schedule
+	ts := p.targets(ctx)
+	p.sync(ts)
+	for _, t := range ts {
+		top := p.topicsFor(t)
+		snap, err := collectDaily(ctx, p.pool, t, time.Now())
+		if err != nil {
+			p.log.Error("collect daily summary", "member", t.handle, "err", err)
+			continue
 		}
-		// Stop at the first failure. If the broker has gone away mid-round, the
-		// remaining topics would each sit out the whole timeout for nothing, and a
-		// shutdown asked for in the meantime would have to wait for all of them.
-		if !p.publishRaw(p.client, p.top.state(e.suffix), stateValue(snap.value(e.suffix), e.decimals), e.retain) {
-			return
+		for _, e := range entities {
+			if e.expiring {
+				continue // the heartbeat has its own schedule
+			}
+			// Stop at the first failure. If the broker has gone away mid-round, the
+			// remaining topics would each sit out the whole timeout for nothing, and a
+			// shutdown asked for in the meantime would have to wait for all of them.
+			if !p.publishRaw(p.client, top.state(e.suffix), stateValue(snap.value(e.suffix), e.decimals), e.retain) {
+				return
+			}
 		}
+		// The numbers are health data: not in the log on a server several people share.
+		p.log.Info("published daily summary", "member", t.handle)
 	}
-	p.log.Info("published daily summary",
-		"steps", snap.Steps, "active_energy", snap.ActiveEnergy,
-		"sleep_hours", snap.SleepHours, "resting_heart_rate", snap.RestingHeartRate,
-		"rings_closed", snap.RingsClosed)
 }
 
 // publishFreshness publishes the dead man's switch.
@@ -277,47 +376,47 @@ func (p *Publisher) publishFreshness(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx, collectTimeout)
 	defer cancel()
 
-	t, ok := p.target(ctx)
-	if !ok {
-		return
-	}
-	f, err := collectFreshness(ctx, p.pool, t, time.Now())
-	if err != nil {
-		p.log.Error("collect freshness", "err", err)
-		return
-	}
-
+	ts := p.targets(ctx)
+	p.sync(ts)
 	e := freshnessEntity()
-	if attrs, err := attributesJSON(f, "helsa-worker"); err == nil {
-		p.publishRaw(p.client, p.top.state(e.attrs), string(attrs), false)
-	} else {
-		p.log.Error("build freshness attributes", "err", err)
-	}
-	p.publishRaw(p.client, p.top.state(e.suffix), stateValue(f.Hours, e.decimals), e.retain)
+	for _, t := range ts {
+		top := p.topicsFor(t)
+		f, err := collectFreshness(ctx, p.pool, t, time.Now())
+		if err != nil {
+			p.log.Error("collect freshness", "member", t.handle, "err", err)
+			continue
+		}
+		if attrs, err := attributesJSON(f, "helsa-worker"); err == nil {
+			p.publishRaw(p.client, top.state(e.attrs), string(attrs), false)
+		} else {
+			p.log.Error("build freshness attributes", "err", err)
+		}
+		p.publishRaw(p.client, top.state(e.suffix), stateValue(f.Hours, e.decimals), e.retain)
 
-	if f.FutureSkew > 0 {
-		p.log.Warn("newest data is dated in the future; freshness clamped to zero",
-			"skew", f.FutureSkew.String(), "newest", f.Newest)
+		if f.FutureSkew > 0 {
+			p.log.Warn("newest data is dated in the future; freshness clamped to zero",
+				"member", t.handle, "skew", f.FutureSkew.String(), "newest", f.Newest)
+		}
 	}
 }
 
-// target resolves who to publish for, turning "nobody yet" into a quiet skip.
-func (p *Publisher) target(ctx context.Context) (target, bool) {
-	t, err := resolveTarget(ctx, p.pool, p.cfg.UserID)
+// targets resolves who to publish for, turning "nobody yet" into a quiet skip.
+func (p *Publisher) targets(ctx context.Context) []target {
+	ts, err := resolveTargets(ctx, p.pool, p.cfg.UserID)
 	if err != nil && ctx.Err() != nil {
 		// The process is shutting down; a cancelled query is the expected outcome, not
 		// something worth an error line in the log on every restart.
-		return target{}, false
+		return nil
 	}
 	if errors.Is(err, errNoTarget) {
 		p.log.Debug("nothing to publish yet", "reason", err)
-		return target{}, false
+		return nil
 	}
 	if err != nil {
-		p.log.Error("resolve publish target", "err", err)
-		return target{}, false
+		p.log.Error("resolve publish targets", "err", err)
+		return nil
 	}
-	return t, true
+	return ts
 }
 
 // connected asks whether there is an OPEN connection right now.

@@ -1663,6 +1663,9 @@ type LatestValueAgg string
 // MePatch defines model for MePatch.
 type MePatch struct {
 	DisplayName *string `json:"display_name,omitempty"`
+
+	// HaPublish Your daily numbers (steps, sleep, rings) go to this server's Home Assistant. Your own switch — an admin cannot turn it on for you. Everything published there can be seen by anyone in the house with access to Home Assistant. Off by default.
+	HaPublish *bool `json:"ha_publish,omitempty"`
 }
 
 // Member defines model for Member.
@@ -1914,6 +1917,9 @@ type User struct {
 	Capabilities *Capabilities `json:"capabilities,omitempty"`
 	CreatedAt    *time.Time    `json:"created_at,omitempty"`
 	DisplayName  *string       `json:"display_name,omitempty"`
+
+	// HaPublish your daily numbers go to Home Assistant (PATCH /me)
+	HaPublish *bool `json:"ha_publish,omitempty"`
 
 	// Handle the short name, e.g. nori
 	Handle   *string             `json:"handle,omitempty"`

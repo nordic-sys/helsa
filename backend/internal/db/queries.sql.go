@@ -1071,6 +1071,20 @@ func (q *Queries) RevokeDeviceToken(ctx context.Context, arg RevokeDeviceTokenPa
 	return i, err
 }
 
+const setHAPublish = `-- name: SetHAPublish :exec
+UPDATE users SET ha_publish = $1 WHERE id = $2
+`
+
+type SetHAPublishParams struct {
+	HaPublish bool        `json:"ha_publish"`
+	ID        pgtype.UUID `json:"id"`
+}
+
+func (q *Queries) SetHAPublish(ctx context.Context, arg SetHAPublishParams) error {
+	_, err := q.db.Exec(ctx, setHAPublish, arg.HaPublish, arg.ID)
+	return err
+}
+
 const setUserDisabled = `-- name: SetUserDisabled :exec
 UPDATE users SET disabled_at = CASE WHEN $1::boolean THEN COALESCE(disabled_at, now()) ELSE NULL END
 WHERE id = $2

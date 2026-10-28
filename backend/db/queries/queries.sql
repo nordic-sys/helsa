@@ -395,3 +395,6 @@ UPDATE deletion_jobs SET attempts = attempts + 1, last_error = @last_error WHERE
 
 -- name: PurgeDeletedUserAggregates :one
 SELECT purge_deleted_user_aggregates(@user_id::uuid)::bigint AS purged;
+
+-- name: SetHAPublish :exec
+UPDATE users SET ha_publish = @ha_publish WHERE id = @id;

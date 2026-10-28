@@ -26,59 +26,57 @@ var errNoTarget = errors.New("no user to publish for")
 type target struct {
 	userID uuid.UUID
 	loc    *time.Location
+	handle string
+	name   string
+	legacy bool // keeps the single-user topic names (topics.forMember)
 }
 
-// resolveTarget picks the user whose numbers go on the broker.
+// resolveTargets lists the members whose numbers go on the broker (docs/36 §4.4, D8).
 //
-// ⚠️ Helsa is a single-user system, but the schema is not: `users` can hold more
-// than one row (a second Apple account, a leftover smoke-test user). Publishing
-// "the first" of several would silently put somebody else's health data on a
-// broker that the whole house can read. So: exactly one user, or an explicit
-// HELSA_MQTT_USER_ID. Ambiguity means we publish nothing.
-func resolveTarget(ctx context.Context, pool *pgxpool.Pool, pinned string) (target, error) {
+// ⚠️ The broker is readable by the whole house. So a member is published only if
+// THEY switched it on (users.ha_publish) — never because an admin did, and never
+// because they happen to be "the user" — and not while disabled or being deleted.
+// The legacy member (HELSA_MQTT_USER_ID, or the only user of a one-person server)
+// keeps the old topic names; that decides naming only (§9, C25).
+func resolveTargets(ctx context.Context, pool *pgxpool.Pool, pinned string) ([]target, error) {
+	var pin uuid.UUID
 	if pinned != "" {
 		id, err := uuid.Parse(pinned)
 		if err != nil {
-			return target{}, fmt.Errorf("HELSA_MQTT_USER_ID is not a uuid: %w", err)
+			return nil, fmt.Errorf("HELSA_MQTT_USER_ID is not a uuid: %w", err)
 		}
-		var tz string
-		err = pool.QueryRow(ctx, `SELECT time_zone FROM users WHERE id = $1`, pgconv.UUID(id)).Scan(&tz)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return target{}, fmt.Errorf("HELSA_MQTT_USER_ID %s: %w", pinned, errNoTarget)
-		}
-		if err != nil {
-			return target{}, fmt.Errorf("look up pinned user: %w", err)
-		}
-		return target{userID: id, loc: location(tz)}, nil
+		pin = id
 	}
-
-	rows, err := pool.Query(ctx, `SELECT id, time_zone FROM users ORDER BY created_at, id LIMIT 2`)
+	rows, err := pool.Query(ctx, `
+		SELECT u.id, u.time_zone, u.handle, COALESCE(u.display_name, ''),
+		       (SELECT count(*) FROM users) AS everyone
+		FROM users u
+		WHERE u.ha_publish AND u.disabled_at IS NULL
+		  AND NOT EXISTS (SELECT 1 FROM deletion_jobs j WHERE j.user_id = u.id AND j.done_at IS NULL)
+		ORDER BY u.created_at, u.id`)
 	if err != nil {
-		return target{}, fmt.Errorf("list users: %w", err)
+		return nil, fmt.Errorf("list members: %w", err)
 	}
 	defer rows.Close()
-
-	var found []target
+	var out []target
 	for rows.Next() {
 		var id pgtype.UUID
-		var tz string
-		if err := rows.Scan(&id, &tz); err != nil {
-			return target{}, fmt.Errorf("scan user: %w", err)
+		var tz, handle, name string
+		var everyone int64
+		if err := rows.Scan(&id, &tz, &handle, &name, &everyone); err != nil {
+			return nil, fmt.Errorf("scan member: %w", err)
 		}
-		found = append(found, target{userID: pgconv.ToUUID(id), loc: location(tz)})
+		uid := pgconv.ToUUID(id)
+		legacy := uid == pin || (pin == uuid.Nil && everyone == 1)
+		out = append(out, target{userID: uid, loc: location(tz), handle: handle, name: name, legacy: legacy})
 	}
 	if err := rows.Err(); err != nil {
-		return target{}, err
+		return nil, err
 	}
-
-	switch len(found) {
-	case 0:
-		return target{}, errNoTarget
-	case 1:
-		return found[0], nil
-	default:
-		return target{}, fmt.Errorf("%d users in the database: set HELSA_MQTT_USER_ID to say which one to publish", len(found))
+	if len(out) == 0 {
+		return nil, errNoTarget
 	}
+	return out, nil
 }
 
 func location(tz string) *time.Location {

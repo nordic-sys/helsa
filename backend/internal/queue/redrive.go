@@ -218,22 +218,27 @@ func (q *Queue) redrive(ctx context.Context, limit int) (RedriveResult, error) {
 }
 
 func (q *Queue) publishConfirmed(ctx context.Context, ch *amqp.Channel, returns <-chan amqp.Return, p amqp.Publishing) error {
+	return q.publishTo(ctx, ch, returns, q.name, p)
+}
+
+// publishTo publishes to target and waits for the broker's confirm.
+func (q *Queue) publishTo(ctx context.Context, ch *amqp.Channel, returns <-chan amqp.Return, target string, p amqp.Publishing) error {
 	ctx, cancel := context.WithTimeout(ctx, redriveOpTimeout)
 	defer cancel()
-	dc, err := ch.PublishWithDeferredConfirmWithContext(ctx, "", q.name, true, false, p)
+	dc, err := ch.PublishWithDeferredConfirmWithContext(ctx, "", target, true, false, p)
 	if err != nil {
-		return fmt.Errorf("publish to %s: %w", q.name, err)
+		return fmt.Errorf("publish to %s: %w", target, err)
 	}
 	acked, err := dc.WaitContext(ctx)
 	if err != nil {
-		return fmt.Errorf("confirm from %s: %w", q.name, err)
+		return fmt.Errorf("confirm from %s: %w", target, err)
 	}
 	if !acked {
-		return fmt.Errorf("the broker refused the publish to %s (nack)", q.name)
+		return fmt.Errorf("the broker refused the publish to %s (nack)", target)
 	}
 	select {
 	case r := <-returns:
-		return fmt.Errorf("the broker could not route the message to %s: %d %s", q.name, r.ReplyCode, r.ReplyText)
+		return fmt.Errorf("the broker could not route the message to %s: %d %s", target, r.ReplyCode, r.ReplyText)
 	default:
 	}
 	return nil

@@ -180,3 +180,34 @@ func TestEntityNamesDoNotRepeatTheDeviceName(t *testing.T) {
 		}
 	}
 }
+
+// A household member's entities carry their handle in every name; the legacy
+// member keeps the single-user names unchanged (docs/36 §4.4, D8).
+func TestMemberTopicsAreNamespacedAndLegacyIsUnchanged(t *testing.T) {
+	base := topicsForTest()
+	legacy := base.forMember("bob", "Bob", true)
+	if legacy != base {
+		t.Fatalf("the legacy member must keep the base names: %+v", legacy)
+	}
+	steps := entities[0]
+	if got := legacy.state(steps.suffix); got != "helsa/"+steps.suffix {
+		t.Errorf("legacy state topic: %s", got)
+	}
+	nori := base.forMember("nori-b", "Nóri", false)
+	if got := nori.state(steps.suffix); got != "helsa/nori_b/"+steps.suffix {
+		t.Errorf("member state topic: %s", got)
+	}
+	if got := nori.objectID(steps); got != strings.Replace(steps.objectID, "helsa_", "helsa_nori_b_", 1) {
+		t.Errorf("member object id: %s", got)
+	}
+	if nori.status() != base.status() {
+		t.Errorf("availability is the process's, one topic for all: %s vs %s", nori.status(), base.status())
+	}
+	p := nori.discoveryFor(steps, time.Hour)
+	if p.Device.Name != "Helsa — Nóri" || p.Device.Identifiers[0] != "helsa_nori_b" || p.UniqueID != nori.objectID(steps) {
+		t.Errorf("member device/unique id: %+v %s", p.Device, p.UniqueID)
+	}
+	if lp := legacy.discoveryFor(steps, time.Hour); lp.Device.Name != "Helsa" || lp.UniqueID != steps.objectID {
+		t.Errorf("legacy device/unique id changed: %+v %s", lp.Device, lp.UniqueID)
+	}
+}
