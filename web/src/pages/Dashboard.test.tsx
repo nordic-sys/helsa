@@ -169,6 +169,43 @@ describe('one endpoint having a bad day', () => {
   })
 })
 
+describe('the observations card', () => {
+  const composed = {
+    id: 'resting-hr-elevated:2026-09-10',
+    kind: 'anomaly',
+    metric: 'restingHeartRate',
+    rule: 'resting-hr-elevated',
+    values: { recent: 63, baseline: 55, deviation: 1, baselineDays: 28 },
+    title: 'A nyugalmi pulzusod 3 napja a szokásos fölött',
+    severity: 'notice',
+  }
+
+  it('words a known rule in the interface language, and does not apologise for the server', async () => {
+    allEmpty()
+    mock.insights.mockResolvedValue([composed])
+    show(<Dashboard />)
+
+    const lead =
+      dict === en
+        ? 'Your resting heart rate has been above the usual for 3 days'
+        : 'A nyugalmi pulzusod 3 napja a szokásos fölött'
+    const el = await screen.findByText(lead)
+    expect(el).not.toHaveAttribute('lang')
+    expect(screen.queryByText(dict.ui['today.insights.serverLanguage'])).not.toBeInTheDocument()
+  })
+
+  it('falls back to the server sentence for an unknown rule, marked Hungarian, with the note', async () => {
+    allEmpty()
+    mock.insights.mockResolvedValue([
+      { ...composed, id: 'brand-new:2026-09-10', rule: 'brand-new', title: 'Egy új szabály mondata' },
+    ])
+    show(<Dashboard />)
+
+    expect(await screen.findByText('Egy új szabály mondata')).toHaveAttribute('lang', 'hu')
+    expect(screen.getByText(dict.ui['today.insights.serverLanguage'])).toBeInTheDocument()
+  })
+})
+
 describe('the bands', () => {
   it('draws the three the web can fill, and not the one it cannot', async () => {
     allEmpty()

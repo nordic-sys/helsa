@@ -11,7 +11,8 @@
  *   # in the browser: localStorage['helsa.device_token'] = 'demo-token'
  *
  * Knobs, by request (handy from the capture script):
- *   GET /__lang?l=hu       the server-composed observation sentences in Hungarian
+ *   GET /__lang?l=hu       (kept for older capture scripts; the web words observations itself now)
+ *   GET /__fallback?on=1   add an observation whose rule no web build knows (the server-sentence fallback)
  *   GET /__notoday?on=1    nothing for today yet (the first-sync picture)
  *   GET /__mode?m=dlq      the sync queue in another state: idle | noworker | dlq | down
  *
@@ -21,6 +22,7 @@ import http from 'node:http'
 let mode = 'draining'
 let lang = 'en'
 let noToday = false
+let fallback = false
 const now = new Date()
 const iso = (d) => d.toISOString()
 const day = (n) => { const d = new Date(now); d.setDate(d.getDate() - n); return d }
@@ -128,13 +130,24 @@ const routes = {
   '/v1/settings': () => ({ time_zone: 'Europe/Budapest', locale: 'en', unit_system: 'metric' }),
   '/v1/goals': () => [{ metric: 'stepCount', target_value: 10000, source: 'healthkit' }],
   '/v1/me': () => ({ id: 'u1', display_name: 'Demo' }),
-  '/v1/insights': () => [{ id: 'i1', kind: 'correlation', metric: 'stepCount', title: lang === 'hu' ? 'A mozgalmasabb napokat hosszabb alvás követi' : 'Busier days are followed by longer sleep', severity: 'info', generated_at: iso(now) }, { id: 'i2', kind: 'trend', metric: 'restingHeartRate', title: lang === 'hu' ? 'A nyugalmi pulzusod a szokásos tartományban van' : 'Your resting heart rate is in its usual range', severity: 'info' }, { id: 'i3', kind: 'trend', metric: 'hrv', title: lang === 'hu' ? 'A HRV az elmúlt két hétben emelkedett' : 'HRV has risen over the last two weeks', severity: 'info' }],
+  // Real rule ids and the value sets the shared vectors pin: the web words these
+  // itself, in its own language. `title`/`detail` are the server's Hungarian
+  // fallback, as on the wire. `/__fallback?on=1` adds a rule no web build knows,
+  // which is the one case that fallback is printed.
+  '/v1/insights': () => [
+    { id: `steps-sleep-correlation:${ymd(now)}`, rule: 'steps-sleep-correlation', kind: 'correlation', metric: 'stepCount', values: { r: 0.58, pairs: 46 }, title: 'A mozgalmasabb napokat hosszabb alvás követi', severity: 'info', generated_at: iso(now) },
+    { id: `resting-hr-elevated:${ymd(now)}`, rule: 'resting-hr-elevated', kind: 'anomaly', metric: 'restingHeartRate', values: { recent: 61.3, baseline: 56.2, deviation: 2.4, baselineDays: 27 }, title: 'A nyugalmi pulzusod 3 napja a szokásos fölött', severity: 'notice', generated_at: iso(now) },
+    { id: `steps-weekly-trend:${ymd(now)}`, rule: 'steps-weekly-trend', kind: 'trend', metric: 'stepCount', values: { current: 11840, previous: 9620, changePct: 23.1, currentDays: 7, previousDays: 7 }, title: 'A napi lépésszámod 23%-kal több, mint az előző héten', severity: 'info', generated_at: iso(now) },
+    { id: `sleep-midpoint-weekend:${ymd(now)}`, rule: 'sleep-midpoint-weekend', kind: 'pattern', metric: 'sleepDuration', values: { free: 1712, work: 1638, delta: 74, freeCount: 8, workCount: 19 }, title: 'Az alvásod közepe hétvégén 74 perccel később van, mint hétköznap', severity: 'info', generated_at: iso(now) },
+    ...(fallback ? [{ id: `hydration-streak:${ymd(now)}`, rule: 'hydration-streak', kind: 'pattern', metric: 'dietaryWater', values: { days: 9 }, title: 'Kilenc napja minden nap rögzítettél vizet', detail: 'Ezt a szabályt a webes felület még nem ismeri, ezért a szerver magyar mondata jelenik meg.', severity: 'info', generated_at: iso(now) }] : []),
+  ],
   '/v1/achievements': () => Array.from({ length: 23 }, (_, i) => ({ id: `a${i}`, kind: i % 3 ? 'month' : 'milestone', code: 'challenge', period: i % 3 ? ymd(day(30 * i)).slice(0, 7) : undefined, value: 200000, earned_at: iso(day(30 * i + 1)) })),
   '/v1/challenge': challenge,
 }
 http.createServer((req, res) => {
   const u = new URL(req.url, 'http://x')
   if (u.pathname === '/__notoday') { noToday = u.searchParams.get('on') === '1'; mode = noToday ? 'idle' : 'draining'; res.end(String(noToday)); return }
+  if (u.pathname === '/__fallback') { fallback = u.searchParams.get('on') === '1'; res.end(String(fallback)); return }
   if (u.pathname === '/__lang') { lang = u.searchParams.get('l'); res.end(lang); return }
   if (u.pathname === '/__mode') { mode = u.searchParams.get('m'); res.end(mode); return }
   let body
