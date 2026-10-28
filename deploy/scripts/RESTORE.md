@@ -60,7 +60,13 @@ $COMPOSE exec -T timescaledb pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
 $COMPOSE exec -T timescaledb psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
   -c "SELECT timescaledb_post_restore();"
 
-# 6. Everything can start again
+# 6. The application role's grants. --no-privileges restored the tables without
+#    them, and the new database has no default privileges; the helsa_app role
+#    itself is cluster-wide and survived. Skip this and the api can log in but
+#    gets "permission denied for table …" on everything. Idempotent.
+make prod-app-role
+
+# 7. Everything can start again
 $COMPOSE start api worker
 ```
 

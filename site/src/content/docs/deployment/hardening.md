@@ -64,7 +64,28 @@ any change to the proxy or the network.
 
 - [ ] The application connects as a **non-superuser** role with rights only on its
       own schema. Cheap to do, and it turns a catastrophic mistake into a failed
-      query.
+      query. In Helsa that role is `helsa_app` (since 2026-10-28; an older install
+      gets it with [these steps](/getting-started/quick-start/#upgrading-an-install-from-before-helsa_app)).
+      Check it from inside the api's own connection string, not by trusting the
+      Compose file:
+
+      ```bash
+      C="docker compose -f docker-compose.yml -f docker-compose.prod.yml"
+      $C exec timescaledb psql -U helsa -d helsa -c \
+        "SELECT a.usename, r.rolsuper, count(*) FROM pg_stat_activity a JOIN pg_roles r ON r.oid = a.usesysid
+         WHERE a.datname = 'helsa' AND a.backend_type = 'client backend' GROUP BY 1, 2;"
+      ```
+
+      The api's and the worker's connections must be `helsa_app | f`; the one
+      `helsa | t` row is your own `psql`. And the role must be unable to change the
+      schema — as `helsa_app`, `CREATE TABLE x (i int);` answers *permission denied
+      for schema public*. What it may do is spelled out in
+      `deploy/init/timescaledb/03-app-role.sql`: `SELECT`/`INSERT`/`UPDATE`/`DELETE`
+      on Helsa's tables, `SELECT` on the views, nothing on the migration tool's
+      table, no temporary tables, no `TRUNCATE`.
+- [ ] `.env` holds `HELSA_APP_DB_PASSWORD`, and it differs from `POSTGRES_PASSWORD`. The api,
+      worker and token containers see only the former — the Compose file blanks the
+      owner's password in their environment.
 - [ ] Migrations are run as an explicit step, never automatically on API start-up.
 - [ ] A dump ran last night, and you have looked at the file.
 - [ ] You have completed a [restore test](backups/#the-restore-test).

@@ -22,8 +22,8 @@ DEVVM := docker compose -f docker-compose.yml -f docker-compose.prod.yml -f dock
 TILES := docker compose -f docker-compose.yml -f docker-compose.prod.yml -f docker-compose.tiles.yml
 
 .PHONY: help up down restart logs ps psql redis-cli rabbit reset migrate mqtt-up mqtt-down mqtt-watch \
-        prod-up prod-down prod-logs prod-ps prod-build prod-pull prod-up-source prod-migrate prod-caddy-check \
-        devvm-up devvm-down devvm-logs devvm-ps devvm-build devvm-migrate \
+        app-role prod-up prod-down prod-logs prod-ps prod-build prod-pull prod-up-source prod-migrate prod-app-role prod-caddy-check \
+        devvm-up devvm-down devvm-logs devvm-ps devvm-build devvm-migrate devvm-app-role \
         tiles-build tiles-install tiles-up tiles-down tiles-list
 
 help: ## List the commands
@@ -52,6 +52,11 @@ ps: ## [local] Service status
 
 migrate: ## [local] Apply the schema by hand (idempotent)
 	cat init/timescaledb/*.sql | $(DEV) exec -T timescaledb psql -U $${POSTGRES_USER:-helsa} -d $${POSTGRES_DB:-helsa} -v ON_ERROR_STOP=1
+
+app-role: ## [local] Create/repair the non-superuser application role helsa_app (HELSA_APP_DB_PASSWORD in .env)
+	@# Optional locally: the Go code may keep connecting as the owner. Run it to test
+	@# as production does — then point backend/.env's HELSA_DATABASE_URL at helsa_app.
+	$(DEV) --profile tools run --rm app-role
 
 psql: ## [local] psql into TimescaleDB
 	$(DEV) exec timescaledb psql -U $${POSTGRES_USER:-helsa} -d $${POSTGRES_DB:-helsa}
@@ -99,8 +104,18 @@ prod-ps: ## [VM] Service status
 prod-logs: ## [VM] Follow the logs
 	$(PROD) logs -f
 
-prod-migrate: ## [VM] Migration — a SEPARATE, DELIBERATE step (docs/07 §3.1)
+prod-migrate: ## [VM] Migration — a SEPARATE, DELIBERATE step (docs/07 §3.1); then the app role's grants
 	$(PROD) --profile tools run --rm migrate up
+	@# The migrations run as the owner; the application connects as helsa_app. The
+	@# default privileges cover new tables, but this narrows a new view to SELECT and
+	@# keeps the migration tool's own table out of the application's reach.
+	$(PROD) --profile tools run --rm app-role
+
+prod-app-role: ## [VM] Create/repair the non-superuser application role helsa_app — idempotent (HELSA_APP_DB_PASSWORD in .env)
+	@# The upgrade step for an install that predates helsa_app, and the repair for one
+	@# whose grants drifted (e.g. after a restore with --no-privileges). It also sets
+	@# the role's password from .env, so it is how that password is changed.
+	$(PROD) --profile tools run --rm app-role
 
 prod-exec-api: ## [VM] Run a command inside the api container (CMD="wget -qO- http://127.0.0.1:8080/readyz")
 	@# ⚠️ The api container publishes NO port on the production path — only the proxy faces
@@ -130,8 +145,12 @@ prod-caddy-check: ## [VM] Validate the Caddyfile BEFORE DEPLOYING (handle takes 
 devvm-build: ## [DEV VM] Build the images from this checkout
 	$(FROM_SOURCE) $(DEVVM) build
 
-devvm-migrate: ## [DEV VM] Migration
+devvm-migrate: ## [DEV VM] Migration, then the app role's grants
 	$(FROM_SOURCE) $(DEVVM) --profile tools run --rm migrate up
+	$(DEVVM) --profile tools run --rm app-role
+
+devvm-app-role: ## [DEV VM] Create/repair the application role helsa_app
+	$(DEVVM) --profile tools run --rm app-role
 
 devvm-up: ## [DEV VM] Start the stack from this checkout (web+API on :8443, WITHOUT mTLS)
 	$(FROM_SOURCE) $(DEVVM) up -d

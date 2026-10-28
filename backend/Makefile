@@ -68,6 +68,14 @@ migrate: ## Apply the goose migrations (idempotent against an already bootstrapp
 # rows stamped with its token, and the purge and the user cascade leave nothing.
 # internal/ingest holds the database test of deleting by HealthKit UUID from a
 # COMPRESSED chunk: only a real Timescale has a decompression limit to hit.
+#
+# As production connects: production's api and worker log in as helsa_app, not as
+# the owner (deploy/init/timescaledb/03-app-role.sql). To run this suite under the
+# same privileges, `cd ../deploy && make app-role` (with HELSA_APP_DB_PASSWORD in
+# deploy/.env), then point HELSA_DATABASE_URL at helsa_app and
+# HELSA_SMOKE_OWNER_DATABASE_URL at the owner — two fixtures (compressing a chunk,
+# refreshing a continuous aggregate) are owner-only, and use that second URL.
+# Unset, it falls back to HELSA_DATABASE_URL.
 SMOKE_PKGS := ./test/smoke ./internal/insights ./internal/coverage ./internal/sourcemerge ./internal/ingeststat ./internal/queue ./internal/workouts ./internal/latest ./internal/challenge ./internal/journal ./internal/ingest
 
 smoke: $(ENV_FILE) ## E2E smoke: auth -> ingest -> summary (against the running infrastructure)

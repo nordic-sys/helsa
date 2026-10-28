@@ -142,9 +142,18 @@ $C exec -T timescaledb pg_restore -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
 $C exec -T timescaledb psql -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
   -c "SELECT timescaledb_post_restore();"
 
-# 6. Start the writers again.
+# 6. Give the application role its grants back. --no-privileges restored the
+#    tables without them, and a new database has no default privileges either;
+#    the role itself is cluster-wide and survived. Idempotent.
+make prod-app-role
+
+# 7. Start the writers again.
 $C start api worker
 ```
+
+⚠️ **Skip step 6 and the restore looks broken when it is not**: the api answers `/readyz` as not
+ready and logs `permission denied for table …`, because `helsa_app` can log in but may touch none
+of the restored tables.
 
 Renaming instead of dropping in step 2 means a failed restore costs you nothing.
 Drop `*_old` only once you have verified the new database.
