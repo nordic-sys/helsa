@@ -25,7 +25,9 @@ That guarantee holds only if:
 - `mode require_and_verify` is set, **not** `request` or `verify_if_given`;
 - the trust pool is *your* CA file only, with no public roots;
 - port `443` is the **only** port you forward. Not 8443, not 5432, not 15672,
-  not SSH.
+  not SSH. (The number on the router's outside does not have to be 443: an
+  external port such as `8444` mapped onto the Helsa host's `443` is the same
+  single port — see [A reverse proxy already runs on your network](#a-reverse-proxy-already-runs-on-your-network).)
 
 If you are not confident about all three, do not forward anything. The system is
 fully usable over LAN or a VPN, and that is a legitimate permanent choice — you
@@ -187,6 +189,53 @@ curl --cacert pki/out/ca/ca.crt \
      --key  pki/out/clients/iphone/iphone.key \
      https://helsa.example.net/healthz
 ```
+
+## A reverse proxy already runs on your network
+
+Many home networks already have one — Nginx Proxy Manager, Traefik, HAProxy, a router's
+own — holding port 443 and a wildcard certificate for every service. **Do not put Helsa
+behind it as an ordinary proxy host.**
+
+:::danger[Why it breaks]
+An ordinary proxy host **terminates TLS** with the proxy's own certificate. The phone's
+client certificate is presented to that proxy and ends there; the connection the proxy
+then opens to Helsa's Caddy carries no client certificate at all. Caddy, set to
+`require_and_verify`, refuses it — or, if someone "fixes" that by relaxing the mode, the
+one gate that makes the open port defensible is gone.
+:::
+
+The phone has to reach Helsa's Caddy **directly**, with nothing that decrypts in between.
+Two ways:
+
+1. **A dedicated external port, straight to the Helsa host.** On the router forward one
+   port — pick an unused one, for example `8444` — to the Helsa host's `443`. The existing
+   proxy keeps 443 for everything else. The phone's endpoint then carries the port:
+   `https://helsa.example.net:8444/v1`.
+2. **TCP passthrough in the existing proxy**, if it can route by name without decrypting:
+   Traefik's TCP router with `tls.passthrough: true`, nginx's `stream` module with
+   `ssl_preread`, HAProxy in `mode tcp` with an SNI rule. ⚠️ Nginx Proxy Manager's
+   *Streams* forward a whole port and cannot choose by name, so on 443 they would take the
+   port away from every other service — for NPM use option 1.
+
+Whichever you choose:
+
+- **The name.** Inside the network a wildcard record (`*.example.net`) usually points at
+  the existing proxy. Add a specific record for Helsa that points at the Helsa host's LAN
+  address; the specific name wins over the wildcard, so the same name works at home and
+  away. From outside, the name must resolve to your public address (a CNAME to your
+  dynamic-DNS name is enough).
+- **The certificate.** `server.cnf` needs the name, plus the LAN address if anything uses
+  it — the port plays no part in a certificate: [Issuing](/getting-started/certificates/#issuing--on-your-own-computer).
+- **The test.** From outside, a request without a client certificate must fail at the
+  handshake, and the server must present the Helsa certificate, not the wildcard one:
+
+  ```bash title="On your computer, off your home network"
+  openssl s_client -connect helsa.example.net:8444 -servername helsa.example.net </dev/null 2>/dev/null \
+    | openssl x509 -noout -subject -issuer
+  ```
+
+  The issuer has to be your own CA. If it names Let's Encrypt or the proxy, the traffic is
+  still going through the proxy.
 
 ## Dynamic DNS is now load-bearing
 

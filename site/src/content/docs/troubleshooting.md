@@ -29,6 +29,7 @@ meet them.
 | 4 · First sync | Looking for "Your own server" in Settings | No such row | It is under **Settings → Export**, at the bottom |
 | 4 · First sync | Saving and expecting it to work at once | No device ever registers | Restart the app — the connection is built at launch |
 | 4 · First sync | Expecting background sync on iOS 27 | Data goes up only while the app is open | iPhone Settings → General → Background App Refresh → Helsa on |
+| Deployment | Adding Helsa to the reverse proxy that already runs the home network (Nginx Proxy Manager, Traefik) as an ordinary proxy host | TLS fails on the phone, or the server presents the wildcard certificate instead of yours | The phone must reach Helsa's Caddy without anything decrypting in between: a dedicated port straight to the Helsa host, or TCP passthrough — [A reverse proxy already runs on your network](/deployment/reverse-proxy/#a-reverse-proxy-already-runs-on-your-network) |
 | Tokens | One `SUBJECT` per person instead of per device (tool before 2026-10-27) | The dashboard is empty while the phone uploads | Since then every token binds to the one user; on an old install use `TOKEN_USER` — [Device token](/getting-started/device-token/) |
 
 ## Nothing arrives from the phone
