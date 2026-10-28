@@ -195,8 +195,26 @@ ON CONFLICT (user_id, metric) DO UPDATE SET
     updated_at = now()
 RETURNING *;
 
--- name: DeleteSamplesByUUID :exec
-DELETE FROM samples WHERE user_id = $1 AND source_uuid = ANY(@source_uuids::text[]);
+-- name: LocateSamplesByUUID :many
+-- Step one of deleting samples by HealthKit UUID: which types, over which time span.
+--
+-- ⚠️ A DELETE that names only user_id and source_uuid makes Timescale decompress
+-- EVERY compressed batch of the user (compression is segmented by user_id and
+-- data_type and ordered by ts; source_uuid is in neither), and past about 100,000
+-- rows the transaction fails with "tuple decompression limit exceeded" — a real
+-- server with four million samples dead-lettered every batch carrying a deletion.
+-- Reading is not limited; so the rows are found first, and the delete below then
+-- names the type and the span, which Timescale uses to touch only those batches.
+SELECT data_type, min(ts)::timestamptz AS from_ts, max(ts)::timestamptz AS to_ts
+FROM samples
+WHERE user_id = @user_id AND source_uuid = ANY(@source_uuids::text[])
+GROUP BY data_type;
+
+-- name: DeleteSamplesByUUIDInSpan :exec
+DELETE FROM samples
+WHERE user_id = @user_id AND data_type = @data_type
+  AND ts >= @from_ts::timestamptz AND ts <= @to_ts::timestamptz
+  AND source_uuid = ANY(@source_uuids::text[]);
 
 -- name: DeleteWorkoutsByUUID :exec
 DELETE FROM workouts WHERE user_id = $1 AND source_uuid = ANY(@source_uuids::text[]);

@@ -11,17 +11,29 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const deleteSamplesByUUID = `-- name: DeleteSamplesByUUID :exec
-DELETE FROM samples WHERE user_id = $1 AND source_uuid = ANY($2::text[])
+const deleteSamplesByUUIDInSpan = `-- name: DeleteSamplesByUUIDInSpan :exec
+DELETE FROM samples
+WHERE user_id = $1 AND data_type = $2
+  AND ts >= $3::timestamptz AND ts <= $4::timestamptz
+  AND source_uuid = ANY($5::text[])
 `
 
-type DeleteSamplesByUUIDParams struct {
-	UserID      pgtype.UUID `json:"user_id"`
-	SourceUuids []string    `json:"source_uuids"`
+type DeleteSamplesByUUIDInSpanParams struct {
+	UserID      pgtype.UUID        `json:"user_id"`
+	DataType    string             `json:"data_type"`
+	FromTs      pgtype.Timestamptz `json:"from_ts"`
+	ToTs        pgtype.Timestamptz `json:"to_ts"`
+	SourceUuids []string           `json:"source_uuids"`
 }
 
-func (q *Queries) DeleteSamplesByUUID(ctx context.Context, arg DeleteSamplesByUUIDParams) error {
-	_, err := q.db.Exec(ctx, deleteSamplesByUUID, arg.UserID, arg.SourceUuids)
+func (q *Queries) DeleteSamplesByUUIDInSpan(ctx context.Context, arg DeleteSamplesByUUIDInSpanParams) error {
+	_, err := q.db.Exec(ctx, deleteSamplesByUUIDInSpan,
+		arg.UserID,
+		arg.DataType,
+		arg.FromTs,
+		arg.ToTs,
+		arg.SourceUuids,
+	)
 	return err
 }
 
@@ -420,6 +432,53 @@ func (q *Queries) ListSleepSegments(ctx context.Context, arg ListSleepSegmentsPa
 	for rows.Next() {
 		var i ListSleepSegmentsRow
 		if err := rows.Scan(&i.StartedAt, &i.EndedAt, &i.Stage); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
+const locateSamplesByUUID = `-- name: LocateSamplesByUUID :many
+SELECT data_type, min(ts)::timestamptz AS from_ts, max(ts)::timestamptz AS to_ts
+FROM samples
+WHERE user_id = $1 AND source_uuid = ANY($2::text[])
+GROUP BY data_type
+`
+
+type LocateSamplesByUUIDParams struct {
+	UserID      pgtype.UUID `json:"user_id"`
+	SourceUuids []string    `json:"source_uuids"`
+}
+
+type LocateSamplesByUUIDRow struct {
+	DataType string             `json:"data_type"`
+	FromTs   pgtype.Timestamptz `json:"from_ts"`
+	ToTs     pgtype.Timestamptz `json:"to_ts"`
+}
+
+// Step one of deleting samples by HealthKit UUID: which types, over which time span.
+//
+// ⚠️ A DELETE that names only user_id and source_uuid makes Timescale decompress
+// EVERY compressed batch of the user (compression is segmented by user_id and
+// data_type and ordered by ts; source_uuid is in neither), and past about 100,000
+// rows the transaction fails with "tuple decompression limit exceeded" — a real
+// server with four million samples dead-lettered every batch carrying a deletion.
+// Reading is not limited; so the rows are found first, and the delete below then
+// names the type and the span, which Timescale uses to touch only those batches.
+func (q *Queries) LocateSamplesByUUID(ctx context.Context, arg LocateSamplesByUUIDParams) ([]LocateSamplesByUUIDRow, error) {
+	rows, err := q.db.Query(ctx, locateSamplesByUUID, arg.UserID, arg.SourceUuids)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []LocateSamplesByUUIDRow
+	for rows.Next() {
+		var i LocateSamplesByUUIDRow
+		if err := rows.Scan(&i.DataType, &i.FromTs, &i.ToTs); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

@@ -13,6 +13,7 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
@@ -216,8 +217,8 @@ func Process(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, body []
 	if b.Deletions != nil && len(*b.Deletions) > 0 {
 		ids := *b.Deletions
 		counts.Deletions = len(ids)
-		if err := q.DeleteSamplesByUUID(ctx, db.DeleteSamplesByUUIDParams{UserID: uid, SourceUuids: ids}); err != nil {
-			return counts, fmt.Errorf("delete samples: %w", err)
+		if err := deleteSamples(ctx, tx, q, uid, ids); err != nil {
+			return counts, err
 		}
 		if err := q.DeleteWorkoutsByUUID(ctx, db.DeleteWorkoutsByUUIDParams{UserID: uid, SourceUuids: ids}); err != nil {
 			return counts, fmt.Errorf("delete workouts: %w", err)
@@ -249,6 +250,34 @@ func Process(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, body []
 		_ = summary.InvalidateUser(ctx, rdb, msg.UserID)
 	}
 	return counts, nil
+}
+
+// deleteSamples removes samples by HealthKit UUID without decompressing the
+// user's whole history (see LocateSamplesByUUID for the failure this avoids).
+//
+// The decompression limit is lifted for this transaction only: with the type and
+// the span named, the work is bounded by what is actually being deleted, and a
+// phone that deleted a source app's years of data is a legitimate large delete —
+// it must not dead-letter because of a guard meant for unbounded statements.
+func deleteSamples(ctx context.Context, tx pgx.Tx, q *db.Queries, uid pgtype.UUID, ids []string) error {
+	spans, err := q.LocateSamplesByUUID(ctx, db.LocateSamplesByUUIDParams{UserID: uid, SourceUuids: ids})
+	if err != nil {
+		return fmt.Errorf("locate samples to delete: %w", err)
+	}
+	if len(spans) == 0 {
+		return nil
+	}
+	if _, err := tx.Exec(ctx, `SET LOCAL timescaledb.max_tuples_decompressed_per_dml_transaction = 0`); err != nil {
+		return fmt.Errorf("lift the decompression limit: %w", err)
+	}
+	for _, s := range spans {
+		if err := q.DeleteSamplesByUUIDInSpan(ctx, db.DeleteSamplesByUUIDInSpanParams{
+			UserID: uid, DataType: s.DataType, FromTs: s.FromTs, ToTs: s.ToTs, SourceUuids: ids,
+		}); err != nil {
+			return fmt.Errorf("delete samples (%s): %w", s.DataType, err)
+		}
+	}
+	return nil
 }
 
 func sampleParams(uid pgtype.UUID, s api.SampleIn) db.InsertSampleParams {
