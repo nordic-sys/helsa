@@ -55,6 +55,10 @@ type Principal struct {
 	// bearer header (web.go).
 	Kind      string
 	ExpiresAt time.Time // the row's expiry; zero for a token from before the register
+	// TokenExpiresAt is the expiry IN the presented token. For a sliding web session
+	// it can be earlier than the row's, when a renewal's response never reached the
+	// browser (web.go).
+	TokenExpiresAt time.Time
 }
 
 // IsAdmin reports whether the caller may administer the server.

@@ -262,6 +262,9 @@ func (s *Service) VerifyAccess(ctx context.Context, token string) (Principal, er
 	}
 
 	p := Principal{UserID: userID, Label: claims.Device, Via: ViaDeviceToken}
+	if claims.ExpiresAt != nil {
+		p.TokenExpiresAt = claims.ExpiresAt.Time
+	}
 	// The lookups below read rows the policies guard (device_tokens is the user's own),
 	// so they run as the token's user. The `sub` is signed: it was checked above.
 	ctx = tenant.With(ctx, userID)

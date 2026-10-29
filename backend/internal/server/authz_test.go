@@ -129,3 +129,15 @@ func TestRequireAccessEnforcesAdminRows(t *testing.T) {
 		t.Errorf("member status: %d", got)
 	}
 }
+
+// Personal answers are never kept by an HTTP cache; the map tiles may be (S10).
+func TestPersonalAnswersAreNotCached(t *testing.T) {
+	h := noStore(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {}))
+	for path, want := range map[string]string{"/v1/me": "no-store", "/v1/summary": "no-store", "/v1/tiles/1/2/3": "", "/healthz": ""} {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
+		if got := rec.Header().Get("Cache-Control"); got != want {
+			t.Errorf("%s: Cache-Control %q, want %q", path, got, want)
+		}
+	}
+}

@@ -95,6 +95,7 @@ func (s *Server) Router() http.Handler {
 	r.Use(middleware.RequestID)
 	r.Use(middleware.RealIP)
 	r.Use(middleware.Recoverer)
+	r.Use(noStore)
 
 	// Root-level health probes (the k8s liveness/readiness convention). The contract
 	// also offers /v1/healthz|readyz; both are served by the same logic.
@@ -351,4 +352,18 @@ func problem(w http.ResponseWriter, status int, title, detail string) {
 	w.Header().Set("Content-Type", "application/problem+json")
 	w.WriteHeader(status)
 	_ = json.NewEncoder(w).Encode(api.Problem{Status: &status, Title: &title, Detail: &detail})
+}
+
+// noStore marks every /v1 answer except the map tiles as not to be kept by a
+// browser or anything in between. They are one person's data or account, under URLs
+// that are the same for everybody: an HTTP cache that kept Bob's answer could hand
+// it to Nóri's next request in the same browser, and clearing the dashboard's own
+// cache does not reach it (docs/36 §10.4, S10). The tiles are a map, nobody's.
+func noStore(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.HasPrefix(r.URL.Path, "/v1/") && !strings.HasPrefix(r.URL.Path, "/v1/tiles/") {
+			w.Header().Set("Cache-Control", "no-store")
+		}
+		next.ServeHTTP(w, r)
+	})
 }

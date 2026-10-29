@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgconn"
 
+	"github.com/nordic-sys/helsa/backend/internal/auth"
 	"github.com/nordic-sys/helsa/backend/internal/tenant"
 )
 
@@ -72,6 +73,22 @@ func TestTheDatabaseKeepsMembersApartWithoutTheApplication(t *testing.T) {
 		if foreignPoints != 0 {
 			t.Errorf("route points as %s: %d of somebody else's", me.name, foreignPoints)
 		}
+	}
+
+	// An admin is no exception on health data: the admin policies cover the account
+	// tables only (00015), so the same unfiltered reads as admin show only the
+	// admin's own rows (Codex S12).
+	setRole(t, e, a, auth.RoleAdmin)
+	adminCtx := tenant.With(context.Background(), a.userID)
+	for _, rel := range []string{"my_samples", "workouts", "workout_route_points", "sleep_segments", "activity_summary", "goals", "devices", "push_tokens", "achievements", "journal_entries"} {
+		if _, foreign := count(adminCtx, rel, a.userID); foreign != 0 {
+			t.Errorf("%s as an ADMIN, unfiltered: %d rows of another member's health data", rel, foreign)
+		}
+	}
+	var foreignAdminPoints int
+	if err := pool.QueryRow(adminCtx, `SELECT count(*) FROM workout_route_points p WHERE NOT EXISTS
+		(SELECT 1 FROM workouts w WHERE w.id = p.workout_id AND w.user_id = $1)`, a.userID).Scan(&foreignAdminPoints); err != nil || foreignAdminPoints != 0 {
+		t.Errorf("route points as an admin: %d foreign (%v)", foreignAdminPoints, err)
 	}
 
 	// Nobody: every one of them is empty, and none of them errors.

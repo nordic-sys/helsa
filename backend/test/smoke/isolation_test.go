@@ -116,7 +116,10 @@ func (p *person) upload(t *testing.T, c *apiClient, covered map[string]bool) {
 	route := []api.RoutePoint{{Ts: now, Lat: p.lat, Lon: 19.0402}, {Ts: now.Add(time.Minute), Lat: p.lat + 0.001, Lon: 19.0410}}
 	workouts := []api.WorkoutIn{{SourceUuid: wkSrc, ActivityType: "running", StartedAt: now, EndedAt: &end, Route: &route}}
 	sleeps := []api.SleepSegmentIn{{SourceUuid: p.sub + "-sl", StartedAt: now.Add(-8 * time.Hour), EndedAt: now.Add(-7 * time.Hour), Stage: "asleepCore"}}
-	day := openapi_types.Date{Time: now}
+	// The person's own calendar day: a UTC date can be "tomorrow" in their zone (at
+	// 03:00 in Budapest, the UTC day is already tomorrow in Chicago), and the
+	// activity read rightly leaves a future day out.
+	day := openapi_types.Date{Time: now.In(mustLoc(t, p.tz))}
 	rings := []api.ActivitySummary{{Day: &day, ActiveEnergy: &p.energy}}
 	var acc api.IngestAccepted
 	expect("POST /ingest", c.do(t, http.MethodPost, "/v1/ingest", p.token, api.IngestBatch{

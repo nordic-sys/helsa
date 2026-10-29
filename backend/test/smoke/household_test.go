@@ -69,7 +69,7 @@ func (c *apiClient) send(t *testing.T, x call) (*http.Response, []byte) {
 func resetRedeemCounters(t *testing.T, e *env) {
 	t.Helper()
 	ctx := context.Background()
-	keys, _ := e.store.Redis.Keys(ctx, "helsa:redeem:fail:*").Result()
+	keys, _ := e.store.Redis.Keys(ctx, "helsa:redeem:attempts:*").Result()
 	if len(keys) > 0 {
 		e.store.Redis.Del(ctx, keys...)
 	}
@@ -361,4 +361,55 @@ func contains(xs []string, x string) bool {
 		}
 	}
 	return false
+}
+
+// A member deletes their own account (S1 — this used to fail on row security), and
+// an admin's second, held-back code is dead once the member has a device (S2).
+func TestSelfDeletionAndHeldBackAdminCodes(t *testing.T) {
+	e := newEnv(t)
+	c := e.client
+	resetRedeemCounters(t, e)
+	t.Cleanup(func() { resetRedeemCounters(t, e) })
+	admin := addPerson(t, e, "adm", "Europe/Budapest", 1, 1, 1, 1, 1)
+	setRole(t, e, admin, auth.RoleAdmin)
+
+	handle := fmt.Sprintf("kid%d", time.Now().UnixNano()%1_000_000_000)
+	_, body := c.send(t, call{method: "POST", path: "/v1/admin/users", bearer: admin.token, body: api.MemberCreate{Handle: handle}})
+	var m api.Member
+	must(t, json.Unmarshal(body, &m), "member")
+	path := "/v1/admin/users/" + m.Id.String() + "/codes"
+
+	var first, held api.CodeIssued
+	_, body = c.send(t, call{method: "POST", path: path, bearer: admin.token, body: api.CodeRequest{Purpose: "device"}})
+	must(t, json.Unmarshal(body, &first), "first code")
+	_, body = c.send(t, call{method: "POST", path: path, bearer: admin.token, body: api.CodeRequest{Purpose: "device"}})
+	must(t, json.Unmarshal(body, &held), "held code")
+
+	resp, body := c.send(t, call{method: "POST", path: "/v1/enroll", body: api.EnrollRequest{Code: first.Code, Label: "phone"}})
+	if resp.StatusCode != 201 {
+		t.Fatalf("the member's code: %d %s", resp.StatusCode, body)
+	}
+	var enrolled api.EnrollResult
+	must(t, json.Unmarshal(body, &enrolled), "enrolled")
+	if resp, _ := c.send(t, call{method: "POST", path: "/v1/enroll", body: api.EnrollRequest{Code: held.Code, Label: "admin's laptop"}}); resp.StatusCode != 401 {
+		t.Errorf("the admin's held-back code after the member joined: %d, want 401", resp.StatusCode)
+	}
+	var tokens []api.TokenInfo
+	c.do(t, "GET", "/v1/me/tokens", enrolled.AccessToken, nil, &tokens)
+	if len(tokens) != 1 {
+		t.Errorf("the member has %d tokens, want only their phone: %+v", len(tokens), tokens)
+	}
+
+	resp, body = c.send(t, call{method: "DELETE", path: "/v1/me", bearer: enrolled.AccessToken, body: api.DeleteConfirm{Handle: handle}})
+	if resp.StatusCode != 202 {
+		t.Fatalf("a member deleting themselves: %d %s", resp.StatusCode, body)
+	}
+	if st := c.do(t, "GET", "/v1/me", enrolled.AccessToken, nil, nil); st != 401 {
+		t.Errorf("after self-deletion: %d, want 401", st)
+	}
+	var jobs int
+	must(t, e.store.DB.QueryRow(context.Background(), `SELECT count(*) FROM deletion_jobs WHERE user_id = $1 AND done_at IS NULL`, m.Id).Scan(&jobs), "jobs")
+	if jobs != 1 {
+		t.Errorf("open deletion jobs: %d, want 1", jobs)
+	}
 }

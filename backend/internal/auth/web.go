@@ -105,10 +105,22 @@ func ClearSessionCookie(w http.ResponseWriter) {
 // renewal: the row's expiry first, then a fresh token with the same id. A failure
 // to renew is not a failure of the request — the session simply ends on its date.
 func (s *Service) slideSession(w http.ResponseWriter, r *http.Request, p *Principal, _ string) {
-	if p.ExpiresAt.IsZero() || time.Until(p.ExpiresAt) > WebSessionTTL-24*time.Hour {
+	if p.ExpiresAt.IsZero() {
 		return
 	}
 	now := time.Now()
+	// The row was renewed but the browser never got the new cookie (a lost
+	// response): its token still carries the old expiry. Hand it a token for the
+	// row's date, rather than letting a session in use run out (docs/36 §10.4, S11).
+	if p.TokenExpiresAt.Before(p.ExpiresAt.Add(-time.Minute)) {
+		if tok, texp, err := s.signAccessUntil(p.UserID, p.TokenID, p.Label, now, p.ExpiresAt); err == nil {
+			SetSessionCookie(w, tok, texp)
+		}
+		return
+	}
+	if time.Until(p.ExpiresAt) > WebSessionTTL-24*time.Hour {
+		return
+	}
 	exp := now.Add(WebSessionTTL).Truncate(time.Second)
 	ctx := tenant.With(r.Context(), p.UserID)
 	if err := s.queries().ExtendDeviceToken(ctx, db.ExtendDeviceTokenParams{ID: pgconv.UUID(p.TokenID), ExpiresAt: pgconv.Timestamptz(exp)}); err != nil {

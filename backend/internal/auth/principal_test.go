@@ -294,3 +294,42 @@ func subjectOf(t *testing.T, tok string) string {
 	}
 	return c.Subject
 }
+
+// A web session whose row was renewed but whose new cookie never reached the browser
+// gets the cookie again, for the row's date — instead of expiring while in use
+// (docs/36 §10.4, S11).
+func TestALostRenewalIsHandedBackToTheBrowser(t *testing.T) {
+	svc, _, state := serviceWithFakes(t)
+	user := uuid.New()
+	state.addUser(user, RoleMember)
+	now := time.Now()
+	id := uuid.New()
+	rowExp := now.Add(WebSessionTTL).Truncate(time.Second)
+	state.tokens[id] = db.GetDeviceTokenRow{ID: pgconv.UUID(id), UserID: pgconv.UUID(user), Label: "Safari on Mac", Kind: "web", ExpiresAt: pgconv.Timestamptz(rowExp)}
+	// The browser still holds the token from before the renewal: 5 days left.
+	old, _, err := svc.signAccessUntil(user, id, "Safari on Mac", now.Add(-25*24*time.Hour), now.Add(5*24*time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	h := svc.Middleware(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusNoContent) }))
+	req := httptest.NewRequest(http.MethodGet, "/v1/me", nil)
+	req.AddCookie(&http.Cookie{Name: SessionCookie, Value: old})
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, req)
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status %d", rec.Code)
+	}
+	var fresh *http.Cookie
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == SessionCookie {
+			fresh = c
+		}
+	}
+	if fresh == nil || fresh.Value == old {
+		t.Fatal("the browser was not handed the renewed session")
+	}
+	var c jwt.RegisteredClaims
+	if _, _, err := jwt.NewParser().ParseUnverified(fresh.Value, &c); err != nil || c.ExpiresAt.Time.Before(rowExp.Add(-time.Second)) {
+		t.Errorf("the new cookie's token expires %v, want the row's %v", c.ExpiresAt, rowExp)
+	}
+}

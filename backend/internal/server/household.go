@@ -98,11 +98,16 @@ func (s *Server) PatchMe(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if body.HaPublish != nil {
-		if err := s.q.SetHAPublish(r.Context(), db.SetHAPublishParams{ID: pgconv.UUID(p.UserID), HaPublish: *body.HaPublish}); err != nil {
+		on := *body.HaPublish
+		if err := s.tx(r.Context(), func(q *db.Queries) error {
+			if err := q.SetHAPublish(r.Context(), db.SetHAPublishParams{ID: pgconv.UUID(p.UserID), HaPublish: on}); err != nil {
+				return err
+			}
+			return eventTx(r.Context(), q, p.UserID, p.UserID, "ha_publish", map[string]any{"on": on})
+		}); err != nil {
 			problem(w, http.StatusInternalServerError, "Saving failed", "")
 			return
 		}
-		s.event(r.Context(), p.UserID, p.UserID, "ha_publish", map[string]any{"on": *body.HaPublish})
 	}
 	if body.DisplayName == nil {
 		s.GetMe(w, r)
@@ -222,7 +227,14 @@ func (s *Server) PostAdminUsers(w http.ResponseWriter, r *http.Request) {
 		n := strings.TrimSpace(*body.DisplayName)
 		name = &n
 	}
-	u, err := s.q.CreateMember(r.Context(), db.CreateMemberParams{Handle: handle, DisplayName: name, Role: string(role)})
+	var u db.User
+	err := s.tx(r.Context(), func(q *db.Queries) error {
+		var err error
+		if u, err = q.CreateMember(r.Context(), db.CreateMemberParams{Handle: handle, DisplayName: name, Role: string(role)}); err != nil {
+			return err
+		}
+		return eventTx(r.Context(), q, pgconv.ToUUID(u.ID), p.UserID, "member_added", map[string]any{"role": role})
+	})
 	if isUniqueViolation(err) {
 		problem(w, http.StatusConflict, "Handle taken", "there is already a member called "+handle)
 		return
@@ -232,7 +244,6 @@ func (s *Server) PostAdminUsers(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	uid := pgconv.ToUUID(u.ID)
-	s.event(r.Context(), uid, p.UserID, "member_added", map[string]any{"role": role})
 	m, _, _ := s.member(r.Context(), uid)
 	writeJSON(w, http.StatusCreated, m)
 }
@@ -265,10 +276,6 @@ func (s *Server) PatchAdminUsersId(w http.ResponseWriter, r *http.Request, id op
 		problem(w, http.StatusBadRequest, "Invalid change", "role: admin or member")
 		return
 	}
-	var events []struct {
-		kind   string
-		detail map[string]any
-	}
 	err := pgx.BeginFunc(r.Context(), s.store.DB, func(tx pgx.Tx) error {
 		q := s.q.WithTx(tx)
 		if err := q.LockAdmins(r.Context()); err != nil {
@@ -293,10 +300,9 @@ func (s *Server) PatchAdminUsersId(w http.ResponseWriter, r *http.Request, id op
 			if err := q.SetUserRole(r.Context(), db.SetUserRoleParams{ID: pgconv.UUID(target), Role: string(*body.Role)}); err != nil {
 				return err
 			}
-			events = append(events, struct {
-				kind   string
-				detail map[string]any
-			}{"role_changed", map[string]any{"from": u.Role, "to": string(*body.Role)}})
+			if err := eventTx(r.Context(), q, target, p.UserID, "role_changed", map[string]any{"from": u.Role, "to": string(*body.Role)}); err != nil {
+				return err
+			}
 		}
 		if body.Disabled != nil && *body.Disabled != u.DisabledAt.Valid {
 			if err := q.SetUserDisabled(r.Context(), db.SetUserDisabledParams{ID: pgconv.UUID(target), Disabled: *body.Disabled}); err != nil {
@@ -306,10 +312,9 @@ func (s *Server) PatchAdminUsersId(w http.ResponseWriter, r *http.Request, id op
 			if *body.Disabled {
 				kind = "disabled"
 			}
-			events = append(events, struct {
-				kind   string
-				detail map[string]any
-			}{kind, nil})
+			if err := eventTx(r.Context(), q, target, p.UserID, kind, nil); err != nil {
+				return err
+			}
 		}
 		if body.DisplayName != nil {
 			name := strings.TrimSpace(*body.DisplayName)
@@ -335,9 +340,6 @@ func (s *Server) PatchAdminUsersId(w http.ResponseWriter, r *http.Request, id op
 	case err != nil:
 		problem(w, http.StatusInternalServerError, "Saving failed", "")
 		return
-	}
-	for _, e := range events {
-		s.event(r.Context(), target, p.UserID, e.kind, e.detail)
 	}
 	s.GetAdminUsersId(w, r, id)
 }
@@ -449,7 +451,13 @@ func (s *Server) writeTokens(w http.ResponseWriter, r *http.Request, p auth.Prin
 }
 
 func (s *Server) revokeToken(w http.ResponseWriter, r *http.Request, p auth.Principal, owner, token uuid.UUID) {
-	label, err := s.auth.RevokeToken(r.Context(), owner, token)
+	err := s.tx(r.Context(), func(q *db.Queries) error {
+		label, err := s.auth.WithQueries(q).RevokeToken(r.Context(), owner, token)
+		if err != nil {
+			return err
+		}
+		return eventTx(r.Context(), q, owner, p.UserID, "token_revoked", map[string]any{"label": label, "token_id": token})
+	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		// Not theirs, not there, or already revoked — one answer for all three: a
 		// token id of somebody else's must not be confirmed by a different status.
@@ -460,7 +468,6 @@ func (s *Server) revokeToken(w http.ResponseWriter, r *http.Request, p auth.Prin
 		problem(w, http.StatusInternalServerError, "Revoking failed", "")
 		return
 	}
-	s.event(r.Context(), owner, p.UserID, "token_revoked", map[string]any{"label": label, "token_id": token})
 	w.WriteHeader(http.StatusNoContent)
 }
 
@@ -469,12 +476,19 @@ func (s *Server) issueCode(w http.ResponseWriter, r *http.Request, p auth.Princi
 		problem(w, http.StatusBadRequest, "Invalid code request", "purpose: device or web")
 		return
 	}
-	code, exp, err := s.auth.IssueCode(r.Context(), owner, purpose, ttl, p.UserID)
+	var code string
+	var exp time.Time
+	err := s.tx(r.Context(), func(q *db.Queries) error {
+		var err error
+		if code, exp, err = s.auth.WithQueries(q).IssueCode(r.Context(), owner, purpose, ttl, p.UserID); err != nil {
+			return err
+		}
+		return eventTx(r.Context(), q, owner, p.UserID, "code_issued", map[string]any{"purpose": purpose, "expires_at": exp})
+	})
 	if err != nil {
 		problem(w, http.StatusInternalServerError, "Issuing the code failed", "")
 		return
 	}
-	s.event(r.Context(), owner, p.UserID, "code_issued", map[string]any{"purpose": purpose, "expires_at": exp})
 	writeJSON(w, http.StatusCreated, api.CodeIssued{Code: code, Purpose: api.CodeIssuedPurpose(purpose), ExpiresAt: exp})
 }
 
@@ -542,7 +556,10 @@ func (s *Server) queueDeletion(w http.ResponseWriter, r *http.Request, p auth.Pr
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil // already queued
 		}
-		return err
+		if err != nil {
+			return err
+		}
+		return eventTx(r.Context(), q, target, p.UserID, "deletion_requested", nil)
 	})
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
@@ -561,20 +578,26 @@ func (s *Server) queueDeletion(w http.ResponseWriter, r *http.Request, p auth.Pr
 
 var errConfirm = errors.New("handle does not match")
 
-// event writes the account log. A failure is a log line, not a failed request: the
-// action itself has happened.
-func (s *Server) event(ctx context.Context, user, actor uuid.UUID, kind string, detail map[string]any) {
+// tx runs fn in one transaction. An account action and its log entry go through
+// here together: a log that can miss an action is not a log (docs/36 §10.4, S9).
+func (s *Server) tx(ctx context.Context, fn func(q *db.Queries) error) error {
+	return pgx.BeginFunc(ctx, s.store.DB, func(t pgx.Tx) error { return fn(s.q.WithTx(t)) })
+}
+
+// eventTx writes one account-log entry with q — inside the action's transaction.
+func eventTx(ctx context.Context, q *db.Queries, user, actor uuid.UUID, kind string, detail map[string]any) error {
 	if detail == nil {
 		detail = map[string]any{}
 	}
-	b, _ := json.Marshal(detail)
+	b, err := json.Marshal(detail)
+	if err != nil {
+		return err
+	}
 	var a pgtype.UUID
 	if actor != uuid.Nil {
 		a = pgconv.UUID(actor)
 	}
-	if err := s.q.InsertAccountEvent(ctx, db.InsertAccountEventParams{UserID: pgconv.UUID(user), ActorID: a, Kind: kind, Detail: b}); err != nil {
-		slog.Warn("account event", "kind", kind, "user_id", user, "err", err)
-	}
+	return q.InsertAccountEvent(ctx, db.InsertAccountEventParams{UserID: pgconv.UUID(user), ActorID: a, Kind: kind, Detail: b})
 }
 
 // --- redeeming codes: /enroll and /auth/web/login ---------------------------
@@ -670,16 +693,22 @@ func browserLabel(r *http.Request) string {
 	return browser
 }
 
-// # The rate limit on redeeming (docs/36 §3.2, §9 C8)
+// # The rate limit on redeeming (docs/36 §3.2, §9 C8; the review §10.4 S8)
 //
-// Counted in Redis, per client address and for the whole server, over a 15-minute
-// window: 5 failures from one address, or 30 in all, and every redemption is refused
-// with 429 until the window passes. The global budget is what makes 40 bits enough:
-// an attacker rotating addresses still gets 30 guesses a quarter-hour.
+// Counted in Redis over a 15-minute window, per client address and for the whole
+// server: at most 5 attempts from one address and 30 in all may be in the window,
+// and anything over is 429 until it passes. The global budget is what makes 40 bits
+// enough: an attacker rotating addresses still gets 30 guesses a quarter-hour.
+//
+// ⚠️ An attempt is RESERVED before the code is checked, atomically, in one script:
+// counting failures afterwards let concurrent guesses all pass the read before any
+// of them was counted, and a Redis that accepted reads but refused writes let every
+// guess through uncounted. A successful redemption gives its reservation back.
 //
 // The address is the one the proxy saw (X-Real-IP, set by Caddy and never passed
-// through). ⚠️ Behind another proxy (NPM) that is the proxy's address, so a
-// household shares one per-address budget; the global one is the protection.
+// through). ⚠️ Behind another proxy (NPM) that is the proxy's address, so a household
+// shares one per-address budget; the global one is the protection. A per-code budget
+// would add nothing: a guesser tries a different code every time.
 //
 // Fails CLOSED: without Redis no code is redeemed (503).
 const (
@@ -688,30 +717,33 @@ const (
 	redeemGlobal     = 30
 )
 
+var reserveAttempt = redis.NewScript(`
+local a = redis.call('INCR', KEYS[1])
+redis.call('EXPIRE', KEYS[1], ARGV[1], 'NX')
+local g = redis.call('INCR', KEYS[2])
+redis.call('EXPIRE', KEYS[2], ARGV[1], 'NX')
+if a > tonumber(ARGV[2]) or g > tonumber(ARGV[3]) then
+  redis.call('DECR', KEYS[1])
+  redis.call('DECR', KEYS[2])
+  return 0
+end
+return 1`)
+
 func (s *Server) redeem(w http.ResponseWriter, r *http.Request, code string, purpose auth.Purpose, label string) (*auth.Session, bool) {
 	ctx := r.Context()
-	addr := clientAddr(r)
-	keyAddr, keyAll := "helsa:redeem:fail:addr:"+addr, "helsa:redeem:fail:all"
-	counts, err := s.store.Redis.MGet(ctx, keyAddr, keyAll).Result()
+	keys := []string{"helsa:redeem:attempts:addr:" + clientAddr(r), "helsa:redeem:attempts:all"}
+	ok, err := reserveAttempt.Run(ctx, s.store.Redis, keys, int(redeemWindow.Seconds()), redeemPerAddress, redeemGlobal).Int()
 	if err != nil {
-		problem(w, http.StatusServiceUnavailable, "Try again later", "the attempt counter cannot be read")
+		problem(w, http.StatusServiceUnavailable, "Try again later", "the attempt counter cannot be written")
 		return nil, false
 	}
-	if atoiAny(counts[0]) >= redeemPerAddress || atoiAny(counts[1]) >= redeemGlobal {
+	if ok == 0 {
 		w.Header().Set("Retry-After", fmt.Sprint(int(redeemWindow.Seconds())))
 		problem(w, http.StatusTooManyRequests, "Too many attempts", "wait a quarter of an hour, then ask for a new code")
 		return nil, false
 	}
 	sess, err := s.auth.Redeem(ctx, code, purpose, label)
 	if errors.Is(err, auth.ErrBadCode) {
-		pipe := s.store.Redis.TxPipeline()
-		pipe.Incr(ctx, keyAddr)
-		pipe.Expire(ctx, keyAddr, redeemWindow)
-		pipe.Incr(ctx, keyAll)
-		pipe.Expire(ctx, keyAll, redeemWindow)
-		if _, perr := pipe.Exec(ctx); perr != nil && !errors.Is(perr, redis.Nil) {
-			slog.Warn("redeem: count the failure", "err", perr)
-		}
 		problem(w, http.StatusUnauthorized, "Code not accepted",
 			"the code has expired, has been used, or was mistyped — ask for a new one")
 		return nil, false
@@ -719,6 +751,14 @@ func (s *Server) redeem(w http.ResponseWriter, r *http.Request, code string, pur
 	if err != nil {
 		problem(w, http.StatusServiceUnavailable, "Try again later", "the code could not be checked")
 		return nil, false
+	}
+	// A good code spends no budget. If the refund fails the attempt simply stays
+	// counted until the window passes — the safe direction.
+	pipe := s.store.Redis.TxPipeline()
+	pipe.Decr(ctx, keys[0])
+	pipe.Decr(ctx, keys[1])
+	if _, err := pipe.Exec(ctx); err != nil {
+		slog.Warn("redeem: refund the attempt", "err", err)
 	}
 	return sess, true
 }
@@ -729,21 +769,6 @@ func clientAddr(r *http.Request) string {
 		return r.RemoteAddr
 	}
 	return host
-}
-
-func atoiAny(v any) int {
-	str, ok := v.(string)
-	if !ok {
-		return 0
-	}
-	n := 0
-	for _, c := range str {
-		if c < '0' || c > '9' {
-			return 0
-		}
-		n = n*10 + int(c-'0')
-	}
-	return n
 }
 
 func validHandle(h string) bool {

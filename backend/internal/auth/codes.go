@@ -181,3 +181,12 @@ func (s *Service) RevokeToken(ctx context.Context, owner, token uuid.UUID) (stri
 	}
 	return row.Label, nil
 }
+
+// WithQueries is s working through q — a transaction's queries — so that an
+// account action and its log entry commit together or not at all (docs/36 §10.4,
+// S9). The returned Service shares everything else with s.
+func (s *Service) WithQueries(q *db.Queries) *Service {
+	c := *s
+	c.state = q
+	return &c
+}

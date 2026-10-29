@@ -38,7 +38,7 @@ import type {
 // (`POST /v1/auth/web/login`), and the server answers with `helsa_session` —
 // httpOnly, so no script here can read it, and Path=/v1, so it travels with
 // every call below and with nothing else. `fetch` carries it because the API is
-// same-origin (`credentials: 'same-origin'`).
+// same-origin (`credentials: 'same-origin'`), never from the HTTP cache (`cache: 'no-store'`).
 //
 // ⛔ **No bearer header, ever.** Until the household the web kept a year-long
 // device token in `localStorage` and sent it as `Authorization: Bearer`. That
@@ -109,6 +109,9 @@ async function req<T>(path: string, init: ReqInit = {}): Promise<T> {
     headers,
     body: json !== undefined ? JSON.stringify(json) : undefined,
     credentials: 'same-origin',
+    // Never from the browser's HTTP cache: the URLs are the same for everybody on
+    // this server, and a kept answer would be the previous person's (§10.4, S10).
+    cache: 'no-store',
   })
 
   if (!res.ok) throw await problemOf(res, quiet)
@@ -389,6 +392,9 @@ async function exportFile(body: ExportRequest, opts: ExportOptions): Promise<Exp
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
     credentials: 'same-origin',
+    // Never from the browser's HTTP cache: the URLs are the same for everybody on
+    // this server, and a kept answer would be the previous person's (§10.4, S10).
+    cache: 'no-store',
     signal: opts.signal,
   })
   if (!res.ok) throw await problemOf(res)
