@@ -186,6 +186,17 @@ func TokenDevice(token string) string {
 	return claims.Device
 }
 
+// TokenSubject reads the user out of a token WITHOUT verifying it — for the log
+// line of a revocation that has already been verified; never for a decision.
+func TokenSubject(token string) (uuid.UUID, bool) {
+	var claims accessClaims
+	if _, _, err := jwt.NewParser().ParseUnverified(token, &claims); err != nil {
+		return uuid.Nil, false
+	}
+	id, err := uuid.Parse(claims.Subject)
+	return id, err == nil
+}
+
 // parse checks the signature and the expiry, and reads the claims.
 func (s *Service) parse(token string) (accessClaims, uuid.UUID, uuid.UUID, error) {
 	// ⛔ One token, one spelling. Base64url leaves a few bits of the last character

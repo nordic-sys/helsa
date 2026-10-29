@@ -19,6 +19,15 @@ let who: 'bob' | 'nori' | null
 /** Who the next valid code signs in. */
 let nextLogin: 'bob' | 'nori'
 let requests: { url: string; init: RequestInit }[]
+// When set, the next /me answers with whoever was signed in WHEN IT WAS ASKED, but
+// only once the test lets it go — a slow answer overtaken by a later one.
+let slowMe: { promise: Promise<void>; release: () => void } | null = null
+function holdNextMe() {
+  let release!: () => void
+  const promise = new Promise<void>((r) => (release = r))
+  slowMe = { promise, release }
+  return release
+}
 
 const PEOPLE = {
   bob: { id: 'u-bob', handle: 'bob', display_name: 'Bob', role: 'admin' },
@@ -33,6 +42,7 @@ function reply(status: number, body?: unknown) {
 }
 
 beforeEach(() => {
+  slowMe = null
   localStorage.clear()
   localStorage.setItem('helsa.lang', 'en')
   resetLegacyCheck()
@@ -51,6 +61,13 @@ beforeEach(() => {
       if (url === '/v1/auth/web/logout') {
         who = null
         return reply(204)
+      }
+      if (url === '/v1/me' && slowMe) {
+        const answer = PEOPLE[who]
+        const gate = slowMe
+        slowMe = null
+        await gate.promise
+        return reply(200, answer)
       }
       if (url === '/v1/me') return reply(200, PEOPLE[who])
       if (url.startsWith('/v1/goals')) return reply(200, [{ metric: `${who}-data` }])
@@ -164,6 +181,33 @@ describe('two people, one browser (C12)', () => {
     // Not for a single frame: the cached answer is gone, so it is fetched anew.
     expect(screen.getByTestId('data')).not.toHaveTextContent('bob-data')
     await waitFor(() => expect(screen.getByTestId('data')).toHaveTextContent('nori-data'))
+  })
+
+  it('throws away a slow answer that a newer one has overtaken (§10.4, S3)', async () => {
+    who = 'bob'
+    mount()
+    await waitFor(() => expect(screen.getByTestId('data')).toHaveTextContent('bob-data'))
+
+    // A first signal: its /me is asked while it is still Bob, and is slow.
+    const releaseSlow = holdNextMe()
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', { key: SESSION_SIGNAL_KEY, newValue: '1' }))
+    })
+    // Bob's pages are taken down at once, before any answer.
+    expect(screen.queryByText('signed in as Bob')).not.toBeInTheDocument()
+
+    // Meanwhile the other tab signs in as Nóri, and a second signal asks again — fast.
+    who = 'nori'
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage', { key: SESSION_SIGNAL_KEY, newValue: '2' }))
+    })
+    expect(await screen.findByText('signed in as Nóri')).toBeInTheDocument()
+
+    // Now Bob's old answer arrives. It must not paint Bob over Nóri's cookie.
+    await act(async () => releaseSlow())
+    await new Promise((r) => setTimeout(r, 20))
+    expect(screen.getByText('signed in as Nóri')).toBeInTheDocument()
+    expect(screen.queryByText('signed in as Bob')).not.toBeInTheDocument()
   })
 
   it('notices when another tab signs somebody else in', async () => {

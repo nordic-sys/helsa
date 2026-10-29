@@ -5,7 +5,10 @@ package queue
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"testing"
+
+	"github.com/redis/go-redis/v9"
 )
 
 // A deleted member's stuck batches leave the dead-letter queue; everybody else's
@@ -41,5 +44,33 @@ func TestPurgeDeadLettersTakesOnlyTheNamedMember(t *testing.T) {
 	}
 	if !kept[bodies[1]] || !kept[bodies[3]] {
 		t.Errorf("the other member's batch and the unreadable one must stay unchanged: %v", kept)
+	}
+}
+
+// The dead-letter lock is shared across processes: while one queue client (the
+// worker's purge) holds it, another (the API's redrive) is told the queue is busy
+// instead of working on it at the same time (docs/36 §10.4, S7).
+func TestTheDeadLetterLockIsSharedAcrossClients(t *testing.T) {
+	q1, _, name := redriveFixture(t)
+	q2, err := Open(envOr("HELSA_RABBITMQ_URL", "amqp://helsa:helsa_local_dev@localhost:5672/"), name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = q2.Close() })
+	rdb := redis.NewClient(&redis.Options{Addr: envOr("HELSA_REDIS_ADDR", "localhost:6380"), Password: envOr("HELSA_REDIS_PASSWORD", "helsa_local_dev")})
+	t.Cleanup(func() { _ = rdb.Close() })
+	q1.UseSharedLock(rdb)
+	q2.UseSharedLock(rdb)
+
+	release, err := q1.acquire(context.Background(), 0)
+	if err != nil {
+		t.Fatalf("take the lock: %v", err)
+	}
+	if _, err := q2.Redrive(context.Background(), 0); !errors.Is(err, ErrRedriveBusy) {
+		t.Errorf("a redrive while another process holds the lock: %v, want ErrRedriveBusy", err)
+	}
+	release()
+	if _, err := q2.Redrive(context.Background(), 0); err != nil {
+		t.Errorf("after the release: %v", err)
 	}
 }

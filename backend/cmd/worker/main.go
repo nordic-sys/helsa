@@ -56,6 +56,9 @@ func main() {
 		os.Exit(1)
 	}
 	defer q.Close()
+	// One hand in the dead-letter queue at a time, across the api and the worker
+	// (internal/queue dlqlock.go).
+	q.UseSharedLock(st.Redis)
 
 	// The Home Assistant publisher shares the worker's lifetime. It is OFF unless
 	// HELSA_MQTT_URL is set, and a broker that is unreachable costs it a log line,

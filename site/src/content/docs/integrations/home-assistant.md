@@ -95,8 +95,10 @@ for them: whatever goes on the broker, the whole house can read.
 - The **legacy** member — the one `HELSA_MQTT_USER_ID` names, or the only user of a one-person
   server — keeps exactly the names below (`helsa/daily/steps_today`, `sensor.helsa_steps_today`,
   the device *Helsa*), so existing automations keep working.
-- Everybody else gets their handle in every name: `helsa/nori/daily/steps_today`,
-  `sensor.helsa_nori_steps_today`, the device *Helsa — Nóri*.
+- Everybody else gets their handle and the first eight characters of their member id in every
+  name: `helsa/nori_3f2b9c1e/daily/steps_today`, `sensor.helsa_nori_3f2b9c1e_steps_today`, the device
+  *Helsa — Nóri*. The id part is what keeps two members apart whose handles would read the same
+  (`ann-marie`, `ann_marie`), and a re-used handle apart from the member who had it before.
 - `HELSA_MQTT_USER_ID` only decides the naming. Without the member's own switch nothing of theirs
   is published, not even for the pinned user.
 - Switching off, being disabled or being deleted clears the member's entities: an empty retained

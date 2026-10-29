@@ -2,6 +2,7 @@ package hass
 
 import (
 	"encoding/json"
+	"github.com/google/uuid"
 	"regexp"
 	"strings"
 	"testing"
@@ -185,7 +186,7 @@ func TestEntityNamesDoNotRepeatTheDeviceName(t *testing.T) {
 // member keeps the single-user names unchanged (docs/36 §4.4, D8).
 func TestMemberTopicsAreNamespacedAndLegacyIsUnchanged(t *testing.T) {
 	base := topicsForTest()
-	legacy := base.forMember("bob", "Bob", true)
+	legacy := base.forMember(uuid.New(), "bob", "Bob", true)
 	if legacy != base {
 		t.Fatalf("the legacy member must keep the base names: %+v", legacy)
 	}
@@ -193,18 +194,23 @@ func TestMemberTopicsAreNamespacedAndLegacyIsUnchanged(t *testing.T) {
 	if got := legacy.state(steps.suffix); got != "helsa/"+steps.suffix {
 		t.Errorf("legacy state topic: %s", got)
 	}
-	nori := base.forMember("nori-b", "Nóri", false)
-	if got := nori.state(steps.suffix); got != "helsa/nori_b/"+steps.suffix {
+	id := uuid.MustParse("3f2b9c1e-0000-4000-8000-000000000001")
+	nori := base.forMember(id, "nori-b", "Nóri", false)
+	if got := nori.state(steps.suffix); got != "helsa/nori_b_3f2b9c1e/"+steps.suffix {
 		t.Errorf("member state topic: %s", got)
 	}
-	if got := nori.objectID(steps); got != strings.Replace(steps.objectID, "helsa_", "helsa_nori_b_", 1) {
+	if got := nori.objectID(steps); got != strings.Replace(steps.objectID, "helsa_", "helsa_nori_b_3f2b9c1e_", 1) {
 		t.Errorf("member object id: %s", got)
+	}
+	// Two handles that map to one name are still two members (S4).
+	if a, b := base.forMember(uuid.New(), "ann-marie", "", false), base.forMember(uuid.New(), "ann_marie", "", false); a.state(steps.suffix) == b.state(steps.suffix) {
+		t.Errorf("ann-marie and ann_marie share a topic: %s", a.state(steps.suffix))
 	}
 	if nori.status() != base.status() {
 		t.Errorf("availability is the process's, one topic for all: %s vs %s", nori.status(), base.status())
 	}
 	p := nori.discoveryFor(steps, time.Hour)
-	if p.Device.Name != "Helsa — Nóri" || p.Device.Identifiers[0] != "helsa_nori_b" || p.UniqueID != nori.objectID(steps) {
+	if p.Device.Name != "Helsa — Nóri" || p.Device.Identifiers[0] != "helsa_nori_b_3f2b9c1e" || p.UniqueID != nori.objectID(steps) {
 		t.Errorf("member device/unique id: %+v %s", p.Device, p.UniqueID)
 	}
 	if lp := legacy.discoveryFor(steps, time.Hour); lp.Device.Name != "Helsa" || lp.UniqueID != steps.objectID {

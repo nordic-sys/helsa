@@ -72,6 +72,15 @@ type Publisher struct {
 	// than left there retained (docs/36 §4.4, §4.6/4).
 	mu        sync.Mutex
 	published map[uuid.UUID]topics
+	// pending are topics whose clearing has not been acknowledged yet — retried every
+	// round, so a broker hiccup during an opt-out does not leave health values
+	// retained for good (S6).
+	pending []topics
+
+	// round serialises a whole publishing round — targets, collection, publication —
+	// with ForgetUser: a round that collected a member's numbers must not publish them
+	// after the member's topics were cleared (docs/36 §10.4, S5).
+	round sync.Mutex
 }
 
 // New builds a Publisher. It performs no I/O — nothing connects until Run.
@@ -251,7 +260,9 @@ func (p *Publisher) publishDiscoveryAll(ctx context.Context, c mqtt.Client) {
 	}
 }
 
-func (p *Publisher) topicsFor(t target) topics { return p.top.forMember(t.handle, t.name, t.legacy) }
+func (p *Publisher) topicsFor(t target) topics {
+	return p.top.forMember(t.userID, t.handle, t.name, t.legacy)
+}
 
 // sync records the current targets, publishes discovery for any that are new, and
 // clears the topics of any that were published before and no longer are.
@@ -277,9 +288,19 @@ func (p *Publisher) sync(ts []target) {
 		}
 	}
 	p.published = want
+	gone = append(gone, p.pending...)
+	p.pending = nil
 	p.mu.Unlock()
+	var failed []topics
 	for _, top := range gone {
-		p.clear(top)
+		if !p.clear(top) {
+			failed = append(failed, top)
+		}
+	}
+	if len(failed) > 0 {
+		p.mu.Lock()
+		p.pending = append(p.pending, failed...)
+		p.mu.Unlock()
 	}
 	for _, top := range fresh {
 		p.publishDiscovery(p.client, top)
@@ -307,27 +328,45 @@ func (p *Publisher) clear(top topics) bool {
 // ForgetUser clears a member's retained topics — the member-deletion job's MQTT
 // stage (internal/deletion). With the publisher off there is nothing to clear; with
 // it on but the broker unreachable, it is an error, and the job retries.
-func (p *Publisher) ForgetUser(_ context.Context, user uuid.UUID, handle string) error {
+func (p *Publisher) ForgetUser(ctx context.Context, user uuid.UUID, handle string) error {
 	if !p.cfg.Enabled() {
 		return nil
 	}
 	if !p.connected() {
 		return errors.New("mqtt broker not connected")
 	}
+	// No round is between collecting and publishing while this runs; the next round's
+	// targets no longer contain the member (deleted, or with an open deletion job).
+	p.round.Lock()
+	defer p.round.Unlock()
 	p.mu.Lock()
 	top, ok := p.published[user]
 	delete(p.published, user)
 	p.mu.Unlock()
-	if !ok {
-		// Not published by this process (it restarted): clear the non-legacy names,
-		// which are the only ones a deleted member can have had unless they were the
-		// pinned user — and then their legacy names are the pinned user's, cleared below.
-		top = p.top.forMember(handle, handle, false)
+	clears := []topics{p.top.forMember(user, handle, handle, false)}
+	if ok {
+		clears[0] = top
 	}
-	if !p.clear(top) {
-		return errors.New("mqtt publish failed while clearing")
+	// The legacy names were theirs if they were the pinned user — or the only user,
+	// which after their deletion means nobody is left (S6: a restart forgets what was
+	// published, so this is worked out, not remembered).
+	if p.cfg.UserID == user.String() || (p.cfg.UserID == "" && p.nobodyLeft(ctx)) {
+		clears = append(clears, p.top)
+	}
+	for _, c := range clears {
+		if !p.clear(c) {
+			return errors.New("mqtt publish failed while clearing")
+		}
 	}
 	return nil
+}
+
+func (p *Publisher) nobodyLeft(ctx context.Context) bool {
+	var n int
+	if err := p.pool.QueryRow(ctx, `SELECT count(*) FROM users`).Scan(&n); err != nil {
+		return false
+	}
+	return n == 0
 }
 
 // publishSummary collects and publishes the daily numbers.
@@ -335,6 +374,8 @@ func (p *Publisher) publishSummary(ctx context.Context) {
 	if !p.connected() {
 		return
 	}
+	p.round.Lock()
+	defer p.round.Unlock()
 	ctx, cancel := context.WithTimeout(ctx, collectTimeout)
 	defer cancel()
 
@@ -373,6 +414,8 @@ func (p *Publisher) publishFreshness(ctx context.Context) {
 	if !p.connected() {
 		return
 	}
+	p.round.Lock()
+	defer p.round.Unlock()
 	ctx, cancel := context.WithTimeout(ctx, collectTimeout)
 	defer cancel()
 

@@ -89,6 +89,16 @@ func (q *Queue) Redrive(ctx context.Context, want int) (RedriveResult, error) {
 		return RedriveResult{}, ErrRedriveBusy
 	}
 	defer q.redriveMu.Unlock()
+	// The other process (a member deletion's purge) may be walking the queue: a
+	// redrive does not wait for it, it says "busy" like a second redrive would.
+	release, err := q.acquire(ctx, 0)
+	if errors.Is(err, ErrDLQBusy) {
+		return RedriveResult{}, ErrRedriveBusy
+	}
+	if err != nil {
+		return RedriveResult{}, err
+	}
+	defer release()
 
 	if err := q.Ready(); err != nil {
 		return RedriveResult{}, err

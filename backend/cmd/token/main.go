@@ -30,6 +30,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"flag"
 	"fmt"
@@ -83,7 +84,21 @@ func main() {
 	// revokes tokens is a route somebody else can call. Both halves of a token's life
 	// are operator actions, taken on the server.
 	if *revoke != "" {
-		expiry, err := svc.Revoke(ctx, *revoke)
+		var expiry time.Time
+		err := pgx.BeginFunc(ctx, st.DB, func(tx pgx.Tx) error {
+			q := db.New(st.DB).WithTx(tx)
+			var err error
+			if expiry, err = svc.WithQueries(q).Revoke(ctx, *revoke); err != nil {
+				return err
+			}
+			// Into the owner's log when the token names one; a token that is not ours
+			// was refused above with ErrUnauthorized.
+			if owner, ok := auth.TokenSubject(*revoke); ok {
+				detail, _ := json.Marshal(map[string]any{"label": auth.TokenDevice(*revoke), "by": "operator"})
+				return q.InsertAccountEvent(ctx, db.InsertAccountEventParams{UserID: pgconv.UUID(owner), Kind: "token_revoked", Detail: detail})
+			}
+			return nil
+		})
 		switch {
 		case errors.Is(err, auth.ErrUnauthorized):
 			fail("that token is expired or not one of ours — it already cannot be used")
@@ -125,7 +140,18 @@ func main() {
 	// so a new install is never left without one (docs/36 §9, C3). The migration does
 	// the same for an existing install with exactly one user.
 
-	sess, err := svc.IssueDeviceToken(ctx, owner.ID, device, uuid.Nil)
+	// The token's row and the member's log entry together, or neither (docs/36
+	// §10.4, S9): the member's log is where they see a token issued in their name.
+	var sess *auth.Session
+	err = pgx.BeginFunc(ctx, st.DB, func(tx pgx.Tx) error {
+		q := db.New(st.DB).WithTx(tx)
+		var err error
+		if sess, err = svc.WithQueries(q).IssueDeviceToken(ctx, owner.ID, device, uuid.Nil); err != nil {
+			return err
+		}
+		detail, _ := json.Marshal(map[string]any{"label": device, "token_id": sess.TokenID, "by": "operator"})
+		return q.InsertAccountEvent(ctx, db.InsertAccountEventParams{UserID: pgconv.UUID(owner.ID), Kind: "token_issued", Detail: detail})
+	})
 	if err != nil {
 		fail("issue token: %v", err)
 	}

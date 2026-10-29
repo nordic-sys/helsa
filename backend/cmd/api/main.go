@@ -49,6 +49,9 @@ func main() {
 		os.Exit(1)
 	}
 	defer q.Close()
+	// One hand in the dead-letter queue at a time, across the api and the worker
+	// (internal/queue dlqlock.go).
+	q.UseSharedLock(st.Redis)
 
 	srv := server.New(cfg, st, q)
 	httpServer := &http.Server{

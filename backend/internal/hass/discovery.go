@@ -3,6 +3,7 @@ package hass
 import (
 	"encoding/json"
 	"fmt"
+	"github.com/google/uuid"
 	"strings"
 	"time"
 )
@@ -197,11 +198,17 @@ type topics struct {
 }
 
 // forMember is t for one member's entities.
-func (t topics) forMember(handle, name string, legacy bool) topics {
+//
+// ⚠️ The name is the handle AND a piece of the member's id: `nori_3f2b9c1e`. A
+// handle alone is not an identity here — `ann-marie` and `ann_marie` are two
+// members whose MQTT names would be one, and a deleted member's handle can be taken
+// again before Home Assistant has forgotten the old entities (docs/36 §10.4, S4).
+// The id part is immutable; the handle part is there for whoever reads the topics.
+func (t topics) forMember(user uuid.UUID, handle, name string, legacy bool) topics {
 	if legacy {
 		return t
 	}
-	t.member = strings.ReplaceAll(handle, "-", "_")
+	t.member = strings.ReplaceAll(handle, "-", "_") + "_" + strings.ReplaceAll(user.String(), "-", "")[:8]
 	t.memberName = name
 	if t.memberName == "" {
 		t.memberName = handle

@@ -98,6 +98,10 @@ export function SessionGate({ children }: { children: ReactNode }) {
   // The current person, readable from the callbacks below without re-binding
   // them on every change.
   const current = useRef<string | undefined>(undefined)
+  // Every identity change moves the generation on; an answer that was asked for in
+  // an older generation is thrown away. Without it a slow /me for A could land
+  // after another tab signed in as B, and paint A's name over B's cookie (§10.4, S3).
+  const generation = useRef(0)
 
   /** Everything read so far belonged to someone; throw it away. */
   const purge = useCallback(() => {
@@ -116,6 +120,7 @@ export function SessionGate({ children }: { children: ReactNode }) {
 
   const forget = useCallback(
     (reason: SignedOutReason) => {
+      generation.current++
       purge()
       current.current = undefined
       setState({ status: 'signedOut', reason })
@@ -126,9 +131,13 @@ export function SessionGate({ children }: { children: ReactNode }) {
   /** Asks the server who this is. A 401 is "nobody", whatever came before. */
   const look = useCallback(
     async (after401: SignedOutReason) => {
+      const asked = ++generation.current
       try {
-        signedIn(await api.me({ quiet: true }))
+        const me = await api.me({ quiet: true })
+        if (asked !== generation.current) return // somebody else's answer by now
+        signedIn(me)
       } catch (e) {
+        if (asked !== generation.current) return
         if ((e as ApiError).status === 401) forget(after401)
         else throw e
       }
@@ -154,7 +163,14 @@ export function SessionGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     const onStorage = (e: StorageEvent) => {
       if (e.key !== SESSION_SIGNAL_KEY) return
-      look(current.current !== undefined ? 'ended' : 'none').catch(() => {
+      // The cookie has already changed under this tab. Take the pages down and the
+      // cache with them NOW, before asking who it is: the old pages must not send one
+      // more request with the new person's cookie while the answer is on its way.
+      const was = current.current
+      purge()
+      current.current = undefined
+      setState({ status: 'loading' })
+      look(was !== undefined ? 'ended' : 'none').catch(() => {
         /* the server is unreachable; the next request will say so */
       })
     }
@@ -192,7 +208,11 @@ export function SessionGate({ children }: { children: ReactNode }) {
             isAdmin: me.role === 'admin',
             signOut,
             forget,
-            setMe: (next) => setState({ status: 'signedIn', me: next }),
+            // Only ever the same person: a late answer to a PATCH started before the
+            // person changed is dropped, not written over the new identity (S3).
+            setMe: (next) => {
+              if (next.id === current.current) setState({ status: 'signedIn', me: next })
+            },
             legacyNotice: legacy,
             dismissLegacyNotice: () => setLegacy(false),
           }

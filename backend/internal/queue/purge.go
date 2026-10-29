@@ -3,6 +3,7 @@ package queue
 import (
 	"context"
 	"fmt"
+	"time"
 
 	amqp "github.com/rabbitmq/amqp091-go"
 )
@@ -23,6 +24,13 @@ import (
 func (q *Queue) PurgeDeadLetters(ctx context.Context, drop func(body []byte) bool) (removed int, err error) {
 	q.redriveMu.Lock()
 	defer q.redriveMu.Unlock()
+	// Wait out a redrive in the API: its unacknowledged messages are invisible here,
+	// and one it fails to publish goes back into the queue (S7).
+	release, err := q.acquire(ctx, time.Minute)
+	if err != nil {
+		return 0, err
+	}
+	defer release()
 	depth, err := q.dlqDepth(ctx)
 	if err != nil {
 		return 0, err

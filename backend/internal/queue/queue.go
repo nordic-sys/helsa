@@ -9,6 +9,7 @@ package queue
 import (
 	"context"
 	"fmt"
+	"github.com/redis/go-redis/v9"
 	"sync"
 	"time"
 
@@ -25,6 +26,9 @@ type Queue struct {
 
 	// redriveMu makes one Redrive run at a time in this process — see Redrive.
 	redriveMu sync.Mutex
+	// lock is the cross-process lock on the dead-letter queue (dlqlock.go); nil
+	// without UseSharedLock.
+	lock *redis.Client
 }
 
 // Open connects and declares the topology (idempotent).
