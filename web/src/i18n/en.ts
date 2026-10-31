@@ -1824,6 +1824,11 @@ export const en: Dict = {
       'The code is typed on the sign-in page, in the browser that is to be signed in.',
     'code.once': 'The code works once, and is not shown again once you close this.',
     'code.failed': 'The code could not be issued. Try again.',
+    'code.revoke': 'Revoke the code',
+    'code.revoked': 'Revoked — nobody can connect with this code any more.',
+    'code.revokeUsed':
+      'This code has already been used, so it cannot be revoked. If the device it connected is not yours, revoke that device in the list of devices.',
+    'code.revokeFailed': 'The code could not be revoked. Try again, or let it expire.',
 
     // --- Devices and sign-ins (My account and a member's page) -----------------
     'tokens.col.label': 'Name',
@@ -1891,6 +1896,10 @@ export const en: Dict = {
     'log.webCode.you': 'You asked for a sign-in code for the web dashboard.',
     'log.webCode.named': '{actor} asked for a sign-in code for the web dashboard.',
     'log.webCode.by': '{actor} issued a sign-in code for the web dashboard.',
+    'log.deviceCodeRevoked.you': 'You revoked an unused connection code.',
+    'log.deviceCodeRevoked.by': '{actor} revoked an unused connection code.',
+    'log.webCodeRevoked.you': 'You revoked an unused sign-in code.',
+    'log.webCodeRevoked.by': '{actor} revoked an unused sign-in code.',
     'log.redeemed.device': 'A phone joined: {label}.',
     'log.redeemed.web': 'Signed in to the web dashboard: {label}.',
     'log.haOn.you': 'You started sending your daily numbers to Home Assistant.',

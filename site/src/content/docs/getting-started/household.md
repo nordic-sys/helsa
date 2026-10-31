@@ -34,7 +34,9 @@ Hand the `.p12` to the member (AirDrop), and its password separately.
 
 **In the dashboard**, as admin: *Household ▸ New member* — a short handle (`nori`) and a
 display name. Then *Connect a device*: a QR code and an eight-character code (`K7QM-4XPA`)
-that lives 15 minutes and works once.
+that lives 15 minutes and works once. Shown on the wrong screen or handed to the wrong person?
+*Revoke the code* in the same window withdraws it at once — while it is unused. A used code
+cannot be withdrawn; revoke the device it connected instead.
 
 **On the member's phone**: *Helsa ▸ Your own server ▸ Sending ▸ Join with a QR code*. The app
 first asks for the client certificate if it has none, then scans the code, asks for the

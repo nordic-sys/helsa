@@ -188,12 +188,15 @@ function household(req, u, bodyText) {
   if (p === '/v1/me/events') return [200, events[me.id]]
   if (p === '/v1/me/enrolment-codes') return [201, code('device')]
   if (p === '/v1/me/login-codes') return [201, code('web')]
+  // W2: a code ending in U answers "already used", so the dialog's 409 can be photographed.
+  if (p === '/v1/me/codes/revoke') return /U$/.test(body.code ?? '') ? [409, { title: 'The code can no longer be revoked', detail: 'used' }] : [204]
   let m
   if ((m = /^\/v1\/me\/tokens\/([^/]+)$/.exec(p))) { const t = tokens[me.id].find((x) => x.id === m[1]); if (!t) return [404, { title: 'No such device' }]; t.revoked_at = iso(new Date()); return [204] }
   if (!p.startsWith('/v1/admin/')) return undefined
   if (me.role !== 'admin') return [403, { title: 'Forbidden' }]
   if (p === '/v1/admin/users' && req.method === 'GET') return [200, Object.values(people).map(member)]
   if (p === '/v1/admin/users' && req.method === 'POST') { const np = { id: `u-${body.handle}`, handle: body.handle, display_name: body.display_name, role: 'member', created_at: iso(new Date()), ha_publish: false }; people[body.handle] = np; tokens[np.id] = []; events[np.id] = [{ kind: 'member_added', at: iso(new Date()), actor: me.display_name }]; return [201, member(np)] }
+  if ((m = /^\/v1\/admin\/users\/([^/]+)\/codes\/revoke$/.exec(p))) return byId(m[1]) ? [204] : [404, { title: 'No such member' }]
   if ((m = /^\/v1\/admin\/users\/([^/]+)(?:\/(tokens|events|codes))?(?:\/([^/]+))?$/.exec(p))) {
     const t = byId(m[1]); if (!t) return [404, { title: 'No such member' }]
     if (!m[2] && req.method === 'GET') return [200, member(t)]

@@ -1824,6 +1824,11 @@ export const hu = {
       'A kódot a belépő oldalon kell beírni, abban a böngészőben, amelyikkel be akarsz lépni.',
     'code.once': 'A kód egyszer használható, és ha bezárod ezt az ablakot, többé nem jelenik meg.',
     'code.failed': 'A kódot nem sikerült kiadni. Próbáld újra.',
+    'code.revoke': 'Kód visszavonása',
+    'code.revoked': 'Visszavontad — ezzel a kóddal már senki nem tud csatlakozni.',
+    'code.revokeUsed':
+      'Ezt a kódot már beváltották, így nem vonható vissza. Ha nem a te eszközöd csatlakozott vele, vond vissza az eszközt az eszközök listájában.',
+    'code.revokeFailed': 'A kódot nem sikerült visszavonni. Próbáld újra, vagy hagyd lejárni.',
 
     // --- Devices and sign-ins (My account and a member's page) -----------------
     'tokens.col.label': 'Név',
@@ -1890,6 +1895,10 @@ export const hu = {
     'log.webCode.you': 'Belépőkódot kértél a webes felülethez.',
     'log.webCode.named': '{actor} belépőkódot kért a webes felülethez.',
     'log.webCode.by': '{actor} belépőkódot adott ki a webes felülethez.',
+    'log.deviceCodeRevoked.you': 'Visszavontál egy fel nem használt csatlakozási kódot.',
+    'log.deviceCodeRevoked.by': '{actor} visszavont egy fel nem használt csatlakozási kódot.',
+    'log.webCodeRevoked.you': 'Visszavontál egy fel nem használt belépőkódot.',
+    'log.webCodeRevoked.by': '{actor} visszavont egy fel nem használt belépőkódot.',
     'log.redeemed.device': 'Csatlakozott egy telefon: {label}.',
     'log.redeemed.web': 'Belépés a webes felületre: {label}.',
     'log.haOn.you': 'Elindítottad a napi számaid küldését a Home Assistantbe.',

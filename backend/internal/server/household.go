@@ -156,6 +156,11 @@ func (s *Server) PostMeLoginCodes(w http.ResponseWriter, r *http.Request) {
 	s.issueCode(w, r, p, p.UserID, auth.PurposeWeb, 0)
 }
 
+func (s *Server) PostMeCodesRevoke(w http.ResponseWriter, r *http.Request) {
+	p, _ := auth.PrincipalFrom(r.Context())
+	s.revokeCode(w, r, p, p.UserID)
+}
+
 func (s *Server) GetMeEvents(w http.ResponseWriter, r *http.Request) {
 	p, _ := auth.PrincipalFrom(r.Context())
 	s.writeEvents(w, r, p, p.UserID)
@@ -412,6 +417,14 @@ func (s *Server) PostAdminUsersIdCodes(w http.ResponseWriter, r *http.Request, i
 	s.issueCode(w, r, p, target, auth.Purpose(body.Purpose), ttl)
 }
 
+func (s *Server) PostAdminUsersIdCodesRevoke(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	p, _ := auth.PrincipalFrom(r.Context())
+	if !s.memberExists(w, r, uuid.UUID(id)) {
+		return
+	}
+	s.revokeCode(w, r, p, uuid.UUID(id))
+}
+
 func (s *Server) memberExists(w http.ResponseWriter, r *http.Request, id uuid.UUID) bool {
 	if _, err := s.q.GetUser(r.Context(), pgconv.UUID(id)); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -490,6 +503,35 @@ func (s *Server) issueCode(w http.ResponseWriter, r *http.Request, p auth.Princi
 		return
 	}
 	writeJSON(w, http.StatusCreated, api.CodeIssued{Code: code, Purpose: api.CodeIssuedPurpose(purpose), ExpiresAt: exp})
+}
+
+// revokeCode withdraws one of owner's unredeemed codes. The caller holds the code,
+// so saying what became of it (used, expired) tells them nothing they could not
+// find out by trying it — and "used" is the useful answer: a device is connected,
+// and that is what to revoke.
+func (s *Server) revokeCode(w http.ResponseWriter, r *http.Request, p auth.Principal, owner uuid.UUID) {
+	var body api.CodeRevoke
+	if !decodeBody(w, r, &body, "Invalid code") {
+		return
+	}
+	err := s.tx(r.Context(), func(q *db.Queries) error {
+		purpose, err := s.auth.WithQueries(q).RevokeCode(r.Context(), owner, body.Code)
+		if err != nil {
+			return err
+		}
+		return eventTx(r.Context(), q, owner, p.UserID, "code_revoked", map[string]any{"purpose": purpose})
+	})
+	var gone *auth.CodeNotRevocableError
+	switch {
+	case err == nil:
+		w.WriteHeader(http.StatusNoContent)
+	case errors.Is(err, auth.ErrNoSuchCode):
+		problem(w, http.StatusNotFound, "No such code", "")
+	case errors.As(err, &gone):
+		problem(w, http.StatusConflict, "The code can no longer be revoked", string(gone.State))
+	default:
+		problem(w, http.StatusInternalServerError, "Revoking the code failed", "")
+	}
 }
 
 func (s *Server) writeEvents(w http.ResponseWriter, r *http.Request, p auth.Principal, owner uuid.UUID) {

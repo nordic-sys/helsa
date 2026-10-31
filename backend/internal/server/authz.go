@@ -90,6 +90,7 @@ var routes = map[string]rule{
 	"DELETE /me/tokens/{id}":                    {Principal, ScopeNone, "one of the caller's own; another's id is 404"},
 	"POST /me/enrolment-codes":                  {Principal, ScopeNone, "a code for the caller's own next phone"},
 	"POST /me/login-codes":                      {Principal, ScopeNone, "a code for the caller's own browser"},
+	"POST /me/codes/revoke":                     {Principal, ScopeNone, "an unused code of the caller's own; another's is 404"},
 	"GET /me/events":                            {Principal, ScopeNone, "the caller's own account log"},
 	"POST /enroll":                              {Public, ScopeNone, "the code is the credential; mTLS port only; rate-limited"},
 	"POST /auth/web/login":                      {Public, ScopeNone, "the code is the credential; web port and own Origin only; rate-limited"},
@@ -103,6 +104,7 @@ var routes = map[string]rule{
 	"DELETE /admin/users/{id}/tokens/{tokenId}": {Admin, ScopeNone, "revoke a member's device; the token must be theirs"},
 	"GET /admin/users/{id}/events":              {Admin, ScopeNone, "the member's account log, as the member sees it"},
 	"POST /admin/users/{id}/codes":              {Admin, ScopeNone, "only for a member with no live device (C2)"},
+	"POST /admin/users/{id}/codes/revoke":       {Admin, ScopeNone, "an unused code issued for the member"},
 
 	"GET /achievements":        {Subject, ScopeMetrics, "badges"},
 	"GET /activity":            {Subject, ScopeMetrics, "rings"},

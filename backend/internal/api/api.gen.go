@@ -1085,6 +1085,12 @@ type CodeRequest struct {
 // CodeRequestPurpose defines model for CodeRequest.Purpose.
 type CodeRequestPurpose string
 
+// CodeRevoke defines model for CodeRevoke.
+type CodeRevoke struct {
+	// Code as it was shown: XXXX-XXXX, dashes and case do not matter
+	Code string `json:"code"`
+}
+
 // CoverageGap The metric had settled into a rhythm and that rhythm has broken. **An observation, not a problem** — a flat battery, a holiday, a broken sensor and a deliberate break all look the same from here, and the server does not guess which.
 //
 // The rules are the phone's (`Coverage/MetricGap.swift`), value for value: at least 6 intervals spanning at least 14 days before a rhythm is claimed at all, a silence of at least 3 days AND at least 3× the typical interval, no judgement above a 30-day cadence, and nothing after 90 silent days — past that the metric is not silent but discontinued, and the rhythm being compared against would itself be stale.
@@ -2142,6 +2148,9 @@ type PatchAdminUsersIdJSONRequestBody = MemberPatch
 // PostAdminUsersIdCodesJSONRequestBody defines body for PostAdminUsersIdCodes for application/json ContentType.
 type PostAdminUsersIdCodesJSONRequestBody = CodeRequest
 
+// PostAdminUsersIdCodesRevokeJSONRequestBody defines body for PostAdminUsersIdCodesRevoke for application/json ContentType.
+type PostAdminUsersIdCodesRevokeJSONRequestBody = CodeRevoke
+
 // PostAuthWebLoginJSONRequestBody defines body for PostAuthWebLogin for application/json ContentType.
 type PostAuthWebLoginJSONRequestBody = WebLoginRequest
 
@@ -2171,6 +2180,9 @@ type DeleteMeJSONRequestBody = DeleteConfirm
 
 // PatchMeJSONRequestBody defines body for PatchMe for application/json ContentType.
 type PatchMeJSONRequestBody = MePatch
+
+// PostMeCodesRevokeJSONRequestBody defines body for PostMeCodesRevoke for application/json ContentType.
+type PostMeCodesRevokeJSONRequestBody = CodeRevoke
 
 // PutPushPrefsJSONRequestBody defines body for PutPushPrefs for application/json ContentType.
 type PutPushPrefsJSONRequestBody = NotifPrefs
@@ -2210,6 +2222,9 @@ type ServerInterface interface {
 	// A connection or sign-in code for a member who has no live device or session
 	// (POST /admin/users/{id}/codes)
 	PostAdminUsersIdCodes(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Withdraw a code issued for a member that has not been used yet
+	// (POST /admin/users/{id}/codes/revoke)
+	PostAdminUsersIdCodesRevoke(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// What was done with a member's account — the same list the member sees
 	// (GET /admin/users/{id}/events)
 	GetAdminUsersIdEvents(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -2297,6 +2312,9 @@ type ServerInterface interface {
 	// Change your display name
 	// (PATCH /me)
 	PatchMe(w http.ResponseWriter, r *http.Request)
+	// Withdraw a code of yours that has not been used yet
+	// (POST /me/codes/revoke)
+	PostMeCodesRevoke(w http.ResponseWriter, r *http.Request)
 	// A one-time code to connect another phone of yours
 	// (POST /me/enrolment-codes)
 	PostMeEnrolmentCodes(w http.ResponseWriter, r *http.Request)
@@ -2405,6 +2423,12 @@ func (_ Unimplemented) PatchAdminUsersId(w http.ResponseWriter, r *http.Request,
 // A connection or sign-in code for a member who has no live device or session
 // (POST /admin/users/{id}/codes)
 func (_ Unimplemented) PostAdminUsersIdCodes(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Withdraw a code issued for a member that has not been used yet
+// (POST /admin/users/{id}/codes/revoke)
+func (_ Unimplemented) PostAdminUsersIdCodesRevoke(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2579,6 +2603,12 @@ func (_ Unimplemented) GetMe(w http.ResponseWriter, r *http.Request) {
 // Change your display name
 // (PATCH /me)
 func (_ Unimplemented) PatchMe(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Withdraw a code of yours that has not been used yet
+// (POST /me/codes/revoke)
+func (_ Unimplemented) PostMeCodesRevoke(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2969,6 +2999,40 @@ func (siw *ServerInterfaceWrapper) PostAdminUsersIdCodes(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.PostAdminUsersIdCodes(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAdminUsersIdCodesRevoke operation middleware
+func (siw *ServerInterfaceWrapper) PostAdminUsersIdCodesRevoke(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	ctx = context.WithValue(ctx, WebSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAdminUsersIdCodesRevoke(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3841,6 +3905,28 @@ func (siw *ServerInterfaceWrapper) PatchMe(w http.ResponseWriter, r *http.Reques
 	handler.ServeHTTP(w, r)
 }
 
+// PostMeCodesRevoke operation middleware
+func (siw *ServerInterfaceWrapper) PostMeCodesRevoke(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	ctx = context.WithValue(ctx, WebSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostMeCodesRevoke(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // PostMeEnrolmentCodes operation middleware
 func (siw *ServerInterfaceWrapper) PostMeEnrolmentCodes(w http.ResponseWriter, r *http.Request) {
 
@@ -4613,6 +4699,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/admin/users/{id}/codes", wrapper.PostAdminUsersIdCodes)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/users/{id}/codes/revoke", wrapper.PostAdminUsersIdCodesRevoke)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/users/{id}/events", wrapper.GetAdminUsersIdEvents)
 	})
 	r.Group(func(r chi.Router) {
@@ -4698,6 +4787,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/me", wrapper.PatchMe)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/me/codes/revoke", wrapper.PostMeCodesRevoke)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/me/enrolment-codes", wrapper.PostMeEnrolmentCodes)

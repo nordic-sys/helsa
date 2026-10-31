@@ -192,6 +192,29 @@ func (q *Queries) FailDeletionJob(ctx context.Context, arg FailDeletionJobParams
 	return err
 }
 
+const getCodeState = `-- name: GetCodeState :one
+SELECT used_at, revoked_at, expires_at FROM enrolment_codes
+WHERE code_hash = $1 AND user_id = $2
+`
+
+type GetCodeStateParams struct {
+	CodeHash []byte      `json:"code_hash"`
+	UserID   pgtype.UUID `json:"user_id"`
+}
+
+type GetCodeStateRow struct {
+	UsedAt    pgtype.Timestamptz `json:"used_at"`
+	RevokedAt pgtype.Timestamptz `json:"revoked_at"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+}
+
+func (q *Queries) GetCodeState(ctx context.Context, arg GetCodeStateParams) (GetCodeStateRow, error) {
+	row := q.db.QueryRow(ctx, getCodeState, arg.CodeHash, arg.UserID)
+	var i GetCodeStateRow
+	err := row.Scan(&i.UsedAt, &i.RevokedAt, &i.ExpiresAt)
+	return i, err
+}
+
 const getDeviceToken = `-- name: GetDeviceToken :one
 SELECT id, user_id, label, kind, expires_at, revoked_at, last_used_at
 FROM device_tokens WHERE id = $1
@@ -1043,6 +1066,27 @@ func (q *Queries) RedeemCode(ctx context.Context, arg RedeemCodeParams) (pgtype.
 	var user_id pgtype.UUID
 	err := row.Scan(&user_id)
 	return user_id, err
+}
+
+const revokeCode = `-- name: RevokeCode :one
+UPDATE enrolment_codes SET revoked_at = now()
+WHERE code_hash = $1 AND user_id = $2
+  AND used_at IS NULL AND revoked_at IS NULL AND expires_at > now()
+RETURNING purpose
+`
+
+type RevokeCodeParams struct {
+	CodeHash []byte      `json:"code_hash"`
+	UserID   pgtype.UUID `json:"user_id"`
+}
+
+// An unredeemed, unexpired code of one member, withdrawn (docs/36 §5.5, W2). Row
+// security keeps it to the caller's own codes, or any member's for an admin.
+func (q *Queries) RevokeCode(ctx context.Context, arg RevokeCodeParams) (string, error) {
+	row := q.db.QueryRow(ctx, revokeCode, arg.CodeHash, arg.UserID)
+	var purpose string
+	err := row.Scan(&purpose)
+	return purpose, err
 }
 
 const revokeDeviceToken = `-- name: RevokeDeviceToken :one

@@ -365,3 +365,16 @@
 .table-wrap--anchor {
   position: relative;
 }
+
+/* A withdrawn or expired code stays readable — the person may be comparing it with
+   the one on the other screen — but plainly no longer usable (W2). */
+.code-value--dead {
+  color: var(--text-faint);
+  text-decoration: line-through;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: var(--sp-4, 12px);
+}

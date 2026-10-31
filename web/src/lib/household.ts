@@ -129,6 +129,10 @@ const KINDS: Record<string, (d: Record<string, unknown>) => Variants> = {
     d.purpose === 'web'
       ? { you: 'log.webCode.you', named: 'log.webCode.named', by: 'log.webCode.by' }
       : { you: 'log.deviceCode.you', named: 'log.deviceCode.named', by: 'log.deviceCode.by' },
+  code_revoked: (d) =>
+    d.purpose === 'web'
+      ? { you: 'log.webCodeRevoked.you', named: 'log.webCodeRevoked.by', by: 'log.webCodeRevoked.by' }
+      : { you: 'log.deviceCodeRevoked.you', named: 'log.deviceCodeRevoked.by', by: 'log.deviceCodeRevoked.by' },
   // The person redeeming is always the owner, and the sentence needs nobody.
   code_redeemed: (d) => same(d.purpose === 'web' ? 'log.redeemed.web' : 'log.redeemed.device'),
   ha_publish: (d) =>

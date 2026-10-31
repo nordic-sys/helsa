@@ -128,6 +128,57 @@ func (s *Service) IssueCode(ctx context.Context, user uuid.UUID, purpose Purpose
 	return code, exp, nil
 }
 
+// CodeState is why a code could not be revoked.
+type CodeState string
+
+const (
+	CodeUsed    CodeState = "used"
+	CodeExpired CodeState = "expired"
+	CodeRevoked CodeState = "revoked"
+)
+
+// ErrNoSuchCode: not one of owner's codes (or not visible to the caller).
+var ErrNoSuchCode = errors.New("auth: no such code")
+
+// CodeNotRevocableError says what became of a code that can no longer be withdrawn.
+type CodeNotRevocableError struct{ State CodeState }
+
+func (e *CodeNotRevocableError) Error() string { return "auth: code is " + string(e.State) }
+
+// RevokeCode withdraws an unredeemed code of owner (docs/36 §5.5, W2) and returns
+// its purpose. ctx carries the caller (tenant), whose row-level policies the update
+// goes through. A code past use answers *CodeNotRevocableError; an unknown one
+// ErrNoSuchCode.
+func (s *Service) RevokeCode(ctx context.Context, owner uuid.UUID, code string) (Purpose, error) {
+	if s.state == nil {
+		return "", errors.New("auth: no database")
+	}
+	q := s.queries()
+	h := hashCode(code)
+	purpose, err := q.RevokeCode(ctx, db.RevokeCodeParams{CodeHash: h, UserID: pgconv.UUID(owner)})
+	if err == nil {
+		return Purpose(purpose), nil
+	}
+	if !errors.Is(err, pgx.ErrNoRows) {
+		return "", err
+	}
+	st, err := q.GetCodeState(ctx, db.GetCodeStateParams{CodeHash: h, UserID: pgconv.UUID(owner)})
+	if errors.Is(err, pgx.ErrNoRows) {
+		return "", ErrNoSuchCode
+	}
+	if err != nil {
+		return "", err
+	}
+	switch {
+	case st.UsedAt.Valid:
+		return "", &CodeNotRevocableError{CodeUsed}
+	case st.RevokedAt.Valid:
+		return "", &CodeNotRevocableError{CodeRevoked}
+	default:
+		return "", &CodeNotRevocableError{CodeExpired}
+	}
+}
+
 // Redeem consumes a code and issues its token: a device token for "device", a web
 // session for "web". It is one database statement (redeem_code, 00015): the code,
 // the token's row and the event are written together, or nothing is. The token

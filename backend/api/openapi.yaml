@@ -177,6 +177,26 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/CodeIssued' }
 
+  /me/codes/revoke:
+    post:
+      tags: [profile]
+      summary: Withdraw a code of yours that has not been used yet
+      description: >
+        The code itself is the identifier, in the body and never in the path, where it would land in
+        access logs. A code that was already used, has expired or was revoked answers 409, with
+        `detail` saying which: `used` (a device or browser is connected — revoke that instead),
+        `expired` or `revoked`.
+      security: [{ deviceToken: [] }, { webSession: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CodeRevoke' }
+      responses:
+        '204': { description: Revoked — the code can no longer be redeemed }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
   /me/events:
     get:
       tags: [profile]
@@ -397,6 +417,25 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CodeIssued' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /admin/users/{id}/codes/revoke:
+    post:
+      tags: [admin]
+      summary: Withdraw a code issued for a member that has not been used yet
+      description: As `POST /me/codes/revoke`, for a code of the member named in the path.
+      security: [{ deviceToken: [] }, { webSession: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CodeRevoke' }
+      responses:
+        '204': { description: Revoked }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
@@ -1441,6 +1480,12 @@ components:
       properties:
         purpose: { type: string, enum: [device, web] }
         ttl_minutes: { type: integer, minimum: 1, maximum: 1440, description: "device codes only; default 15. A web code always lives 10 minutes." }
+
+    CodeRevoke:
+      type: object
+      required: [code]
+      properties:
+        code: { type: string, description: "as it was shown: XXXX-XXXX, dashes and case do not matter" }
 
     CodeIssued:
       type: object

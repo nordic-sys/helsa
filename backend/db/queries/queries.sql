@@ -357,6 +357,18 @@ WHERE user_id = @user_id AND revoked_at IS NULL AND expires_at > now();
 INSERT INTO enrolment_codes (code_hash, user_id, purpose, created_by, expires_at)
 VALUES (@code_hash, @user_id, @purpose, sqlc.narg('created_by'), @expires_at);
 
+-- name: RevokeCode :one
+-- An unredeemed, unexpired code of one member, withdrawn (docs/36 §5.5, W2). Row
+-- security keeps it to the caller's own codes, or any member's for an admin.
+UPDATE enrolment_codes SET revoked_at = now()
+WHERE code_hash = @code_hash AND user_id = @user_id
+  AND used_at IS NULL AND revoked_at IS NULL AND expires_at > now()
+RETURNING purpose;
+
+-- name: GetCodeState :one
+SELECT used_at, revoked_at, expires_at FROM enrolment_codes
+WHERE code_hash = @code_hash AND user_id = @user_id;
+
 -- name: RedeemCode :one
 SELECT redeem_code(@code_hash, @purpose, @token_id, @label, @kind, @expires_at)::uuid AS user_id;
 

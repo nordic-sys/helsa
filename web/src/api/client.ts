@@ -245,6 +245,9 @@ export const api = {
   myDeviceCode: () => req<CodeIssued>('/me/enrolment-codes', { method: 'POST' }),
   /** A code for the caller's own next browser (10 minutes). */
   myLoginCode: () => req<CodeIssued>('/me/login-codes', { method: 'POST' }),
+  /** Withdraw an unused code of one's own (W2): 204, or 409 with `detail` =
+   * used | expired | revoked. The code goes in the body, never in a URL. */
+  revokeMyCode: (code: string) => req<void>('/me/codes/revoke', { method: 'POST', json: { code } }),
   myEvents: () => req<AccountEvent[]>('/me/events'),
 
   // --- Signing in and out -------------------------------------------------
@@ -280,6 +283,8 @@ export const api = {
    * who has one asks for their own, so an admin cannot quietly become them
    * (C2). Otherwise 409, which the page explains.
    */
+  revokeMemberCode: (id: string, code: string) =>
+    req<void>(`/admin/users/${encodeURIComponent(id)}/codes/revoke`, { method: 'POST', json: { code } }),
   memberCode: (id: string, purpose: CodePurpose) =>
     req<CodeIssued>(`/admin/users/${encodeURIComponent(id)}/codes`, {
       method: 'POST',

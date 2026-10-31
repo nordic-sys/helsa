@@ -253,7 +253,21 @@ function MemberDetail({ m }: { m: Member }) {
         </Card>
       </div>
 
-      {code && <CodeDialog code={code} forName={own ? undefined : name} serverEndpoint={me.device_endpoint} onClose={() => setCode(null)} />}
+      {code && (
+        <CodeDialog
+          code={code}
+          forName={own ? undefined : name}
+          serverEndpoint={me.device_endpoint}
+          onRevoke={async () => {
+            try {
+              await (own ? api.revokeMyCode(code.code) : api.revokeMemberCode(m.id, code.code))
+            } finally {
+              void refresh()
+            }
+          }}
+          onClose={() => setCode(null)}
+        />
+      )}
     </>
   )
 }

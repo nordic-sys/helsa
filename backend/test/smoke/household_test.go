@@ -26,6 +26,7 @@ var householdOps = []string{
 	"GET /admin/users", "POST /admin/users", "GET /admin/users/{id}", "PATCH /admin/users/{id}",
 	"DELETE /admin/users/{id}", "GET /admin/users/{id}/tokens", "DELETE /admin/users/{id}/tokens/{tokenId}",
 	"GET /admin/users/{id}/events", "POST /admin/users/{id}/codes",
+	"POST /me/codes/revoke", "POST /admin/users/{id}/codes/revoke",
 }
 
 // call is one request with full control over headers, for the cookie rules.
@@ -288,6 +289,48 @@ func TestHouseholdFlow(t *testing.T) {
 	if st := c.do(t, "GET", "/v1/me", second.AccessToken, nil, nil); st != 401 {
 		t.Errorf("the revoked iPad: %d, want 401", st)
 	}
+
+	// 6b. A code handed out and not used can be withdrawn (§5.5, W2): by its owner,
+	// or by an admin; not by another member. A used one answers "used".
+	used := code.Code // the iPad's, redeemed above
+	revoke := func(path, bearer, code string) (*http.Response, []byte) {
+		return c.send(t, call{method: "POST", path: path, bearer: bearer, body: api.CodeRevoke{Code: code}})
+	}
+	_, body = c.send(t, call{method: "POST", path: "/v1/me/enrolment-codes", bearer: phone})
+	must(t, json.Unmarshal(body, &code), "code to withdraw")
+	if resp, body := revoke("/v1/me/codes/revoke", bob.token, code.Code); resp.StatusCode != 404 {
+		t.Errorf("another member withdrawing her code through /me: %d, want 404 — %s", resp.StatusCode, body)
+	}
+	resp, body = revoke("/v1/me/codes/revoke", phone, strings.ToLower(strings.ReplaceAll(code.Code, "-", "")))
+	expect("POST /me/codes/revoke", resp, body, 204)
+	if resp, _ := c.send(t, call{method: "POST", path: "/v1/enroll", body: api.EnrollRequest{Code: code.Code, Label: "x"}}); resp.StatusCode != 401 {
+		t.Errorf("a withdrawn code redeemed: %d, want 401", resp.StatusCode)
+	}
+	for _, x := range []struct{ code, state string }{{code.Code, "revoked"}, {used, "used"}} {
+		if resp, body := revoke("/v1/me/codes/revoke", phone, x.code); resp.StatusCode != 409 || !strings.Contains(string(body), x.state) {
+			t.Errorf("withdrawing a %s code: %d %s, want 409 %s", x.state, resp.StatusCode, body, x.state)
+		}
+	}
+	_, body = c.send(t, call{method: "POST", path: "/v1/me/login-codes", bearer: phone})
+	must(t, json.Unmarshal(body, &code), "her web code")
+	resp, body = revoke(noriPath+"/codes/revoke", bob.token, code.Code)
+	expect("POST /admin/users/{id}/codes/revoke", resp, body, 204)
+	if resp, _ := c.send(t, call{method: "POST", path: "/v1/auth/web/login", listener: "web", origin: origin,
+		body: api.WebLoginRequest{Code: code.Code}}); resp.StatusCode != 401 {
+		t.Errorf("a web code the admin withdrew, redeemed: %d, want 401", resp.StatusCode)
+	}
+	var evs []api.AccountEvent
+	c.do(t, "GET", "/v1/me/events", phone, nil, &evs)
+	revoked := 0
+	for _, ev := range evs {
+		if ev.Kind == "code_revoked" {
+			revoked++
+		}
+	}
+	if revoked != 2 {
+		t.Errorf("her log shows %d withdrawn codes, want 2", revoked)
+	}
+	resetRedeemCounters(t, e)
 
 	// 7. The last admin stays (C3), and disabling is not revoking (A8).
 	bobPath := "/v1/admin/users/" + bob.userID.String()

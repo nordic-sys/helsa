@@ -11,9 +11,12 @@
 //     it with a phone, where it is refused with the one 401 that explains nothing.
 //
 // The code is never stored by the page: closing the dialog forgets it, and the
-// server holds only its hash.
+// server holds only its hash. While the dialog is open the code can be withdrawn
+// (§5.5, W2) — a code shown on the wrong screen, or handed to the wrong person,
+// need not be left to expire.
 
 import { useEffect, useRef, useState } from 'react'
+import { ApiError } from '../api/client'
 import type { CodeIssued } from '../api/types'
 import { useI18n } from '../i18n'
 import { deviceEndpoint, enrolUrl, mmss, secondsLeft } from '../lib/household'
@@ -23,6 +26,7 @@ export function CodeDialog({
   code,
   forName,
   serverEndpoint,
+  onRevoke,
   onClose,
 }: {
   code: CodeIssued
@@ -30,6 +34,8 @@ export function CodeDialog({
   forName?: string
   /** The phone's address as the server knows it (GET /v1/me device_endpoint). */
   serverEndpoint?: string
+  /** Withdraws the code on the server; a rejection with 409 carries what became of it. */
+  onRevoke?: () => Promise<void>
   onClose: () => void
 }) {
   const { t, locale } = useI18n()
@@ -39,6 +45,22 @@ export function CodeDialog({
   const device = code.purpose === 'device'
   const endpoint = deviceEndpoint(window.location, import.meta.env.VITE_HELSA_DEVICE_ENDPOINT, serverEndpoint)
   const until = new Date(code.expires_at).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' })
+  const [revoke, setRevoke] = useState<'idle' | 'busy' | 'done' | 'used' | 'failed'>('idle')
+  const live = left > 0 && revoke !== 'done'
+
+  const withdraw = async () => {
+    if (!onRevoke) return
+    setRevoke('busy')
+    try {
+      await onRevoke()
+      setRevoke('done')
+    } catch (e) {
+      const err = e as ApiError
+      if (err.status === 409 && err.detail === 'used') setRevoke('used')
+      else if (err.status === 409) setRevoke('done') // expired or already revoked: it cannot be used either way
+      else setRevoke('failed')
+    }
+  }
 
   useEffect(() => {
     closeRef.current?.focus()
@@ -76,13 +98,17 @@ export function CodeDialog({
         </div>
 
         <div className={device ? 'code-body code-body--qr' : 'code-body'}>
-          {device && left > 0 && <QrCode value={enrolUrl(endpoint, code.code)} label={t('code.qrLabel')} />}
+          {device && live && <QrCode value={enrolUrl(endpoint, code.code)} label={t('code.qrLabel')} />}
           <div className="code-text">
-            <div className="code-value" data-testid="code-value">
+            <div className={live ? 'code-value' : 'code-value code-value--dead'} data-testid="code-value">
               {code.code}
             </div>
             <p className="subtle" aria-live="polite" style={{ margin: 0 }}>
-              {left > 0 ? t('code.expires', { time: until, left: mmss(left) }) : t('code.expired')}
+              {revoke === 'done'
+                ? t('code.revoked')
+                : left > 0
+                  ? t('code.expires', { time: until, left: mmss(left) })
+                  : t('code.expired')}
             </p>
             <Copyable
               label={device ? t('code.device.address') : t('code.web.address')}
@@ -102,6 +128,23 @@ export function CodeDialog({
         <p className="subtle" style={{ marginBottom: 0 }}>
           {t('code.once')}
         </p>
+        {revoke === 'used' && (
+          <p className="form-error" role="alert">
+            {t('code.revokeUsed')}
+          </p>
+        )}
+        {revoke === 'failed' && (
+          <p className="form-error" role="alert">
+            {t('code.revokeFailed')}
+          </p>
+        )}
+        {onRevoke && live && revoke !== 'used' && (
+          <div className="modal-actions">
+            <button type="button" className="btn" disabled={revoke === 'busy'} onClick={() => void withdraw()}>
+              {t('code.revoke')}
+            </button>
+          </div>
+        )}
       </div>
     </div>
   )

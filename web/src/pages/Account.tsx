@@ -121,7 +121,20 @@ export default function Account() {
         </Card>
       </div>
 
-      {code && <CodeDialog code={code} serverEndpoint={session.me.device_endpoint} onClose={() => setCode(null)} />}
+      {code && (
+        <CodeDialog
+          code={code}
+          serverEndpoint={session.me.device_endpoint}
+          onRevoke={async () => {
+            try {
+              await api.revokeMyCode(code.code)
+            } finally {
+              void refresh()
+            }
+          }}
+          onClose={() => setCode(null)}
+        />
+      )}
     </>
   )
 }

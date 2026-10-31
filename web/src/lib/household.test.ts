@@ -91,6 +91,15 @@ describe('logLine', () => {
     expect(line(ev, false)).toMatchObject({ key: 'log.deviceCode.named', params: { actor: 'Nóri' } })
   })
 
+  it('words a withdrawn code by its kind (W2)', () => {
+    expect(line({ kind: 'code_revoked', at, actor: 'Nóri', actor_is_self: true, detail: { purpose: 'web' } })).toMatchObject({
+      key: 'log.webCodeRevoked.you',
+    })
+    expect(
+      line({ kind: 'code_revoked', at, actor: 'Bob', actor_is_self: false, detail: { purpose: 'device' } }),
+    ).toMatchObject({ key: 'log.deviceCodeRevoked.by', params: { actor: 'Bob' } })
+  })
+
   it('names somebody else who acted, and the operator when nobody is named', () => {
     expect(
       line({ kind: 'code_issued', at, actor: 'Bob', actor_is_self: false, detail: { purpose: 'web' } }),
