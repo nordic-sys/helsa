@@ -1964,6 +1964,10 @@ export const hu = {
 
     // --- Elsewhere -------------------------------------------------------------
     'ingest.redrive.memberNote': 'Újrapróbálni a szerver gazdája tudja, erről az oldalról.',
+    'ingest.noConsumer.member':
+      'Lassúságnak tűnik, de nem az: a szerver feldolgozó része most nem fut, és amíg el nem indul, a sor egyáltalán nem fogy. Szólj a szerver gazdájának. A telefonodon semmi nem vész el, a feltöltés megvárja.',
+    'ingest.apiOld.member':
+      'A szerver egy része régebbi, mint ez a weboldal, ezért az oldal nem tudja megmutatni a sort. Szólj a szerver gazdájának, hogy frissítse a szervert.',
     'settings.export.moved': 'Az export átkerült a {link} oldalra, a fiók törlése mellé.',
     'dashboard.empty.noPhone':
       'Még nincs csatlakoztatott telefonod. A {link} oldalon kérhetsz csatlakozási kódot — amint a telefon szinkronizál, itt megjelenik minden.',

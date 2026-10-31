@@ -182,6 +182,32 @@ describe('the dead-letter queue', () => {
     expect(within(alert).queryByRole('button')).not.toBeInTheDocument()
     expect(alert).toHaveTextContent("The server's owner can retry them, from this page.")
   })
+
+  // W8: a member cannot run commands on a server that is not theirs.
+  it('shows a member no commands and no queue names — but still the resync', async () => {
+    status.mockResolvedValue({ ...draining, dead_letter: { name: 'helsa.ingest.dlq', ready: 2 } })
+    show(MEMBER)
+    const alert = await screen.findByRole('alert')
+    expect(alert).not.toHaveTextContent(/docker compose/)
+    expect(alert).not.toHaveTextContent(/helsa\.ingest\.dlq/)
+    expect(alert).toHaveTextContent(/Full resync/)
+  })
+})
+
+describe('what a member is told instead of commands (W8)', () => {
+  it('no worker: whom to ask, and that nothing is lost', async () => {
+    status.mockResolvedValue({ ...draining, queue: { ...draining.queue!, consumers: 0 } })
+    show(MEMBER)
+    expect(await screen.findByText(/Tell the server's owner/)).toBeInTheDocument()
+    expect(screen.queryByText(/docker compose/)).not.toBeInTheDocument()
+  })
+
+  it('an older server: no update command', async () => {
+    status.mockRejectedValue(Object.assign(new Error('HTTP 404'), { status: 404 }))
+    show(MEMBER)
+    expect(await screen.findByText(/Ask the server's owner to update/)).toBeInTheDocument()
+    expect(screen.queryByText(/make prod-pull/)).not.toBeInTheDocument()
+  })
 })
 
 /**

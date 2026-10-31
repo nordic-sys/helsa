@@ -29,6 +29,8 @@
 // the same numbers, but only THEIR OWN set-aside parts listed (the server filters
 // `recent_failures`), and no retry button: a retry moves every member's stuck
 // parts, so it is an admin's act (authz.go answers 403 to anyone else anyway).
+// Nor the shell commands and queue names (W8): a member cannot run them on a
+// server that is not theirs, so they are told whom to ask instead.
 //
 // The page speaks to the person who owns the server, not to RabbitMQ: a batch is
 // a "part", the dead-letter queue is "set aside", a consumer is a "worker". The
@@ -73,8 +75,15 @@ function Code({ children }: { children: ReactNode }) {
 }
 
 /** The version-skew explanation — shared by the status read and the retry. */
-function ApiTooOld() {
+function ApiTooOld({ admin }: { admin: boolean }) {
   const { t } = useI18n()
+  if (!admin) {
+    return (
+      <Alert tone="warn" title={t('ingest.apiOld.title')}>
+        <p>{t('ingest.apiOld.member')}</p>
+      </Alert>
+    )
+  }
   return (
     <Alert tone="warn" title={t('ingest.apiOld.title')}>
       <p>{t('ingest.apiOld.body')}</p>
@@ -88,12 +97,13 @@ function Status({
   s,
   lastGood,
   redrive,
-  canRedrive,
+  admin,
 }: {
   s: IngestStatus
   lastGood?: string
   redrive: RedriveState
-  canRedrive: boolean
+  /** The server's admin: the retry, and the commands and names only they can use (W8). */
+  admin: boolean
 }) {
   const { t, tp, tx, locale } = useI18n()
   const f = useFormat()
@@ -136,12 +146,12 @@ function Status({
         <Alert tone="unknown" title={t('ingest.unreachable.title')}>
           <p>{t('ingest.unreachable.body')}</p>
           {lastGood && <p>{t('ingest.unreachable.lastGood', { time: clock(lastGood) })}</p>}
-          {s.broker_error && (
+          {s.broker_error && admin && (
             <p className="alert-tech">{t('ingest.unreachable.detail', { error: s.broker_error })}</p>
           )}
         </Alert>
       )}
-      {dlq != null && dlq > 0 && <DeadLetterAlert s={s} count={dlq} redrive={redrive} canRedrive={canRedrive} />}
+      {dlq != null && dlq > 0 && <DeadLetterAlert s={s} count={dlq} redrive={redrive} admin={admin} />}
       {/* ⚠️ Outside the alert, and always mounted: a retry that empties the
           dead-letter queue unmounts the alert, and must not take its own result
           and its announcement with it. */}
@@ -149,10 +159,12 @@ function Status({
       {p === 'noConsumer' && (
         <Alert tone="warn" title={t('ingest.noConsumer.title')}>
           <p>
-            {tx('ingest.noConsumer.body', {
-              ps: <code>docker compose ps</code>,
-              logs: <code>docker compose logs worker</code>,
-            })}
+            {admin
+              ? tx('ingest.noConsumer.body', {
+                  ps: <code>docker compose ps</code>,
+                  logs: <code>docker compose logs worker</code>,
+                })
+              : t('ingest.noConsumer.member')}
           </p>
         </Alert>
       )}
@@ -337,12 +349,13 @@ function DeadLetterAlert({
   s,
   count,
   redrive,
-  canRedrive,
+  admin,
 }: {
   s: IngestStatus
   count: number
   redrive: RedriveState
-  canRedrive: boolean
+  /** The server's admin: the retry, and the commands and names only they can use (W8). */
+  admin: boolean
 }) {
   const { t, tp, tx } = useI18n()
   const f = useFormat()
@@ -353,7 +366,7 @@ function DeadLetterAlert({
     <Alert tone="error" title={tp('ingest.dlq.title', count, { n: f.num(count) })}>
       <p>{t('ingest.dlq.body')}</p>
 
-      {canRedrive ? (
+      {admin ? (
         <RedriveControls count={count} redrive={redrive} />
       ) : (
         <p>{t('ingest.redrive.memberNote')}</p>
@@ -383,10 +396,14 @@ function DeadLetterAlert({
         </p>
       )}
 
-      <p className="alert-tech">
-        {tx('ingest.dlq.tech', { name: <code>{s.dead_letter?.name ?? ''}</code> })}
-      </p>
-      <Code>{LOG_COMMAND}</Code>
+      {admin && (
+        <>
+          <p className="alert-tech">
+            {tx('ingest.dlq.tech', { name: <code>{s.dead_letter?.name ?? ''}</code> })}
+          </p>
+          <Code>{LOG_COMMAND}</Code>
+        </>
+      )}
       <p className="alert-tech">{t('ingest.dlq.resync')}</p>
     </Alert>
   )
@@ -635,7 +652,7 @@ export default function Ingest() {
       ) : q.isError && isApiTooOld(q.error) ? (
         // ⚠️ A 404 here is version skew, not a broken link: the web image
         // landed before the backend image. Say which, and what to run.
-        <ApiTooOld />
+        <ApiTooOld admin={isAdmin} />
       ) : q.isError && !q.data ? (
         <ErrorState error={q.error} />
       ) : q.data ? (
@@ -649,7 +666,7 @@ export default function Ingest() {
               </Alert>
             </div>
           )}
-          <Status s={q.data} lastGood={lastGood.current} redrive={redrive} canRedrive={isAdmin} />
+          <Status s={q.data} lastGood={lastGood.current} redrive={redrive} admin={isAdmin} />
         </Fragment>
       ) : null}
     </>

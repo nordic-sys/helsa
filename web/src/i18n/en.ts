@@ -1965,6 +1965,10 @@ export const en: Dict = {
 
     // --- Elsewhere -------------------------------------------------------------
     'ingest.redrive.memberNote': "The server's owner can retry them, from this page.",
+    'ingest.noConsumer.member':
+      "This looks like slowness and is not: the server's processing part is not running, and until it starts the queue will not shrink at all. Tell the server's owner. Nothing on your phone is lost; the upload waits.",
+    'ingest.apiOld.member':
+      "Part of the server is older than this website, so the page cannot show the queue. Ask the server's owner to update the server.",
     'settings.export.moved': 'Export has moved to {link}, next to deleting the account.',
     'dashboard.empty.noPhone':
       'You have no phone connected yet. Ask for a connection code on {link} — once the phone syncs, everything shows up here.',
