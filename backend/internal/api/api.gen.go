@@ -1686,7 +1686,10 @@ type Member struct {
 	Handle       string             `json:"handle"`
 	Id           openapi_types.UUID `json:"id"`
 	LastUploadAt *time.Time         `json:"last_upload_at,omitempty"`
-	Role         MemberRole         `json:"role"`
+
+	// LegacyTokenUsedAt as on User
+	LegacyTokenUsedAt *time.Time `json:"legacy_token_used_at,omitempty"`
+	Role              MemberRole `json:"role"`
 }
 
 // MemberRole defines model for Member.Role.
@@ -1931,11 +1934,14 @@ type User struct {
 	HaPublish *bool `json:"ha_publish,omitempty"`
 
 	// Handle the short name, e.g. nori
-	Handle   *string             `json:"handle,omitempty"`
-	Id       *openapi_types.UUID `json:"id,omitempty"`
-	Role     *UserRole           `json:"role,omitempty"`
-	Settings *Settings           `json:"settings,omitempty"`
-	Token    *TokenInfo          `json:"token,omitempty"`
+	Handle *string             `json:"handle,omitempty"`
+	Id     *openapi_types.UUID `json:"id,omitempty"`
+
+	// LegacyTokenUsedAt When a token from before the household register (no `jti`, so not in the device list) was last accepted for this member, to the hour. Absent: none in use, or all of them revoked. See POST /me/legacy-tokens/revoke.
+	LegacyTokenUsedAt *time.Time `json:"legacy_token_used_at,omitempty"`
+	Role              *UserRole  `json:"role,omitempty"`
+	Settings          *Settings  `json:"settings,omitempty"`
+	Token             *TokenInfo `json:"token,omitempty"`
 }
 
 // UserRole defines model for User.Role.
@@ -2228,6 +2234,9 @@ type ServerInterface interface {
 	// What was done with a member's account — the same list the member sees
 	// (GET /admin/users/{id}/events)
 	GetAdminUsersIdEvents(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
+	// Revoke every token of a member from before the household register
+	// (POST /admin/users/{id}/legacy-tokens/revoke)
+	PostAdminUsersIdLegacyTokensRevoke(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// A member's devices and sessions
 	// (GET /admin/users/{id}/tokens)
 	GetAdminUsersIdTokens(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
@@ -2321,6 +2330,9 @@ type ServerInterface interface {
 	// What was done with your account, and by whom
 	// (GET /me/events)
 	GetMeEvents(w http.ResponseWriter, r *http.Request)
+	// Revoke every token of yours from before the household register
+	// (POST /me/legacy-tokens/revoke)
+	PostMeLegacyTokensRevoke(w http.ResponseWriter, r *http.Request)
 	// A one-time code to sign in to the web dashboard (10 minutes)
 	// (POST /me/login-codes)
 	PostMeLoginCodes(w http.ResponseWriter, r *http.Request)
@@ -2435,6 +2447,12 @@ func (_ Unimplemented) PostAdminUsersIdCodesRevoke(w http.ResponseWriter, r *htt
 // What was done with a member's account — the same list the member sees
 // (GET /admin/users/{id}/events)
 func (_ Unimplemented) GetAdminUsersIdEvents(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Revoke every token of a member from before the household register
+// (POST /admin/users/{id}/legacy-tokens/revoke)
+func (_ Unimplemented) PostAdminUsersIdLegacyTokensRevoke(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -2621,6 +2639,12 @@ func (_ Unimplemented) PostMeEnrolmentCodes(w http.ResponseWriter, r *http.Reque
 // What was done with your account, and by whom
 // (GET /me/events)
 func (_ Unimplemented) GetMeEvents(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Revoke every token of yours from before the household register
+// (POST /me/legacy-tokens/revoke)
+func (_ Unimplemented) PostMeLegacyTokensRevoke(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -3067,6 +3091,40 @@ func (siw *ServerInterfaceWrapper) GetAdminUsersIdEvents(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAdminUsersIdEvents(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PostAdminUsersIdLegacyTokensRevoke operation middleware
+func (siw *ServerInterfaceWrapper) PostAdminUsersIdLegacyTokensRevoke(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	ctx = context.WithValue(ctx, WebSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostAdminUsersIdLegacyTokensRevoke(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -3971,6 +4029,28 @@ func (siw *ServerInterfaceWrapper) GetMeEvents(w http.ResponseWriter, r *http.Re
 	handler.ServeHTTP(w, r)
 }
 
+// PostMeLegacyTokensRevoke operation middleware
+func (siw *ServerInterfaceWrapper) PostMeLegacyTokensRevoke(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, DeviceTokenScopes, []string{})
+
+	ctx = context.WithValue(ctx, WebSessionScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PostMeLegacyTokensRevoke(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // PostMeLoginCodes operation middleware
 func (siw *ServerInterfaceWrapper) PostMeLoginCodes(w http.ResponseWriter, r *http.Request) {
 
@@ -4705,6 +4785,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/admin/users/{id}/events", wrapper.GetAdminUsersIdEvents)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/admin/users/{id}/legacy-tokens/revoke", wrapper.PostAdminUsersIdLegacyTokensRevoke)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/admin/users/{id}/tokens", wrapper.GetAdminUsersIdTokens)
 	})
 	r.Group(func(r chi.Router) {
@@ -4796,6 +4879,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/events", wrapper.GetMeEvents)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/me/legacy-tokens/revoke", wrapper.PostMeLegacyTokensRevoke)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/me/login-codes", wrapper.PostMeLoginCodes)

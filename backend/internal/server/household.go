@@ -79,6 +79,10 @@ func (s *Server) userDTO(ctx context.Context, u db.User, p auth.Principal) (api.
 		HaPublish:    &u.HaPublish,
 		Capabilities: &api.Capabilities{Household: &household, CanDeleteSelf: &canDelete},
 	}
+	if u.LegacyTokenUsedAt.Valid {
+		t := u.LegacyTokenUsedAt.Time
+		out.LegacyTokenUsedAt = &t
+	}
 	if s.cfg.DeviceEndpoint != "" {
 		ep := s.cfg.DeviceEndpoint
 		out.DeviceEndpoint = &ep
@@ -161,6 +165,11 @@ func (s *Server) PostMeCodesRevoke(w http.ResponseWriter, r *http.Request) {
 	s.revokeCode(w, r, p, p.UserID)
 }
 
+func (s *Server) PostMeLegacyTokensRevoke(w http.ResponseWriter, r *http.Request) {
+	p, _ := auth.PrincipalFrom(r.Context())
+	s.revokeLegacyTokens(w, r, p, p.UserID)
+}
+
 func (s *Server) GetMeEvents(w http.ResponseWriter, r *http.Request) {
 	p, _ := auth.PrincipalFrom(r.Context())
 	s.writeEvents(w, r, p, p.UserID)
@@ -187,6 +196,10 @@ func memberDTO(m db.ListMembersRow) api.Member {
 	out := api.Member{
 		Id: openapi_types.UUID(pgconv.ToUUID(m.ID)), Handle: m.Handle, DisplayName: m.DisplayName,
 		Role: api.MemberRole(m.Role), Disabled: &disabled, Deleting: &deleting, CreatedAt: m.CreatedAt.Time, Devices: &n,
+	}
+	if m.LegacyTokenUsedAt.Valid {
+		t := m.LegacyTokenUsedAt.Time
+		out.LegacyTokenUsedAt = &t
 	}
 	if m.LastUploadAt.Valid {
 		t := m.LastUploadAt.Time
@@ -425,6 +438,14 @@ func (s *Server) PostAdminUsersIdCodesRevoke(w http.ResponseWriter, r *http.Requ
 	s.revokeCode(w, r, p, uuid.UUID(id))
 }
 
+func (s *Server) PostAdminUsersIdLegacyTokensRevoke(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+	p, _ := auth.PrincipalFrom(r.Context())
+	if !s.memberExists(w, r, uuid.UUID(id)) {
+		return
+	}
+	s.revokeLegacyTokens(w, r, p, uuid.UUID(id))
+}
+
 func (s *Server) memberExists(w http.ResponseWriter, r *http.Request, id uuid.UUID) bool {
 	if _, err := s.q.GetUser(r.Context(), pgconv.UUID(id)); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -503,6 +524,32 @@ func (s *Server) issueCode(w http.ResponseWriter, r *http.Request, p auth.Princi
 		return
 	}
 	writeJSON(w, http.StatusCreated, api.CodeIssued{Code: code, Purpose: api.CodeIssuedPurpose(purpose), ExpiresAt: exp})
+}
+
+// revokeLegacyTokens refuses every jti-less token of owner issued until now (W4).
+// Asked for with one of those tokens itself, it would cut off the very device that
+// asked — refused, so the person connects it again with a code first.
+func (s *Server) revokeLegacyTokens(w http.ResponseWriter, r *http.Request, p auth.Principal, owner uuid.UUID) {
+	if owner == p.UserID && p.TokenID == uuid.Nil {
+		problem(w, http.StatusConflict, "This device uses an old token itself",
+			"connect it again with a code first, then revoke the old tokens from the new connection")
+		return
+	}
+	err := s.tx(r.Context(), func(q *db.Queries) error {
+		if _, err := s.auth.WithQueries(q).RevokeLegacyTokens(r.Context(), owner); err != nil {
+			return err
+		}
+		return eventTx(r.Context(), q, owner, p.UserID, "legacy_tokens_revoked", nil)
+	})
+	if errors.Is(err, pgx.ErrNoRows) {
+		problem(w, http.StatusNotFound, "No such member", "")
+		return
+	}
+	if err != nil {
+		problem(w, http.StatusInternalServerError, "Revoking the old tokens failed", "")
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }
 
 // revokeCode withdraws one of owner's unredeemed codes. The caller holds the code,

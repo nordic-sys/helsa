@@ -25,6 +25,7 @@ import { api, type ApiError } from '../api/client'
 import type { CodeIssued, CodePurpose, Member, Role, TokenInfo } from '../api/types'
 import { AccountLog, ConfirmByHandle, TokenList } from '../components/Account'
 import { CodeDialog } from '../components/CodeDialog'
+import { LegacyTokens } from '../components/LegacyTokens'
 import { Alert, Card, ErrorState, Loading, PageHead } from '../components/ui'
 import { useI18n } from '../i18n'
 import { useFormat } from '../lib/format'
@@ -177,6 +178,14 @@ function MemberDetail({ m }: { m: Member }) {
           </Alert>
         )}
         {patchError && <p className="form-error">{patchError}</p>}
+        <LegacyTokens
+          usedAt={m.legacy_token_used_at}
+          name={own ? undefined : name}
+          onRevoke={async () => {
+            await (own ? api.revokeMyLegacyTokens() : api.revokeMemberLegacyTokens(m.id))
+            await refresh()
+          }}
+        />
 
         {confirm === 'disable' && (
           <div className="confirm confirm--danger" role="group" aria-label={t('member.disable')}>

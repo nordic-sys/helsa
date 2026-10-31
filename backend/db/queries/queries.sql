@@ -270,7 +270,25 @@ ON CONFLICT (user_id, id) DO UPDATE SET
 -- takes effect on the next request, not a minute later (docs/36 §9, C5).
 
 -- name: GetUserAuthState :one
-SELECT id, role, disabled_at FROM users WHERE id = @id;
+SELECT id, role, disabled_at, legacy_tokens_revoked_at FROM users WHERE id = @id;
+
+-- name: TouchLegacyToken :exec
+-- A jti-less token was accepted (W4). Hourly, like TouchDeviceToken.
+UPDATE users SET legacy_token_used_at = now()
+WHERE id = @id AND (legacy_token_used_at IS NULL OR legacy_token_used_at < now() - interval '1 hour');
+
+-- name: RevokeLegacyTokens :one
+-- Every jti-less token of the member issued until now stops working (W4). The
+-- "in use" mark goes too: a token that still works after this — none should —
+-- would set it again on its next request.
+UPDATE users SET legacy_tokens_revoked_at = now(), legacy_token_used_at = NULL
+WHERE id = @id
+RETURNING legacy_tokens_revoked_at;
+
+-- name: ClearLegacyTokenUse :exec
+-- After one jti-less token was revoked by its text (the CLI): if another is still
+-- in use, its next request sets the mark again.
+UPDATE users SET legacy_token_used_at = NULL WHERE id = @id;
 
 -- name: CountUsers :one
 SELECT count(*) FROM users;
@@ -343,6 +361,7 @@ WHERE u.role = 'admin' AND u.disabled_at IS NULL AND u.id <> @except_id::uuid
 -- Account metadata only — never anything read out of a member's data. The token
 -- count goes through device_tokens' admin policy; the last upload is users' own.
 SELECT u.id, u.handle, u.display_name, u.role, u.disabled_at, u.created_at, u.last_upload_at,
+       u.legacy_token_used_at,
        (SELECT count(*) FROM device_tokens t
          WHERE t.user_id = u.id AND t.revoked_at IS NULL AND t.expires_at > now()) AS live_tokens,
        EXISTS (SELECT 1 FROM deletion_jobs j WHERE j.user_id = u.id AND j.done_at IS NULL) AS deleting

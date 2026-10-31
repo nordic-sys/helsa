@@ -19,6 +19,7 @@
  *   GET /__lang?l=hu       (kept for older capture scripts; the web words observations itself now)
  *   GET /__fallback?on=1   add an observation whose rule no web build knows (the server-sentence fallback)
  *   GET /__notoday?on=1    nothing for today yet (the first-sync picture)
+ *   GET /__legacy?on=1     Nóri still uses a token from before the household (docs/36 W4)
  *   GET /__mode?m=dlq      the sync queue in another state: idle | noworker | dlq | down
  *   GET /__as?u=bob        who a request WITHOUT a cookie is (bob | nori | none, the default) —
  *                          for capture scripts that photograph a page without signing in first
@@ -29,6 +30,7 @@ import http from 'node:http'
 let mode = 'draining'
 let lang = 'en'
 let noToday = false
+let legacyNori = false
 let fallback = false
 const now = new Date()
 const iso = (d) => d.toISOString()
@@ -161,8 +163,9 @@ const events = {
 }
 const byId = (id) => Object.values(people).find((p) => p.id === id)
 const live = (id) => tokens[id].filter((t) => !t.revoked_at).length
-const member = (p) => ({ ...p, devices: live(p.id), last_upload_at: p.id === 'u-panni' ? undefined : p.id === 'u-bob' ? mins(4) : mins(120) })
-const meOf = (p) => ({ ...p, capabilities: { household: true, can_delete_self: p.role !== 'admin' }, settings: { time_zone: 'Europe/Budapest' } })
+const legacyOf = (p) => (legacyNori && p.id === 'u-nori' ? { legacy_token_used_at: mins(180) } : {})
+const member = (p) => ({ ...p, ...legacyOf(p), devices: live(p.id), last_upload_at: p.id === 'u-panni' ? undefined : p.id === 'u-bob' ? mins(4) : mins(120) })
+const meOf = (p) => ({ ...p, ...legacyOf(p), capabilities: { household: true, can_delete_self: p.role !== 'admin' }, settings: { time_zone: 'Europe/Budapest' } })
 let asDefault = null
 const code = (purpose) => ({ code: purpose === 'web' ? 'H3KD-9QWT' : 'K7QM-4XPA', purpose, expires_at: iso(new Date(Date.now() + (purpose === 'web' ? 10 : 15) * 60e3)) })
 const whoOf = (req) => { const m = /(?:^|;\s*)helsa_session=([a-z]+)/.exec(req.headers.cookie || ''); return people[m?.[1] ?? asDefault] }
@@ -189,6 +192,7 @@ function household(req, u, bodyText) {
   if (p === '/v1/me/enrolment-codes') return [201, code('device')]
   if (p === '/v1/me/login-codes') return [201, code('web')]
   // W2: a code ending in U answers "already used", so the dialog's 409 can be photographed.
+  if (p === '/v1/me/legacy-tokens/revoke') { if (me.id === 'u-nori') legacyNori = false; return [204] }
   if (p === '/v1/me/codes/revoke') return /U$/.test(body.code ?? '') ? [409, { title: 'The code can no longer be revoked', detail: 'used' }] : [204]
   let m
   if ((m = /^\/v1\/me\/tokens\/([^/]+)$/.exec(p))) { const t = tokens[me.id].find((x) => x.id === m[1]); if (!t) return [404, { title: 'No such device' }]; t.revoked_at = iso(new Date()); return [204] }
@@ -196,6 +200,7 @@ function household(req, u, bodyText) {
   if (me.role !== 'admin') return [403, { title: 'Forbidden' }]
   if (p === '/v1/admin/users' && req.method === 'GET') return [200, Object.values(people).map(member)]
   if (p === '/v1/admin/users' && req.method === 'POST') { const np = { id: `u-${body.handle}`, handle: body.handle, display_name: body.display_name, role: 'member', created_at: iso(new Date()), ha_publish: false }; people[body.handle] = np; tokens[np.id] = []; events[np.id] = [{ kind: 'member_added', at: iso(new Date()), actor: me.display_name }]; return [201, member(np)] }
+  if ((m = /^\/v1\/admin\/users\/([^/]+)\/legacy-tokens\/revoke$/.exec(p))) { if (m[1] === 'u-nori') legacyNori = false; return byId(m[1]) ? [204] : [404, { title: 'No such member' }] }
   if ((m = /^\/v1\/admin\/users\/([^/]+)\/codes\/revoke$/.exec(p))) return byId(m[1]) ? [204] : [404, { title: 'No such member' }]
   if ((m = /^\/v1\/admin\/users\/([^/]+)(?:\/(tokens|events|codes))?(?:\/([^/]+))?$/.exec(p))) {
     const t = byId(m[1]); if (!t) return [404, { title: 'No such member' }]
@@ -242,6 +247,7 @@ http.createServer(async (req, res) => {
   for await (const chunk of req) bodyText += chunk
   const h = household(req, u, bodyText)
   if (h) { const [status, out, headers = {}] = h; res.writeHead(status, { 'content-type': status < 300 ? 'application/json' : 'application/problem+json', ...headers }); res.end(out === undefined ? '' : JSON.stringify(out)); return }
+  if (u.pathname === '/__legacy') { legacyNori = u.searchParams.get('on') === '1'; res.end(String(legacyNori)); return }
   if (u.pathname === '/__notoday') { noToday = u.searchParams.get('on') === '1'; mode = noToday ? 'idle' : 'draining'; res.end(String(noToday)); return }
   if (u.pathname === '/__fallback') { fallback = u.searchParams.get('on') === '1'; res.end(String(fallback)); return }
   if (u.pathname === '/__lang') { lang = u.searchParams.get('l'); res.end(lang); return }

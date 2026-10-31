@@ -14,6 +14,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/golang-jwt/jwt/v5"
+
 	"github.com/nordic-sys/helsa/backend/internal/api"
 	"github.com/nordic-sys/helsa/backend/internal/auth"
 )
@@ -27,6 +29,7 @@ var householdOps = []string{
 	"DELETE /admin/users/{id}", "GET /admin/users/{id}/tokens", "DELETE /admin/users/{id}/tokens/{tokenId}",
 	"GET /admin/users/{id}/events", "POST /admin/users/{id}/codes",
 	"POST /me/codes/revoke", "POST /admin/users/{id}/codes/revoke",
+	"POST /me/legacy-tokens/revoke", "POST /admin/users/{id}/legacy-tokens/revoke",
 }
 
 // call is one request with full control over headers, for the cookie rules.
@@ -332,6 +335,42 @@ func TestHouseholdFlow(t *testing.T) {
 	}
 	resetRedeemCounters(t, e)
 
+	// 6c. A token from before the register (W4): it works and shows as "in use", it
+	// cannot revoke the old tokens itself, and one call refuses it — and only it.
+	legacy := legacyToken(t, e, nori.Id.String(), time.Now().Add(-48*time.Hour))
+	if st := c.do(t, "GET", "/v1/me", legacy, nil, nil); st != 200 {
+		t.Fatalf("an old token before any revoke: %d", st)
+	}
+	var seen api.Member
+	c.do(t, "GET", noriPath, bob.token, nil, &seen)
+	if seen.LegacyTokenUsedAt == nil {
+		t.Error("the admin's view does not show the old token in use")
+	}
+	resp, body = c.send(t, call{method: "POST", path: "/v1/me/legacy-tokens/revoke", bearer: legacy})
+	expect("POST /me/legacy-tokens/revoke", resp, body, 409)
+	resp, body = c.send(t, call{method: "POST", path: noriPath + "/legacy-tokens/revoke", bearer: bob.token})
+	expect("POST /admin/users/{id}/legacy-tokens/revoke", resp, body, 204)
+	if st := c.do(t, "GET", "/v1/me", legacy, nil, nil); st != 401 {
+		t.Errorf("the old token after the revoke: %d, want 401", st)
+	}
+	var after api.User
+	if st := c.do(t, "GET", "/v1/me", phone, nil, &after); st != 200 || after.LegacyTokenUsedAt != nil {
+		t.Errorf("her registered phone after the revoke: %d, mark %v — want 200 and no mark", st, after.LegacyTokenUsedAt)
+	}
+	if resp, body := c.send(t, call{method: "POST", path: "/v1/me/legacy-tokens/revoke", bearer: phone}); resp.StatusCode != 204 {
+		t.Errorf("revoking her old tokens from her registered phone: %d %s", resp.StatusCode, body)
+	}
+	c.do(t, "GET", "/v1/me/events", phone, nil, &evs)
+	n := 0
+	for _, ev := range evs {
+		if ev.Kind == "legacy_tokens_revoked" {
+			n++
+		}
+	}
+	if n != 2 {
+		t.Errorf("her log shows %d old-token revokes, want 2", n)
+	}
+
 	// 7. The last admin stays (C3), and disabling is not revoking (A8).
 	bobPath := "/v1/admin/users/" + bob.userID.String()
 	resp, body = c.send(t, call{method: "PATCH", path: bobPath, bearer: bob.token, body: map[string]any{"role": "member"}})
@@ -455,4 +494,14 @@ func TestSelfDeletionAndHeldBackAdminCodes(t *testing.T) {
 	if jobs != 1 {
 		t.Errorf("open deletion jobs: %d, want 1", jobs)
 	}
+}
+
+// legacyToken mints a token the way the server did before the register: no jti.
+func legacyToken(t *testing.T, e *env, user string, issued time.Time) string {
+	t.Helper()
+	tok, err := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.RegisteredClaims{
+		Subject: user, IssuedAt: jwt.NewNumericDate(issued), ExpiresAt: jwt.NewNumericDate(time.Now().Add(time.Hour)),
+	}).SignedString([]byte(e.cfg.JWTSecret))
+	must(t, err, "legacy token")
+	return tok
 }

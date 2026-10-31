@@ -91,6 +91,13 @@ describe('logLine', () => {
     expect(line(ev, false)).toMatchObject({ key: 'log.deviceCode.named', params: { actor: 'Nóri' } })
   })
 
+  it('words revoking the old sign-ins (W4)', () => {
+    expect(line({ kind: 'legacy_tokens_revoked', at, actor: 'Bob', actor_is_self: false })).toMatchObject({
+      key: 'log.legacyRevoked.by',
+      params: { actor: 'Bob' },
+    })
+  })
+
   it('words a withdrawn code by its kind (W2)', () => {
     expect(line({ kind: 'code_revoked', at, actor: 'Nóri', actor_is_self: true, detail: { purpose: 'web' } })).toMatchObject({
       key: 'log.webCodeRevoked.you',

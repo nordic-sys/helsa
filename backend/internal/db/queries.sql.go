@@ -27,6 +27,17 @@ func (q *Queries) AdvanceDeletionJob(ctx context.Context, arg AdvanceDeletionJob
 	return err
 }
 
+const clearLegacyTokenUse = `-- name: ClearLegacyTokenUse :exec
+UPDATE users SET legacy_token_used_at = NULL WHERE id = $1
+`
+
+// After one jti-less token was revoked by its text (the CLI): if another is still
+// in use, its next request sets the mark again.
+func (q *Queries) ClearLegacyTokenUse(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, clearLegacyTokenUse, id)
+	return err
+}
+
 const countLiveTokens = `-- name: CountLiveTokens :one
 SELECT count(*) FROM device_tokens
 WHERE user_id = $1 AND revoked_at IS NULL AND expires_at > now()
@@ -66,7 +77,7 @@ func (q *Queries) CountUsers(ctx context.Context) (int64, error) {
 const createMember = `-- name: CreateMember :one
 INSERT INTO users (handle, display_name, role)
 VALUES ($1, $2, $3)
-RETURNING id, handle, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at, ha_publish, last_upload_at
+RETURNING id, handle, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at, ha_publish, last_upload_at, legacy_token_used_at, legacy_tokens_revoked_at
 `
 
 type CreateMemberParams struct {
@@ -93,6 +104,8 @@ func (q *Queries) CreateMember(ctx context.Context, arg CreateMemberParams) (Use
 		&i.DisabledAt,
 		&i.HaPublish,
 		&i.LastUploadAt,
+		&i.LegacyTokenUsedAt,
+		&i.LegacyTokensRevokedAt,
 	)
 	return i, err
 }
@@ -304,7 +317,7 @@ func (q *Queries) GetSettings(ctx context.Context, id pgtype.UUID) (GetSettingsR
 }
 
 const getUser = `-- name: GetUser :one
-SELECT id, handle, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at, ha_publish, last_upload_at FROM users WHERE id = $1
+SELECT id, handle, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at, ha_publish, last_upload_at, legacy_token_used_at, legacy_tokens_revoked_at FROM users WHERE id = $1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
@@ -325,19 +338,22 @@ func (q *Queries) GetUser(ctx context.Context, id pgtype.UUID) (User, error) {
 		&i.DisabledAt,
 		&i.HaPublish,
 		&i.LastUploadAt,
+		&i.LegacyTokenUsedAt,
+		&i.LegacyTokensRevokedAt,
 	)
 	return i, err
 }
 
 const getUserAuthState = `-- name: GetUserAuthState :one
 
-SELECT id, role, disabled_at FROM users WHERE id = $1
+SELECT id, role, disabled_at, legacy_tokens_revoked_at FROM users WHERE id = $1
 `
 
 type GetUserAuthStateRow struct {
-	ID         pgtype.UUID        `json:"id"`
-	Role       string             `json:"role"`
-	DisabledAt pgtype.Timestamptz `json:"disabled_at"`
+	ID                    pgtype.UUID        `json:"id"`
+	Role                  string             `json:"role"`
+	DisabledAt            pgtype.Timestamptz `json:"disabled_at"`
+	LegacyTokensRevokedAt pgtype.Timestamptz `json:"legacy_tokens_revoked_at"`
 }
 
 // ── Who is asking (docs/36 §2.4) ────────────────────────────────────────────
@@ -346,13 +362,18 @@ type GetUserAuthStateRow struct {
 func (q *Queries) GetUserAuthState(ctx context.Context, id pgtype.UUID) (GetUserAuthStateRow, error) {
 	row := q.db.QueryRow(ctx, getUserAuthState, id)
 	var i GetUserAuthStateRow
-	err := row.Scan(&i.ID, &i.Role, &i.DisabledAt)
+	err := row.Scan(
+		&i.ID,
+		&i.Role,
+		&i.DisabledAt,
+		&i.LegacyTokensRevokedAt,
+	)
 	return i, err
 }
 
 const getUserByHandle = `-- name: GetUserByHandle :one
 
-SELECT id, handle, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at, ha_publish, last_upload_at FROM users WHERE handle = $1
+SELECT id, handle, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at, ha_publish, last_upload_at, legacy_token_used_at, legacy_tokens_revoked_at FROM users WHERE handle = $1
 `
 
 // ── The household (00015, 00016; docs/36 F1) ───────────────────────────────
@@ -374,6 +395,8 @@ func (q *Queries) GetUserByHandle(ctx context.Context, handle string) (User, err
 		&i.DisabledAt,
 		&i.HaPublish,
 		&i.LastUploadAt,
+		&i.LegacyTokenUsedAt,
+		&i.LegacyTokensRevokedAt,
 	)
 	return i, err
 }
@@ -795,6 +818,7 @@ func (q *Queries) ListGoals(ctx context.Context, userID pgtype.UUID) ([]Goal, er
 
 const listMembers = `-- name: ListMembers :many
 SELECT u.id, u.handle, u.display_name, u.role, u.disabled_at, u.created_at, u.last_upload_at,
+       u.legacy_token_used_at,
        (SELECT count(*) FROM device_tokens t
          WHERE t.user_id = u.id AND t.revoked_at IS NULL AND t.expires_at > now()) AS live_tokens,
        EXISTS (SELECT 1 FROM deletion_jobs j WHERE j.user_id = u.id AND j.done_at IS NULL) AS deleting
@@ -803,15 +827,16 @@ ORDER BY u.created_at, u.id
 `
 
 type ListMembersRow struct {
-	ID           pgtype.UUID        `json:"id"`
-	Handle       string             `json:"handle"`
-	DisplayName  *string            `json:"display_name"`
-	Role         string             `json:"role"`
-	DisabledAt   pgtype.Timestamptz `json:"disabled_at"`
-	CreatedAt    pgtype.Timestamptz `json:"created_at"`
-	LastUploadAt pgtype.Timestamptz `json:"last_upload_at"`
-	LiveTokens   int64              `json:"live_tokens"`
-	Deleting     bool               `json:"deleting"`
+	ID                pgtype.UUID        `json:"id"`
+	Handle            string             `json:"handle"`
+	DisplayName       *string            `json:"display_name"`
+	Role              string             `json:"role"`
+	DisabledAt        pgtype.Timestamptz `json:"disabled_at"`
+	CreatedAt         pgtype.Timestamptz `json:"created_at"`
+	LastUploadAt      pgtype.Timestamptz `json:"last_upload_at"`
+	LegacyTokenUsedAt pgtype.Timestamptz `json:"legacy_token_used_at"`
+	LiveTokens        int64              `json:"live_tokens"`
+	Deleting          bool               `json:"deleting"`
 }
 
 // Account metadata only — never anything read out of a member's data. The token
@@ -833,6 +858,7 @@ func (q *Queries) ListMembers(ctx context.Context) ([]ListMembersRow, error) {
 			&i.DisabledAt,
 			&i.CreatedAt,
 			&i.LastUploadAt,
+			&i.LegacyTokenUsedAt,
 			&i.LiveTokens,
 			&i.Deleting,
 		); err != nil {
@@ -1115,6 +1141,22 @@ func (q *Queries) RevokeDeviceToken(ctx context.Context, arg RevokeDeviceTokenPa
 	return i, err
 }
 
+const revokeLegacyTokens = `-- name: RevokeLegacyTokens :one
+UPDATE users SET legacy_tokens_revoked_at = now(), legacy_token_used_at = NULL
+WHERE id = $1
+RETURNING legacy_tokens_revoked_at
+`
+
+// Every jti-less token of the member issued until now stops working (W4). The
+// "in use" mark goes too: a token that still works after this — none should —
+// would set it again on its next request.
+func (q *Queries) RevokeLegacyTokens(ctx context.Context, id pgtype.UUID) (pgtype.Timestamptz, error) {
+	row := q.db.QueryRow(ctx, revokeLegacyTokens, id)
+	var legacy_tokens_revoked_at pgtype.Timestamptz
+	err := row.Scan(&legacy_tokens_revoked_at)
+	return legacy_tokens_revoked_at, err
+}
+
 const setHAPublish = `-- name: SetHAPublish :exec
 UPDATE users SET ha_publish = $1 WHERE id = $2
 `
@@ -1202,8 +1244,19 @@ func (q *Queries) TouchLastUpload(ctx context.Context, id pgtype.UUID) error {
 	return err
 }
 
+const touchLegacyToken = `-- name: TouchLegacyToken :exec
+UPDATE users SET legacy_token_used_at = now()
+WHERE id = $1 AND (legacy_token_used_at IS NULL OR legacy_token_used_at < now() - interval '1 hour')
+`
+
+// A jti-less token was accepted (W4). Hourly, like TouchDeviceToken.
+func (q *Queries) TouchLegacyToken(ctx context.Context, id pgtype.UUID) error {
+	_, err := q.db.Exec(ctx, touchLegacyToken, id)
+	return err
+}
+
 const updateDisplayName = `-- name: UpdateDisplayName :one
-UPDATE users SET display_name = $1 WHERE id = $2 RETURNING id, handle, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at, ha_publish, last_upload_at
+UPDATE users SET display_name = $1 WHERE id = $2 RETURNING id, handle, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at, ha_publish, last_upload_at, legacy_token_used_at, legacy_tokens_revoked_at
 `
 
 type UpdateDisplayNameParams struct {
@@ -1229,6 +1282,8 @@ func (q *Queries) UpdateDisplayName(ctx context.Context, arg UpdateDisplayNamePa
 		&i.DisabledAt,
 		&i.HaPublish,
 		&i.LastUploadAt,
+		&i.LegacyTokenUsedAt,
+		&i.LegacyTokensRevokedAt,
 	)
 	return i, err
 }
@@ -1575,7 +1630,7 @@ INSERT INTO users (handle, email, display_name)
 VALUES ($1, $2, $3)
 ON CONFLICT (handle) DO UPDATE
     SET email = COALESCE(EXCLUDED.email, users.email)
-RETURNING id, handle, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at, ha_publish, last_upload_at
+RETURNING id, handle, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at, ha_publish, last_upload_at, legacy_token_used_at, legacy_tokens_revoked_at
 `
 
 type UpsertUserByHandleParams struct {
@@ -1605,6 +1660,8 @@ func (q *Queries) UpsertUserByHandle(ctx context.Context, arg UpsertUserByHandle
 		&i.DisabledAt,
 		&i.HaPublish,
 		&i.LastUploadAt,
+		&i.LegacyTokenUsedAt,
+		&i.LegacyTokensRevokedAt,
 	)
 	return i, err
 }

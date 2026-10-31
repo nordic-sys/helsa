@@ -1825,6 +1825,22 @@ export const en: Dict = {
     'code.once': 'The code works once, and is not shown again once you close this.',
     'code.failed': 'The code could not be issued. Try again.',
     'code.revoke': 'Revoke the code',
+    'legacy.title': 'An old sign-in of yours is still in use',
+    'legacy.titleFor': '{name} still uses an old sign-in',
+    'legacy.body':
+      'A device last used it {when}. It dates from before the household, so it is not in the list of devices and cannot be revoked on its own.',
+    'legacy.how':
+      'First connect that device again with a code (on the phone: Your own server ▸ Sending ▸ Join with a QR code), then revoke the old sign-ins.',
+    'legacy.howFor': 'First {name} connects their device again with a code, then revoke their old sign-ins.',
+    'legacy.revoke': 'Revoke old sign-ins',
+    'legacy.ask':
+      'Every old sign-in stops working at once. A device still using one cannot send anything until you connect it again with a code. No data is lost.',
+    'legacy.confirm': 'Revoke',
+    'legacy.selfRefused':
+      'You are using an old sign-in on this very device, so this would lock it out. Connect it again with a code, and revoke from there.',
+    'legacy.failed': 'Could not revoke. Try again.',
+    'household.legacy': 'old sign-in',
+    'household.legacyHint': 'Also uses an old sign-in from before the household — revocable on the details page.',
     'code.revoked': 'Revoked — nobody can connect with this code any more.',
     'code.revokeUsed':
       'This code has already been used, so it cannot be revoked. If the device it connected is not yours, revoke that device in the list of devices.',
@@ -1896,6 +1912,8 @@ export const en: Dict = {
     'log.webCode.you': 'You asked for a sign-in code for the web dashboard.',
     'log.webCode.named': '{actor} asked for a sign-in code for the web dashboard.',
     'log.webCode.by': '{actor} issued a sign-in code for the web dashboard.',
+    'log.legacyRevoked.you': 'You revoked your old sign-ins from before the household.',
+    'log.legacyRevoked.by': '{actor} revoked the old sign-ins from before the household.',
     'log.deviceCodeRevoked.you': 'You revoked an unused connection code.',
     'log.deviceCodeRevoked.by': '{actor} revoked an unused connection code.',
     'log.webCodeRevoked.you': 'You revoked an unused sign-in code.',

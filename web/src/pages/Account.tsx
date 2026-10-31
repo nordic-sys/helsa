@@ -17,6 +17,7 @@ import { api, type ApiError } from '../api/client'
 import type { CodeIssued, TokenInfo } from '../api/types'
 import { AccountLog, ConfirmByHandle, TokenList } from '../components/Account'
 import { CodeDialog } from '../components/CodeDialog'
+import { LegacyTokens } from '../components/LegacyTokens'
 import { ExportCard } from '../components/ExportCard'
 import { Card, ErrorState, PageHead } from '../components/ui'
 import { useI18n } from '../i18n'
@@ -62,6 +63,14 @@ export default function Account() {
       />
 
       <div className="sections">
+        <LegacyTokens
+          usedAt={me.legacy_token_used_at}
+          onRevoke={async () => {
+            await api.revokeMyLegacyTokens()
+            session.setMe({ ...me, legacy_token_used_at: undefined })
+            await refresh()
+          }}
+        />
         <Card title={t('account.devices.title')}>
           {tokens.isError ? (
             <ErrorState error={tokens.error} />

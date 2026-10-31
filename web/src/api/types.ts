@@ -635,6 +635,8 @@ export type User = {
   device_endpoint?: string
   settings?: Settings
   created_at?: string
+  /** When a token from before the household register was last accepted (W4); absent = none in use. */
+  legacy_token_used_at?: string
 }
 
 export type MePatch = { display_name?: string; ha_publish?: boolean }
@@ -673,6 +675,8 @@ export type Member = {
   /** Live tokens: devices and browser sessions together. */
   devices?: number
   last_upload_at?: string
+  /** As on User (W4). */
+  legacy_token_used_at?: string
 }
 
 export type MemberCreate = { handle: string; display_name?: string; role?: Role }

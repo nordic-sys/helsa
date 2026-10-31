@@ -63,6 +63,8 @@ type stateStore interface {
 	GetUserAuthState(ctx context.Context, id pgtypeUUID) (db.GetUserAuthStateRow, error)
 	GetDeviceToken(ctx context.Context, id pgtypeUUID) (db.GetDeviceTokenRow, error)
 	TouchDeviceToken(ctx context.Context, id pgtypeUUID) error
+	TouchLegacyToken(ctx context.Context, id pgtypeUUID) error
+	ClearLegacyTokenUse(ctx context.Context, id pgtypeUUID) error
 	InsertDeviceToken(ctx context.Context, arg db.InsertDeviceTokenParams) error
 	RevokeDeviceToken(ctx context.Context, arg db.RevokeDeviceTokenParams) (db.RevokeDeviceTokenRow, error)
 }
@@ -244,7 +246,9 @@ func (s *Service) parse(token string) (accessClaims, uuid.UUID, uuid.UUID, error
 //  2. for a token with a `jti`: its device_tokens row must exist, belong to the
 //     same user, be unrevoked and unexpired;
 //  3. for EVERY token, old and new: the user must still exist and not be disabled,
-//     and the role is read here, from the row — it is never in the token.
+//     and the role is read here, from the row — it is never in the token;
+//  4. for a token WITHOUT a `jti`: it must be newer than the member's "revoke all
+//     old tokens" instant (W4), read from the same row as 3.
 //
 // ⚠️ There is no cache in front of 2 and 3. The plan had a 60-second Redis cache
 // (docs/36 §2.4); the review threw it out (§9, C5): it would keep a demoted admin an
@@ -316,17 +320,40 @@ func (s *Service) VerifyAccess(ctx context.Context, token string) (Principal, er
 	if state.DisabledAt.Valid {
 		return Principal{}, ErrDisabled
 	}
+	if jti == uuid.Nil && state.LegacyTokensRevokedAt.Valid {
+		// A token without its issue time cannot be shown to be newer: refused.
+		if claims.IssuedAt == nil || !claims.IssuedAt.Time.After(state.LegacyTokensRevokedAt.Time) {
+			return Principal{}, ErrRevoked
+		}
+	}
 	p.Role = Role(state.Role)
 	if !p.Role.valid() {
 		return Principal{}, fmt.Errorf("user %s has an unknown role %q", userID, state.Role)
 	}
 
+	// "Last used" is for display only; a failure to write it must not fail the
+	// request, and the hourly condition lives in the UPDATE itself.
 	if p.TokenID != uuid.Nil {
-		// "Last used" is for display only; a failure to write it must not fail the
-		// request, and the hourly condition lives in the UPDATE itself.
 		_ = s.state.TouchDeviceToken(ctx, pgconv.UUID(p.TokenID))
+	} else {
+		_ = s.state.TouchLegacyToken(ctx, pgconv.UUID(userID))
 	}
 	return p, nil
+}
+
+// RevokeLegacyTokens refuses, from now on, every token of user that was issued
+// without a `jti` (before the register) — all of them, without knowing any (W4).
+// ctx carries the caller (tenant); users has no row policy, the caller's right is
+// checked by the handler.
+func (s *Service) RevokeLegacyTokens(ctx context.Context, user uuid.UUID) (time.Time, error) {
+	if s.state == nil {
+		return time.Time{}, errors.New("auth: no database")
+	}
+	at, err := s.queries().RevokeLegacyTokens(ctx, pgconv.UUID(user))
+	if err != nil {
+		return time.Time{}, err
+	}
+	return at.Time, nil
 }
 
 // Revoke takes one token back and reports when it would have expired.
@@ -371,6 +398,11 @@ func (s *Service) Revoke(ctx context.Context, token string) (time.Time, error) {
 	}
 	if err := s.deny.Set(ctx, revokedKey(token), "1", ttl).Err(); err != nil {
 		return time.Time{}, fmt.Errorf("deny-list write: %w", err)
+	}
+	// The "old token in use" mark (W4): if another one is still in use, its next
+	// request sets it again. Display only, so a failure does not fail the revoke.
+	if s.state != nil {
+		_ = s.state.ClearLegacyTokenUse(tenant.With(ctx, userID), pgconv.UUID(userID))
 	}
 	return expiry, nil
 }

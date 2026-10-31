@@ -77,6 +77,11 @@ export default function Household() {
                       ) : (
                         m.disabled && <span className="chip chip--warn">{t('household.disabled')}</span>
                       )}
+                      {m.legacy_token_used_at && !m.deleting && (
+                        <span className="chip chip--warn" title={t('household.legacyHint')}>
+                          ⚠ {t('household.legacy')}
+                        </span>
+                      )}
                     </td>
                     <td>{m.role === 'admin' ? t('role.admin') : t('role.member')}</td>
                     <td className="num">{f.num(m.devices ?? 0)}</td>

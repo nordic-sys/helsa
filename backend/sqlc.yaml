@@ -15,6 +15,7 @@ sql:
       - "db/migrations/00013_device_tokens.sql"
       - "db/migrations/00015_household.sql"
       - "db/migrations/00016_household_ops.sql"
+      - "db/migrations/00018_legacy_tokens.sql"
     queries: "db/queries"
     gen:
       go:

@@ -248,6 +248,9 @@ export const api = {
   /** Withdraw an unused code of one's own (W2): 204, or 409 with `detail` =
    * used | expired | revoked. The code goes in the body, never in a URL. */
   revokeMyCode: (code: string) => req<void>('/me/codes/revoke', { method: 'POST', json: { code } }),
+  /** Every token of one's own from before the register stops working (W4). 409
+   * when asked for WITH such a token: it would cut off the asking device. */
+  revokeMyLegacyTokens: () => req<void>('/me/legacy-tokens/revoke', { method: 'POST' }),
   myEvents: () => req<AccountEvent[]>('/me/events'),
 
   // --- Signing in and out -------------------------------------------------
@@ -283,6 +286,8 @@ export const api = {
    * who has one asks for their own, so an admin cannot quietly become them
    * (C2). Otherwise 409, which the page explains.
    */
+  revokeMemberLegacyTokens: (id: string) =>
+    req<void>(`/admin/users/${encodeURIComponent(id)}/legacy-tokens/revoke`, { method: 'POST' }),
   revokeMemberCode: (id: string, code: string) =>
     req<void>(`/admin/users/${encodeURIComponent(id)}/codes/revoke`, { method: 'POST', json: { code } }),
   memberCode: (id: string, purpose: CodePurpose) =>

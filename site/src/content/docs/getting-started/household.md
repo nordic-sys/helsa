@@ -108,6 +108,16 @@ Each member decides for themselves whether their daily numbers go to Home Assist
 account*), off by default — everything on the broker can be seen by anyone in the house with
 access to Home Assistant. See [Home Assistant](/integrations/home-assistant/#several-people).
 
+## Tokens from before the household
+
+A token issued before this version (`make prod-token`, until 2026-11) has no entry in the device
+register: it keeps working, but it is in no list. While one is in use, *My account* — and the
+member's row under *Household* — says so, with when it was last used. **Connect that device
+again with a code first**, then *Revoke old sign-ins*: every such token of that person issued
+until that moment is refused from the next request, without anyone having to know its text.
+The call is refused when made with one of those old tokens itself, because it would lock out the
+very device asking.
+
 ## If a phone is lost or compromised
 
 Revoke its token (*My account*, or the admin under *Household*) — the token is refused from the

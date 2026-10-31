@@ -20,10 +20,12 @@ import (
 // fakeState is the users table and the token register, in memory, with a switch
 // for breaking.
 type fakeState struct {
-	users   map[uuid.UUID]db.GetUserAuthStateRow
-	tokens  map[uuid.UUID]db.GetDeviceTokenRow
-	touched int
-	broken  bool
+	users         map[uuid.UUID]db.GetUserAuthStateRow
+	tokens        map[uuid.UUID]db.GetDeviceTokenRow
+	touched       int
+	legacyTouched int
+	legacyCleared int
+	broken        bool
 }
 
 func newFakeState() *fakeState {
@@ -60,6 +62,16 @@ func (f *fakeState) GetDeviceToken(_ context.Context, id pgtype.UUID) (db.GetDev
 
 func (f *fakeState) TouchDeviceToken(context.Context, pgtype.UUID) error {
 	f.touched++
+	return nil
+}
+
+func (f *fakeState) TouchLegacyToken(context.Context, pgtype.UUID) error {
+	f.legacyTouched++
+	return nil
+}
+
+func (f *fakeState) ClearLegacyTokenUse(context.Context, pgtype.UUID) error {
+	f.legacyCleared++
 	return nil
 }
 

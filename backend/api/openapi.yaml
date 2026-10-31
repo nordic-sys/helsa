@@ -197,6 +197,19 @@ paths:
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
 
+  /me/legacy-tokens/revoke:
+    post:
+      tags: [profile]
+      summary: Revoke every token of yours from before the household register
+      description: >
+        Those tokens carry no `jti`, so they are in no list and cannot be revoked one by one without
+        their text. This refuses all of them issued until now — connect the device again with a code
+        first. Called with such a token itself, it answers 409: it would cut off the caller.
+      security: [{ deviceToken: [] }, { webSession: [] }]
+      responses:
+        '204': { description: Revoked }
+        '409': { $ref: '#/components/responses/Problem' }
+
   /me/events:
     get:
       tags: [profile]
@@ -417,6 +430,20 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CodeIssued' }
+        '403': { $ref: '#/components/responses/Problem' }
+        '404': { $ref: '#/components/responses/Problem' }
+        '409': { $ref: '#/components/responses/Problem' }
+
+  /admin/users/{id}/legacy-tokens/revoke:
+    post:
+      tags: [admin]
+      summary: Revoke every token of a member from before the household register
+      description: As `POST /me/legacy-tokens/revoke`, for the member named in the path.
+      security: [{ deviceToken: [] }, { webSession: [] }]
+      parameters:
+        - { name: id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '204': { description: Revoked }
         '403': { $ref: '#/components/responses/Problem' }
         '404': { $ref: '#/components/responses/Problem' }
         '409': { $ref: '#/components/responses/Problem' }
@@ -1433,6 +1460,13 @@ components:
             operator has not set it, and the dashboard then guesses.
         settings: { $ref: '#/components/schemas/Settings' }
         created_at: { type: string, format: date-time }
+        legacy_token_used_at:
+          type: string
+          format: date-time
+          description: >
+            When a token from before the household register (no `jti`, so not in the device
+            list) was last accepted for this member, to the hour. Absent: none in use, or all of
+            them revoked. See POST /me/legacy-tokens/revoke.
 
     Capabilities:
       type: object
@@ -1545,6 +1579,7 @@ components:
         created_at: { type: string, format: date-time }
         devices: { type: integer, description: "live tokens (devices and browser sessions)" }
         last_upload_at: { type: string, format: date-time }
+        legacy_token_used_at: { type: string, format: date-time, description: "as on User" }
 
     MemberCreate:
       type: object

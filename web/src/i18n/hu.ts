@@ -1825,6 +1825,23 @@ export const hu = {
     'code.once': 'A kód egyszer használható, és ha bezárod ezt az ablakot, többé nem jelenik meg.',
     'code.failed': 'A kódot nem sikerült kiadni. Próbáld újra.',
     'code.revoke': 'Kód visszavonása',
+    'legacy.title': 'Egy régi belépésed is használatban van',
+    'legacy.titleFor': '{name} egy régi belépést is használ',
+    'legacy.body':
+      'Utoljára {when} használta egy eszköz. Ez még a háztartás előtti időkből való, ezért nem látszik az eszközök között, és egyenként nem vonható vissza.',
+    'legacy.how':
+      'Előbb csatlakoztasd újra azt az eszközt kóddal (telefonon: Saját szerver ▸ Küldés ▸ Csatlakozás QR-kóddal), aztán vond vissza a régi belépéseket.',
+    'legacy.howFor':
+      'Előbb {name} csatlakoztassa újra az eszközét kóddal, aztán vond vissza a régi belépéseit.',
+    'legacy.revoke': 'Régi belépések visszavonása',
+    'legacy.ask':
+      'Minden régi belépés azonnal megszűnik. Az az eszköz, amelyik még ilyet használ, attól kezdve semmit nem tud küldeni, amíg kóddal újra nem csatlakoztatod. Az adatokból semmi nem vész el.',
+    'legacy.confirm': 'Visszavonom',
+    'legacy.selfRefused':
+      'Ezt az eszközt magát is régi belépéssel használod, így kizárnád vele. Csatlakoztasd újra kóddal, és onnan vond vissza.',
+    'legacy.failed': 'Nem sikerült visszavonni. Próbáld újra.',
+    'household.legacy': 'régi belépés',
+    'household.legacyHint': 'Régi, a háztartás előtti belépést is használ — a részleteknél visszavonható.',
     'code.revoked': 'Visszavontad — ezzel a kóddal már senki nem tud csatlakozni.',
     'code.revokeUsed':
       'Ezt a kódot már beváltották, így nem vonható vissza. Ha nem a te eszközöd csatlakozott vele, vond vissza az eszközt az eszközök listájában.',
@@ -1895,6 +1912,8 @@ export const hu = {
     'log.webCode.you': 'Belépőkódot kértél a webes felülethez.',
     'log.webCode.named': '{actor} belépőkódot kért a webes felülethez.',
     'log.webCode.by': '{actor} belépőkódot adott ki a webes felülethez.',
+    'log.legacyRevoked.you': 'Visszavontad a háztartás előtti régi belépéseidet.',
+    'log.legacyRevoked.by': '{actor} visszavonta a háztartás előtti régi belépéseket.',
     'log.deviceCodeRevoked.you': 'Visszavontál egy fel nem használt csatlakozási kódot.',
     'log.deviceCodeRevoked.by': '{actor} visszavont egy fel nem használt csatlakozási kódot.',
     'log.webCodeRevoked.you': 'Visszavontál egy fel nem használt belépőkódot.',
