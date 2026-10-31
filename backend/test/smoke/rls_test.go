@@ -31,9 +31,19 @@ func TestTheDatabaseKeepsMembersApartWithoutTheApplication(t *testing.T) {
 	waitForSteps(t, e, a)
 	waitForSteps(t, e, b)
 
+	// sync_state has no route that writes it (the phone's anchors live on the phone,
+	// docs/ADR-0004), so its rows are put in from outside the API; phone_settings
+	// came in through PUT /settings above (S12).
+	for _, p := range []*person{a, b} {
+		_, err := e.store.DB.Exec(context.Background(),
+			`INSERT INTO sync_state (user_id, data_type, anchor) VALUES ($1, 'stepCount', $2)`, p.userID, p.sub+"-anchor")
+		must(t, err, "sync_state for "+p.name)
+	}
+
 	pool := e.api.DB
 	rels := []string{"my_samples", "workouts", "workout_route_points", "sleep_segments", "activity_summary",
-		"goals", "devices", "push_tokens", "achievements", "journal_entries", "device_tokens"}
+		"goals", "devices", "push_tokens", "achievements", "journal_entries", "device_tokens",
+		"phone_settings", "sync_state"}
 
 	count := func(ctx context.Context, rel string, other uuid.UUID) (mine, foreign int) {
 		t.Helper()
@@ -80,7 +90,7 @@ func TestTheDatabaseKeepsMembersApartWithoutTheApplication(t *testing.T) {
 	// admin's own rows (Codex S12).
 	setRole(t, e, a, auth.RoleAdmin)
 	adminCtx := tenant.With(context.Background(), a.userID)
-	for _, rel := range []string{"my_samples", "workouts", "workout_route_points", "sleep_segments", "activity_summary", "goals", "devices", "push_tokens", "achievements", "journal_entries"} {
+	for _, rel := range []string{"my_samples", "workouts", "workout_route_points", "sleep_segments", "activity_summary", "goals", "devices", "push_tokens", "achievements", "journal_entries", "phone_settings", "sync_state"} {
 		if _, foreign := count(adminCtx, rel, a.userID); foreign != 0 {
 			t.Errorf("%s as an ADMIN, unfiltered: %d rows of another member's health data", rel, foreign)
 		}
@@ -116,6 +126,28 @@ func TestTheDatabaseKeepsMembersApartWithoutTheApplication(t *testing.T) {
 	var pg *pgconn.PgError
 	if !errors.As(err, &pg) || pg.Code != "42501" {
 		t.Errorf("an insert into another member's goals: want a policy violation, got %v", err)
+	}
+
+	// The same for the two tables that had only a policy and no behaviour test (S12):
+	// an update of the other's row touches nothing, an insert as the other is refused.
+	aCtx := tenant.With(context.Background(), a.userID)
+	for _, q := range []string{
+		`UPDATE phone_settings SET hydration_goal_ml = 4321 WHERE user_id = $1`,
+		`UPDATE sync_state SET anchor = 'stolen' WHERE user_id = $1`,
+	} {
+		tag, err := pool.Exec(aCtx, q, b.userID)
+		if err != nil || tag.RowsAffected() != 0 {
+			t.Errorf("%q as a on b's row: %d rows (%v), want 0", q, tag.RowsAffected(), err)
+		}
+	}
+	_, err = pool.Exec(aCtx, `INSERT INTO sync_state (user_id, data_type, anchor) VALUES ($1, 'heartRate', 'x')`, b.userID)
+	if !errors.As(err, &pg) || pg.Code != "42501" {
+		t.Errorf("an insert into another member's sync_state: want a policy violation, got %v", err)
+	}
+	var anchor string
+	must(t, e.store.DB.QueryRow(context.Background(), `SELECT anchor FROM sync_state WHERE user_id = $1 AND data_type = 'stepCount'`, b.userID).Scan(&anchor), "b's anchor")
+	if anchor != b.sub+"-anchor" {
+		t.Errorf("b's sync_state anchor is %q after a's update", anchor)
 	}
 }
 

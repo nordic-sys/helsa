@@ -65,6 +65,7 @@ func (p *person) markers() []string {
 	m := []string{
 		p.sub, p.userID.String(), p.tz,
 		fmt.Sprint(p.steps), fmt.Sprint(p.hr), fmt.Sprint(p.energy), fmt.Sprint(p.goal), fmt.Sprint(p.lat),
+		fmt.Sprint(p.milestone()), p.route(),
 	}
 	for _, id := range []uuid.UUID{p.device, p.workout, p.batch} {
 		if id != uuid.Nil {
@@ -86,6 +87,12 @@ func addPerson(t *testing.T, e *env, name, tz string, steps, hr, energy, goal fl
 		steps: steps, hr: hr, energy: energy, goal: goal, lat: lat}
 }
 
+// The phone's own settings (phone_settings, docs/35): a challenge milestone and a
+// journey that are this person's alone, so the settings and challenge reads have
+// something of the caller's to show, and the other person's to look for (S12).
+func (p *person) milestone() int { return int(p.steps) + 7 }
+func (p *person) route() string  { return p.sub + "-route" }
+
 // upload puts the person's whole fixture onto the server through the API, the way
 // a phone would.
 func (p *person) upload(t *testing.T, c *apiClient, covered map[string]bool) {
@@ -99,7 +106,14 @@ func (p *person) upload(t *testing.T, c *apiClient, covered map[string]bool) {
 		}
 	}
 
-	expect("PUT /settings", c.do(t, http.MethodPut, "/v1/settings", p.token, api.Settings{TimeZone: &tz}, nil), 200)
+	journey, started := p.route(), openapi_types.Date{Time: time.Now().UTC().AddDate(0, 0, -10)}
+	water := 1500 + int(p.hr) // inside the phone's bracket, different per person
+	expect("PUT /settings", c.do(t, http.MethodPut, "/v1/settings", p.token, api.Settings{
+		TimeZone:  &tz,
+		Challenge: &api.ChallengeSettings{Thresholds: &[]int{p.milestone()}},
+		Hydration: &api.HydrationSettings{GoalMl: &water},
+		Journey:   &api.JourneySettings{RouteId: &journey, StartedOn: &started},
+	}, nil), 200)
 
 	var dev api.Device
 	expect("POST /devices", c.do(t, http.MethodPost, "/v1/devices", p.token, api.Device{
@@ -189,7 +203,7 @@ func TestTwoPeopleSeeOnlyTheirOwnData(t *testing.T) {
 		{op: "GET /me", path: func(*person) string { return "/v1/me" }, status: 200,
 			own: func(p *person) []string { return []string{p.userID.String()} }},
 		{op: "GET /settings", path: func(*person) string { return "/v1/settings" }, status: 200,
-			own: func(p *person) []string { return []string{p.tz} }},
+			own: func(p *person) []string { return []string{p.tz, p.route()} }},
 		{op: "GET /devices", path: func(*person) string { return "/v1/devices" }, status: 200,
 			own: func(p *person) []string { return []string{p.device.String()} }},
 		{op: "GET /achievements", path: func(*person) string { return "/v1/achievements" }, status: 200,
@@ -219,7 +233,7 @@ func TestTwoPeopleSeeOnlyTheirOwnData(t *testing.T) {
 		{op: "GET /coverage", path: func(p *person) string { return "/v1/coverage?from=" + today(p) + "&tz=" + p.tz }, status: 200,
 			own: none, why: "lists data types, which both fixtures share; the leak check still runs"},
 		{op: "GET /challenge", path: func(p *person) string { return "/v1/challenge?tz=" + p.tz }, status: 200,
-			own: func(p *person) []string { return []string{fmt.Sprint(p.steps)} }},
+			own: func(p *person) []string { return []string{fmt.Sprint(p.milestone())} }},
 		{op: "GET /baseline", path: func(p *person) string { return "/v1/baseline?range=month&metrics=stepCount&tz=" + p.tz }, status: 200,
 			own: none, why: "a baseline needs weeks of history the fixture does not have"},
 		{op: "GET /insights", path: func(*person) string { return "/v1/insights" }, status: 200,
@@ -329,6 +343,27 @@ func TestTwoPeopleSeeOnlyTheirOwnData(t *testing.T) {
 	}
 	if body, _, _ := c.raw(t, http.MethodGet, "/v1/goals", b.token, nil); !strings.Contains(string(body), fmt.Sprint(b.goal)) || strings.Contains(string(body), "999.5") {
 		t.Errorf("a's PUT /goals reached b's goals: %.300s", body)
+	}
+
+	// The phone's blocks are replaced whole (docs/35): a sending an empty journey and
+	// no water goal clears its own, and b's stay exactly as b sent them (S12).
+	if st := c.do(t, http.MethodPut, "/v1/settings", a.token, api.Settings{
+		Hydration: &api.HydrationSettings{}, Journey: &api.JourneySettings{},
+		Challenge: &api.ChallengeSettings{Thresholds: &[]int{}},
+	}, nil); st != 200 {
+		t.Fatalf("PUT /settings clearing a's blocks: %d", st)
+	}
+	var bSet api.Settings
+	if st := c.do(t, http.MethodGet, "/v1/settings", b.token, nil, &bSet); st != 200 ||
+		bSet.Journey == nil || bSet.Journey.RouteId == nil || *bSet.Journey.RouteId != b.route() ||
+		bSet.Hydration == nil || bSet.Hydration.GoalMl == nil ||
+		bSet.Challenge == nil || bSet.Challenge.Thresholds == nil || len(*bSet.Challenge.Thresholds) != 1 || (*bSet.Challenge.Thresholds)[0] != b.milestone() {
+		t.Errorf("a clearing its phone settings changed b's (status %d): %+v", st, bSet)
+	}
+	var aSet api.Settings
+	if st := c.do(t, http.MethodGet, "/v1/settings", a.token, nil, &aSet); st != 200 ||
+		aSet.Journey == nil || aSet.Journey.RouteId != nil || aSet.Hydration == nil || aSet.Hydration.GoalMl != nil {
+		t.Errorf("a's own cleared blocks did not clear (status %d): %+v", st, aSet)
 	}
 
 	// The admin-only row, enforced: a member is refused, an admin is not.
