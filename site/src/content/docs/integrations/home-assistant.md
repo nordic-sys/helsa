@@ -102,8 +102,10 @@ for them: whatever goes on the broker, the whole house can read.
 - `HELSA_MQTT_USER_ID` only decides the naming. Without the member's own switch nothing of theirs
   is published, not even for the pinned user.
 - Switching off, being disabled or being deleted clears the member's entities: an empty retained
-  message on every discovery and state topic. ⚠️ What Home Assistant already recorded in its own
-  history stays there — that is Home Assistant's database.
+  message on every discovery and state topic. This holds across a restart too: on start-up the
+  worker clears the topics of every member it is not publishing for, so a switch-off that happened
+  while the worker was down — or while the broker was unreachable — is not forgotten. ⚠️ What Home
+  Assistant already recorded in its own history stays there — that is Home Assistant's database.
 
 ## Topics
 

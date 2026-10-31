@@ -33,9 +33,11 @@ import (
 	"time"
 
 	mqtt "github.com/eclipse/paho.mqtt.golang"
+	"github.com/jackc/pgx/v5/pgtype"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/nordic-sys/helsa/backend/internal/config"
+	"github.com/nordic-sys/helsa/backend/internal/pgconv"
 )
 
 const (
@@ -76,6 +78,12 @@ type Publisher struct {
 	// round, so a broker hiccup during an opt-out does not leave health values
 	// retained for good (S6).
 	pending []topics
+	// swept is set once this process has cleared the topics of everybody it is NOT
+	// publishing for. `published` and `pending` live in memory, so an opt-out whose
+	// clearing a restart interrupted would otherwise stay retained for good (S6);
+	// the sweep works out from the database what must be absent instead of
+	// remembering it. Guarded by `round`.
+	swept bool
 
 	// round serialises a whole publishing round — targets, collection, publication —
 	// with ForgetUser: a round that collected a member's numbers must not publish them
@@ -253,7 +261,8 @@ func (p *Publisher) publishDiscovery(c mqtt.Client, top topics) bool {
 func (p *Publisher) publishDiscoveryAll(ctx context.Context, c mqtt.Client) {
 	ctx, cancel := context.WithTimeout(ctx, collectTimeout)
 	defer cancel()
-	for _, t := range p.targets(ctx) {
+	ts, _ := p.targets(ctx)
+	for _, t := range ts {
 		if !p.publishDiscovery(c, p.topicsFor(t)) {
 			return
 		}
@@ -379,8 +388,16 @@ func (p *Publisher) publishSummary(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx, collectTimeout)
 	defer cancel()
 
-	ts := p.targets(ctx)
+	ts, ok := p.targets(ctx)
+	if !ok {
+		// Not "nobody": a failed lookup must not read as everybody having opted out,
+		// which would clear every member's entities until the next round.
+		return
+	}
 	p.sync(ts)
+	if !p.swept {
+		p.swept = p.sweep(ctx, ts)
+	}
 	for _, t := range ts {
 		top := p.topicsFor(t)
 		snap, err := collectDaily(ctx, p.pool, t, time.Now())
@@ -419,7 +436,10 @@ func (p *Publisher) publishFreshness(ctx context.Context) {
 	ctx, cancel := context.WithTimeout(ctx, collectTimeout)
 	defer cancel()
 
-	ts := p.targets(ctx)
+	ts, ok := p.targets(ctx)
+	if !ok {
+		return
+	}
 	p.sync(ts)
 	e := freshnessEntity()
 	for _, t := range ts {
@@ -444,22 +464,73 @@ func (p *Publisher) publishFreshness(ctx context.Context) {
 }
 
 // targets resolves who to publish for, turning "nobody yet" into a quiet skip.
-func (p *Publisher) targets(ctx context.Context) []target {
+// ok is false when the answer is unknown (the lookup failed), as opposed to empty.
+func (p *Publisher) targets(ctx context.Context) (ts []target, ok bool) {
 	ts, err := resolveTargets(ctx, p.pool, p.cfg.UserID)
 	if err != nil && ctx.Err() != nil {
 		// The process is shutting down; a cancelled query is the expected outcome, not
 		// something worth an error line in the log on every restart.
-		return nil
+		return nil, false
 	}
 	if errors.Is(err, errNoTarget) {
 		p.log.Debug("nothing to publish yet", "reason", err)
-		return nil
+		return nil, true
 	}
 	if err != nil {
 		p.log.Error("resolve publish targets", "err", err)
-		return nil
+		return nil, false
 	}
-	return ts
+	return ts, true
+}
+
+// sweep clears, once per process, the topics of every member who is not a target
+// now — switched off, disabled, or being deleted — and the single-user names if
+// nobody holds them. It reports whether every clear landed; the next round tries
+// again until one does.
+//
+// Empty retained messages on topics that were never used are harmless: the broker
+// has nothing to forget and Home Assistant no entity to remove. A member deleted
+// outright is not here — their clearing is a durable stage of the deletion job.
+func (p *Publisher) sweep(ctx context.Context, ts []target) bool {
+	want := map[uuid.UUID]bool{}
+	legacyHeld := false
+	for _, t := range ts {
+		want[t.userID] = true
+		legacyHeld = legacyHeld || t.legacy
+	}
+	rows, err := p.pool.Query(ctx, `SELECT id, handle, COALESCE(display_name, '') FROM users`)
+	if err != nil {
+		p.log.Warn("sweep unpublished members", "err", err)
+		return false
+	}
+	var clears []topics
+	for rows.Next() {
+		var id pgtype.UUID
+		var handle, name string
+		if err := rows.Scan(&id, &handle, &name); err != nil {
+			rows.Close()
+			p.log.Warn("sweep unpublished members", "err", err)
+			return false
+		}
+		if uid := pgconv.ToUUID(id); !want[uid] {
+			clears = append(clears, p.top.forMember(uid, handle, name, false))
+		}
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		p.log.Warn("sweep unpublished members", "err", err)
+		return false
+	}
+	if !legacyHeld {
+		clears = append(clears, p.top)
+	}
+	for _, c := range clears {
+		if !p.clear(c) {
+			return false
+		}
+	}
+	p.log.Info("cleared the topics of members not published", "members", len(clears))
+	return true
 }
 
 // connected asks whether there is an OPEN connection right now.

@@ -262,7 +262,12 @@ func TestHomeAssistantMQTTPublisher(t *testing.T) {
 	}
 	// Half a second is generous for a local broker replaying its retained set.
 	time.Sleep(500 * time.Millisecond)
-	if v, seen := late.get(prefix + "/sync/freshness_hours"); seen {
+	// ⚠️ Asked by the retain flag, not by "seen": the publisher keeps publishing the
+	// heartbeat, and one sent while the late client is subscribed arrives live, with
+	// the flag cleared. Only a replay — a retained message — is the failure. (The
+	// start-up sweep made the first round longer and moved a heartbeat into this
+	// window, which is how "seen" turned out to be the wrong question.)
+	if v, seen := late.get(prefix + "/sync/freshness_hours"); seen && late.wasRetained(prefix+"/sync/freshness_hours") {
 		t.Errorf("the freshness state was replayed to a new subscriber (%q): it must not be retained", v)
 	}
 	t.Logf("✓ retention: discovery + availability survive a restart, the freshness state deliberately does not")
