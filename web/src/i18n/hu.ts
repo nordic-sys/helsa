@@ -1778,13 +1778,13 @@ export const hu = {
     // --- Sign-in page ----------------------------------------------------------
     'login.title': 'Belépés',
     'login.intro':
-      'Írd be a belépőkódot. A telefonodon kapod meg (Helsa ▸ Saját szerver ▸ Belépés a webes felületre), vagy a szerver gazdájától.',
+      'Írd be a belépőkódot. A telefonodon kapod meg (Helsa ▸ Beállítások ▸ Export ▸ Saját szerver ▸ Belépés a webes felületre), vagy a szerver gazdájától.',
     'login.codeLabel': 'Belépőkód',
     'login.submit': 'Belépés',
     'login.busy': 'Ellenőrzés…',
     'login.error.shape': 'A belépőkód nyolc karakter, például K7QM-4XPA.',
     'login.error.rejected':
-      'Ezt a kódot a szerver nem fogadta el. Lehet, hogy lejárt (tíz percig él), már felhasználták, vagy elírás van benne — kérj egy újat.',
+      'Ezt a kódot a szerver nem fogadta el. Lehet, hogy lejárt (tíz percig él), már felhasználták, elírás van benne, telefonhoz szóló csatlakozási kód, vagy ki van kapcsolva a fiók — kérj egy újat, vagy szólj a szerver gazdájának.',
     'login.error.limited':
       'Túl sok volt a sikertelen próbálkozás. Várj negyed órát, aztán kérj új kódot.',
     'login.error.unavailable':
@@ -1799,7 +1799,7 @@ export const hu = {
       'Eddig egy eszköz-token volt itt elmentve, és azzal ért el mindent. Ezt a tokent most töröltük ebből a böngészőből: a webes felület innentől csak belépés után mutat adatot, és mindenki a sajátját látja. A telefonodon ettől semmi nem változik. Belépőkódot a telefonodon kérhetsz; a legelső belépéshez a szerveren: make prod-login-code HANDLE=…',
     'login.unreachable':
       'A szerver most nem válaszol. Ha van kódod, próbáld meg; ha nincs, nézz vissza pár perc múlva.',
-    'login.first': 'Első belépés egy új szerverre? A szerveren:',
+    'login.first': 'Te üzemelteted a szervert, és ez a legelső belépés? A szerveren:',
 
     // --- The code dialog -------------------------------------------------------
     'code.device.title': 'Csatlakozási kód új telefonhoz',
@@ -1810,14 +1810,14 @@ export const hu = {
     'code.qrLabel': 'QR-kód a telefon csatlakoztatásához',
     'code.expires': 'Lejár {time}-kor · még {left}',
     'code.expired': 'A kód lejárt. Zárd be ezt az ablakot, és kérj újat.',
-    'code.device.address': 'A szerver címe a telefonnak',
+    'code.device.address': 'Szervercím a telefonhoz',
     'code.web.address': 'A belépő oldal',
     'code.copy': 'Másolás',
     'code.copied': 'Kimásolva',
     'code.device.howTo':
-      'A telefonon: Helsa ▸ Saját szerver ▸ Küldés ▸ Csatlakozás QR-kóddal. Ha a QR-kód nem olvasható be, a kódot és a címet kézzel is be lehet írni.',
+      'A telefonon: Helsa ▸ Beállítások ▸ Export ▸ Saját szerver ▸ Csatlakozás QR-kóddal. Ha a QR-kód nem olvasható be, a kódot és a címet kézzel is be lehet írni.',
     'code.device.cert':
-      'Előtte a telefonon kell lennie a kliens-tanúsítványnak — anélkül a szerver nem engedi be.',
+      'Előtte a telefonon kell lennie a kliens-tanúsítványnak: egy .p12 fájl, amit a szerver gazdájától kapsz — kérd el tőle. Az app végigvezet a betöltésén; anélkül a szerver nem engedi be a telefont.',
     'code.device.certAdmin':
       'Előtte a telefonon kell lennie a kliens-tanúsítványnak: make client NAME=… a saját gépeden, aztán AirDroppal át a telefonra.',
     'code.web.howTo':
@@ -1830,7 +1830,7 @@ export const hu = {
     'legacy.body':
       'Utoljára {when} használta egy eszköz. Ez még a háztartás előtti időkből való, ezért nem látszik az eszközök között, és egyenként nem vonható vissza.',
     'legacy.how':
-      'Előbb csatlakoztasd újra azt az eszközt kóddal (telefonon: Saját szerver ▸ Küldés ▸ Csatlakozás QR-kóddal), aztán vond vissza a régi belépéseket.',
+      'Előbb csatlakoztasd újra azt az eszközt kóddal (telefonon: Beállítások ▸ Export ▸ Saját szerver ▸ Csatlakozás QR-kóddal), aztán vond vissza a régi belépéseket.',
     'legacy.howFor':
       'Előbb {name} csatlakoztassa újra az eszközét kóddal, aztán vond vissza a régi belépéseit.',
     'legacy.revoke': 'Régi belépések visszavonása',
@@ -1919,7 +1919,7 @@ export const hu = {
     'log.webCodeRevoked.you': 'Visszavontál egy fel nem használt belépőkódot.',
     'log.webCodeRevoked.by': '{actor} visszavont egy fel nem használt belépőkódot.',
     'log.redeemed.device': 'Csatlakozott egy telefon: {label}.',
-    'log.redeemed.web': 'Belépés a webes felületre: {label}.',
+    'log.redeemed.web': 'Belépett egy böngésző: {label}.',
     'log.haOn.you': 'Elindítottad a napi számaid küldését a Home Assistantbe.',
     'log.haOn.by': '{actor} elindította a napi számai küldését a Home Assistantbe.',
     'log.haOff.you': 'Leállítottad a napi számaid küldését a Home Assistantbe.',
@@ -1928,7 +1928,7 @@ export const hu = {
     // --- The household (admin) -------------------------------------------------
     'household.title': 'Háztartás',
     'household.subtitle':
-      'Ki tölt fel erre a szerverre, és melyik eszközről. Egészségadatot itt nem látsz.',
+      'Ki tölt fel erre a szerverre, és melyik eszközről. Egészségadatot itt nem látsz, a gyerekekét sem: ebben a változatban mindenki csak a sajátját látja.',
     'household.add': '+ Új tag',
     'household.col.name': 'Név',
     'household.col.role': 'Szerep',

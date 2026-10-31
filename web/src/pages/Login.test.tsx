@@ -39,7 +39,9 @@ describe('the sign-in page', () => {
     const onSignedIn = show()
     await submit('K7QM-4XPA')
     expect(
-      await screen.findByText(/did not accept this code\. It may have expired .*, been used already, or been mistyped — ask for a new one\./),
+      await screen.findByText(
+        /did not accept this code\. It may have expired .*, been used already or mistyped, be a phone's connection code, or the account may be switched off/,
+      ),
     ).toBeInTheDocument()
     expect(onSignedIn).not.toHaveBeenCalled()
   })

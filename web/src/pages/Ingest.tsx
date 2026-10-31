@@ -193,8 +193,13 @@ function Status({
                 <small>{tp('ingest.hero.parts', q.ready)}</small>
               </span>
               <span className="stat-note">
-                {q.in_flight_max ? `${t('ingest.stat.inFlight', { n: f.num(q.in_flight_max) })} · ` : ''}
-                {t('ingest.hero.tech', { name: q.name })}
+                {/* The queue's name is for whoever reads the logs — an admin (W8, agy B9). */}
+                {[
+                  q.in_flight_max ? t('ingest.stat.inFlight', { n: f.num(q.in_flight_max) }) : '',
+                  admin ? t('ingest.hero.tech', { name: q.name }) : '',
+                ]
+                  .filter(Boolean)
+                  .join(' · ')}
               </span>
             </div>
             <div className="queue-eta">
@@ -306,7 +311,7 @@ function Status({
                 {f.num(dlq)}
               </p>
               <p className="stat-note">{t('ingest.tile.setAsideNote')}</p>
-              <p className="stat-note">{t('ingest.tile.setAsideTech')}</p>
+              {admin && <p className="stat-note">{t('ingest.tile.setAsideTech')}</p>}
             </article>
           )}
         </div>

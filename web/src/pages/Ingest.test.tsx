@@ -191,6 +191,9 @@ describe('the dead-letter queue', () => {
     expect(alert).not.toHaveTextContent(/docker compose/)
     expect(alert).not.toHaveTextContent(/helsa\.ingest\.dlq/)
     expect(alert).toHaveTextContent(/Full resync/)
+    // Nor anywhere else on the page (agy B9).
+    expect(screen.queryByText(/batches in helsa\.ingest/)).not.toBeInTheDocument()
+    expect(screen.queryByText('the dead-letter queue')).not.toBeInTheDocument()
   })
 })
 

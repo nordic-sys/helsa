@@ -1778,13 +1778,13 @@ export const en: Dict = {
     // --- Sign-in page ----------------------------------------------------------
     'login.title': 'Sign in',
     'login.intro':
-      "Enter your sign-in code. You get it on your phone (Helsa ▸ Your own server ▸ Sign in to the web dashboard), or from the server's owner.",
+      "Enter your sign-in code. You get it on your phone (Helsa ▸ Settings ▸ Export ▸ Your own server ▸ Sign in to the web dashboard), or from the server's owner.",
     'login.codeLabel': 'Sign-in code',
     'login.submit': 'Sign in',
     'login.busy': 'Checking…',
     'login.error.shape': 'A sign-in code is eight characters, like K7QM-4XPA.',
     'login.error.rejected':
-      'The server did not accept this code. It may have expired (a code lasts ten minutes), been used already, or been mistyped — ask for a new one.',
+      "The server did not accept this code. It may have expired (a code lasts ten minutes), been used already or mistyped, be a phone's connection code, or the account may be switched off — ask for a new one, or talk to the server's owner.",
     'login.error.limited':
       'Too many attempts failed. Wait a quarter of an hour, then ask for a new code.',
     'login.error.unavailable':
@@ -1799,7 +1799,7 @@ export const en: Dict = {
       'Until now a device token was saved here, and it opened everything. That token has now been removed from this browser: from here on the web dashboard shows data only after you sign in, and everyone sees their own. Nothing changes on your phone. You can ask for a sign-in code on your phone; for the very first sign-in, on the server: make prod-login-code HANDLE=…',
     'login.unreachable':
       'The server is not answering right now. If you have a code, try it; if not, check back in a few minutes.',
-    'login.first': 'First sign-in on a new server? On the server:',
+    'login.first': 'Running this server yourself, and this is the very first sign-in? On the server:',
 
     // --- The code dialog -------------------------------------------------------
     'code.device.title': 'Code for connecting a new phone',
@@ -1815,9 +1815,9 @@ export const en: Dict = {
     'code.copy': 'Copy',
     'code.copied': 'Copied',
     'code.device.howTo':
-      'On the phone: Helsa ▸ Your own server ▸ Sending ▸ Join with a QR code. If the QR code will not scan, the code and the address can be typed by hand.',
+      'On the phone: Helsa ▸ Settings ▸ Export ▸ Your own server ▸ Join with a QR code. If the QR code will not scan, the code and the address can be typed by hand.',
     'code.device.cert':
-      'The phone needs its client certificate first — without it the server will not let it in.',
+      "The phone needs its client certificate first: a .p12 file you get from the server's owner — ask them for it. The app walks you through loading it; without it the server will not let the phone in.",
     'code.device.certAdmin':
       'The phone needs its client certificate first: make client NAME=… on your own machine, then AirDrop it to the phone.',
     'code.web.howTo':
@@ -1830,7 +1830,7 @@ export const en: Dict = {
     'legacy.body':
       'A device last used it {when}. It dates from before the household, so it is not in the list of devices and cannot be revoked on its own.',
     'legacy.how':
-      'First connect that device again with a code (on the phone: Your own server ▸ Sending ▸ Join with a QR code), then revoke the old sign-ins.',
+      'First connect that device again with a code (on the phone: Settings ▸ Export ▸ Your own server ▸ Join with a QR code), then revoke the old sign-ins.',
     'legacy.howFor': 'First {name} connects their device again with a code, then revoke their old sign-ins.',
     'legacy.revoke': 'Revoke old sign-ins',
     'legacy.ask':
@@ -1919,7 +1919,7 @@ export const en: Dict = {
     'log.webCodeRevoked.you': 'You revoked an unused sign-in code.',
     'log.webCodeRevoked.by': '{actor} revoked an unused sign-in code.',
     'log.redeemed.device': 'A phone joined: {label}.',
-    'log.redeemed.web': 'Signed in to the web dashboard: {label}.',
+    'log.redeemed.web': 'A browser signed in: {label}.',
     'log.haOn.you': 'You started sending your daily numbers to Home Assistant.',
     'log.haOn.by': '{actor} started sending their daily numbers to Home Assistant.',
     'log.haOff.you': 'You stopped sending your daily numbers to Home Assistant.',
@@ -1928,7 +1928,7 @@ export const en: Dict = {
     // --- The household (admin) -------------------------------------------------
     'household.title': 'Household',
     'household.subtitle':
-      'Who uploads to this server, and from which device. No health data is shown here.',
+      "Who uploads to this server, and from which device. No health data is shown here, not even the children's: in this version everybody sees only their own.",
     'household.add': '+ New member',
     'household.col.name': 'Name',
     'household.col.role': 'Role',

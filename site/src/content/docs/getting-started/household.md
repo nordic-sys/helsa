@@ -38,7 +38,7 @@ that lives 15 minutes and works once. Shown on the wrong screen or handed to the
 *Revoke the code* in the same window withdraws it at once — while it is unused. A used code
 cannot be withdrawn; revoke the device it connected instead.
 
-**On the member's phone**: *Helsa ▸ Your own server ▸ Sending ▸ Join with a QR code*. The app
+**On the member's phone**: *Helsa ▸ Settings ▸ Export ▸ Your own server ▸ Join with a QR code*. The app
 first asks for the client certificate if it has none, then scans the code, asks for the
 device's name, and connects. Nothing has to be typed, and the long-lived token is never on a
 screen.
@@ -53,7 +53,7 @@ make prod-login-code HANDLE=nori     # a 10-minute code for the dashboard's sign
 ## Signing in a browser
 
 The dashboard has no passwords. The sign-in page asks for a one-time code, which a member
-gets on their phone (*Your own server ▸ Sign in to the web dashboard*) — or, if they have no
+gets on their phone (*Settings ▸ Export ▸ Your own server ▸ Sign in to the web dashboard*) — or, if they have no
 device at all yet, from the admin. The browser then keeps a session cookie for 30 days, renewed
 while it is used. *Sign out* ends it; any of a member's sessions can also be revoked from *My
 account*, on the phone or from another browser.
