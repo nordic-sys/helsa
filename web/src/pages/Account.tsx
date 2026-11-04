@@ -134,6 +134,7 @@ export default function Account() {
         <CodeDialog
           code={code}
           serverEndpoint={session.me.device_endpoint}
+          operator={session.isAdmin}
           onRevoke={async () => {
             try {
               await api.revokeMyCode(code.code)

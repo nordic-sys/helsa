@@ -98,6 +98,19 @@ function ingest() {
   if (mode === 'down') return { checked_at: iso(new Date()), broker_reachable: false, broker_error: 'dial tcp 172.18.0.4:5672: connect: connection refused', stats_reachable: true, throughput: b.throughput }
   return b
 }
+// What the server leaves out for a member (backend ingeststat.MemberView, agy C1):
+// the pace, the estimate, the worker's counters, the last redrive — and it says so.
+function memberView(b) {
+  if (!b.broker_reachable && !b.queue) return { ...b, throughput: undefined, member_view: true }
+  return {
+    ...b,
+    member_view: true,
+    throughput: undefined,
+    eta_seconds: undefined,
+    worker: b.worker && { started_at: b.worker.started_at, prefetch: b.worker.prefetch },
+    dead_letter: b.dead_letter && { ...b.dead_letter, last_redrive: undefined },
+  }
+}
 const challenge = () => ({ month: ymd(now).slice(0, 7), tz: 'Europe/Budapest', days_in_month: 31, days_elapsed: now.getDate() - 1, days_remaining: 31 - now.getDate() + 1, steps: 254627, steps_per_day: 9793, measured_days: 26, goal: 200000, percent: 100, complete: true, thresholds: [25000, 50000, 75000, 100000, 150000, 200000].map((s) => ({ steps: s, reached: true })), thresholds_source: 'default', days: [], streak: { length: 12, active_days: 12, longest: 18, window_from: ymd(day(30)), window_to: ymd(now), missing_inputs: [] } })
 
 function journal(q) {
@@ -256,6 +269,7 @@ http.createServer(async (req, res) => {
   if (req.method === 'POST' && u.pathname === '/v1/ingest/dead-letter/redrive') body = { moved: 3, remaining: 0, max_redriven: 4, repeated: 1 }
   else if (/^\/v1\/workouts\/[^/]+\/route$/.test(u.pathname)) body = route()
   else if (/^\/v1\/workouts\/[^/]+$/.test(u.pathname)) body = workouts.find((w) => w.id === u.pathname.split('/')[3])
+  else if (u.pathname === '/v1/ingest/status' && whoOf(req)?.role !== 'admin') body = memberView(ingest())
   else if (routes[u.pathname]) body = routes[u.pathname](u.searchParams)
   if (body === undefined) { res.writeHead(404, { 'content-type': 'application/problem+json' }); res.end(JSON.stringify({ title: 'Not Found' })); return }
   res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(body))

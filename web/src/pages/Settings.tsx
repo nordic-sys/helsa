@@ -67,6 +67,12 @@ export default function SettingsPage() {
               </table>
             </div>
           )}
+          {/* Two device lists, two questions (agy C11): this one is "which device sends data, and
+              how fresh", My account's is "who may sign in" — and only that one revokes. */}
+          <p className="subtle" style={{ marginBottom: 0, marginTop: 12 }}>
+            {t('settings.devices.note')}{' '}
+            <Link to="/account">{t('nav.account')}</Link>
+          </p>
         </Card>
 
         <Card title={t('settings.goals.title')}>

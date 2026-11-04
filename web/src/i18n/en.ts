@@ -618,6 +618,8 @@ export const en: Dict = {
     'settings.subtitle':
       'Language, map, devices and goals. Your own account — sign-ins, export, deletion — is on My account.',
     'settings.devices.title': 'Devices and sync freshness',
+    'settings.devices.note':
+      'This list shows which device sends data, and when it last did. Who may sign in, and revoking that:',
     'settings.devices.empty': 'No device registered yet.',
     'settings.devices.col.device': 'Device',
     'settings.devices.col.platform': 'Platform',
@@ -681,6 +683,7 @@ export const en: Dict = {
     'settings.export.days.one': '{n} day',
     'settings.export.days.other': '{n} days',
     'settings.export.year': '1 year',
+    'settings.export.all': 'Everything',
     'settings.export.custom': 'Choose dates',
     'settings.export.from': 'From',
     'settings.export.to': 'To (included)',
@@ -982,6 +985,8 @@ export const en: Dict = {
       'Batches are waiting, but none finished in the last {n} minutes — there is no rate to estimate from.',
     'ingest.stalled.since':
       'Parts are waiting, and the last one finished {when} — nothing has finished since, so there is no current rate to estimate from.',
+    'ingest.queued':
+      "A worker is connected and the parts are in line. How fast it goes is for the server's owner to see — it would tell when, and how much, somebody else in the household uploaded.",
     'ingest.rateUnknown':
       'A worker is connected, but its counters cannot be read (Redis did not answer, or this worker is too old to report them) — so whether the queue is moving is not known. That is not the same as “not moving”.',
     'ingest.settling':
@@ -1081,6 +1086,7 @@ export const en: Dict = {
     'today.pill.stalled': 'Parts are waiting and nothing finished recently',
     'today.pill.noConsumer': 'Parts are waiting and nothing is writing them',
     'today.pill.rateUnknown': 'Parts are waiting · progress cannot be read',
+    'today.pill.queued': 'Parts are waiting to be written',
     'today.pill.settling': 'Nothing waiting · the worker may still be finishing up to {n}',
     'today.pill.settling.noBound': 'Nothing waiting · the worker may still be finishing up',
     'today.pill.setAside.one': '{n} part could not be written',
@@ -1096,6 +1102,8 @@ export const en: Dict = {
       'The queue holds {n} parts waiting to be written · about {duration} for the current backlog, if nothing more arrives',
     'today.sync.stuck.one': 'The queue holds {n} part, and nothing has finished recently',
     'today.sync.stuck.other': 'The queue holds {n} parts, and nothing has finished recently',
+    'today.sync.queued.one': '{n} part is waiting in the queue to be written',
+    'today.sync.queued.other': '{n} parts are waiting in the queue to be written',
     'today.sync.rateUnknown.one': 'The queue holds {n} part; whether it is moving cannot be read',
     'today.sync.rateUnknown.other':
       'The queue holds {n} parts; whether they are moving cannot be read',
@@ -1150,6 +1158,7 @@ export const en: Dict = {
     'ingest.hero.nothing': 'Nothing to wait for',
     'ingest.hero.notMoving': 'Not moving',
     'ingest.hero.noEstimate': 'no estimate',
+    'ingest.hero.queued': "The pace is for the server's owner to see",
     'ingest.hero.rateUnknown': 'Rate unknown',
     'ingest.hero.settling': 'Nothing waiting for delivery',
     'ingest.tile.rate': 'Rate',
@@ -1834,7 +1843,7 @@ export const en: Dict = {
     'legacy.howFor': 'First {name} connects their device again with a code, then revoke their old sign-ins.',
     'legacy.revoke': 'Revoke old sign-ins',
     'legacy.ask':
-      'Every old sign-in stops working at once. A device still using one cannot send anything until you connect it again with a code. No data is lost.',
+      'Every old sign-in stops working at once. A device still using one cannot send anything until it is connected again with a code. No data is lost.',
     'legacy.confirm': 'Revoke',
     'legacy.selfRefused':
       'You are using an old sign-in on this very device, so this would lock it out. Connect it again with a code, and revoke from there.',
@@ -1842,6 +1851,7 @@ export const en: Dict = {
     'household.legacy': 'old sign-in',
     'household.legacyHint': 'Also uses an old sign-in from before the household — revocable on the details page.',
     'code.revoked': 'Revoked — nobody can connect with this code any more.',
+    'code.revoked.web': 'Revoked — nobody can sign in with this code any more.',
     'code.revokeUsed':
       'This code has already been used, so it cannot be revoked. If the device it connected is not yours, revoke that device in the list of devices.',
     'code.revokeFailed': 'The code could not be revoked. Try again, or let it expire.',
@@ -1887,7 +1897,7 @@ export const en: Dict = {
       'Your account and all your data are deleted from this server. Nothing changes on your phone or in the Health app.',
     'account.delete.button': 'Delete my account and data…',
     'account.delete.body':
-      'Your account and everything you uploaded are permanently deleted from this server. It disappears from the backups within five weeks at most. If you want to keep your data, export it before deleting (above, on the Export card).',
+      'Your account and everything you uploaded are permanently deleted from this server. It disappears from the backups within five weeks at most. If you want to keep your data, export it before deleting, above on the Export card: as JSON, with “Everything” — a CSV holds the measurements only, not the workouts and sleep.',
     'account.delete.confirm': 'Delete for good',
     'account.delete.lastAdmin':
       "You are this server's only admin, so you cannot delete your account. Make someone else an admin on the Household page first.",
@@ -1912,6 +1922,8 @@ export const en: Dict = {
     'log.webCode.you': 'You asked for a sign-in code for the web dashboard.',
     'log.webCode.named': '{actor} asked for a sign-in code for the web dashboard.',
     'log.webCode.by': '{actor} issued a sign-in code for the web dashboard.',
+    'log.deletionRequested.you': 'You started deleting your account.',
+    'log.deletionRequested.by': '{actor} started deleting the account.',
     'log.legacyRevoked.you': 'You revoked your old sign-ins from before the household.',
     'log.legacyRevoked.by': '{actor} revoked the old sign-ins from before the household.',
     'log.deviceCodeRevoked.you': 'You revoked an unused connection code.',
@@ -1978,7 +1990,7 @@ export const en: Dict = {
     'member.code.device': 'Connect a device',
     'member.code.web': 'Web sign-in code',
     'member.code.hasDevice':
-      '{name} already has a working device, so they ask for the new code themselves: on their phone (Your own server) or on My account. If they have lost all their devices, revoke them here first, and then you can give a code.',
+      '{name} already has a working device, so they ask for the new code themselves: for a new device on the web dashboard\'s My account page, for signing in to the web also on their phone (Settings ▸ Export ▸ Your own server ▸ Sign in to the web dashboard). If they have lost all their devices, revoke them here first, and then you can give them a code.',
     'member.log.title': 'Log (also shown to {name})',
 
     // --- Elsewhere -------------------------------------------------------------

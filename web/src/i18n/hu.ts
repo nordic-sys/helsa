@@ -621,6 +621,8 @@ export const hu = {
       'A nyelv, a térkép, az eszközök és a célok. A saját fiókod — belépések, export, törlés — a Fiókom oldalon van.',
     'settings.devices.title': 'Eszközök és a szinkronizálás frissessége',
     'settings.devices.empty': 'Még nincs regisztrált eszköz.',
+    'settings.devices.note':
+      'Ez a lista azt mutatja, melyik készülék küld adatot, és mikor küldött utoljára. Hogy ki léphet be, és annak visszavonása:',
     'settings.devices.col.device': 'Eszköz',
     'settings.devices.col.platform': 'Platform',
     'settings.devices.col.lastSync': 'Utolsó szinkron',
@@ -682,6 +684,7 @@ export const hu = {
     'settings.export.days.one': '{n} nap',
     'settings.export.days.other': '{n} nap',
     'settings.export.year': '1 év',
+    'settings.export.all': 'Minden',
     'settings.export.custom': 'Dátumok megadása',
     'settings.export.from': 'Ettől',
     'settings.export.to': 'Eddig (bezárólag)',
@@ -980,6 +983,8 @@ export const hu = {
       'Kötegek várnak, de az elmúlt {n} percben egy sem készült el — nincs ütem, amiből becsülni lehetne.',
     'ingest.stalled.since':
       'Részek várnak, és az utolsó {when} készült el — azóta egy sem, így nincs friss ütem, amiből becsülni lehetne.',
+    'ingest.queued':
+      'Van kapcsolódó feldolgozó, és a részek sorban állnak. Hogy milyen gyorsan halad, azt a szerver gazdája látja — abból kiderülne, mikor és mennyit töltött fel más a háztartásban.',
     'ingest.rateUnknown':
       'Van kapcsolódó worker, de a számlálói nem olvashatók (a Redis nem válaszolt, vagy ez a worker túl régi ahhoz, hogy jelentse őket) — így nem tudni, halad-e a sor. Ez nem ugyanaz, mint hogy „nem halad”.',
     'ingest.settling':
@@ -1080,6 +1085,7 @@ export const hu = {
     'today.pill.stalled': 'Részek várnak, és mostanában semmi nem készült el',
     'today.pill.noConsumer': 'Részek várnak, és semmi nem írja be őket',
     'today.pill.rateUnknown': 'Részek várnak · a haladás nem olvasható',
+    'today.pill.queued': 'Részek várnak feldolgozásra',
     'today.pill.settling': 'Semmi nem vár · a worker még befejezhet legfeljebb ennyit: {n}',
     'today.pill.settling.noBound': 'Semmi nem vár · a worker még befejezhet valamit',
     'today.pill.setAside.one': '{n} részt nem sikerült beírni',
@@ -1095,6 +1101,8 @@ export const hu = {
       'A sorban beírásra vár: {n} rész · a mostani sorra, ha nem érkezik több, nagyjából {duration}',
     'today.sync.stuck.one': 'A sorban vár {n} rész, és mostanában semmi nem készült el',
     'today.sync.stuck.other': 'A sorban vár {n} rész, és mostanában semmi nem készült el',
+    'today.sync.queued.one': 'A sorban vár {n} rész feldolgozásra',
+    'today.sync.queued.other': 'A sorban vár {n} rész feldolgozásra',
     'today.sync.rateUnknown.one': 'A sorban vár {n} rész; hogy halad-e, az nem olvasható',
     'today.sync.rateUnknown.other': 'A sorban vár {n} rész; hogy halad-e, az nem olvasható',
     'today.sync.allWritten': 'A sorban nincs több beírnivaló.',
@@ -1149,6 +1157,7 @@ export const hu = {
     'ingest.hero.notMoving': 'Nem halad',
     'ingest.hero.noEstimate': 'nincs becslés',
     'ingest.hero.rateUnknown': 'Az ütem ismeretlen',
+    'ingest.hero.queued': 'Az ütemet a szerver gazdája látja',
     'ingest.hero.settling': 'Semmi nem vár kiosztásra',
     'ingest.tile.rate': 'Ütem',
     'ingest.tile.rateUnit': 'rész/perc',
@@ -1835,7 +1844,7 @@ export const hu = {
       'Előbb {name} csatlakoztassa újra az eszközét kóddal, aztán vond vissza a régi belépéseit.',
     'legacy.revoke': 'Régi belépések visszavonása',
     'legacy.ask':
-      'Minden régi belépés azonnal megszűnik. Az az eszköz, amelyik még ilyet használ, attól kezdve semmit nem tud küldeni, amíg kóddal újra nem csatlakoztatod. Az adatokból semmi nem vész el.',
+      'Minden régi belépés azonnal megszűnik. Az az eszköz, amelyik még ilyet használ, attól kezdve semmit nem tud küldeni, amíg kóddal újra nem csatlakoztatják. Az adatokból semmi nem vész el.',
     'legacy.confirm': 'Visszavonom',
     'legacy.selfRefused':
       'Ezt az eszközt magát is régi belépéssel használod, így kizárnád vele. Csatlakoztasd újra kóddal, és onnan vond vissza.',
@@ -1843,6 +1852,7 @@ export const hu = {
     'household.legacy': 'régi belépés',
     'household.legacyHint': 'Régi, a háztartás előtti belépést is használ — a részleteknél visszavonható.',
     'code.revoked': 'Visszavontad — ezzel a kóddal már senki nem tud csatlakozni.',
+    'code.revoked.web': 'Visszavontad — ezzel a kóddal már senki nem tud belépni.',
     'code.revokeUsed':
       'Ezt a kódot már beváltották, így nem vonható vissza. Ha nem a te eszközöd csatlakozott vele, vond vissza az eszközt az eszközök listájában.',
     'code.revokeFailed': 'A kódot nem sikerült visszavonni. Próbáld újra, vagy hagyd lejárni.',
@@ -1887,7 +1897,7 @@ export const hu = {
       'A fiókod és minden adatod törlődik erről a szerverről. A telefonodon és az Egészség appban semmi nem változik.',
     'account.delete.button': 'Fiókom és adataim törlése…',
     'account.delete.body':
-      'A fiókod és minden feltöltött adatod végleg törlődik erről a szerverről. A mentésekből legkésőbb öt hét alatt tűnik el. Ha meg akarod tartani az adataidat, a törlés előtt exportáld őket (fent, az Export kártyán).',
+      'A fiókod és minden feltöltött adatod végleg törlődik erről a szerverről. A mentésekből legkésőbb öt hét alatt tűnik el. Ha meg akarod tartani az adataidat, a törlés előtt exportáld őket fent, az Export kártyán: JSON formátumban és „Minden” időszakkal — a CSV csak a méréseket tartalmazza, az edzéseket és az alvást nem.',
     'account.delete.confirm': 'Végleges törlés',
     'account.delete.lastAdmin':
       'Te vagy a szerver egyetlen adminja, ezért a fiókodat nem törölheted. Előbb tegyél adminná valaki mást a Háztartás oldalon.',
@@ -1912,6 +1922,8 @@ export const hu = {
     'log.webCode.you': 'Belépőkódot kértél a webes felülethez.',
     'log.webCode.named': '{actor} belépőkódot kért a webes felülethez.',
     'log.webCode.by': '{actor} belépőkódot adott ki a webes felülethez.',
+    'log.deletionRequested.you': 'Elindítottad a fiókod törlését.',
+    'log.deletionRequested.by': '{actor} elindította a fiók törlését.',
     'log.legacyRevoked.you': 'Visszavontad a háztartás előtti régi belépéseidet.',
     'log.legacyRevoked.by': '{actor} visszavonta a háztartás előtti régi belépéseket.',
     'log.deviceCodeRevoked.you': 'Visszavontál egy fel nem használt csatlakozási kódot.',
@@ -1978,7 +1990,7 @@ export const hu = {
     'member.code.device': 'Eszköz csatlakoztatása',
     'member.code.web': 'Webes belépőkód',
     'member.code.hasDevice':
-      '{name} már használ egy eszközt, ezért az új kódot maga kéri: a telefonján (Saját szerver) vagy a Fiókom oldalon. Ha minden eszközét elvesztette, előbb vond vissza őket itt, és utána adhatsz kódot.',
+      '{name} már használ egy eszközt, ezért az új kódot maga kéri: új eszközhöz a webes felület Fiókom oldalán, webes belépéshez a telefonján is (Beállítások ▸ Export ▸ Saját szerver ▸ Belépés a webes felületre). Ha minden eszközét elvesztette, előbb vond vissza őket itt, és utána adhatsz neki kódot.',
     'member.log.title': 'Napló ({name} is látja)',
 
     // --- Elsewhere -------------------------------------------------------------

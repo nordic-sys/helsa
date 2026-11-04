@@ -197,6 +197,23 @@ describe('the dead-letter queue', () => {
   })
 })
 
+describe("a member's view: no verdict on a pace they are not sent (agy C1)", () => {
+  it('says the parts are waiting, not that nothing moves, and shows no last-batch tile', async () => {
+    status.mockResolvedValue({
+      ...draining,
+      member_view: true,
+      throughput: undefined,
+      eta_seconds: undefined,
+      worker: { started_at: draining.worker!.started_at, prefetch: 8 },
+    })
+    show(MEMBER)
+    expect(await screen.findByText("The pace is for the server's owner to see")).toBeInTheDocument()
+    expect(screen.getByText(/How fast it goes is for the server's owner to see/)).toBeInTheDocument()
+    expect(screen.queryByText(/Not moving|not moving|No worker has started/)).not.toBeInTheDocument()
+    expect(screen.queryByText('Last written')).not.toBeInTheDocument()
+  })
+})
+
 describe('what a member is told instead of commands (W8)', () => {
   it('no worker: whom to ask, and that nothing is lost', async () => {
     status.mockResolvedValue({ ...draining, queue: { ...draining.queue!, consumers: 0 } })

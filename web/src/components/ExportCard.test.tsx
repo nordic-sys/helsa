@@ -116,6 +116,15 @@ describe('the export card', () => {
     )
   })
 
+  // agy C10: "all my data" before deleting the account means everything, as on the phone.
+  it('offers everything, from 2000-01-01 to today', async () => {
+    show()
+    await userEvent.click(screen.getByRole('button', { name: /^everything$/i }))
+    await userEvent.click(screen.getByRole('button', { name: /download from the server/i }))
+    await waitFor(() => expect(calls).toHaveLength(1))
+    expect(calls[0]).toMatchObject({ from: '2000-01-01', to: exportWindow(1, new Date()).to })
+  })
+
   it('sends a hand-picked range, and will not send a reversed one', async () => {
     show()
     await userEvent.click(screen.getByRole('button', { name: /choose dates/i }))

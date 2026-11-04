@@ -42,6 +42,8 @@ export const PROGRESS_MS = 2 * 60_000
  *  - `stalled` — waiting, a worker connected and reporting, and nothing finished
  *    recently (none in the window, or the last one older than `PROGRESS_MS`).
  *  - `draining` — waiting, and finished batches recently: connected and progressing.
+ *  - `queued` — a MEMBER's view: waiting, a worker connected, and the pace is the
+ *    admin's to see (`member_view`). Neither "moving" nor "not moving" (agy C1).
  *  - `settling` — nothing waiting, but a connected worker may still be writing
  *    what it took (no completion evidence yet: see `QUIET_MS`).
  *  - `idle` — nothing waiting, and either no worker (a batch a worker held goes
@@ -54,6 +56,7 @@ export type IngestPhase =
   | 'rateUnknown'
   | 'stalled'
   | 'draining'
+  | 'queued'
   | 'settling'
   | 'idle'
 
@@ -68,6 +71,11 @@ function sinceLastWork(s: IngestStatus): number {
 export function phase(s: IngestStatus): IngestPhase {
   const q = s.queue
   if (!s.broker_reachable || !q) return 'unreachable'
+  // A member is not sent the pace or the last batch (MemberView). Judged by them, a
+  // working worker looks stuck; so with a worker there, the member hears only
+  // "waiting" or, with nothing waiting, "nothing left" (their own parts are written
+  // or with the worker for seconds).
+  if (s.member_view && q.consumers > 0) return q.ready === 0 ? 'idle' : 'queued'
   if (q.ready === 0) {
     if (q.consumers === 0) return 'idle'
     // Completion evidence: the worker reports, and has been quiet long enough.
@@ -132,6 +140,7 @@ export type SyncState =
   | 'noConsumer'
   | 'stalled'
   | 'rateUnknown'
+  | 'queued'
   | 'writing'
   | 'settling'
   | 'upToDate'
@@ -145,6 +154,7 @@ export function syncState(s: IngestStatus): SyncState {
     case 'noConsumer':
     case 'stalled':
     case 'rateUnknown':
+    case 'queued':
     case 'settling':
       return p
     case 'draining':
@@ -164,6 +174,7 @@ export function toneOf(state: SyncState): QueueTone | 'ok' {
       return 'stalled'
     case 'writing':
     case 'rateUnknown':
+    case 'queued':
     case 'settling':
       return 'busy'
     case 'upToDate':

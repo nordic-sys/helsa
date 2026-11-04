@@ -40,7 +40,11 @@ import { useAvailability } from '../lib/useAvailability'
 import { Card } from './ui'
 
 type Format = 'csv' | 'json'
-type Period = (typeof EXPORT_DAY_OPTIONS)[number] | 'custom'
+type Period = (typeof EXPORT_DAY_OPTIONS)[number] | 'all' | 'custom'
+
+/** "Everything": from a day before any HealthKit data can exist to today — the same
+ * start the app's own export uses, so "all my data" means the same on both (agy C10). */
+const ALL_FROM = '2000-01-01'
 
 type Status =
   | { kind: 'idle' }
@@ -105,7 +109,12 @@ export function ExportCard({ save = saveBlob }: { save?: (blob: Blob, filename: 
 
   async function run() {
     if (blocked) return
-    const win = period === 'custom' ? { from, to } : exportWindow(period, new Date())
+    const win =
+      period === 'custom'
+        ? { from, to }
+        : period === 'all'
+          ? { from: ALL_FROM, to: exportWindow(1, new Date()).to }
+          : exportWindow(period, new Date())
     const body: ExportRequest = { format, from: win.from, to: win.to }
     if (!allMetrics) {
       // Every wire name a ticked metric can arrive under (`MetricDef.aliases`):
@@ -149,6 +158,7 @@ export function ExportCard({ save = saveBlob }: { save?: (blob: Blob, filename: 
     { key: 30, label: tp('settings.export.days', 30) },
     { key: 90, label: tp('settings.export.days', 90) },
     { key: 365, label: t('settings.export.year') },
+    { key: 'all', label: t('settings.export.all') },
     { key: 'custom', label: t('settings.export.custom') },
   ]
 

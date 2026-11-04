@@ -133,6 +133,11 @@ const KINDS: Record<string, (d: Record<string, unknown>) => Variants> = {
     d.purpose === 'web'
       ? { you: 'log.webCodeRevoked.you', named: 'log.webCodeRevoked.by', by: 'log.webCodeRevoked.by' }
       : { you: 'log.deviceCodeRevoked.you', named: 'log.deviceCodeRevoked.by', by: 'log.deviceCodeRevoked.by' },
+  deletion_requested: () => ({
+    you: 'log.deletionRequested.you',
+    named: 'log.deletionRequested.by',
+    by: 'log.deletionRequested.by',
+  }),
   legacy_tokens_revoked: () => ({
     you: 'log.legacyRevoked.you',
     named: 'log.legacyRevoked.by',

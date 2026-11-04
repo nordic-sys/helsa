@@ -142,4 +142,11 @@ func TestMemberViewHidesEverybodysPace(t *testing.T) {
 	if m.Queue == nil || m.Queue.Ready != 3 {
 		t.Errorf("the depth itself is the member's to see: %+v", m.Queue)
 	}
+	// And it says it is trimmed, or a client takes the missing pace for a stuck worker (agy C1).
+	if m.MemberView == nil || !*m.MemberView {
+		t.Error("a member's view does not say it is one")
+	}
+	if full.MemberView != nil {
+		t.Error("an admin's view claims to be a member's")
+	}
 }

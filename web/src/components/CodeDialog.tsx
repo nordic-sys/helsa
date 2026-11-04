@@ -26,6 +26,7 @@ export function CodeDialog({
   code,
   forName,
   serverEndpoint,
+  operator = false,
   onRevoke,
   onClose,
 }: {
@@ -34,6 +35,9 @@ export function CodeDialog({
   forName?: string
   /** The phone's address as the server knows it (GET /v1/me device_endpoint). */
   serverEndpoint?: string
+  /** The server's admin, on their own account: the certificate is theirs to make, not to ask
+   * the owner for (agy C8). */
+  operator?: boolean
   /** Withdraws the code on the server; a rejection with 409 carries what became of it. */
   onRevoke?: () => Promise<void>
   onClose: () => void
@@ -105,29 +109,40 @@ export function CodeDialog({
             </div>
             <p className="subtle" aria-live="polite" style={{ margin: 0 }}>
               {revoke === 'done'
-                ? t('code.revoked')
+                ? device
+                  ? t('code.revoked')
+                  : t('code.revoked.web')
                 : left > 0
                   ? t('code.expires', { time: until, left: mmss(left) })
                   : t('code.expired')}
             </p>
-            <Copyable
-              label={device ? t('code.device.address') : t('code.web.address')}
-              value={device ? endpoint : window.location.origin}
-            />
+            {revoke !== 'done' && (
+              <Copyable
+                label={device ? t('code.device.address') : t('code.web.address')}
+                value={device ? endpoint : window.location.origin}
+              />
+            )}
           </div>
         </div>
 
-        {device ? (
+        {/* A withdrawn code has nothing left to do: no steps to redeem it (agy C7). */}
+        {revoke !== 'done' && (
           <>
-            <p>{t('code.device.howTo')}</p>
-            <p className="subtle">{forName ? t('code.device.certAdmin') : t('code.device.cert')}</p>
+            {device ? (
+              <>
+                <p>{t('code.device.howTo')}</p>
+                <p className="subtle">
+                  {forName || operator ? t('code.device.certAdmin') : t('code.device.cert')}
+                </p>
+              </>
+            ) : (
+              <p>{t('code.web.howTo')}</p>
+            )}
+            <p className="subtle" style={{ marginBottom: 0 }}>
+              {t('code.once')}
+            </p>
           </>
-        ) : (
-          <p>{t('code.web.howTo')}</p>
         )}
-        <p className="subtle" style={{ marginBottom: 0 }}>
-          {t('code.once')}
-        </p>
         {revoke === 'used' && (
           <p className="form-error" role="alert">
             {t('code.revokeUsed')}

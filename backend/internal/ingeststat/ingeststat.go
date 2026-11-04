@@ -362,6 +362,10 @@ func recentFailures(fs []Failure) *[]api.IngestFailure {
 // counters and the time of its last batch, and the last redrive. Each of them says WHEN somebody uploaded and how
 // much — on a server shared by a household, that is somebody else's day.
 func MemberView(out api.IngestStatus) api.IngestStatus {
+	// Said outright (agy C1): without it a client reads the missing pace as a stuck
+	// worker, since an admin's snapshot can lack it too.
+	member := true
+	out.MemberView = &member
 	out.Throughput = nil
 	// The ETA is depth ÷ the server's rate: with the depth shown, it gives the rate
 	// back (Codex R2). A member's view has the depth, not the pace.

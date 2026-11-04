@@ -506,6 +506,9 @@ export type IngestStatus = {
   throughput?: IngestThroughput
   /** An ESTIMATE; absent when there is nothing to estimate from. */
   eta_seconds?: number
+  /** A member's view (docs/36 §5.8): pace, estimate and the worker's counters are left
+   * out on purpose — their absence is not a stuck worker (agy C1). */
+  member_view?: boolean
 }
 
 // --- GET /v1/workout-intensity (training progress, zone 3+) -----------------

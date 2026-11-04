@@ -12,11 +12,11 @@ import { CodeDialog } from './CodeDialog'
 
 const soon = () => new Date(Date.now() + 15 * 60_000).toISOString()
 
-function show(code: CodeIssued, forName?: string, onRevoke?: () => Promise<void>) {
+function show(code: CodeIssued, forName?: string, onRevoke?: () => Promise<void>, operator = false) {
   localStorage.setItem('helsa.lang', 'en')
   return render(
     <I18nProvider>
-      <CodeDialog code={code} forName={forName} onRevoke={onRevoke} onClose={() => {}} />
+      <CodeDialog code={code} forName={forName} onRevoke={onRevoke} operator={operator} onClose={() => {}} />
     </I18nProvider>,
   )
 }
@@ -57,6 +57,21 @@ describe('the code dialog', () => {
     expect(screen.queryByTestId('qr')).not.toBeInTheDocument()
     expect(screen.getByTestId('code-value')).toHaveClass('code-value--dead')
     expect(screen.queryByRole('button', { name: 'Revoke the code' })).not.toBeInTheDocument()
+    // Nothing left to redeem it with (agy C7).
+    expect(screen.queryByText(/On the phone:/)).not.toBeInTheDocument()
+    expect(screen.queryByText(/The code works once/)).not.toBeInTheDocument()
+  })
+
+  it('words a withdrawn sign-in code as signing in, not connecting', async () => {
+    show({ code: 'ABCD-EFGH', purpose: 'web', expires_at: soon() }, undefined, async () => {})
+    fireEvent.click(screen.getByRole('button', { name: 'Revoke the code' }))
+    expect(await screen.findByText(/nobody can sign in with this code/)).toBeInTheDocument()
+  })
+
+  it("tells the server's admin how to make the certificate, not to ask the owner (agy C8)", () => {
+    show({ code: 'K7QM-4XPA', purpose: 'device', expires_at: soon() }, undefined, undefined, true)
+    expect(screen.getByText(/make client NAME=/)).toBeInTheDocument()
+    expect(screen.queryByText(/ask them for it/)).not.toBeInTheDocument()
   })
 
   it('says so when the code was already used — and points at the device to revoke instead', async () => {

@@ -267,6 +267,7 @@ function MemberDetail({ m }: { m: Member }) {
           code={code}
           forName={own ? undefined : name}
           serverEndpoint={me.device_endpoint}
+          operator
           onRevoke={async () => {
             try {
               await (own ? api.revokeMyCode(code.code) : api.revokeMemberCode(m.id, code.code))

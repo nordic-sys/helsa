@@ -338,6 +338,7 @@ export function SyncPill({ query }: { query: UseQueryResult<import('../api/types
     stalled: t('today.pill.stalled'),
     noConsumer: t('today.pill.noConsumer'),
     rateUnknown: t('today.pill.rateUnknown'),
+    queued: t('today.pill.queued'),
     // ⚠️ Nothing waiting is not everything written: up to `in_flight_max`
     // parts may still be with the worker (see `QUIET_MS`).
     settling: s.queue?.in_flight_max
@@ -819,6 +820,7 @@ function SyncCard({
   else if (state === 'stalled' || state === 'noConsumer')
     queueLine = tp('today.sync.stuck', waiting, { n: f.num(waiting) })
   else if (state === 'rateUnknown') queueLine = tp('today.sync.rateUnknown', waiting, { n: f.num(waiting) })
+  else if (state === 'queued') queueLine = tp('today.sync.queued', waiting, { n: f.num(waiting) })
   else if (state === 'settling')
     queueLine = s?.queue?.in_flight_max
       ? t('today.pill.settling', { n: f.num(s.queue.in_flight_max) })

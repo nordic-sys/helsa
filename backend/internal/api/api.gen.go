@@ -1419,7 +1419,10 @@ type IngestStatus struct {
 	DeadLetter *IngestDeadLetter `json:"dead_letter,omitempty"`
 
 	// EtaSeconds An ESTIMATE of how long the current backlog takes to drain at the recent rate. Absent when there is no backlog, no consumer, or no batch was processed in the window.
-	EtaSeconds *int              `json:"eta_seconds,omitempty"`
+	EtaSeconds *int `json:"eta_seconds,omitempty"`
+
+	// MemberView True when the caller is a member, not an admin: the pace, the estimate, the worker's counters and the time of its last batch are left out on purpose (they tell when somebody else uploaded). A client must not read their absence as a worker that is not moving.
+	MemberView *bool             `json:"member_view,omitempty"`
 	Queue      *IngestQueueDepth `json:"queue,omitempty"`
 
 	// StatsReachable false → the worker's counters (in Redis) could not be read; `worker` and `throughput` are absent

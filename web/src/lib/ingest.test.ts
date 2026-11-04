@@ -241,3 +241,32 @@ describe('a retry call that did not answer 200', () => {
     expect(redriveErrorKind(new TypeError('Failed to fetch'))).toBe('unknown')
   })
 })
+
+// agy C1: a member is not sent the pace or the last batch (backend MemberView). Read as
+// an admin's snapshot, a worker writing all day looks stuck.
+describe("a member's view of the queue", () => {
+  const member = (over: Partial<IngestStatus> = {}) =>
+    base({
+      member_view: true,
+      throughput: undefined,
+      eta_seconds: undefined,
+      worker: { started_at: '2026-10-27T11:30:00Z', prefetch: 8 },
+      ...over,
+    })
+
+  it('is "waiting", never "stalled", while a worker is connected', () => {
+    expect(phase(member())).toBe('queued')
+    expect(syncState(member())).toBe('queued')
+    expect(toneOf(syncState(member()))).toBe('busy')
+    expect(queueBadge(member())).toMatchObject({ tone: 'busy', kind: 'waiting', count: 4000 })
+  })
+
+  it('is up to date with nothing waiting, and still "no worker" without one', () => {
+    expect(phase(member({ queue: { name: 'helsa.ingest', ready: 0, consumers: 1 } }))).toBe('idle')
+    expect(phase(member({ queue: { name: 'helsa.ingest', ready: 5, consumers: 0 } }))).toBe('noConsumer')
+  })
+
+  it("leaves an admin's snapshot without a pace as stalled, as before", () => {
+    expect(phase(base({ throughput: undefined }))).toBe('stalled')
+  })
+})

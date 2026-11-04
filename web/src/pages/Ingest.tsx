@@ -123,6 +123,7 @@ function Status({
     draining: t('ingest.worker.state.working'),
     stalled: t('ingest.worker.state.noRecent'),
     rateUnknown: t('ingest.worker.state.connected'),
+    queued: t('ingest.worker.state.connected'),
     settling: t('ingest.worker.state.finishing'),
   }
   const workerState: { word: string; dot: string; line: string } | null = q
@@ -224,7 +225,9 @@ function Status({
                       ? t('ingest.hero.notMoving')
                       : p === 'rateUnknown'
                         ? t('ingest.hero.rateUnknown')
-                        : t('ingest.hero.etaLabel')}
+                        : p === 'queued'
+                          ? t('ingest.hero.queued')
+                          : t('ingest.hero.etaLabel')}
                   </span>
                   <span className="figure">{t('ingest.hero.noEstimate')}</span>
                 </>
@@ -241,6 +244,8 @@ function Status({
                   ? tp('ingest.stalled', windowMin)
                   : p === 'rateUnknown'
                     ? t('ingest.rateUnknown')
+                    : p === 'queued'
+                      ? t('ingest.queued')
                     : p === 'settling'
                       ? q.in_flight_max
                         ? t('ingest.settling', { n: f.num(q.in_flight_max) })
@@ -285,7 +290,9 @@ function Status({
               <p className="stat-note">{workerState.line}</p>
             </article>
           )}
-          {s.stats_reachable && (
+          {/* A member is not sent the last batch's time (MemberView): no tile that would
+              read "nothing yet" on a server that is writing all day (agy C1). */}
+          {s.stats_reachable && !s.member_view && (
             <article className="card card-sm">
               <h2 className="card-title">{t('ingest.tile.last')}</h2>
               <p className="figure">
@@ -317,7 +324,7 @@ function Status({
         </div>
       )}
 
-      {s.stats_reachable && s.worker && (
+      {s.stats_reachable && s.worker && !s.member_view && (
         <Card
           title={
             s.worker.started_at

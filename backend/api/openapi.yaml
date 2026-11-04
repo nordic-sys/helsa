@@ -1747,6 +1747,12 @@ components:
         the description of GET /ingest/status.
       required: [checked_at, broker_reachable, stats_reachable]
       properties:
+        member_view:
+          type: boolean
+          description: >
+            True when the caller is a member, not an admin: the pace, the estimate, the worker's counters
+            and the time of its last batch are left out on purpose (they tell when somebody else
+            uploaded). A client must not read their absence as a worker that is not moving.
         checked_at: { type: string, format: date-time, description: "when the API took this snapshot" }
         broker_reachable: { type: boolean, description: "false → RabbitMQ could not be asked; `queue` and `dead_letter` are absent" }
         broker_error: { type: string, description: "why the broker could not be asked (only when `broker_reachable` is false)" }
