@@ -92,6 +92,14 @@ services:
   rabbitmq:
     image: rabbitmq:4-management
     container_name: helsa-rabbitmq
+    # ⚠️ A fixed hostname, or a recreated container is a different broker. RabbitMQ
+    # keeps its data under mnesia/rabbit@<hostname>, and Docker gives every new
+    # container a new random hostname: on 2026-11-09 the recreate that added the
+    # memory ceiling below started an empty node next to the old one, and the two
+    # batches set aside in the dead-letter queue disappeared from view (they were
+    # still on the volume, under the old name). A plain restart keeps the hostname;
+    # a recreate — new image, new setting — does not.
+    hostname: helsa-rabbitmq
     # RabbitMQ reads this ceiling and sets its own memory alarm (which slows
     # publishers rather than failing) below it.
     mem_limit: 512m
