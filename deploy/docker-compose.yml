@@ -19,6 +19,14 @@ services:
     # project promises no phone-home, so it is switched off here, for every
     # install. The entrypoint passes these arguments on to postgres.
     command: ["postgres", "-c", "timescaledb.telemetry_level=off"]
+    # ⚠️ Memory ceilings, on every service: on 2026-11-09 one runaway read filled a
+    # 4 GB server until it read the disk at ~1.9 GB/s for an hour and stopped
+    # answering, even over ssh. With a ceiling the kernel stops the one container
+    # that went over instead, and Docker starts it again. Sized for a 4 GB machine.
+    mem_limit: 1792m
+    # Docker gives a container 64 MB of /dev/shm; a parallel query keeps its
+    # shared state there, and on that day asked for 724 MB and failed.
+    shm_size: 256m
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-helsa}
       POSTGRES_USER: ${POSTGRES_USER:-helsa}       # the OWNER: a superuser that owns the schema and runs the migrations
@@ -73,6 +81,7 @@ services:
     image: redis:8-alpine
     container_name: helsa-redis
     command: ["redis-server", "--requirepass", "${REDIS_PASSWORD:-helsa_local_dev}", "--appendonly", "yes"]
+    mem_limit: 128m
     volumes:
       - helsa_redisdata:/data
     healthcheck:
@@ -85,6 +94,9 @@ services:
   rabbitmq:
     image: rabbitmq:4-management
     container_name: helsa-rabbitmq
+    # RabbitMQ reads this ceiling and sets its own memory alarm (which slows
+    # publishers rather than failing) below it.
+    mem_limit: 512m
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-helsa}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-helsa_local_dev}

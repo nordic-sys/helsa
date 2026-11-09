@@ -73,6 +73,13 @@ ALTER ROLE helsa_app WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATIO
 \if :have_password
   ALTER ROLE helsa_app WITH PASSWORD :'app_password';
 \endif
+
+-- A ceiling on any one statement the application runs. On 2026-11-09 one read
+-- (a deletion's locate over four million samples) ran for an hour and took the
+-- whole server down with it; a statement this old is a runaway, not work. Five
+-- minutes, not less: the data export is one streaming SELECT over the whole
+-- history. Migrations and Timescale's own jobs run as the owner, not under this.
+ALTER ROLE helsa_app SET statement_timeout = '300s';
 \unset app_password
 
 -- A membership would hand helsa_app every right of the role it is a member of —
