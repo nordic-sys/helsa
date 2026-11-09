@@ -63,4 +63,4 @@ END $$;
 
 -- +goose Down
 DROP POLICY IF EXISTS own_select ON deletion_jobs;
--- (redeem_code keeps its stricter body: the 00015 one is the bug.)
+-- (redeem_code keeps its stricter body: the 00016 one is the bug.)

@@ -119,7 +119,7 @@ BEGIN
       AND c.relname <> 'goose_db_version'
   LOOP
     -- ⛔ The raw samples and the aggregates over them are NOT the API's: it reads
-    -- them through my_samples, which shows only the request's user (00014, docs/36
+    -- them through my_samples, which shows only the request's user (00015, docs/36
     -- §4.8.8). TimescaleDB allows no row security on the compressed hypertable, so
     -- this missing grant IS the database's line for samples. Revoked every run, so
     -- an install that had the old grants loses them.
@@ -144,10 +144,10 @@ BEGIN
     REVOKE ALL ON TABLE public.goose_db_version FROM helsa_app;
   END IF;
 
-  -- account_events.id is the first sequence (00015).
+  -- account_events.id is the first sequence (00016).
   GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO helsa_app;
 
-  -- The one function the API calls: redeeming a one-time code (00015). It runs as
+  -- The one function the API calls: redeeming a one-time code (00016). It runs as
   -- the owner by design — see the migration for why, and for what it may do.
   IF to_regprocedure('public.redeem_code(bytea, text, uuid, text, text, timestamptz)') IS NOT NULL THEN
     GRANT EXECUTE ON FUNCTION public.redeem_code(bytea, text, uuid, text, text, timestamptz) TO helsa_app;
@@ -262,7 +262,7 @@ BEGIN
     REVOKE ALL ON TABLE public.goose_db_version FROM helsa_worker;
   END IF;
   GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO helsa_worker;
-  -- The member-deletion job's one owner-only step (00016): a deleted user's hourly
+  -- The member-deletion job's one owner-only step (00017): a deleted user's hourly
   -- aggregates. It refuses any user who still exists.
   IF to_regprocedure('public.purge_deleted_user_aggregates(uuid)') IS NOT NULL THEN
     GRANT EXECUTE ON FUNCTION public.purge_deleted_user_aggregates(uuid) TO helsa_worker;

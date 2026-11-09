@@ -376,7 +376,7 @@ const getUserByHandle = `-- name: GetUserByHandle :one
 SELECT id, handle, email, display_name, time_zone, locale, unit_system, notif_prefs, consent_at, created_at, role, disabled_at, ha_publish, last_upload_at, legacy_token_used_at, legacy_tokens_revoked_at FROM users WHERE handle = $1
 `
 
-// ── The household (00015, 00016; docs/36 F1) ───────────────────────────────
+// ── The household (00016, 00017; docs/36 F1) ───────────────────────────────
 func (q *Queries) GetUserByHandle(ctx context.Context, handle string) (User, error) {
 	row := q.db.QueryRow(ctx, getUserByHandle, handle)
 	var i User
@@ -504,7 +504,7 @@ type InsertDeviceTokenParams struct {
 	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
 }
 
-// ── The token register (00013) ──────────────────────────────────────────────
+// ── The token register (00014) ──────────────────────────────────────────────
 func (q *Queries) InsertDeviceToken(ctx context.Context, arg InsertDeviceTokenParams) error {
 	_, err := q.db.Exec(ctx, insertDeviceToken,
 		arg.ID,

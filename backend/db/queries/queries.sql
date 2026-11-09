@@ -296,7 +296,7 @@ SELECT count(*) FROM users;
 -- name: SetUserRole :exec
 UPDATE users SET role = @role WHERE id = @id;
 
--- ── The token register (00013) ──────────────────────────────────────────────
+-- ── The token register (00014) ──────────────────────────────────────────────
 
 -- name: InsertDeviceToken :exec
 INSERT INTO device_tokens (id, user_id, label, kind, created_by, expires_at)
@@ -325,7 +325,7 @@ SELECT id, user_id, label, kind, created_by, created_at, expires_at, last_used_a
 FROM device_tokens WHERE user_id = @user_id
 ORDER BY created_at DESC;
 
--- ── The household (00015, 00016; docs/36 F1) ───────────────────────────────
+-- ── The household (00016, 00017; docs/36 F1) ───────────────────────────────
 
 -- name: GetUserByHandle :one
 SELECT * FROM users WHERE handle = @handle;

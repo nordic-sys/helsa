@@ -10,7 +10,7 @@
 //	                          (§4.8.9) — Timescale drops whole compressed batches.
 //	rows       → aggregates: the hourly aggregate is no foreign key and keeps the
 //	                          member's old buckets; purge_deleted_user_aggregates
-//	                          (00016) removes them.
+//	                          (00017) removes them.
 //	aggregates → cache:      the summary cache in Redis.
 //	cache      → mqtt:       the member's retained Home Assistant topics, through
 //	                          a hook the publisher provides (none when it is off).

@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS deletion_jobs (
 CREATE UNIQUE INDEX IF NOT EXISTS deletion_jobs_one_open ON deletion_jobs (user_id) WHERE done_at IS NULL;
 
 -- ── row-level security on the new tables ───────────────────────────────────────
--- The owner's own rows, as in 00014 …
+-- The owner's own rows, as in 00015 …
 ALTER TABLE enrolment_codes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE account_events  ENABLE ROW LEVEL SECURITY;
 -- A deletion job has no "own" reader: it is the admin's (who asked for it) and the

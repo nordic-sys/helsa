@@ -86,7 +86,7 @@ func TestTheDatabaseKeepsMembersApartWithoutTheApplication(t *testing.T) {
 	}
 
 	// An admin is no exception on health data: the admin policies cover the account
-	// tables only (00015), so the same unfiltered reads as admin show only the
+	// tables only (00016), so the same unfiltered reads as admin show only the
 	// admin's own rows (Codex S12).
 	setRole(t, e, a, auth.RoleAdmin)
 	adminCtx := tenant.With(context.Background(), a.userID)
@@ -180,7 +180,7 @@ func TestEveryMemberTableHasAPolicy(t *testing.T) {
 			continue
 		}
 		if !rls || !policy {
-			t.Errorf("table %s holds members' rows but has row security %v and a policy %v — add it to a migration like 00014", name, rls, policy)
+			t.Errorf("table %s holds members' rows but has row security %v and a policy %v — add it to a migration like 00015", name, rls, policy)
 		}
 	}
 	if seen < 10 {

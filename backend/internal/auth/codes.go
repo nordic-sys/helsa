@@ -180,7 +180,7 @@ func (s *Service) RevokeCode(ctx context.Context, owner uuid.UUID, code string) 
 }
 
 // Redeem consumes a code and issues its token: a device token for "device", a web
-// session for "web". It is one database statement (redeem_code, 00015): the code,
+// session for "web". It is one database statement (redeem_code, 00016): the code,
 // the token's row and the event are written together, or nothing is. The token
 // belongs to the user the code names — never to anyone the request asks for.
 func (s *Service) Redeem(ctx context.Context, code string, purpose Purpose, label string) (*Session, error) {

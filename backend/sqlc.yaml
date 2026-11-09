@@ -11,11 +11,11 @@ sql:
       - "db/migrations/00007_achievements.sql"
       - "db/migrations/00008_workout_routes.sql"
       - "db/migrations/00010_phone_settings.sql"
-      - "db/migrations/00012_users_roles.sql"
-      - "db/migrations/00013_device_tokens.sql"
-      - "db/migrations/00015_household.sql"
-      - "db/migrations/00016_household_ops.sql"
-      - "db/migrations/00018_legacy_tokens.sql"
+      - "db/migrations/00013_users_roles.sql"
+      - "db/migrations/00014_device_tokens.sql"
+      - "db/migrations/00016_household.sql"
+      - "db/migrations/00017_household_ops.sql"
+      - "db/migrations/00019_legacy_tokens.sql"
     queries: "db/queries"
     gen:
       go:

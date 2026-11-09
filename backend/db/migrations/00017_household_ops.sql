@@ -46,7 +46,7 @@ END $$;
 REVOKE ALL ON FUNCTION purge_deleted_user_aggregates(uuid) FROM PUBLIC;
 
 -- A member may queue their OWN deletion (DELETE /v1/me); reading and running the
--- jobs stays the admin's and the worker's (00015).
+-- jobs stays the admin's and the worker's (00016).
 DROP POLICY IF EXISTS own_insert ON deletion_jobs;
 CREATE POLICY own_insert ON deletion_jobs FOR INSERT
   WITH CHECK (user_id = (SELECT NULLIF(current_setting('helsa.user_id', true), '')::uuid));
