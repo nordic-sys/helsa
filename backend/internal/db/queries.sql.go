@@ -11,28 +11,29 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-const deleteSamplesByUUIDInSpan = `-- name: DeleteSamplesByUUIDInSpan :exec
+const deleteSampleExact = `-- name: DeleteSampleExact :exec
 DELETE FROM samples
 WHERE user_id = $1 AND data_type = $2
-  AND ts >= $3::timestamptz AND ts <= $4::timestamptz
-  AND source_uuid = ANY($5::text[])
+  AND ts = $3 AND source_uuid = $4
 `
 
-type DeleteSamplesByUUIDInSpanParams struct {
-	UserID      pgtype.UUID        `json:"user_id"`
-	DataType    string             `json:"data_type"`
-	FromTs      pgtype.Timestamptz `json:"from_ts"`
-	ToTs        pgtype.Timestamptz `json:"to_ts"`
-	SourceUuids []string           `json:"source_uuids"`
+type DeleteSampleExactParams struct {
+	UserID     pgtype.UUID        `json:"user_id"`
+	DataType   string             `json:"data_type"`
+	Ts         pgtype.Timestamptz `json:"ts"`
+	SourceUuid string             `json:"source_uuid"`
 }
 
-func (q *Queries) DeleteSamplesByUUIDInSpan(ctx context.Context, arg DeleteSamplesByUUIDInSpanParams) error {
-	_, err := q.db.Exec(ctx, deleteSamplesByUUIDInSpan,
+// Step two: one located row, named by its segment (user, type) and its exact
+// time, so Timescale decompresses the one batch that holds it. A span (ts BETWEEN)
+// or a list of times (ts = ANY) is not narrowed that way and decompresses the
+// type's whole history between them.
+func (q *Queries) DeleteSampleExact(ctx context.Context, arg DeleteSampleExactParams) error {
+	_, err := q.db.Exec(ctx, deleteSampleExact,
 		arg.UserID,
 		arg.DataType,
-		arg.FromTs,
-		arg.ToTs,
-		arg.SourceUuids,
+		arg.Ts,
+		arg.SourceUuid,
 	)
 	return err
 }
@@ -443,10 +444,9 @@ func (q *Queries) ListSleepSegments(ctx context.Context, arg ListSleepSegmentsPa
 }
 
 const locateSamplesByUUID = `-- name: LocateSamplesByUUID :many
-SELECT data_type, min(ts)::timestamptz AS from_ts, max(ts)::timestamptz AS to_ts
+SELECT data_type, ts, source_uuid
 FROM samples
 WHERE user_id = $1 AND source_uuid = ANY($2::text[])
-GROUP BY data_type
 `
 
 type LocateSamplesByUUIDParams struct {
@@ -455,20 +455,26 @@ type LocateSamplesByUUIDParams struct {
 }
 
 type LocateSamplesByUUIDRow struct {
-	DataType string             `json:"data_type"`
-	FromTs   pgtype.Timestamptz `json:"from_ts"`
-	ToTs     pgtype.Timestamptz `json:"to_ts"`
+	DataType   string             `json:"data_type"`
+	Ts         pgtype.Timestamptz `json:"ts"`
+	SourceUuid string             `json:"source_uuid"`
 }
 
-// Step one of deleting samples by HealthKit UUID: which types, over which time span.
+// Step one of deleting samples by HealthKit UUID: the exact rows.
 //
 // ⚠️ A DELETE that names only user_id and source_uuid makes Timescale decompress
 // EVERY compressed batch of the user (compression is segmented by user_id and
-// data_type and ordered by ts; source_uuid is in neither), and past about 100,000
-// rows the transaction fails with "tuple decompression limit exceeded" — a real
-// server with four million samples dead-lettered every batch carrying a deletion.
-// Reading is not limited; so the rows are found first, and the delete below then
-// names the type and the span, which Timescale uses to touch only those batches.
+// data_type and ordered by ts; source_uuid is in neither) — a real server with
+// four million samples dead-lettered every batch carrying a deletion. So the rows
+// are found first, by a read that the bloom filter on source_uuid (migration
+// 00012) lets skip the batches that cannot hold them.
+//
+// ⚠️ Call it with a FEW UUIDs at a time (ingest.locateGroup). The bloom filter
+// answers per batch and per UUID with a small false-positive rate; asked about
+// a thousand UUIDs at once, nearly every batch says "maybe", the whole history is
+// decompressed anyway — and on 2026-11-09 that read, 1,136 UUIDs against four
+// million samples, filled a 4 GB server until it stopped answering. Measured on
+// four million samples: 10 UUIDs 44 ms, 50 192 ms, 200 1.5 s, 1,136 10 s.
 func (q *Queries) LocateSamplesByUUID(ctx context.Context, arg LocateSamplesByUUIDParams) ([]LocateSamplesByUUIDRow, error) {
 	rows, err := q.db.Query(ctx, locateSamplesByUUID, arg.UserID, arg.SourceUuids)
 	if err != nil {
@@ -478,7 +484,7 @@ func (q *Queries) LocateSamplesByUUID(ctx context.Context, arg LocateSamplesByUU
 	var items []LocateSamplesByUUIDRow
 	for rows.Next() {
 		var i LocateSamplesByUUIDRow
-		if err := rows.Scan(&i.DataType, &i.FromTs, &i.ToTs); err != nil {
+		if err := rows.Scan(&i.DataType, &i.Ts, &i.SourceUuid); err != nil {
 			return nil, err
 		}
 		items = append(items, i)

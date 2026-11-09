@@ -196,25 +196,33 @@ ON CONFLICT (user_id, metric) DO UPDATE SET
 RETURNING *;
 
 -- name: LocateSamplesByUUID :many
--- Step one of deleting samples by HealthKit UUID: which types, over which time span.
+-- Step one of deleting samples by HealthKit UUID: the exact rows.
 --
 -- ⚠️ A DELETE that names only user_id and source_uuid makes Timescale decompress
 -- EVERY compressed batch of the user (compression is segmented by user_id and
--- data_type and ordered by ts; source_uuid is in neither), and past about 100,000
--- rows the transaction fails with "tuple decompression limit exceeded" — a real
--- server with four million samples dead-lettered every batch carrying a deletion.
--- Reading is not limited; so the rows are found first, and the delete below then
--- names the type and the span, which Timescale uses to touch only those batches.
-SELECT data_type, min(ts)::timestamptz AS from_ts, max(ts)::timestamptz AS to_ts
+-- data_type and ordered by ts; source_uuid is in neither) — a real server with
+-- four million samples dead-lettered every batch carrying a deletion. So the rows
+-- are found first, by a read that the bloom filter on source_uuid (migration
+-- 00012) lets skip the batches that cannot hold them.
+--
+-- ⚠️ Call it with a FEW UUIDs at a time (ingest.locateGroup). The bloom filter
+-- answers per batch and per UUID with a small false-positive rate; asked about
+-- a thousand UUIDs at once, nearly every batch says "maybe", the whole history is
+-- decompressed anyway — and on 2026-11-09 that read, 1,136 UUIDs against four
+-- million samples, filled a 4 GB server until it stopped answering. Measured on
+-- four million samples: 10 UUIDs 44 ms, 50 192 ms, 200 1.5 s, 1,136 10 s.
+SELECT data_type, ts, source_uuid
 FROM samples
-WHERE user_id = @user_id AND source_uuid = ANY(@source_uuids::text[])
-GROUP BY data_type;
+WHERE user_id = @user_id AND source_uuid = ANY(@source_uuids::text[]);
 
--- name: DeleteSamplesByUUIDInSpan :exec
+-- name: DeleteSampleExact :exec
+-- Step two: one located row, named by its segment (user, type) and its exact
+-- time, so Timescale decompresses the one batch that holds it. A span (ts BETWEEN)
+-- or a list of times (ts = ANY) is not narrowed that way and decompresses the
+-- type's whole history between them.
 DELETE FROM samples
 WHERE user_id = @user_id AND data_type = @data_type
-  AND ts >= @from_ts::timestamptz AND ts <= @to_ts::timestamptz
-  AND source_uuid = ANY(@source_uuids::text[]);
+  AND ts = @ts AND source_uuid = @source_uuid;
 
 -- name: DeleteWorkoutsByUUID :exec
 DELETE FROM workouts WHERE user_id = $1 AND source_uuid = ANY(@source_uuids::text[]);

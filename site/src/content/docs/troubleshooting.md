@@ -76,6 +76,7 @@ meet them.
 | You want to know whether it is really up | `/readyz`, not `/healthz`. [Quick start](/getting-started/quick-start/#confirm-it-answers) |
 | Something went wrong and you are deciding what to do first | [If something does go wrong](/deployment/hardening/#if-something-does-go-wrong) |
 | You need to get the data back | [Backups and restore](/deployment/backups/) |
+| The machine stops answering — even ssh — soon after the phone comes back online, with the disk read flat out; or the dashboard shows parts set aside with *"locate samples to delete … No space left on device"* | A day of deletions met the whole compressed history in one read (fixed 2026-11-09). Update the images and run `make prod-migrate`: migration 00012 adds the index that lets a deletion find its rows, and recompresses the history once (seconds, not minutes). Then retry the parts set aside from the dashboard. |
 
 ## Still stuck
 

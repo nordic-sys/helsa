@@ -37,6 +37,7 @@ services:
 
   api:
     image: ${HELSA_BACKEND_IMAGE:-ghcr.io/nordic-sys/helsa/backend:main}
+    mem_limit: 512m   # a 32 MB request body is decoded here
     pull_policy: ${HELSA_PULL_POLICY:-always}
     build:
       context: ../backend
@@ -75,6 +76,7 @@ services:
   # through the host's /etc/hosts; an IP address is the reliable answer.
   worker:
     image: ${HELSA_BACKEND_IMAGE:-ghcr.io/nordic-sys/helsa/backend:main}
+    mem_limit: 768m   # decodes a whole batch (up to 64 MB of JSON) at once
     pull_policy: ${HELSA_PULL_POLICY:-always}
     build:
       context: ../backend
@@ -152,6 +154,7 @@ services:
 
   web:
     image: ${HELSA_WEB_IMAGE:-ghcr.io/nordic-sys/helsa/web:main}
+    mem_limit: 64m
     pull_policy: ${HELSA_PULL_POLICY:-always}
     build:
       context: ../web
@@ -162,6 +165,7 @@ services:
 
   proxy:
     image: caddy:2-alpine
+    mem_limit: 128m
     container_name: helsa-proxy
     ports:
       # 443: the ONLY port reachable from outside through the router. The mTLS gate.

@@ -143,3 +143,75 @@ func TestDeletingFromCompressedHistoryTakesOnlyTheNamedRows(t *testing.T) {
 		t.Errorf("heart-rate rows = %d, want 3000 untouched", hr)
 	}
 }
+
+// More deletions than one locate group, spread over several types, into the
+// compressed history: every named row goes, every other row stays.
+//
+// On 2026-11-09 a day's deletions — 1,136 UUIDs — were located in one read that
+// decompressed four million samples and took the server down. The read now asks
+// locateGroup UUIDs at a time and deletes each found row by its exact time; this
+// pins that the grouping loses nothing at the group edges, across types, and
+// with UUIDs that name no sample at all.
+func TestManyDeletionsAcrossTypesTakeExactlyTheNamedRows(t *testing.T) {
+	ctx := context.Background()
+	pool := testPool(t)
+
+	var uid uuid.UUID
+	if err := pool.QueryRow(ctx,
+		`INSERT INTO users (apple_sub, time_zone) VALUES ($1, 'Europe/Budapest') RETURNING id`,
+		fmt.Sprintf("ingest-delete-many-test-%d", time.Now().UnixNano())).Scan(&uid); err != nil {
+		t.Fatalf("create user: %v", err)
+	}
+	t.Cleanup(func() {
+		_, _ = pool.Exec(context.Background(), `DELETE FROM samples WHERE user_id = $1`, pgconv.UUID(uid))
+		_, _ = pool.Exec(context.Background(), `DELETE FROM users WHERE id = $1`, pgconv.UUID(uid))
+	})
+
+	// Three types, 2,000 samples each, a minute apart, two years ago.
+	base := time.Now().UTC().AddDate(-2, 0, 0).Truncate(24 * time.Hour)
+	if _, err := pool.Exec(ctx, `
+		INSERT INTO samples (user_id, ts, data_type, value, unit, source_uuid)
+		SELECT $1, $2::timestamptz + make_interval(mins => g), t, 1, 'u', t || '-' || g
+		FROM generate_series(1, 2000) AS g, unnest(ARRAY['heartRate', 'stepCount', 'activeEnergyBurned']) AS t`,
+		pgconv.UUID(uid), base); err != nil {
+		t.Fatalf("insert: %v", err)
+	}
+	if _, err := ownerPool(t).Exec(ctx, `
+		SELECT compress_chunk(c, if_not_compressed => true)
+		FROM show_chunks('samples', older_than => now() - INTERVAL '1 year') AS c`); err != nil {
+		t.Fatalf("compress: %v", err)
+	}
+
+	// 3 × 9 named rows: 27, so the groups of locateGroup split inside a type and
+	// across types; plus UUIDs that name nothing, at the start, middle and end.
+	ids := []string{"no-such-1"}
+	want := map[string]bool{}
+	for _, typ := range []string{"heartRate", "stepCount", "activeEnergyBurned"} {
+		for i := 1; i <= 9; i++ {
+			id := fmt.Sprintf("%s-%d", typ, i*200)
+			ids = append(ids, id)
+			want[id] = true
+		}
+		ids = append(ids, "no-such-"+typ)
+	}
+	if len(want) <= locateGroup {
+		t.Fatalf("the fixture must span more than one locate group (%d ≤ %d)", len(want), locateGroup)
+	}
+
+	body, _ := json.Marshal(Message{UserID: uid, BatchID: uuid.New(), Batch: api.IngestBatch{Deletions: &ids}})
+	if _, err := Process(ctx, pool, nil, body); err != nil {
+		t.Fatalf("the deletions must go through: %v", err)
+	}
+
+	var left, total int
+	if err := pool.QueryRow(ctx, `SELECT count(*) FILTER (WHERE source_uuid = ANY($2::text[])), count(*)
+		FROM samples WHERE user_id = $1`, pgconv.UUID(uid), ids).Scan(&left, &total); err != nil {
+		t.Fatalf("count: %v", err)
+	}
+	if left != 0 {
+		t.Errorf("%d named samples are still there", left)
+	}
+	if total != 3*2000-len(want) {
+		t.Errorf("rows left = %d, want %d: something other than the named rows went", total, 3*2000-len(want))
+	}
+}

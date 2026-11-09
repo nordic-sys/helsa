@@ -252,29 +252,39 @@ func Process(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, body []
 	return counts, nil
 }
 
+// locateGroup is how many UUIDs one LocateSamplesByUUID call asks about. Small on
+// purpose: see the query's comment for the measurement and the outage behind it.
+const locateGroup = 10
+
 // deleteSamples removes samples by HealthKit UUID without decompressing the
-// user's whole history (see LocateSamplesByUUID for the failure this avoids).
+// user's whole history (see LocateSamplesByUUID for the failure this avoids):
+// first the exact rows, a few UUIDs at a time, then each row by its type and time.
 //
-// The decompression limit is lifted for this transaction only: with the type and
-// the span named, the work is bounded by what is actually being deleted, and a
+// The decompression limit is lifted for this transaction only: each delete names
+// one batch, so the work is bounded by what is actually being deleted, and a
 // phone that deleted a source app's years of data is a legitimate large delete —
 // it must not dead-letter because of a guard meant for unbounded statements.
+// Parallel workers are off for the same span: a parallel scan over the whole
+// history asked the container's 64 MB /dev/shm for 724 MB and failed.
 func deleteSamples(ctx context.Context, tx pgx.Tx, q *db.Queries, uid pgtype.UUID, ids []string) error {
-	spans, err := q.LocateSamplesByUUID(ctx, db.LocateSamplesByUUIDParams{UserID: uid, SourceUuids: ids})
-	if err != nil {
-		return fmt.Errorf("locate samples to delete: %w", err)
-	}
-	if len(spans) == 0 {
-		return nil
-	}
 	if _, err := tx.Exec(ctx, `SET LOCAL timescaledb.max_tuples_decompressed_per_dml_transaction = 0`); err != nil {
 		return fmt.Errorf("lift the decompression limit: %w", err)
 	}
-	for _, s := range spans {
-		if err := q.DeleteSamplesByUUIDInSpan(ctx, db.DeleteSamplesByUUIDInSpanParams{
-			UserID: uid, DataType: s.DataType, FromTs: s.FromTs, ToTs: s.ToTs, SourceUuids: ids,
-		}); err != nil {
-			return fmt.Errorf("delete samples (%s): %w", s.DataType, err)
+	if _, err := tx.Exec(ctx, `SET LOCAL max_parallel_workers_per_gather = 0`); err != nil {
+		return fmt.Errorf("turn off parallel workers: %w", err)
+	}
+	for start := 0; start < len(ids); start += locateGroup {
+		group := ids[start:min(start+locateGroup, len(ids))]
+		rows, err := q.LocateSamplesByUUID(ctx, db.LocateSamplesByUUIDParams{UserID: uid, SourceUuids: group})
+		if err != nil {
+			return fmt.Errorf("locate samples to delete: %w", err)
+		}
+		for _, r := range rows {
+			if err := q.DeleteSampleExact(ctx, db.DeleteSampleExactParams{
+				UserID: uid, DataType: r.DataType, Ts: r.Ts, SourceUuid: r.SourceUuid,
+			}); err != nil {
+				return fmt.Errorf("delete sample (%s): %w", r.DataType, err)
+			}
 		}
 	}
 	return nil
